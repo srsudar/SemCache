@@ -4,6 +4,6 @@ chrome.runtime.onInstalled.addListener(details => {
   console.log('previousVersion', details.previousVersion);
 });
 
-chrome.browserAction.setBadgeText({text: '\'Allo'});
+chrome.browserAction.setBadgeText({text: 'SemCache Badge'});
 
-console.log('\'Allo \'Allo! Event Page for Browser Action');
+console.log('SemCache: Event Page for Browser Action');
