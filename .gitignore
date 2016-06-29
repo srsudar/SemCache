@@ -3,10 +3,10 @@ temp
 .tmp
 dist
 .sass-cache
-app/bower_components
-test/bower_components
+extension/app/bower_components
+extension/test/bower_components
 package
-app/scripts
+extension/app/scripts
 
 # OSX
 .DS_STORE
