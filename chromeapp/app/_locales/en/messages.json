@@ -1,0 +1,10 @@
+{
+    "appName": {
+        "message": "SemCacheApp",
+        "description": "The name of the application"
+    },
+    "appDescription": {
+        "message": "The Chrome App portion of SemCache.",
+        "description": "The description of the application"
+    }
+}

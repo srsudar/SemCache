@@ -8,6 +8,10 @@ extension/test/bower_components
 package
 extension/app/scripts
 
+chromeapp/app/bower_components
+chromeapp/test/bower_components
+chromeapp/node_modules
+
 # OSX
 .DS_STORE
 
