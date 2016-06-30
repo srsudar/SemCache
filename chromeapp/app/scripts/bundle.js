@@ -1723,19 +1723,19 @@ function addServiceToPacket(serviceName, packet) {
   packet.addRecord('AR', srv);
 
   // TXT Record
-  var txtData = new ByteArray();
+  // var txtData = new ByteArray();
 
-  for (var key in service.options) {
-    txtData.append(DNSUtils.labelToByteArray(key + '=' + service.options[key]));
-  }
+  // for (var key in service.options) {
+  //   txtData.append(DNSUtils.labelToByteArray(key + '=' + service.options[key]));
+  // }
   
-  var txt = new DNSResourceRecord({
-    name: alias,
-    recordType: DNSCodes.RECORD_TYPES.TXT,
-    data: txtData
-  });
+  // var txt = new DNSResourceRecord({
+  //   name: alias,
+  //   recordType: DNSCodes.RECORD_TYPES.TXT,
+  //   data: txtData
+  // });
 
-  packet.addRecord('AR', txt);
+  // packet.addRecord('AR', txt);
 
   // PTR Wildcard Record
   var ptrWildcard = new DNSResourceRecord({
