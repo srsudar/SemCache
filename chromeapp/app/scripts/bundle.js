@@ -780,7 +780,7 @@ DNSResourceRecord.parseFromPacketReader = function(reader) {
       data = parseTXT(data, reader.byteArray);
       break;
     case DNSCodes.RECORD_TYPES.SRV:
-      data = parseSRV(data, reader.byteArray);
+      data = parseSRV(data, data);
       break;
     default:
       console.log(
@@ -888,28 +888,31 @@ DNSResourceRecord.generateByteArrayForSRV = function(
   // serviceProtoName, TTL, class, priority, weight, port, targetDomain
   var result = new ByteArray();
 
+  result.push(10, 4);
+  return result;
+
   // serviceProtoName
   var byteSafeName = DNSUtils.labelToByteArray(serviceProtoName);
   result.append(byteSafeName);
  
   // TTL is 4 bytes
-  // result.push(ttl, 4);
+  result.push(ttl, 4);
 
-  // // class code is 2 bytes
-  // var internetClassCode = DNSCodes.CLASS_CODES.IN;
-  // result.push(internetClassCode, 2);
+  // class code is 2 bytes
+  var internetClassCode = DNSCodes.CLASS_CODES.IN;
+  result.push(internetClassCode, 2);
 
-  // // priority is 2 bytes
-  // result.push(priority, 2);
+  // priority is 2 bytes
+  result.push(priority, 2);
 
-  // // weight is two bytes
-  // result.push(weight, 2);
+  // weight is two bytes
+  result.push(weight, 2);
 
-  // // port is two bytes
-  // result.push(port, 2);
+  // port is two bytes
+  result.push(port, 2);
 
-  // var byteSafeDomain = DNSUtils.labelToByteArray(targetDomain);
-  // result.push(byteSafeDomain);
+  var byteSafeDomain = DNSUtils.labelToByteArray(targetDomain);
+  result.push(byteSafeDomain);
 
   return result;
 }

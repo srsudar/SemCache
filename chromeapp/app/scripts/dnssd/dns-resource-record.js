@@ -60,7 +60,7 @@ DNSResourceRecord.parseFromPacketReader = function(reader) {
       data = parseTXT(data, reader.byteArray);
       break;
     case DNSCodes.RECORD_TYPES.SRV:
-      data = parseSRV(data, reader.byteArray);
+      data = parseSRV(data, data);
       break;
     default:
       console.log(
@@ -167,6 +167,9 @@ DNSResourceRecord.generateByteArrayForSRV = function(
   // We are going to push data into the ByteArray in the following order:
   // serviceProtoName, TTL, class, priority, weight, port, targetDomain
   var result = new ByteArray();
+
+  result.push(10, 4);
+  return result;
 
   // serviceProtoName
   var byteSafeName = DNSUtils.labelToByteArray(serviceProtoName);
