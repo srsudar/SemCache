@@ -113,6 +113,10 @@ function parsePTR(data, packetData) {
 function parseTXT(data, packetData) {
   var result = {};
 
+  console.log('parseTXT');
+  console.log('    data: ', data);
+  console.log('    packetData: ', packetData);
+
   var reader = data.getReader();
   var parts = [];
 

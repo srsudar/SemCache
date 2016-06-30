@@ -189,6 +189,9 @@ DNSPacket.RECORD_SECTION_TYPES = DNS_PACKET_RECORD_SECTION_TYPES;
 DNSPacket.prototype.constructor = DNSPacket;
 
 DNSPacket.prototype.addRecord = function(recordSectionType, record) {
+  console.log('Adding record');
+  console.log('    Record section type: ', recordSectionType);
+  console.log('    record; ', record);
   record.packet = this;
   this.records[recordSectionType].push(record);
 };

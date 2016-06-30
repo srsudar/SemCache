@@ -588,6 +588,9 @@ DNSPacket.RECORD_SECTION_TYPES = DNS_PACKET_RECORD_SECTION_TYPES;
 DNSPacket.prototype.constructor = DNSPacket;
 
 DNSPacket.prototype.addRecord = function(recordSectionType, record) {
+  console.log('Adding record');
+  console.log('    Record section type: ', recordSectionType);
+  console.log('    record; ', record);
   record.packet = this;
   this.records[recordSectionType].push(record);
 };
@@ -829,6 +832,10 @@ function parsePTR(data, packetData) {
 
 function parseTXT(data, packetData) {
   var result = {};
+
+  console.log('parseTXT');
+  console.log('    data: ', data);
+  console.log('    packetData: ', packetData);
 
   var reader = data.getReader();
   var parts = [];
@@ -1701,34 +1708,34 @@ function addServiceToPacket(serviceName, packet) {
   var alias = serviceName;
 
   // SRV Record
-  // var srvData = new ByteArray();
-  // srvData.push(0x0000, 2);        // Priority
-  // srvData.push(0x0000, 2);        // Weight
-  // srvData.push(service.port, 2);  // Port
-  // srvData.append(DNSUtils.labelToByteArray(serviceName));
+  var srvData = new ByteArray();
+  srvData.push(0x0000, 2);        // Priority
+  srvData.push(0x0000, 2);        // Weight
+  srvData.push(service.port, 2);  // Port
+  srvData.append(DNSUtils.labelToByteArray(serviceName));
 
-  // var srv = new DNSResourceRecord({
-  //   name: alias,
-  //   recordType: DNSCodes.RECORD_TYPES.SR,
-  //   data: srvData
-  // });
+  var srv = new DNSResourceRecord({
+    name: alias,
+    recordType: DNSCodes.RECORD_TYPES.SRV,
+    data: srvData
+  });
 
-  // packet.addRecord('AR', srv);
+  packet.addRecord('AR', srv);
 
   // TXT Record
-  // var txtData = new ByteArray();
+  var txtData = new ByteArray();
 
-  // for (var key in service.options) {
-  //   txtData.append(DNSUtils.labelToByteArray(key + '=' + service.options[key]));
-  // }
+  for (var key in service.options) {
+    txtData.append(DNSUtils.labelToByteArray(key + '=' + service.options[key]));
+  }
   
-  // var txt = new DNSResourceRecord({
-  //   name: alias,
-  //   recordType: DNSCodes.RECORD_TYPES.TXT,
-  //   data: txtData
-  // });
+  var txt = new DNSResourceRecord({
+    name: alias,
+    recordType: DNSCodes.RECORD_TYPES.TXT,
+    data: txtData
+  });
 
-  // packet.addRecord('AR', txt);
+  packet.addRecord('AR', txt);
 
   // PTR Wildcard Record
   var ptrWildcard = new DNSResourceRecord({
