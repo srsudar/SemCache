@@ -43,7 +43,10 @@ var DNSUtils = {
       }
 
       i++;
-      result += this.decompressLabel(this.byteArrayToLabel(byteArray, label.charCodeAt(i)), byteArray);
+      result += this.decompressLabel(
+        this.byteArrayToLabel(byteArray, label.charCodeAt(i)),
+        byteArray
+      );
     }
 
     return result;

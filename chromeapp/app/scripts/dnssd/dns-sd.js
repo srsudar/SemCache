@@ -271,11 +271,20 @@ function addServiceToPacket(serviceName, packet) {
   var alias = serviceName;
 
   // SRV Record
-  var srvData = new ByteArray();
-  srvData.push(0x0000, 2);        // Priority
-  srvData.push(0x0000, 2);        // Weight
-  srvData.push(service.port, 2);  // Port
-  srvData.append(DNSUtils.labelToByteArray(serviceName));
+  var srvData = DNSResourceRecord.generateByteArrayForSRV(
+    serviceName,
+    10,
+    0,
+    0,
+    1234,
+    'testdomain.local'
+  );
+
+  // var srvData = new ByteArray();
+  // srvData.push(0x0000, 2);        // Priority
+  // srvData.push(0x0000, 2);        // Weight
+  // srvData.push(service.port, 2);  // Port
+  // srvData.append(DNSUtils.labelToByteArray(serviceName));
 
   var srv = new DNSResourceRecord({
     name: alias,

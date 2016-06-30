@@ -59,8 +59,16 @@ DNSResourceRecord.parseFromPacketReader = function(reader) {
     case DNSCodes.RECORD_TYPES.TXT:
       data = parseTXT(data, reader.byteArray);
       break;
+    case DNSCodes.RECORD_TYPES.SRV:
+      data = parseSRV(data, reader.byteArray);
+      break;
     default:
-      // data = BinaryUtils.arrayBufferToString(data.buffer);
+      console.log(
+        'Encountered record type that cannot be deserialized: ',
+        record.recordType
+      );
+      // Do a best effort deserialization
+      data = BinaryUtils.arrayBufferToString(data.buffer);
       break;
   }
 
@@ -89,7 +97,13 @@ DNSResourceRecord.prototype.serialize = function() {
     case DNSCodes.RECORD_TYPES.TXT:
       data = serializeTXT(data);
       break;
+    case DNSCodes.RECORD_TYPES.SRV:
+      // SRV records take care of serializing themselves during generation via
+      // the generateByteArrayForSRV method.
+      data = data;
+      break;
     default:
+      console.log('Serializing unsupported DNS type: ', this.recordType);
       data = new ByteArray(data);
       break;
   }
@@ -104,10 +118,115 @@ DNSResourceRecord.prototype.serialize = function() {
   return byteArray;
 };
 
+/**
+ * Generate the binary content for the SRV record.
+ *
+ * The order is specified here in the Wikipedia and RFC documents:
+ * https://en.wikipedia.org/wiki/SRV_record
+ * https://tools.ietf.org/html/rfc2782
+ *
+ * serviceProtoName:
+ *     This is the service provided, the protocol, and the domain
+ *     for which the record is valid. This might be something like
+ *     _chromecache._http.local .
+ * ttl: 
+ *     The standard time to live field for DNS.
+ * priority: 16 bit unsigned integer
+ *     The priority of the target host, lower equals greater priority.
+ * weight: 16 bit unsigned integer
+ *     When records have the same priority, weight will decide which wins.
+ *     Higher values means preferred.
+ * port: 16 bit unsigned integer
+ *     The port on which the service may be found.
+ * target:
+ *     The hostname of the machine owning the servce. Wikipedia claims this
+ *     should end in a dot, although we are more lenient in this
+ *     implementation.
+ *
+ * The method does not permit a class field, as we assume it will be IN,
+ * meaning internet.
+ */
+DNSResourceRecord.generateByteArrayForSRV = function(
+    serviceProtoName,
+    ttl,
+    priority,
+    weight,
+    port,
+    targetDomain
+) {
+  if (port < 0 || port > 65535) {
+    throw new Error('Port must be > 0 and < 65535, not: ' + port);
+  }
+  if (priority < 0 || priority > 65535) {
+    throw new Error('Priority must be > 0 and < 65535, not: ' + priority);
+  }
+  if (weight < 0 || weight > 65535) {
+    throw new Error('Weight must be > 0 and < 65535, not: ' + weight);
+  }
+
+  // We are going to push data into the ByteArray in the following order:
+  // serviceProtoName, TTL, class, priority, weight, port, targetDomain
+  var result = new ByteArray();
+
+  // serviceProtoName
+  var byteSafeName = DNSUtils.labelToByteArray(serviceProtoName);
+  result.append(byteSafeName);
+ 
+  // TTL is 4 bytes
+  result.push(ttl, 4);
+
+  // class code is 2 bytes
+  var internetClassCode = DNSCodes.CLASS_CODES.IN;
+  result.push(internetClassCode, 2);
+
+  // priority is 2 bytes
+  result.push(priority, 2);
+
+  // weight is two bytes
+  result.push(weight, 2);
+
+  // port is two bytes
+  result.push(port, 2);
+
+  var byteSafeDomain = DNSUtils.labelToByteArray(targetDomain);
+  result.push(byteSafeDomain);
+
+  return result;
+}
+
 function parsePTR(data, packetData) {
   var result = DNSUtils.byteArrayToLabel(data);
 
   return DNSUtils.decompressLabel(result, packetData);
+}
+
+function parseSRV(data, packetData) {
+  // We're just pulling data back out as it was put in by
+  // DNSResourceRecord.generateByteArrayForSRV.
+
+  var packetDataReader = packetData.getReader();
+
+  var serviceProtoName = DNSUtils.byteArrayReaderToLabel(packetDataReader);
+
+  var ttl = packetDataReader.getValue(4);
+  var classCodeInt = packetDataReader.getValue(2);
+  var priority = packetDataReader.getValue(2);
+  var weight = packetDataReader.getValue(2);
+  var port = packetDataReader.getValue(2);
+
+  var domainName = DNSUtils.byteArrayReaderToLabel(packetDataReader);
+
+  var result = {
+    serviceProtoName: serviceProtoName,
+    ttl: ttl,
+    classCode: classCodeInt,
+    priority: priority,
+    weight: weight,
+    port: port,
+    domainName: domainName
+  };
+
+  return result;
 }
 
 function parseTXT(data, packetData) {
