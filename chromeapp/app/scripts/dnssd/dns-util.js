@@ -60,7 +60,7 @@ exports.getDomainAsByteArray = function(domain) {
  * startByte: an optional index indicating the start point of the
  *   serialization. If not present, assumes a starting index ov 0.
  */
-exports.getByteArrayAsDomain = function(byteArr, startByte) {
+exports.getDomainFromByteArray = function(byteArr, startByte) {
   if (!(byteArr instanceof byteArray.ByteArray)) {
     throw new Error('byteArr is not type of ByteArray');
   }
@@ -71,7 +71,19 @@ exports.getByteArrayAsDomain = function(byteArr, startByte) {
   }
 
   var reader = byteArr.getReader(startByte);
+  
+  var result = exports.getDomainFromByteArrayReader(reader, 0);
+  return result;
+};
 
+/**
+ * Convert a serialized domain name from its DNS representation to a string.
+ * The reader should contain bytes as output from getDomainAsByteArray.
+ *
+ * reader: a ByteArrayReader containing the bytes to be deserialized. The
+ *   reader will have all the domain bytes consumed.
+ */
+exports.getDomainFromByteArrayReader = function(reader) {
   var result = '';
 
   // We expect a series of length charCode pairs, ending when the final length

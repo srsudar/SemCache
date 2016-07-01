@@ -112,23 +112,23 @@ exports.ByteArray.prototype.append = function(data) {
 };
 
 exports.ByteArray.prototype.getReader = function(startByte) {
-  return new ByteArrayReader(this, startByte);
+  return new exports.ByteArrayReader(this, startByte);
 };
 
-function ByteArrayReader(byteArray, startByte) {
+exports.ByteArrayReader = function ByteArrayReader(byteArray, startByte) {
   this.byteArray = byteArray;
   this.cursor = startByte || 0;
 }
 
-ByteArrayReader.prototype.constructor = ByteArrayReader;
+exports.ByteArrayReader.prototype.constructor = exports.ByteArrayReader;
 
-Object.defineProperty(ByteArrayReader.prototype, 'eof', {
+Object.defineProperty(exports.ByteArrayReader.prototype, 'eof', {
   get: function() {
     return this.cursor >= this.byteArray.length;
   }
 });
 
-ByteArrayReader.prototype.getBytes = function(length) {
+exports.ByteArrayReader.prototype.getBytes = function(length) {
   if (length === null || length === 0) {
     return new Uint8Array();
   }
@@ -146,7 +146,7 @@ ByteArrayReader.prototype.getBytes = function(length) {
   return new exports.ByteArray(uint8Array);
 };
 
-ByteArrayReader.prototype.getString = function(length) {
+exports.ByteArrayReader.prototype.getString = function(length) {
   var byteArray = this.getBytes(length);
   if (byteArray.length === 0) {
     return '';
@@ -155,7 +155,7 @@ ByteArrayReader.prototype.getString = function(length) {
   return BinaryUtils.arrayBufferToString(byteArray.buffer);
 };
 
-ByteArrayReader.prototype.getValue = function(length) {
+exports.ByteArrayReader.prototype.getValue = function(length) {
   var byteArray = this.getBytes(length);
   if (byteArray.length === 0) {
     return null;

@@ -10,6 +10,9 @@
  * | the 2-octet query class
  */
 
+var byteArray = require('./byte-array-sem');
+var dnsUtil = require('./dns-util');
+
 var OCTETS_QUERY_TYPE = 2;
 var OCTETS_QUERY_CLASS = 2;
 
@@ -28,22 +31,43 @@ exports.DnsQuery = function DnsQuery(domainName, queryType, queryClass) {
   this.domainName = domainName;
   this.queryType = queryType;
   this.queryClass = queryClass;
+};
 
-  /**
-   * Serialize the query to accommodate the DNS spec. Returns a ByteArray
-   * object.
-   */
-  this.serialize = function() {
+/**
+ * Serialize the query to accommodate the DNS spec. Returns a ByteArray
+ * object.
+ */
+exports.DnsQuery.prototype.serialize = function() {
     // The serialization is just the query name in label format, followed by a
     // 2-octet query type and a 2-octet query class.
-    var result = new ByteArray(); 
+    var result = new byteArray.ByteArray(); 
 
-    var domainAsLabel = null;
+    var domainAsLabel = dnsUtil.getDomainAsByteArray(this.domainName);
 
     result.append(domainAsLabel);
-    result.put(this.queryType, OCTETS_QUERY_TYPE);
-    result.put(this.queryClass, OCTETS_QUERY_CLASS);
+    result.push(this.queryType, OCTETS_QUERY_TYPE);
+    result.push(this.queryClass, OCTETS_QUERY_CLASS);
 
     return result;
-  };
+};
+
+/**
+ * Create a DnsQuery object from a byteArray as output by DnsQuery.serialize().
+ *
+ * byteArr: the ByteArray object from which to construct the DnsQuery
+ * startByte: the offset into byteArr from which to start reconstruction
+ */
+exports.createQueryFromByteArray = function(byteArr, startByte) {
+  if (!startByte) {
+    startByte = 0;
+  }
+
+  var reader = byteArr.getReader(startByte);
+
+  var domainName = dnsUtil.getDomainFromByteArrayReader(reader);
+  var queryType = reader.getValue(OCTETS_QUERY_TYPE);
+  var queryClass = reader.getValue(OCTETS_QUERY_CLASS);
+
+  var result = new exports.DnsQuery(domainName, queryType, queryClass);
+  return result;
 };

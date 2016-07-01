@@ -54,7 +54,7 @@ function getByteArrayForExample() {
 }
 
 
-test('serialize outputs correct bytes for example', function(t) {
+test('getDomainAsByteArray outputs correct bytes for example', function(t) {
   // This is the domain name example given in the Stevens TCP/IP book.
   var domainName = 'gemini.tuc.noao.edu';
 
@@ -69,13 +69,59 @@ test('serialize outputs correct bytes for example', function(t) {
   t.end();
 });
 
-test('deserialize returns correctly from example', function(t) {
+test('getDomainFromByteArray produces correct domain', function(t) {
   var startBytes = getByteArrayForExample();
 
   var expected = EXAMPLE_URL;
-  var actual = dnsUtil.getByteArrayAsDomain(startBytes);
+  var actual = dnsUtil.getDomainFromByteArray(startBytes);
 
   t.equal(actual, expected);
 
+  t.end();
+});
+
+test('getDomainFromByteArray respects start bytes', function(t) {
+  var startBytes = getByteArrayForExample();
+
+  var expected = EXAMPLE_URL;
+
+  // We'll push two dummy bytes.
+  var numDummyBytes = 2;
+  var extraBytes = new byteArray.ByteArray(startBytes.length + numDummyBytes);
+  extraBytes.push(2, 1);
+  extraBytes.push(3, 1);
+  extraBytes.append(startBytes);
+
+  var actual = dnsUtil.getDomainFromByteArray(extraBytes, numDummyBytes);
+
+  t.equal(actual, expected);
+
+  t.end();
+});
+
+test('getDomainFromByteArrayReader returns with correct offset', function(t) {
+  // We want the reader to start at the current reader position, recover the
+  // domain, and leave the reader at the correct offset.
+  var startBytes = getByteArrayForExample();
+
+  var extraBytes = new byteArray.ByteArray();
+
+  var firstValue = 3;
+  var lastValue = 8;
+  extraBytes.push(firstValue, 1);
+  extraBytes.append(startBytes);
+  extraBytes.push(lastValue, 1);
+
+  var reader = extraBytes.getReader();
+
+  reader.getValue(1);
+
+  var recoveredDomain = dnsUtil.getDomainFromByteArrayReader(reader);
+
+  var recoveredLastValue = reader.getValue(1);
+
+  t.equal(recoveredDomain, EXAMPLE_URL);
+  t.equal(recoveredLastValue, lastValue);
+  
   t.end();
 });
