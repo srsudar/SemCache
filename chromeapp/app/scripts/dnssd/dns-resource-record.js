@@ -168,9 +168,6 @@ DNSResourceRecord.generateByteArrayForSRV = function(
   // serviceProtoName, TTL, class, priority, weight, port, targetDomain
   var result = new ByteArray();
 
-  result.push(10, 4);
-  return result;
-
   // serviceProtoName
   var byteSafeName = DNSUtils.labelToByteArray(serviceProtoName);
   result.append(byteSafeName);
@@ -192,7 +189,7 @@ DNSResourceRecord.generateByteArrayForSRV = function(
   result.push(port, 2);
 
   var byteSafeDomain = DNSUtils.labelToByteArray(targetDomain);
-  result.push(byteSafeDomain);
+  result.append(byteSafeDomain);
 
   return result;
 }
@@ -210,6 +207,12 @@ function parseSRV(data, packetData) {
   var packetDataReader = packetData.getReader();
 
   var serviceProtoName = DNSUtils.byteArrayReaderToLabel(packetDataReader);
+
+  // There is problem here where consuming the reader via the
+  // byteArrayReaderToLabel function leads to over-consuming, making off by one
+  // problems with parsing packets. -1 byte to correct for this.
+  var badCursorIdx = packetDataReader.cursor;
+  packetDataReader = packetData.getReader(badCursorIdx - 1);
 
   var ttl = packetDataReader.getValue(4);
   var classCodeInt = packetDataReader.getValue(2);
