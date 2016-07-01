@@ -28,7 +28,7 @@
 
 'use strict';
 
-module.exports = window.ByteArray = (function() {
+exports.ByteArray = (function() {
 
 var BinaryUtils = require('./binary-utils');
 

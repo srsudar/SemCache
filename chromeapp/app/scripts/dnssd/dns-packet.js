@@ -28,7 +28,7 @@
 
 'use strict';
 
-module.exports = window.DNSPacket = (function() {
+exports.DNSPacket = (function() {
 
 var DNSRecord         = require('./dns-record');
 var DNSResourceRecord = require('./dns-resource-record');

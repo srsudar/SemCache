@@ -25,7 +25,8 @@
     "jshint-stylish": "~0.1.5",
     "grunt-chrome-manifest": "~0.2.0",
     "grunt-contrib-compress": "~0.9.1",
-    "grunt-browserify": "~5.0.0"
+    "grunt-browserify": "~5.0.0",
+    "tape": "~4.6.0"
   },
   "engines": {
     "node": ">=0.8.0"

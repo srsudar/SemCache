@@ -28,7 +28,7 @@
 
 'use strict';
 
-module.exports = window.BinaryUtils = (function() {
+exports.BinaryUtils = (function() {
 
 var BinaryUtils = {
   stringToArrayBuffer: function(string) {

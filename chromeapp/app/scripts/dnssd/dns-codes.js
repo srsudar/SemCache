@@ -28,7 +28,7 @@
 
 'use strict';
 
-module.exports = window.DNSCodes = (function() {
+exports.DNSCodes = (function() {
 
 const QUERY_RESPONSE_CODES = defineType({
   QUERY       : 0,      // RFC 1035 - Query

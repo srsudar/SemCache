@@ -28,9 +28,9 @@
 
 'use strict';
 
-module.exports = window.DNSResourceRecord = (function() {
+exports.DNSResourceRecord = (function() {
 
-var DNSRecord   = require('./dns-record');
+var dnsRecord   = require('./dns-record');
 var DNSCodes    = require('./dns-codes');
 var DNSUtils    = require('./dns-utils');
 
@@ -40,14 +40,14 @@ const DNS_RESOURCE_RECORD_DEFAULT_TTL = 10; // 10 seconds
 // const DNS_RESOURCE_RECORD_DEFAULT_TTL = 3600; // 1 hour
 
 function DNSResourceRecord(properties) {
-  DNSRecord.call(this, properties);
+  dnsRecord.call(this, properties);
 
   this.ttl  = this.ttl  || DNS_RESOURCE_RECORD_DEFAULT_TTL;
   this.data = this.data || null;
 }
 
 DNSResourceRecord.parseFromPacketReader = function(reader) {
-  var record = DNSRecord.parseFromPacketReader.call(this, reader);
+  var record = dnsRecord.parseFromPacketReader.call(this, reader);
 
   var ttl  = reader.getValue(4);
   var data = reader.getBytes(reader.getValue(2));
@@ -78,12 +78,12 @@ DNSResourceRecord.parseFromPacketReader = function(reader) {
   return record;
 }
 
-DNSResourceRecord.prototype = Object.create(DNSRecord.prototype);
+DNSResourceRecord.prototype = Object.create(dnsRecord.DNSRecord.prototype);
 
 DNSResourceRecord.prototype.constructor = DNSResourceRecord;
 
 DNSResourceRecord.prototype.serialize = function() {
-  var byteArray = DNSRecord.prototype.serialize.call(this);
+  var byteArray = dnsRecord.prototype.serialize.call(this);
 
   // Write `ttl` (4 bytes)
   byteArray.push(this.ttl, 4);

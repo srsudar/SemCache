@@ -28,7 +28,7 @@
 
 'use strict';
 
-module.exports = window.DNSUtils = (function() {
+exports.DNSUtils = (function() {
 
 var ByteArray   = require('./byte-array');
 

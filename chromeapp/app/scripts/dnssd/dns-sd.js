@@ -28,7 +28,7 @@
 
 'use strict';
 
-module.exports = window.DNSSD = (function() {
+exports.DNSSD = (function() {
 
 var DNSRecord         = require('./dns-record');
 var DNSResourceRecord = require('./dns-resource-record');
@@ -36,7 +36,7 @@ var DNSPacket         = require('./dns-packet');
 var DNSCodes          = require('./dns-codes');
 var DNSUtils          = require('./dns-utils');
 
-var EventTarget       = require('./event-target');
+var eventTarget       = require('./event-target');
 var ByteArray         = require('./byte-array');
 var BinaryUtils       = require('./binary-utils');
 var IPUtils           = require('./ip-utils');
@@ -49,7 +49,7 @@ const DNSSD_PORT            = 53531;
 
 const DEBUG = true;
 
-var DNSSD = new EventTarget();
+var DNSSD = new eventTarget.EventTarget();
 
 var discovering = false;
 var services = {};
