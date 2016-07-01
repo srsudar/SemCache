@@ -39,6 +39,10 @@ var ByteArray   = require('./byte-array');
 const DNS_RESOURCE_RECORD_DEFAULT_TTL = 10; // 10 seconds
 // const DNS_RESOURCE_RECORD_DEFAULT_TTL = 3600; // 1 hour
 
+/**
+ * This corresponds to a resource record (RR) as outlined in the DNS spec. This
+ * includes answers, authorities, and additional information.
+ */
 function DNSResourceRecord(properties) {
   dnsRecord.call(this, properties);
 
@@ -53,6 +57,9 @@ DNSResourceRecord.parseFromPacketReader = function(reader) {
   var data = reader.getBytes(reader.getValue(2));
 
   switch (record.recordType) {
+    case DNSCodes.RECORD_TYPES.A:
+      console.log('not yet handling A records');
+      break;
     case DNSCodes.RECORD_TYPES.PTR:
       data = parsePTR(data, reader.byteArray);
       break;

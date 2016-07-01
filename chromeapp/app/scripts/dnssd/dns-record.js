@@ -35,6 +35,11 @@ var DNSUtils  = require('./dns-utils');
 
 var ByteArray = require('./byte-array');
 
+/**
+ * This is common functionality shared between both resource records (RRs) and
+ * questions entries. For this reason it includes query name, query type, and
+ * query class, but not TTL. TTL is present in RRs but not in questions.
+ */
 function DNSRecord(properties) {
   if (properties) {
     for (var property in properties) {
