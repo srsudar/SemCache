@@ -135,7 +135,7 @@ DNSResourceRecord.prototype.serialize = function() {
  * serviceProtoName:
  *     This is the service provided, the protocol, and the domain
  *     for which the record is valid. This might be something like
- *     _chromecache._http.local .
+ *     _semcache._http.local .
  * ttl: 
  *     The standard time to live field for DNS.
  * priority: 16 bit unsigned integer

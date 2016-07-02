@@ -11,7 +11,7 @@ var OCTET_LABEL_LENGTH = 1;
 
 /**
  * Converts a domain name to a byte array. Despite the name, this can serialize
- * any '.' separated string. _chromecache._http.local is not a domain name, eg,
+ * any '.' separated string. _semcache._http.local is not a domain name, eg,
  * but it is serializable in the same fashion. The name 'domain' is retained to
  * be recognizable even to those that are not familiar with the term 'label'
  * that is used in the DNS spec.

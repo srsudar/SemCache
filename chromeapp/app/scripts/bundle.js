@@ -29,7 +29,7 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
 
 'use strict';
 
-module.exports = window.ByteArray = (function() {
+exports.ByteArray = (function() {
 
 var BinaryUtils = require('./binary-utils');
 
@@ -216,7 +216,7 @@ return ByteArray;
 
 'use strict';
 
-module.exports = window.DNSCodes = (function() {
+exports.DNSCodes = (function() {
 
 const QUERY_RESPONSE_CODES = defineType({
   QUERY       : 0,      // RFC 1035 - Query
@@ -427,7 +427,7 @@ return DNSCodes;
 
 'use strict';
 
-module.exports = window.DNSPacket = (function() {
+exports.DNSPacket = (function() {
 
 var DNSRecord         = require('./dns-record');
 var DNSResourceRecord = require('./dns-resource-record');
@@ -664,13 +664,18 @@ return DNSPacket;
 
 'use strict';
 
-module.exports = window.DNSRecord = (function() {
+exports.DNSRecord = (function() {
 
 var DNSCodes  = require('./dns-codes');
 var DNSUtils  = require('./dns-utils');
 
 var ByteArray = require('./byte-array');
 
+/**
+ * This is common functionality shared between both resource records (RRs) and
+ * questions entries. For this reason it includes query name, query type, and
+ * query class, but not TTL. TTL is present in RRs but not in questions.
+ */
 function DNSRecord(properties) {
   if (properties) {
     for (var property in properties) {
@@ -748,9 +753,9 @@ return DNSRecord;
 
 'use strict';
 
-module.exports = window.DNSResourceRecord = (function() {
+exports.DNSResourceRecord = (function() {
 
-var DNSRecord   = require('./dns-record');
+var dnsRecord   = require('./dns-record');
 var DNSCodes    = require('./dns-codes');
 var DNSUtils    = require('./dns-utils');
 
@@ -759,20 +764,27 @@ var ByteArray   = require('./byte-array');
 const DNS_RESOURCE_RECORD_DEFAULT_TTL = 10; // 10 seconds
 // const DNS_RESOURCE_RECORD_DEFAULT_TTL = 3600; // 1 hour
 
+/**
+ * This corresponds to a resource record (RR) as outlined in the DNS spec. This
+ * includes answers, authorities, and additional information.
+ */
 function DNSResourceRecord(properties) {
-  DNSRecord.call(this, properties);
+  dnsRecord.call(this, properties);
 
   this.ttl  = this.ttl  || DNS_RESOURCE_RECORD_DEFAULT_TTL;
   this.data = this.data || null;
 }
 
 DNSResourceRecord.parseFromPacketReader = function(reader) {
-  var record = DNSRecord.parseFromPacketReader.call(this, reader);
+  var record = dnsRecord.parseFromPacketReader.call(this, reader);
 
   var ttl  = reader.getValue(4);
   var data = reader.getBytes(reader.getValue(2));
 
   switch (record.recordType) {
+    case DNSCodes.RECORD_TYPES.A:
+      console.log('not yet handling A records');
+      break;
     case DNSCodes.RECORD_TYPES.PTR:
       data = parsePTR(data, reader.byteArray);
       break;
@@ -798,12 +810,12 @@ DNSResourceRecord.parseFromPacketReader = function(reader) {
   return record;
 }
 
-DNSResourceRecord.prototype = Object.create(DNSRecord.prototype);
+DNSResourceRecord.prototype = Object.create(dnsRecord.DNSRecord.prototype);
 
 DNSResourceRecord.prototype.constructor = DNSResourceRecord;
 
 DNSResourceRecord.prototype.serialize = function() {
-  var byteArray = DNSRecord.prototype.serialize.call(this);
+  var byteArray = dnsRecord.prototype.serialize.call(this);
 
   // Write `ttl` (4 bytes)
   byteArray.push(this.ttl, 4);
@@ -848,7 +860,7 @@ DNSResourceRecord.prototype.serialize = function() {
  * serviceProtoName:
  *     This is the service provided, the protocol, and the domain
  *     for which the record is valid. This might be something like
- *     _chromecache._http.local .
+ *     _semcache._http.local .
  * ttl: 
  *     The standard time to live field for DNS.
  * priority: 16 bit unsigned integer
@@ -930,7 +942,7 @@ function parseSRV(data, packetData) {
 
   // There is problem here where consuming the reader via the
   // byteArrayReaderToLabel function leads to over-consuming, making off by one
-  // problems with parsing packets. work in progress.
+  // problems with parsing packets. -1 byte to correct for this.
   var badCursorIdx = packetDataReader.cursor;
   packetDataReader = packetData.getReader(badCursorIdx - 1);
 
@@ -1043,7 +1055,7 @@ return DNSResourceRecord;
 
 'use strict';
 
-module.exports = window.DNSUtils = (function() {
+exports.DNSUtils = (function() {
 
 var ByteArray   = require('./byte-array');
 
@@ -1193,7 +1205,7 @@ return DNSUtils;
 
 'use strict';
 
-module.exports = window.EventTarget = (function() {
+exports.EventTarget = (function() {
 
 function EventTarget(object) {
   if (typeof object !== 'object') {
@@ -1271,7 +1283,7 @@ return EventTarget;
 
 'use strict';
 
-module.exports = window.IPUtils = (function() {
+exports.IPUtils = (function() {
 
 const CRLF = '\r\n';
 
@@ -1391,7 +1403,7 @@ console.log('loaded?');
 
 'use strict';
 
-module.exports = window.BinaryUtils = (function() {
+exports.BinaryUtils = (function() {
 
 var BinaryUtils = {
   stringToArrayBuffer: function(string) {
@@ -1593,7 +1605,7 @@ exports.logSocketInfo = function(info) {
 
 'use strict';
 
-module.exports = window.DNSSD = (function() {
+exports.DNSSD = (function() {
 
 var DNSRecord         = require('./dns-record');
 var DNSResourceRecord = require('./dns-resource-record');
@@ -1601,7 +1613,7 @@ var DNSPacket         = require('./dns-packet');
 var DNSCodes          = require('./dns-codes');
 var DNSUtils          = require('./dns-utils');
 
-var EventTarget       = require('./event-target');
+var eventTarget       = require('./event-target');
 var ByteArray         = require('./byte-array');
 var BinaryUtils       = require('./binary-utils');
 var IPUtils           = require('./ip-utils');
@@ -1614,7 +1626,7 @@ const DNSSD_PORT            = 53531;
 
 const DEBUG = true;
 
-var DNSSD = new EventTarget();
+var DNSSD = new eventTarget.EventTarget();
 
 var discovering = false;
 var services = {};
