@@ -93,8 +93,6 @@ test('can encode and decode common RR fields', function(t) {
 
 test('can encode and decode A Record', function(t) {
   var domainName = 'happy.days.org';
-  // We'll use the real A Record value, as the deserialization code alerts with
-  // an error if you aren't deserializing an A Record.
   var ipAddress = '193.198.2.51';
   var rrClass = 4;
   var ttl = 123456;
@@ -106,6 +104,28 @@ test('can encode and decode A Record', function(t) {
   var recovered = resRec.createARecordFromReader(byteArr.getReader());
 
   t.deepEqual(recovered, aRecord);
+
+  t.end();
+});
+
+test('can encode and decode PTR Record', function(t) {
+  var serviceType = '_printer._tcp.local';
+  var instanceName = 'PrintsALot._printer._tcp.local';
+  var rrClass = 3;
+  var ttl = 1000;
+
+  var ptrRecord = new resRec.PtrRecord(
+    serviceType,
+    ttl,
+    instanceName,
+    rrClass
+  );
+
+  var byteArr = ptrRecord.convertToByteArray();
+
+  var recovered = resRec.createPtrRecordFromReader(byteArr.getReader());
+
+  t.deepEqual(recovered, ptrRecord);
 
   t.end();
 });
