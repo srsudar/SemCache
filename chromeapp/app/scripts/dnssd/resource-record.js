@@ -12,6 +12,10 @@ var NUM_OCTETS_RESOURCE_DATA_LENGTH = 2;
 /** An A Record has for bytes, all representing an IP address. */
 var NUM_OCTETS_RESOURCE_DATA_A_RECORD = 4;
 
+var NUM_OCTETS_PRIORITY = 2;
+var NUM_OCTETS_WEIGHT = 2;
+var NUM_OCTETS_PORT = 2;
+
 /**
  * A resource record (RR) is a component of a DNS message. They share a similar
  * structure but contain different information.
@@ -183,6 +187,62 @@ exports.createPtrRecordFromReader = function(reader) {
 };
 
 /**
+ * Create an SRV Record from a ByteArrayReader object. The reader should be at
+ * the correct cursor position, at the service type query of the SRV Record.
+ */
+exports.createSrvRecordFromReader = function(reader) {
+  var commonFields = exports.getCommonFieldsFromByteArrayReader(reader);
+
+  if (commonFields.rrType !== dnsCodes.RECORD_TYPES.SRV) {
+    throw new Error(
+      'De-serialized SRV Record does not have SRV Record type: ' + 
+        commonFields.rrType
+    );
+  }
+
+  // And now we recover just the resource length and resource data.
+  var resourceLength = reader.getValue(NUM_OCTETS_RESOURCE_DATA_LENGTH);
+  if (resourceLength < 0 || resourceLength > 65535) {
+    throw new Error(
+      'Illegal length of SRV Record resource data: ' +
+        resourceLength);
+  }
+
+  // In a SRV Record, the domain name field of the RR is actually the service
+  // proto name.
+  var serviceInstanceName = commonFields.domainName;
+  
+  // After the common fields, we expect priority, weight, port, target name.
+  var priority = reader.getValue(NUM_OCTETS_PRIORITY);
+  if (priority < 0 || priority > 65535) {
+    throw new Error('Illegal length of SRV Record priority: ' + priority);
+  }
+
+  var weight = reader.getValue(NUM_OCTETS_WEIGHT);
+  if (weight < 0 || weight > 65535) {
+    throw new Error('Illegal length of SRV Record priority: ' + weight);
+  }
+
+  var port = reader.getValue(NUM_OCTETS_PORT);
+  if (port < 0 || port > 65535) {
+    throw new Error('Illegal length of SRV Record priority: ' + port);
+  }
+
+  var targetName = dnsUtil.getDomainFromByteArrayReader(reader);
+
+  var result = new exports.SrvRecord(
+    serviceInstanceName,
+    commonFields.ttl,
+    priority,
+    weight,
+    port,
+    targetName
+  );
+
+  return result;
+};
+
+/**
  * A PTR record. PTR records respond to a query for a service type (eg
  * '_printer._tcp.local'. They return the name of an instance offering the
  * service (eg 'Printsalot._printer._tcp.local').
@@ -290,6 +350,8 @@ exports.SrvRecord = function SrvRecord(
     throw new Error('SrvRecord must be called with new');
   }
   this.recordType = dnsCodes.RECORD_TYPES.SRV;
+  // Note that we're not exposing rrClass as a caller-specified variable,
+  // because according to the spec SRV records occur in the IN class.
   this.recordClass = dnsCodes.CLASS_CODES.IN;
 
   this.instanceTypeDomain = instanceTypeDomain;
@@ -298,6 +360,58 @@ exports.SrvRecord = function SrvRecord(
   this.weight = weight;
   this.port = port;
   this.targetDomain = targetDomain;
+};
+
+/**
+ * Get the SRV Record as a ByteArray object.
+ *
+ * According to this document (https://tools.ietf.org/html/rfc2782) and more
+ * explicitly this document
+ * (http://www.tahi.org/dns/packages/RFC2782_S4-1_0_0/SV/SV_RFC2782_SRV_rdata.html),
+ * the layout of the SRV RR is as follows:
+ *
+ * The common fields as indicated in getCommonFieldsAsByteArray.
+ *
+ * 2 octets representing the length of the following component, in bytes.
+ *
+ * 2 octets indicating the priority
+ *
+ * 2 octets indicating the weight
+ *
+ * 2 octets indicating the port
+ *
+ * A variable number of octets encoding the target name (e.g.
+ * PrintsALot.local), encoded as a domain name.
+ */
+exports.SrvRecord.prototype.convertToByteArray = function() {
+  var result = exports.getCommonFieldsAsByteArray(
+    this.instanceTypeDomain,
+    this.recordType,
+    this.recordClass,
+    this.ttl
+  );
+
+  var targetNameAsBytes = dnsUtil.getDomainAsByteArray(this.targetDomain);
+
+  var resourceDataLength = NUM_OCTETS_PRIORITY +
+    NUM_OCTETS_WEIGHT +
+    NUM_OCTETS_PORT +
+    targetNameAsBytes.length;
+
+  // First we add the length of the resource data.
+  result.push(
+    resourceDataLength, 
+    NUM_OCTETS_RESOURCE_DATA_LENGTH
+  );
+
+  // Then add the priority, weight, and port.
+  result.push(this.priority, NUM_OCTETS_PRIORITY);
+  result.push(this.weight, NUM_OCTETS_WEIGHT);
+  result.push(this.port, NUM_OCTETS_PORT);
+
+  result.append(targetNameAsBytes);
+
+  return result;
 };
 
 /**

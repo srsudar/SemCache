@@ -129,3 +129,29 @@ test('can encode and decode PTR Record', function(t) {
 
   t.end();
 });
+
+test('can encode and decode SRV Record', function(t) {
+  var instanceName = 'PrintsALot._printer._tcp.local';
+  var targetDomain = 'blackhawk.local';
+  var ttl = 2000;
+  var priority = 10;
+  var weight = 60;
+  var port = 8888;
+
+  var srvRecord = new resRec.SrvRecord(
+    instanceName,
+    ttl,
+    priority,
+    weight,
+    port,
+    targetDomain
+  );
+
+  var byteArr = srvRecord.convertToByteArray();
+
+  var recovered = resRec.createSrvRecordFromReader(byteArr.getReader());
+
+  t.deepEqual(recovered, srvRecord);
+
+  t.end();
+});
