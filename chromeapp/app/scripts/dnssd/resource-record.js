@@ -1,3 +1,4 @@
+/* global exports, require */
 'use strict';
 
 /**
@@ -39,7 +40,7 @@ exports.ARecord = function ARecord(domainName, ttl, ipAddress) {
     throw new Error('ARecord must be called with new');
   }
 
-  if ((typeof ipAddress) !== "string") {
+  if ((typeof ipAddress) !== 'string') {
     throw new Error('ipAddress must be a String: ' + ipAddress);
   }
   this.recordType = dnsCodes.RECORD_TYPES.A;
@@ -47,7 +48,19 @@ exports.ARecord = function ARecord(domainName, ttl, ipAddress) {
 
   this.domainName = domainName;
   this.ttl = ttl;
-  this.ipAddress = ipAddress; 
+  this.ipAddress = ipAddress;
+};
+
+/**
+ * Get the A Record as a ByteArray object.
+ *
+ * The DNS spec indicates that an A Record is represented in byte form as
+ * follows.
+ *
+ *
+ */
+exports.ARecord.prototype.convertToByteArray = function() {
+  throw new Error('unimplemented');
 };
 
 /**
@@ -107,4 +120,4 @@ exports.SrvRecord = function SrvRecord(
   this.weight = weight;
   this.port = port;
   this.targetDomain = targetDomain;
-}
+};
