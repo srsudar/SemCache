@@ -1,6 +1,17 @@
 /* global exports, require */
 'use strict';
 
+var byteArray = require('./byte-array-sem');
+var dnsUtil = require('./dns-util');
+
+var NUM_OCTETS_TYPE = 2;
+var NUM_OCTETS_CLASS = 2;
+var NUM_OCTETS_TTL = 4;
+var NUM_OCTETS_RESOURCE_DATA_LENGTH = 2;
+
+/** An A Record has for bytes, all representing an IP address. */
+var NUM_OCTETS_RESOURCE_DATA_A_RECORD = 4;
+
 /**
  * A resource record (RR) is a component of a DNS message. They share a similar
  * structure but contain different information.
@@ -34,8 +45,15 @@ var dnsCodes = require('./dns-codes-sem');
  * ttl: the time to live
  * ipAddress: the IP address of the domainName. This must be a string
  *   representation (e.g. '192.3.34.17').
+ * recordClass: the class of the record type. This is optional, and if not
+ *   present or is not truthy will be set as IN for internet traffic.
  */
-exports.ARecord = function ARecord(domainName, ttl, ipAddress) {
+exports.ARecord = function ARecord(
+  domainName,
+  ttl,
+  ipAddress,
+  recordClass
+) {
   if (!(this instanceof ARecord)) {
     throw new Error('ARecord must be called with new');
   }
@@ -43,8 +61,13 @@ exports.ARecord = function ARecord(domainName, ttl, ipAddress) {
   if ((typeof ipAddress) !== 'string') {
     throw new Error('ipAddress must be a String: ' + ipAddress);
   }
+  
+  if (!recordClass) {
+    recordClass = dnsCodes.CLASS_CODES.IN;
+  }
+
   this.recordType = dnsCodes.RECORD_TYPES.A;
-  this.recordClass = dnsCodes.CLASS_CODES.IN;
+  this.recordClass = recordClass;
 
   this.domainName = domainName;
   this.ttl = ttl;
@@ -57,10 +80,69 @@ exports.ARecord = function ARecord(domainName, ttl, ipAddress) {
  * The DNS spec indicates that an A Record is represented in byte form as
  * follows.
  *
+ * The common fields as indicated in getCommonFieldsAsByteArray.
  *
+ * 2 octets representing the number 4, to indicate that 4 bytes follow.
+ *
+ * 4 octets representing a 4-byte IP address
  */
 exports.ARecord.prototype.convertToByteArray = function() {
-  throw new Error('unimplemented');
+  var result = exports.getCommonFieldsAsByteArray(
+    this.domainName,
+    this.recordType,
+    this.recordClass,
+    this.ttl
+  );
+
+  // First we add the length of the resource data.
+  result.push(
+    NUM_OCTETS_RESOURCE_DATA_A_RECORD, 
+    NUM_OCTETS_RESOURCE_DATA_LENGTH
+  );
+
+  // Then add the IP address itself.
+  var ipStringAsBytes = dnsUtil.getIpStringAsByteArray(this.ipAddress);
+  result.append(ipStringAsBytes);
+
+  return result;
+};
+
+/**
+ * Create an A Record from a ByteArrayReader object. The reader should be at
+ * the correct cursor position, at the domain name of the A Record.
+ */
+exports.createARecordFromReader = function(reader) {
+  var commonFields = exports.getCommonFieldsFromByteArrayReader(reader);
+
+  if (commonFields.rrType !== dnsCodes.RECORD_TYPES.A) {
+    throw new Error(
+      'De-serialized A Record does not have A Record type: ' + 
+        commonFields.rrType
+    );
+  }
+
+  // And now we recover just the resource length and resource data.
+  var resourceLength = reader.getValue(NUM_OCTETS_RESOURCE_DATA_LENGTH);
+
+  // For an A Record this should always be 4.
+  if (resourceLength !== NUM_OCTETS_RESOURCE_DATA_A_RECORD) {
+    throw new Error(
+      'Recovered resource length does not match expected value for A ' +
+        '  Record: ' +
+        resourceLength
+    );
+  }
+
+  var ipString = dnsUtil.getIpStringFromByteArrayReader(reader);
+
+  var result = new exports.ARecord(
+    commonFields.domainName,
+    commonFields.ttl,
+    ipString,
+    commonFields.rrClass
+  );
+
+  return result;
 };
 
 /**
@@ -120,4 +202,58 @@ exports.SrvRecord = function SrvRecord(
   this.weight = weight;
   this.port = port;
   this.targetDomain = targetDomain;
+};
+
+/**
+ * Get the common components of a RR as a ByteArray. As specified by the DNS
+ * spec and 'TCP/IP Illustrated, Volume 1' by Stevens, the format is as
+ * follows:
+ *
+ * Variable number of octets encoding the domain name to which the RR is
+ *   responding.
+ *
+ * 2 octets representing the RR type
+ *
+ * 2 octets representing the RR class
+ *
+ * 4 octets representing the TTL
+ */
+exports.getCommonFieldsAsByteArray = function(
+  domainName,
+  rrType,
+  rrClass,
+  ttl
+) {
+  var result = new byteArray.ByteArray();
+
+  var domainNameAsBytes = dnsUtil.getDomainAsByteArray(domainName);
+  result.append(domainNameAsBytes);
+
+  result.push(rrType, NUM_OCTETS_TYPE);
+  result.push(rrClass, NUM_OCTETS_CLASS);
+  result.push(ttl, NUM_OCTETS_TTL);
+
+  return result;
+};
+
+/**
+ * Extract the common fields from the reader as encoded by
+ * getCommonFieldsAsByteArray.
+ *
+ * Returns an object with fields domainName, rrType, rrClass, and ttl.
+ */
+exports.getCommonFieldsFromByteArrayReader = function(reader) {
+  var domainName = dnsUtil.getDomainFromByteArrayReader(reader);
+  var rrType = reader.getValue(NUM_OCTETS_TYPE);
+  var rrClass = reader.getValue(NUM_OCTETS_CLASS);
+  var ttl = reader.getValue(NUM_OCTETS_TTL);
+
+  var result = {
+    domainName: domainName,
+    rrType: rrType,
+    rrClass: rrClass,
+    ttl: ttl
+  };
+
+  return result;
 };

@@ -65,3 +65,47 @@ test('create an SrvRecord', function(t) {
 
   t.end();
 });
+
+test('can encode and decode common RR fields', function(t) {
+  var domainName = 'hello.there.com';
+  var rrType = 3;
+  var rrClass = 4;
+  var ttl = 36000;
+
+  var byteArr = resRec.getCommonFieldsAsByteArray(
+    domainName,
+    rrType,
+    rrClass,
+    ttl
+  );
+
+  var recovered = resRec.getCommonFieldsFromByteArrayReader(
+    byteArr.getReader()
+  );
+
+  t.equal(recovered.domainName, domainName);
+  t.equal(recovered.rrType, rrType);
+  t.equal(recovered.rrClass, rrClass);
+  t.equal(recovered.ttl, ttl);
+
+  t.end();
+});
+
+test('can encode and decode A Record', function(t) {
+  var domainName = 'happy.days.org';
+  // We'll use the real A Record value, as the deserialization code alerts with
+  // an error if you aren't deserializing an A Record.
+  var ipAddress = '193.198.2.51';
+  var rrClass = 4;
+  var ttl = 123456;
+
+  var aRecord = new resRec.ARecord(domainName, ttl, ipAddress, rrClass);
+
+  var byteArr = aRecord.convertToByteArray();
+
+  var recovered = resRec.createARecordFromReader(byteArr.getReader());
+
+  t.deepEqual(recovered, aRecord);
+
+  t.end();
+});

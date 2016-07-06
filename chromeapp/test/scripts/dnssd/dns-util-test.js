@@ -61,9 +61,6 @@ test('getDomainAsByteArray outputs correct bytes for example', function(t) {
   var expected = getByteArrayForExample();
   var actual = dnsUtil.getDomainAsByteArray(domainName);
 
-  var er = expected.getReader();
-  var ar = expected.getReader();
-
   t.deepEqual(actual, expected);
 
   t.end();
@@ -123,5 +120,101 @@ test('getDomainFromByteArrayReader returns with correct offset', function(t) {
   t.equal(recoveredDomain, EXAMPLE_URL);
   t.equal(recoveredLastValue, lastValue);
   
+  t.end();
+});
+
+test('getIpStringAsByteArray for common IP address', function(t) {
+  var ipAddress = '155.33.17.68';
+
+  var actual = dnsUtil.getIpStringAsByteArray(ipAddress);
+  
+  var expected = new byteArray.ByteArray();
+  expected.push(155, 1);
+  expected.push(33, 1);
+  expected.push(17, 1);
+  expected.push(68, 1);
+
+  t.deepEqual(actual, expected);
+
+  t.end();
+});
+
+test('getIpStringAsByteArray for 255.255.255.255', function(t) {
+  var ipAddress = '255.255.255.255';
+
+  var actual = dnsUtil.getIpStringAsByteArray(ipAddress);
+  
+  var expected = new byteArray.ByteArray();
+  expected.push(255, 1);
+  expected.push(255, 1);
+  expected.push(255, 1);
+  expected.push(255, 1);
+
+  t.deepEqual(actual, expected);
+
+  t.end();
+});
+
+test('getIpStringAsByteArray for 0.0.0.0', function(t) {
+  var ipAddress = '0.0.0.0';
+
+  var actual = dnsUtil.getIpStringAsByteArray(ipAddress);
+  
+  var expected = new byteArray.ByteArray();
+  expected.push(0, 1);
+  expected.push(0, 1);
+  expected.push(0, 1);
+  expected.push(0, 1);
+
+  t.deepEqual(actual, expected);
+
+  t.end();
+});
+
+test('getIpStringFromByteArrayReader for 255.255.255.255', function(t) {
+  var expected = '255.255.255.255';
+
+  var byteArr = new byteArray.ByteArray();
+  byteArr.push(255, 1);
+  byteArr.push(255, 1);
+  byteArr.push(255, 1);
+  byteArr.push(255, 1);
+
+  var actual = dnsUtil.getIpStringFromByteArrayReader(byteArr.getReader());
+
+  t.equal(actual, expected);
+
+  t.end();
+});
+
+test('getIpStringFromByteArrayReader for 0.0.0.0', function(t) {
+  var expected = '0.0.0.0';
+
+  var byteArr = new byteArray.ByteArray();
+  byteArr.push(0, 1);
+  byteArr.push(0, 1);
+  byteArr.push(0, 1);
+  byteArr.push(0, 1);
+
+  var actual = dnsUtil.getIpStringFromByteArrayReader(byteArr.getReader());
+
+  t.equal(actual, expected);
+
+  t.end();
+});
+
+test('getIpStringFromByteArrayReader for common IP address', function(t) {
+  var expected = '155.33.17.68';
+
+  var byteArr = new byteArray.ByteArray();
+  byteArr.push(155, 1);
+  byteArr.push(33, 1);
+  byteArr.push(17, 1);
+  byteArr.push(68, 1);
+
+  var actual = dnsUtil.getIpStringFromByteArrayReader(byteArr.getReader());
+
+  t.equal(actual, expected);
+
   t.end();
 });

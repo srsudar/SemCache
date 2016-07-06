@@ -122,3 +122,46 @@ exports.getDomainFromByteArrayReader = function(reader) {
 
   return result;
 };
+
+/**
+ * Convert a string representation of an IP address to a ByteArray.
+ * '155.33.17.68' would return a ByteArray with length 4, corresponding to the
+ * bytes 155, 33, 17, 68.
+ */
+exports.getIpStringAsByteArray = function(ipAddress) {
+  var parts = ipAddress.split('.');
+
+  if (parts.length < 4) {
+    throw new Error('IP string does not have 4 parts: ' + ipAddress);
+  }
+
+  var result = new byteArray.ByteArray();
+  
+  parts.forEach(part => {
+    var intValue = parseInt(part);
+    if (intValue < 0 || intValue > 255) {
+      throw new Error('A byte of the IP address < 0 or > 255: ' + ipAddress);
+    }
+    result.push(intValue, 1);
+  });
+
+  return result;
+};
+
+/**
+ * Recover an IP address in string representation from the ByteArrayReader.
+ */
+exports.getIpStringFromByteArrayReader = function(reader) {
+  // We assume a single byte representing each string.
+  var parts = [];
+
+  var numParts = 4;
+  for (var i = 0; i < numParts; i++) {
+    var intValue = reader.getValue(1);
+    var stringValue = intValue.toString();
+    parts.push(stringValue);
+  }
+
+  var result = parts.join('.');
+  return result;
+};
