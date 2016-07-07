@@ -3,6 +3,10 @@
 
 /**
  * The client API for interacting with mDNS and DNS-SD.
+ *
+ * This is based in part on the Bonjour APIs outlined in 'Zero Configuration
+ * Networking: The Definitive Guide' by Cheshire and Steinberg in order to
+ * provide a familiar interface.
  */
 
 /**
@@ -18,6 +22,44 @@ function hasLocalDomain() {
  */
 exports.isDomainAvailable = function(domainName) {
   return new Promise(domainName);
+};
+
+/**
+ * Register a service via mDNS. Returns a Promise that resolves with an object
+ * like the following:
+ *
+ * {
+ *   serviceName: "Sam's SemCache",
+ *   type: "_http._local",
+ *   domain: "laptop.local"
+ * }
+ *
+ * name: a user-friendly string to be the name of the instance, e.g. "Sam's
+ *   SemCache".
+ * type: the service type string. This should be the protocol spoken and the
+ *   transport protocol, eg "_http._tcp".
+ * port: the port the service is available on.
+ */
+exports.register = function(name, type, port) {
+  throw new Error('unimplemented');
+};
+
+/**
+ * Browse for services of a given type. Returns a promise that resolves with
+ * a list of objects like the following:
+ *
+ * {
+ *   serviceName: "Sam's SemCache",
+ *   type: "_http._local",
+ *   domain: "laptop.local",
+ *   port: 8889
+ * }
+ *
+ * type: the service string for the type of services queried for, eg
+ * "_http._tcp".
+ */
+exports.browse = function(type) {
+
 };
 
 /**
