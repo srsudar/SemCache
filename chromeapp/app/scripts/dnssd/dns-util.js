@@ -89,7 +89,15 @@ exports.getDomainFromByteArrayReader = function(reader) {
   // We expect a series of length charCode pairs, ending when the final length
   // field is a 0. We'll do this by examining a single label at a time.
   var lengthOfCurrentLabel = -1;
+  var iteration = 0;
+  // Sanity check because while loops are dangerous when faced with outside
+  // data.
+  var maxIterations = 10;
   while (lengthOfCurrentLabel !== 0) {
+    if (iteration > maxIterations) {
+      throw new Error('Exceeded max iterations, likely malformed data');
+    }
+
     // Get the first length, consuming the first byte of the reader.
     lengthOfCurrentLabel = reader.getValue(1);
 
@@ -112,6 +120,8 @@ exports.getDomainFromByteArrayReader = function(reader) {
     if (lengthOfCurrentLabel !== 0) {
       result += '.';
     }
+
+    iteration += 1;
   }
 
   // Unless we have an empty string, we've added one too many dots due to the

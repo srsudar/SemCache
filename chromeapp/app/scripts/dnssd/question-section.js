@@ -66,7 +66,7 @@ exports.QuestionSection.prototype.convertToByteArray = function() {
 
 /**
  * Create a QuestionSection from a ByteArrayReader as serialized by
- * convertToByteArra().
+ * convertToByteArray().
  */
 exports.createQuestionFromReader = function(reader) {
   var queryName = dnsUtil.getDomainFromByteArrayReader(reader);

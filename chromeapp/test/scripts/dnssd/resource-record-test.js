@@ -2,13 +2,12 @@
 var test = require('tape');
 var resRec = require('../../../app/scripts/dnssd/resource-record');
 var dnsCodes = require('../../../app/scripts/dnssd/dns-codes-sem');
+var byteArray = require('../../../app/scripts/dnssd/byte-array-sem');
 
 test('create an ARecord', function(t) {
   var domainName = 'www.example.com';
   var ttl = 10;
   var ipAddress = '155.33.17.68';
-  // // Corresponds to 155.33.17.68
-  // var ipAddress = 0x9b211144;
   
   var result = new resRec.ARecord(domainName, ttl, ipAddress);
 
@@ -152,6 +151,40 @@ test('can encode and decode SRV Record', function(t) {
   var recovered = resRec.createSrvRecordFromReader(byteArr.getReader());
 
   t.deepEqual(recovered, srvRecord);
+
+  t.end();
+});
+
+test('peek type in reader correct', function(t) {
+  // We will create two aRecords and focus on peeking the type of the second
+  // one, ensuring that the cursor position in the reader isn't mutated.
+  var domainName = 'www.example.com';
+  var ttl = 10;
+  var ipAddress = '155.33.17.68';
+  var domainName2 = 'www.fancy.com';
+  
+  var aRecord1 = new resRec.ARecord(domainName, ttl, ipAddress);
+  var aRecord2 = new resRec.ARecord(domainName2, ttl, ipAddress);
+
+  var byteArr1 = aRecord1.convertToByteArray();
+  var byteArr2 = aRecord2.convertToByteArray();
+
+  var byteArr = new byteArray.ByteArray();
+
+  byteArr.append(byteArr1);
+  byteArr.append(byteArr2);
+  var reader = byteArr.getReader();
+
+  var recovered1 = resRec.createARecordFromReader(reader);
+  t.deepEqual(recovered1, aRecord1);
+
+  var expected = dnsCodes.RECORD_TYPES.A;
+  var actual = resRec.peekTypeInReader(reader);
+  t.equal(actual, expected);
+
+  // And make sure we didn't change the position of the reader.
+  var recovered2 = resRec.createARecordFromReader(reader);
+  t.deepEqual(recovered2, aRecord2);
 
   t.end();
 });

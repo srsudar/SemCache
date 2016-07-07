@@ -1,5 +1,4 @@
-/*jshint esnext:true*/
-/*exported ByteArray*/
+/*jshint esnext:true, bitwise: false */
 'use strict';
 
 /*
@@ -41,7 +40,48 @@
 
 var BinaryUtils = require('./binary-utils');
 
-var DEFAULT_SIZE = 256;
+var DEFAULT_SIZE = 512;
+
+/**
+ *  Bit   1-Byte    2-Bytes     3-Bytes     4-Bytes
+ *  -----------------------------------------------
+ *    0        1        256       65536    16777216
+ *    1        2        512      131072    33554432
+ *    2        4       1024      262144    67108864
+ *    3        8       2048      524288   134217728
+ *    4       16       4096     1048576   268435456
+ *    5       32       8192     2097152   536870912
+ *    6       64      16384     4194304  1073741824
+ *    7      128      32768     8388608  2147483648
+ *  -----------------------------------------------
+ *  Offset     0        255       65535    16777215
+ *  Total    255      65535    16777215  4294967295
+ */
+function valueToUint8Array(value, length) {
+  var arrayBuffer = new ArrayBuffer(length);
+  var uint8Array = new Uint8Array(arrayBuffer);
+  for (var i = length - 1; i >= 0; i--) {
+    uint8Array[i] = value & 0xff;
+    value = value >> 8;
+  }
+
+  return uint8Array;
+}
+
+function uint8ArrayToValue(uint8Array) {
+  var length = uint8Array.length;
+  if (length === 0) {
+    return null;
+  }
+
+  var value = 0;
+  for (var i = 0; i < length; i++) {
+    value = value << 8;
+    value += uint8Array[i];
+  }
+
+  return value;
+}
 
 /**
  * Create a new ByteArray. 
@@ -73,7 +113,7 @@ exports.ByteArray = function ByteArray(maxBytesOrData) {
   this._cursor = 0;
 
 
-}
+};
 
 exports.ByteArray.prototype.constructor = exports.ByteArray;
 
@@ -118,7 +158,7 @@ exports.ByteArray.prototype.getReader = function(startByte) {
 exports.ByteArrayReader = function ByteArrayReader(byteArray, startByte) {
   this.byteArray = byteArray;
   this.cursor = startByte || 0;
-}
+};
 
 exports.ByteArrayReader.prototype.constructor = exports.ByteArrayReader;
 
@@ -163,44 +203,3 @@ exports.ByteArrayReader.prototype.getValue = function(length) {
 
   return uint8ArrayToValue(new Uint8Array(byteArray.buffer));
 };
-
-/**
- *  Bit   1-Byte    2-Bytes     3-Bytes     4-Bytes
- *  -----------------------------------------------
- *    0        1        256       65536    16777216
- *    1        2        512      131072    33554432
- *    2        4       1024      262144    67108864
- *    3        8       2048      524288   134217728
- *    4       16       4096     1048576   268435456
- *    5       32       8192     2097152   536870912
- *    6       64      16384     4194304  1073741824
- *    7      128      32768     8388608  2147483648
- *  -----------------------------------------------
- *  Offset     0        255       65535    16777215
- *  Total    255      65535    16777215  4294967295
- */
-function valueToUint8Array(value, length) {
-  var arrayBuffer = new ArrayBuffer(length);
-  var uint8Array = new Uint8Array(arrayBuffer);
-  for (var i = length - 1; i >= 0; i--) {
-    uint8Array[i] = value & 0xff;
-    value = value >> 8;
-  }
-
-  return uint8Array;
-}
-
-function uint8ArrayToValue(uint8Array) {
-  var length = uint8Array.length;
-  if (length === 0) {
-    return null;
-  }
-
-  var value = 0;
-  for (var i = 0; i < length; i++) {
-    value = value << 8;
-    value += uint8Array[i];
-  }
-
-  return value;
-}

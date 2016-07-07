@@ -467,3 +467,22 @@ exports.getCommonFieldsFromByteArrayReader = function(reader) {
 
   return result;
 };
+
+/**
+ * Return type of the Resource Record queued up in the reader. Peaking does not
+ * affect the position of the underlying reader.
+ */
+exports.peekTypeInReader = function(reader) {
+  // Getting values from the reader normally consumes bytes. Create a defensive
+  // copy to work with instead.
+  var byteArr = reader.byteArray;
+  var startByte = reader.cursor;
+  var safeReader = byteArr.getReader(startByte);
+
+  // Consume an encoded domain name. Note this means we're computing domain
+  // names twice, which isn't optimal.
+  dnsUtil.getDomainFromByteArrayReader(safeReader);
+  // After the domain, the type is next.
+  var result = safeReader.getValue(NUM_OCTETS_TYPE);
+  return result;
+};
