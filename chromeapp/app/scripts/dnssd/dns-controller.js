@@ -7,11 +7,6 @@ var dnsPacket = require('./dns-packet-sem');
 var byteArray = require('./byte-array-sem');
 var dnsCodes = require('./dns-codes-sem');
 var qSection = require('./question-section');
-var resRec = require('./resource-record');
-
-var DEFAULT_TTL = 10;
-var DEFAULT_PRIORITY = 0;
-var DEFAULT_WEIGHT = 0;
 
 /**
  * This module maintains DNS state and serves as the DNS server. It is
@@ -30,8 +25,8 @@ exports.DNSSD_PORT = DNSSD_PORT;
 
 /**
  * These are the records owned by this module. They are maintained in an object
- * of record type (A, SRV, etc) to an object mapping query name to record.
- * E.g.: {A: {'www.example.com': ARecord} }
+ * of domain name to array of records, e.g. { 'www.example.com': [Object,
+ * Object, Object], 'www.foo.com': [Object] }.
  */
 var records = {};
 
@@ -155,18 +150,16 @@ exports.getSocket = function() {
       // We've bound to the DNSSD port successfully.
       return chromeUdp.joinGroup(socketInfo.socketId, DNSSD_MULTICAST_GROUP);
     }, function error(error) {
-      console.log('Error when binding DNSSD port: ', error);
       chromeUdp.closeAllSockets();
-      reject();
+      reject(new Error('Error when binding DNSSD port:', error));
     })
     .then(function joinedGroup() {
       socket = new chromeUdp.ChromeUdpSocket(socketInfo);
       started = true;
       resolve(socket);
     }, function failedToJoinGroup(result) {
-      console.log('Error when joining DNSSD group: ', result);
       chromeUdp.closeAllSockets();
-      reject();
+      reject(new Error('Error when joining DNSSD group: ', result));
     });
   });
 };
@@ -262,46 +255,13 @@ exports.queryForSrvRecord = function(instanceName) {
 };
 
 /**
- * Add an SRV Record to the DNS system.
+ * Add a record corresponding to name to the internal data structures.
  */
-exports.addSrvRecord = function(
-  instanceName,
-  port,
-  domainName,
-  ttl,
-  priority,
-  weight
-) {
-  // Create an empty object if there isn't one already present.
-  var srvRecords = records.SRV || {};
-  ttl = ttl || DEFAULT_TTL;
-  priority = priority || DEFAULT_PRIORITY;
-  weight = weight || DEFAULT_WEIGHT;
-
-  var record = new resRec.SrvRecord(
-    instanceName,
-    ttl,
-    priority,
-    weight,
-    port,
-    domainName
-  );
-
-  srvRecords[instanceName] = record;
-  records.SRV = srvRecords;
-};
-
-/**
- * Add an A Record to the DNS System.
- */
-exports.addARecord = function(domainName, ipString) {
-  console.log(domainName, ipString);
-};
-
-/**
- * Add a PTR Record to the DNS System.
- */
-exports.addPtrRecord = function(serviceInstance, serviceDomain) {
-  // unsure if this is the right signature
-  console.log(serviceInstance, serviceDomain);
+exports.addRecord = function(name, record) {
+  var existingRecords = records[name];
+  if (!existingRecords) {
+    existingRecords = [];
+    records[name] = existingRecords;
+  }
+  existingRecords.push(record);
 };

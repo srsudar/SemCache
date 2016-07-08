@@ -22,7 +22,7 @@
 
 var dnsUtil = require('./dns-util');
 var dnsController = require('./dns-controller');
-var dnsCodes = require('./dns-codes');
+var dnsCodes = require('./dns-codes-sem');
 
 var MAX_PROBE_WAIT = 250;
 
@@ -60,13 +60,13 @@ exports.packetIsForQuery = function(packet, queryName) {
  * Generates a semi-random hostname ending with ".local". An example might be
  * 'host123.local'.
  */
-function createHostName() {
+exports.createHostName = function() {
   var start = 'host';
   // We'll return within the range 0, 1000.
   var randomInt = dnsUtil.randomInt(0, 1001);
   var result = start + randomInt + dnsUtil.getLocalSuffix();
   return result;
-}
+};
 
 /**
  * Register a service via mDNS. Returns a Promise that resolves with an object
@@ -85,7 +85,7 @@ function createHostName() {
  *   transport protocol, eg "_http._tcp".
  * port: the port the service is available on.
  */
-exports.register = function(name, type, port) {
+exports.register = function(host, name, type, port) {
   // Registration is a multi-step process. According to the RFC, section 8.
   //
   // 8.1 indicates that the first step is to send an mDNS query of type ANY
@@ -104,29 +104,21 @@ exports.register = function(name, type, port) {
   // the newly created resource records in the Answer Section. This must be
   // performed twice, one second apart.
 
-  // Start by selecting a semi-random hostname.
-  var host = createHostName();
-
   var result = new Promise(function(resolve, reject) {
     // We start by probing for messages of type ANY with the hostname.
-    var hostProbe = exports.issueProbe(
+    exports.issueProbe(
       host,
       dnsCodes.RECORD_TYPES.ANY,
       dnsCodes.CLASS_CODES.IN
-    );
-
-    hostProbe.catch(function failure() {
-      reject(new Error('host taken: ' + host));
-    });
-
-    hostProbe.then(function success() {
+    ).then(function hostFree() {
       return exports.issueProbe(
         name,
         dnsCodes.RECORD_TYPES.ANY,
         dnsCodes.CLASS_CODES.IN
       );
-    })
-    .then(function success() {
+    }, function hostTaken() {
+      reject(new Error('host taken: ' + host));
+    }).then(function instanceFree() {
       // TODO: make records and issue records now that we know we don't have
       // conflicts.
       resolve(
@@ -137,9 +129,8 @@ exports.register = function(name, type, port) {
           port: port
         }
       );
-    })
-    .catch(function failure() {
-      reject(new Error('instance name taken: ' + name));
+    }, function instanceTaken() {
+      reject(new Error('instance taken: ' + name));
     });
   });
 

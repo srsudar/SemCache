@@ -10,6 +10,7 @@ var dnsCodes = require('../../../app/scripts/dnssd/dns-codes-sem');
 var dnsPacket = require('../../../app/scripts/dnssd/dns-packet-sem');
 var qSection = require('../../../app/scripts/dnssd/question-section');
 var byteArray = require('../../../app/scripts/dnssd/byte-array-sem');
+var resRec = require('../../../app/scripts/dnssd/resource-record');
 
 /**
  * Manipulating the object directly leads to polluting the require cache. Any
@@ -68,6 +69,85 @@ test('getSocket follows success chain and resolves with socket', function(t) {
     t.end();
   }, function error() {
     t.fail(); 
+    t.end();
+  });
+
+  resetDnsController();
+});
+
+test('getSocket fails if bind fails', function(t) {
+  var chromeUdpStub = {};
+
+  var fakeInfo = {
+    socketId: 12,
+    localPort: 8887
+  };
+
+  var closeAllSocketsSpy = sinon.spy();
+
+  chromeUdpStub.addOnReceiveListener = function() {};
+  chromeUdpStub.closeAllSockets = closeAllSocketsSpy;
+  chromeUdpStub.create = sinon.stub().resolves(fakeInfo);
+  chromeUdpStub.bind = sinon.stub().rejects('auto reject');
+
+  var mockedController = proxyquire(
+    '../../../app/scripts/dnssd/dns-controller.js',
+    {
+      './chromeUdp': chromeUdpStub
+    }
+  );
+
+  var result = mockedController.getSocket();
+  result.then(function success() {
+    t.fail('should not succeed');
+    t.end();
+    resetDnsController();
+  }, function error(errorObj) {
+    var startsWithMessage = errorObj.message.startsWith(
+      'Error when binding DNSSD port'
+    );
+    t.true(startsWithMessage);
+    t.equal(closeAllSocketsSpy.callCount, 1);
+    t.end();
+  });
+
+  resetDnsController();
+});
+
+test('getSocket fails if join group fails', function(t) {
+  var chromeUdpStub = {};
+
+  var fakeInfo = {
+    socketId: 12,
+    localPort: 8887
+  };
+  var closeAllSocketsSpy = sinon.spy();
+
+  chromeUdpStub.addOnReceiveListener = function() {};
+  chromeUdpStub.closeAllSockets = closeAllSocketsSpy;
+  chromeUdpStub.create = sinon.stub().resolves(fakeInfo);
+  chromeUdpStub.bind = sinon.stub().resolves();
+  chromeUdpStub.joinGroup = sinon.stub().rejects('auto reject');
+
+  var mockedController = proxyquire(
+    '../../../app/scripts/dnssd/dns-controller.js',
+    {
+      './chromeUdp': chromeUdpStub
+    }
+  );
+
+  var result = mockedController.getSocket();
+  result.then(function success() {
+    t.fail('should not succeed');
+    t.end();
+    resetDnsController();
+  }, function error(errorObj) {
+    var startsWithMessage = errorObj.message.startsWith(
+      'Error when joining DNSSD group'
+    );
+    t.true(startsWithMessage);
+    t.equal(closeAllSocketsSpy.callCount, 1);
+    t.end();
   });
 
   resetDnsController();
@@ -172,6 +252,42 @@ test('query calls send with correct args', function(t) {
 
   mockedController.getSocket = sinon.stub().resolves(socket);
   mockedController.query(qName, qType, qClass);
+
+  resetDnsController();
+});
+
+test('addRecord updates data structures', function(t) {
+  var aName = 'www.example.com';
+  var aRecord1 = new resRec.ARecord(aName, 10, '123.42.61.123', 2);
+  var aRecord2 = new resRec.ARecord(aName, 10, '124.42.61.123', 2);
+
+  var ptrName = '_print._tcp';
+  var ptrRecord1 = new resRec.PtrRecord(ptrName, 108, 'PrintsALot', 4);
+
+  var srvName = 'Sam Cache._semcache._tcp';
+  var srvRecord1 = new resRec.SrvRecord(srvName, 99, 0, 10, 8888, 'sam.local');
+
+  // We should start with an empty object.
+  var expectedRecords = {};
+  t.deepEqual(dnsController.getRecords(), expectedRecords);
+
+  expectedRecords[aName] = [aRecord1];
+  dnsController.addRecord(aName, aRecord1);
+  t.deepEqual(dnsController.getRecords(), expectedRecords);
+
+  expectedRecords[ptrName] = [ptrRecord1];
+  dnsController.addRecord(ptrName, ptrRecord1);
+  t.deepEqual(dnsController.getRecords(), expectedRecords);
+
+  expectedRecords[srvName] = [srvRecord1];
+  dnsController.addRecord(srvName, srvRecord1);
+  t.deepEqual(dnsController.getRecords(), expectedRecords);
+
+  expectedRecords[aName].push(aRecord2);
+  dnsController.addRecord(aName, aRecord2);
+  t.deepEqual(dnsController.getRecords(), expectedRecords);
+
+  t.end();
 
   resetDnsController();
 });

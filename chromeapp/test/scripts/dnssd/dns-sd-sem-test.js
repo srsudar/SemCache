@@ -212,3 +212,136 @@ test('receivedPacket false if packetIsForQuery false', function(t) {
 
   resetDnsSdSem();
 });
+
+test('register rejects if host taken', function(t) {
+  var dnssdSem = require('../../../app/scripts/dnssd/dns-sd-sem');
+  
+  var host = 'hostname.local';
+  var instanceName = 'my instance';
+  var type = '_semcache._tcp';
+  var port = 1234;
+
+  var calledHost;
+
+  var issueProbeCallCount = 0;
+  var issueProbeSpy = function(
+    hostParam
+  ) {
+    issueProbeCallCount += 1;
+    calledHost = hostParam;
+    return Promise.reject('auto reject of probe');
+  };
+  dnssdSem.issueProbe = issueProbeSpy;
+
+  var resultPromise = dnssdSem.register(host, instanceName, type, port);
+
+  resultPromise.then(function succeeded() {
+    // We are expecting to fail if the host is taken, so we should never
+    // resolve.
+    resetDnsSdSem();
+    t.fail();
+  }, function failed(failObj) {
+    // We rejected, as expected because the host was taken.
+    // Make sure we called issueProbe with the host
+    // console.log(failObj);
+    t.equal(calledHost, host);
+    t.equal(failObj.message, 'host taken: ' + host);
+    // We should only ever issue a single probe.
+    t.equal(issueProbeCallCount, 1);
+    t.true(true);
+    t.end();
+    resetDnsSdSem();
+  });
+});
+
+test('register rejects if instance taken', function(t) {
+  var dnssdSem = require('../../../app/scripts/dnssd/dns-sd-sem');
+  
+  var host = 'hostname.local';
+  var instanceName = 'my instance';
+  var type = '_semcache._tcp';
+  var port = 1234;
+
+  var calledHost;
+  var calledName;
+
+  var issueProbeCallCount = 0;
+  var issueProbeSpy = function(
+    hostParam
+  ) {
+    issueProbeCallCount += 1;
+    calledHost = hostParam;
+    if (issueProbeCallCount === 1 ) {
+      // We want to fulfill the first call, which is for the host
+      calledHost = hostParam;
+      return Promise.resolve('auto resolve of probe');
+    } else if (issueProbeCallCount === 2) {
+      calledName = hostParam;
+      return Promise.reject('auto reject of probe');
+    } else {
+      t.fail('called probe more than twice');
+    }
+  };
+  dnssdSem.issueProbe = issueProbeSpy;
+
+  var resultPromise = dnssdSem.register(host, instanceName, type, port);
+
+  resultPromise.then(function succeeded() {
+    // We are expecting to fail if the instance is taken, so we should never
+    // resolve.
+    resetDnsSdSem();
+    t.fail();
+  }, function failed(failObj) {
+    // We rejected, as expected because the instance was taken.
+    // Make sure we called issueProbe with the instance
+    t.equal(calledHost, instanceName);
+    t.equal(failObj.message, 'instance taken: ' + instanceName);
+    // We should issue two probes.
+    t.equal(issueProbeCallCount, 2);
+    t.true(true);
+    t.end();
+    resetDnsSdSem();
+  });
+});
+
+test('register resolves if name and host probe succeed', function(t) {
+  var dnssdSem = require('../../../app/scripts/dnssd/dns-sd-sem');
+  
+  var host = 'hostname.local';
+  var instanceName = 'my instance';
+  var type = '_semcache._tcp';
+  var port = 1234;
+
+  var issueProbeCallCount = 0;
+  var issueProbeSpy = function() {
+    issueProbeCallCount += 1;
+    // Make both promises succeed
+    return Promise.resolve('auto succeed in spy');
+  };
+  dnssdSem.issueProbe = issueProbeSpy;
+
+  var resultPromise = dnssdSem.register(host, instanceName, type, port);
+
+  var expected = {
+    serviceName: instanceName,
+    type: type,
+    domain: host,
+    port: port
+  };
+
+  resultPromise.then(function succeeded(resolveObj) {
+    // We are expecting to fail if the host is taken, so we should never
+    // resolve.
+    t.deepEqual(resolveObj, expected);
+    // TODO: test that we added records via dns-controller
+    t.fail('unimplemented verifying dns-controller');
+    // We should have issued 2 probes
+    t.equal(issueProbeCallCount, 2);
+    resetDnsSdSem();
+    t.end();
+  }, function failed() {
+    // We rejected, which should never happen.
+    t.fail('we should not reject in this case');
+    resetDnsSdSem();
+  });
+});
