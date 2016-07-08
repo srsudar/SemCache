@@ -47,11 +47,12 @@ exports.waitForProbeTime = function() {
  * Returns true if the DnsPacket is for this queryName.
  */
 exports.packetIsForQuery = function(packet, queryName) {
-  packet.questions.forEach(question => {
+  for (var i = 0; i < packet.questions.length; i++) {
+    var question = packet.questions[i];
     if (question.queryName === queryName) {
       return true;
     }
-  });
+  }
   return false;
 };
 

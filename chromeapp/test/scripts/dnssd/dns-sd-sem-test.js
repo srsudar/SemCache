@@ -3,6 +3,9 @@ var test = require('tape');
 var proxyquire = require('proxyquire');
 var sinon = require('sinon');
 
+var qRec = require('../../../app/scripts/dnssd/question-section');
+var dnsPacket = require('../../../app/scripts/dnssd/dns-packet-sem');
+
 /**
  * Manipulating the object directly leads to polluting the require cache. Any
  * test that modifies the required object should call this method to get a
@@ -120,4 +123,36 @@ test('issueProbe fails if received packets on second probe', function(t) {
 
 test('issueProbe fails if received packets on third probe', function(t) {
   probeRejectsHelper(2, t);
+});
+
+test('packetIsForQuery true if owns question', function(t) {
+  var dnssdSem = require('../../../app/scripts/dnssd/dns-sd-sem');
+
+  var qName = 'www.example.com';
+  var question = new qRec.QuestionSection(qName, 4, 5);
+  var packet = new dnsPacket.DnsPacket(
+    0, false, 0, false, false, false, false, 0
+  );
+
+  packet.addQuestion(question);
+
+  var actual = dnssdSem.packetIsForQuery(packet, qName);
+  t.true(actual);
+  t.end();
+});
+
+test('packetIsForQuery false if doesn not own question', function(t) {
+  var dnssdSem = require('../../../app/scripts/dnssd/dns-sd-sem');
+
+  var qName = 'www.example.com';
+  var question = new qRec.QuestionSection('other name', 4, 5);
+  var packet = new dnsPacket.DnsPacket(
+    0, false, 0, false, false, false, false, 0
+  );
+
+  packet.addQuestion(question);
+
+  var actual = dnssdSem.packetIsForQuery(packet, qName);
+  t.false(actual);
+  t.end();
 });
