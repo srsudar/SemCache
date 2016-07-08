@@ -64,8 +64,6 @@ function probeRejectsHelper(returnTrueAfterCall, t) {
     // our promise didn't resolve, meaning we failed.
     // We should have been called one more than we were permitting (i.e. a call
     // on the 0th call leads to a single call
-    console.log('return true after: ', returnTrueAfterCall);
-    console.log('received packet count: ', receivedPacketCallCount);
     t.equal(returnTrueAfterCall + 1, receivedPacketCallCount);
     t.equal(addOnReceiveCallbackSpy.callCount, 1);
     t.equal(removeOnReceiveCallbackSpy.callCount, 1);
@@ -155,4 +153,62 @@ test('packetIsForQuery false if doesn not own question', function(t) {
   var actual = dnssdSem.packetIsForQuery(packet, qName);
   t.false(actual);
   t.end();
+});
+
+test('receivedPacket calls packetIsForQuery on each packet', function(t) {
+  var dnssdSem = require('../../../app/scripts/dnssd/dns-sd-sem');
+
+  var packetIsForQuerySpy = sinon.spy();
+  dnssdSem.packetIsForQuery = packetIsForQuerySpy;
+
+  var first = 'a';
+  var second = 'b';
+  var third = 'c';
+  var packets = [];
+  packets.push(first);
+  packets.push(second);
+  packets.push(third);
+
+  var queryName = 'foobar';
+  dnssdSem.receivedPacket(packets, queryName);
+
+  t.equal(packetIsForQuerySpy.callCount, packets.length);
+  t.true(packetIsForQuerySpy.calledWith(first, queryName));
+  t.true(packetIsForQuerySpy.calledWith(second, queryName));
+  t.true(packetIsForQuerySpy.calledWith(third, queryName));
+  t.end();
+
+  resetDnsSdSem();
+});
+
+test('receivedPacket true if packetIsForQuery true', function(t) {
+  var dnssdSem = require('../../../app/scripts/dnssd/dns-sd-sem');
+
+  var packetIsForQueryStub = sinon.stub().returns(true);
+  dnssdSem.packetIsForQuery = packetIsForQueryStub; 
+
+  var packets = [];
+  packets.push('a');
+
+  var actual = dnssdSem.receivedPacket(packets, 'foo');
+  t.true(actual);
+  t.end();
+
+  resetDnsSdSem();
+});
+
+test('receivedPacket false if packetIsForQuery false', function(t) {
+  var dnssdSem = require('../../../app/scripts/dnssd/dns-sd-sem');
+
+  var packetIsForQueryStub = sinon.stub().returns(false);
+  dnssdSem.packetIsForQuery = packetIsForQueryStub; 
+
+  var packets = [];
+  packets.push('a');
+
+  var actual = dnssdSem.receivedPacket(packets, 'foo');
+  t.false(actual);
+  t.end();
+
+  resetDnsSdSem();
 });
