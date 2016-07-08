@@ -55,6 +55,7 @@ function probeRejectsHelper(returnTrueAfterCall, t) {
   );
 
   dnssdSem.receivedPacket = receivedPacketSpy;
+  dnssdSem.wait = () => Promise.resolve();
 
   t.plan(3);
 
@@ -98,6 +99,7 @@ test('issueProbe succeeds correctly', function(t) {
   );
 
   dnssdSem.receivedPacket = receivedPacketSpy;
+  dnssdSem.wait = () => Promise.resolve();
 
   t.plan(3);
 
@@ -236,6 +238,7 @@ test('register rejects if host taken', function(t) {
     return Promise.reject('auto reject of probe');
   };
   dnssdSem.issueProbe = issueProbeSpy;
+  dnssdSem.wait = () => Promise.resolve();
 
   var resultPromise = dnssdSem.register(host, instanceName, type, port);
 
