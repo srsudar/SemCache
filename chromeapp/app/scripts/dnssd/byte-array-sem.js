@@ -203,3 +203,13 @@ exports.ByteArrayReader.prototype.getValue = function(length) {
 
   return uint8ArrayToValue(new Uint8Array(byteArray.buffer));
 };
+
+/**
+ * Get the ByteArray object as a Uint8Array. This is truncated to the correct
+ * size. The ByteArray might be a larger size than necessary, but the
+ * Uint8Array is truncated to just the size that is actually used by the
+ * ByteArray.
+ */
+exports.getByteArrayAsUint8Array = function(byteArr) {
+  return new Uint8Array(byteArr._buffer, 0, byteArr._cursor);
+};

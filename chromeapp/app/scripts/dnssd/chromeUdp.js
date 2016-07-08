@@ -1,4 +1,4 @@
-/* globals Promise */
+/* globals Promise, chrome */
 'use strict';
 
 var DEBUG = true;
@@ -9,15 +9,28 @@ exports.ChromeUdpSocket = function ChromeUdpSocket(socketInfo) {
   }
   this.socketInfo = socketInfo;
   this.socketId = socketInfo.socketId;
+};
 
-  /**
-   * Send data over the port and return a promise with the sendInfo result.
-   * Behaves as a thin wrapper around chromeUdp.send.
-   */
-  this.send = function(arrayBuffer, address, port) {
-    return exports.send(this.socketId, arrayBuffer, address, port);
-  };
+/**
+ * Send data over the port and return a promise with the sendInfo result.
+ * Behaves as a thin wrapper around chromeUdp.send.
+ */
+exports.ChromeUdpSocket.prototype.send = function(arrayBuffer, address, port) {
+  return exports.send(this.socketId, arrayBuffer, address, port);
+};
 
+/**
+ * Add listener via call to chrome.sockets.udp.onReceive.addListener.
+ */
+exports.addOnReceiveListener = function(listener) {
+  chrome.sockets.udp.onReceive.addListener(listener);
+};
+
+/**
+ * Add listener via call to chrome.sockets.udp.onReceiveError.addListener.
+ */
+exports.addOnReceiveErrorListener = function(listener) {
+  chrome.sockets.udp.onReceiveError.addListener(listener);
 };
 
 exports.create = function(obj) {

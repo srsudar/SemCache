@@ -9,6 +9,22 @@ var byteArray = require('./byte-array-sem');
 var MAX_LABEL_LENGTH = 63;
 var OCTET_LABEL_LENGTH = 1;
 
+exports.DEBUG = true;
+
+/**
+ * Return the local suffix, i.e. ".local". The leading dot is included.
+ */
+exports.getLocalSuffix = function() {
+  return '.local';
+};
+
+/**
+ * Return a random integer between [min, max).
+ */
+exports.randomInt = function(min, max) {
+  return Math.floor(Math.random() * (max - min)) + min;
+};
+
 /**
  * Converts a domain name to a byte array. Despite the name, this can serialize
  * any '.' separated string. _semcache._http.local is not a domain name, eg,
