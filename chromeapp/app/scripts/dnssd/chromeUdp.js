@@ -134,3 +134,14 @@ exports.logSocketInfo = function(info) {
   console.log('    data: ', info.data);
   console.log('    info: ', info);
 };
+
+/**
+ * Returns a Promise that resolves with a list of network interfaces.
+ */
+exports.getNetworkInterfaces = function() {
+  return new Promise(function(resolve) {
+    chrome.system.network.getNetworkInterfaces(function(interfaces) {
+      resolve(interfaces);
+    });
+  });
+};

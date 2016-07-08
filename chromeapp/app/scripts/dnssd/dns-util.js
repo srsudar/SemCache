@@ -11,6 +11,10 @@ var OCTET_LABEL_LENGTH = 1;
 
 exports.DEBUG = true;
 
+exports.DEFAULT_TTL = 10;
+exports.DEFAULT_PRIORITY = 0;
+exports.DEFAULT_WEIGHT = 0;
+
 /**
  * Return the local suffix, i.e. ".local". The leading dot is included.
  */

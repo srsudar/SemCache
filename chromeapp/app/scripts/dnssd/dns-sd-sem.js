@@ -23,6 +23,8 @@
 var dnsUtil = require('./dns-util');
 var dnsController = require('./dns-controller');
 var dnsCodes = require('./dns-codes-sem');
+var resRec = require('./resource-record');
+var chromeUdp = require('./chromeUdp');
 
 var MAX_PROBE_WAIT = 250;
 
@@ -121,6 +123,8 @@ exports.register = function(host, name, type, port) {
     }).then(function instanceFree() {
       // TODO: make records and issue records now that we know we don't have
       // conflicts.
+      exports.createHostRecords(host);
+      exports.createServiceRecords(name, type, port, host);
       resolve(
         {
           serviceName: name,
@@ -135,6 +139,55 @@ exports.register = function(host, name, type, port) {
   });
 
   return result;
+};
+
+/**
+ * Register the host on the network. Assumes that a probe has occurred and the
+ * hostname is free.
+ */
+exports.createHostRecords = function(host) {
+  // This just consists of an A Record. Make an entry for every IPv4 address.
+  chromeUdp.getNetworkInterfaces().then(function success(interfaces) {
+    interfaces.forEach(iface => {
+      if (iface.address.indexOf(':') !== -1) {
+        console.log('Not yet supporting IPv6: ', iface);
+      } else {
+        var aRecord = new resRec.ARecord(
+          host,
+          dnsUtil.DEFAULT_TTL,
+          iface.address,
+          dnsCodes.CLASS_CODES.IN
+        );
+        dnsController.addRecord(host, aRecord);
+      }
+    });
+  });
+};
+
+/**
+ * Register the service on the network. Assumes that a probe has occured and
+ * the service name is free.
+ */
+exports.createServiceRecords = function(name, type, port, domain) {
+  // We need to add a PTR record and an SRV record.
+  var srvRecord = new resRec.SrvRecord(
+    name,
+    dnsUtil.DEFAULT_TTL,
+    dnsUtil.DEFAULT_PRIORITY,
+    dnsUtil.DEFAULT_WEIGHT,
+    port,
+    domain
+  );
+
+  var ptrRecord = new resRec.PtrRecord(
+    type,
+    dnsUtil.DEFAULT_TTL,
+    name,
+    dnsCodes.CLASS_CODES.IN
+  );
+
+  dnsController.addRecord(name, srvRecord);
+  dnsController.addRecord(type, ptrRecord);
 };
 
 exports.receivedPacket = function(packets, queryName) {

@@ -2,9 +2,13 @@
 var test = require('tape');
 var proxyquire = require('proxyquire');
 var sinon = require('sinon');
+require('sinon-as-promised');
 
 var qRec = require('../../../app/scripts/dnssd/question-section');
 var dnsPacket = require('../../../app/scripts/dnssd/dns-packet-sem');
+var resRec = require('../../../app/scripts/dnssd/resource-record');
+var dnsUtil = require('../../../app/scripts/dnssd/dns-util');
+var dnsCodes = require('../../../app/scripts/dnssd/dns-codes-sem');
 
 /**
  * Manipulating the object directly leads to polluting the require cache. Any
@@ -304,6 +308,96 @@ test('register rejects if instance taken', function(t) {
   });
 });
 
+test('createServiceRecords calls to create records correctly', function(t) {
+  var addRecordSpy = sinon.spy();
+  var dnssdSem = proxyquire(
+    '../../../app/scripts/dnssd/dns-sd-sem',
+    {
+      './dns-controller':
+      {
+        addRecord: addRecordSpy
+      }
+    }
+  );
+  
+  var name = 'fancy name';
+  var type = '_semcache._tcp';
+  var port = 8817;
+  var domain = 'computer.local';
+
+  var expectedSrvRecord = new resRec.SrvRecord(
+    name,
+    dnsUtil.DEFAULT_TTL,
+    dnsUtil.DEFAULT_PRIORITY,
+    dnsUtil.DEFAULT_WEIGHT,
+    port,
+    domain
+  );
+
+  var expectedPtrRecord = new resRec.PtrRecord(
+    type,
+    dnsUtil.DEFAULT_TTL,
+    name,
+    dnsCodes.CLASS_CODES.IN
+  );
+
+  dnssdSem.createServiceRecords(name, type, port, domain);
+
+  t.equal(addRecordSpy.callCount, 2);
+
+  var firstArgs = addRecordSpy.args[0];
+  var secondArgs = addRecordSpy.args[1];
+
+  t.equal(firstArgs[0], name);
+  t.deepEqual(firstArgs[1], expectedSrvRecord);
+
+  t.equal(secondArgs[0], type);
+  t.deepEqual(secondArgs[1], expectedPtrRecord);
+
+  t.end();
+  resetDnsSdSem();
+});
+
+test('createHostRecords calls to create records correctly', function(t) {
+  var iface = {
+    name: 'eth0',
+    address: '123.456.789.91',
+    prefixLength: 0
+  };
+
+  var host = 'hostname.local';
+
+  var expectedRecord = new resRec.ARecord(
+    host,
+    dnsUtil.DEFAULT_TTL,
+    iface.address,
+    dnsCodes.CLASS_CODES.IN
+  );
+
+  var addRecordSpy = function(hostParam, recordParam) {
+    t.equal(hostParam, host);
+    t.deepEqual(recordParam, expectedRecord);
+    t.end();
+  };
+
+  var dnssdSem = proxyquire(
+    '../../../app/scripts/dnssd/dns-sd-sem',
+    {
+      './chromeUdp':
+      {
+        getNetworkInterfaces: sinon.stub().resolves([iface])
+      },
+      './dns-controller':
+      {
+        addRecord: addRecordSpy
+      }
+    }
+  );
+
+  dnssdSem.createHostRecords(host);
+  resetDnsSdSem();
+});
+
 test('register resolves if name and host probe succeed', function(t) {
   var dnssdSem = require('../../../app/scripts/dnssd/dns-sd-sem');
   
@@ -320,6 +414,11 @@ test('register resolves if name and host probe succeed', function(t) {
   };
   dnssdSem.issueProbe = issueProbeSpy;
 
+  var createHostRecordsSpy = sinon.spy();
+  var createServiceRecordsSpy = sinon.spy();
+  dnssdSem.createHostRecords = createHostRecordsSpy;
+  dnssdSem.createServiceRecords= createServiceRecordsSpy;
+
   var resultPromise = dnssdSem.register(host, instanceName, type, port);
 
   var expected = {
@@ -333,8 +432,8 @@ test('register resolves if name and host probe succeed', function(t) {
     // We are expecting to fail if the host is taken, so we should never
     // resolve.
     t.deepEqual(resolveObj, expected);
-    // TODO: test that we added records via dns-controller
-    t.fail('unimplemented verifying dns-controller');
+    t.true(createHostRecordsSpy.calledWith(host));
+    t.true(createServiceRecordsSpy.calledWith(instanceName, type, port, host));
     // We should have issued 2 probes
     t.equal(issueProbeCallCount, 2);
     resetDnsSdSem();
