@@ -50,8 +50,9 @@ exports.bind = function(socketId, address, port) {
         console.log('    address: ', address);
         console.log('    port: ', port);
         reject(result);
+      } else {
+        resolve(result);
       }
-      resolve(result);
     });
   });
 };
@@ -74,8 +75,9 @@ exports.send = function(socketId, arrayBuffer, address, port) {
         if (sendInfo.resultCode < 0) {
           console.log('chromeUdp.send: result < 0, rejecting');
           reject(sendInfo);
+        } else {
+          resolve(sendInfo);
         }
-        resolve(sendInfo);
       }
     );
   });
@@ -84,11 +86,14 @@ exports.send = function(socketId, arrayBuffer, address, port) {
 exports.joinGroup = function(socketId, address) {
   return new Promise(function(resolve, reject) {
     chrome.sockets.udp.joinGroup(socketId, address, function(result) {
+      console.log('socketId: ', socketId);
+      console.log('address: ', address);
       if (result < 0) {
         console.log('chromeUdp.joinGroup: result < 0, reject');
         reject(result);
+      } else {
+        resolve(result);
       }
-      resolve(result);
     });
   });
 };

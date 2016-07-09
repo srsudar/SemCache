@@ -21,7 +21,8 @@
             ]
         },
         "storage",
-        "<all_urls>"
+        "<all_urls>",
+        "system.network"
     ],
     "icons": {
         "16": "images/icon-16.png",
@@ -31,6 +32,7 @@
         "background": {
             "scripts": [
                 "scripts/main.js",
+                "scripts/bundle.js",
                 "scripts/chromereload.js"
             ]
         }

@@ -13,7 +13,7 @@ var qSection = require('./question-section');
  * responsible for issuing DNS requests.
  */
 
-var DNSSD_MULTICAST_GROUP = '244.0.0.251';
+var DNSSD_MULTICAST_GROUP = '224.0.0.251';
 var DNSSD_PORT = 53531;
 // var DNSSD_SERVICE_NAME = '_services._snd-sd._udp.local';
 
