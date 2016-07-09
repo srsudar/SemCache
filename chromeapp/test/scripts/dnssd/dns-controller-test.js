@@ -239,7 +239,7 @@ test('query calls send with correct args', function(t) {
   targetPacket.addQuestion(targetQuestion);
 
   var byteArr = targetPacket.convertToByteArray();
-  var expectedArr = byteArray.getByteArrayAsUint8Array(byteArr);
+  var expectedArr = byteArray.getByteArrayAsUint8Array(byteArr).buffer;
 
   // We need a socket that has a send function we can spy on.
   var socket = new chromeUdp.ChromeUdpSocket({socketId: 123, port: 333});

@@ -191,11 +191,10 @@ exports.createServiceRecords = function(name, type, port, domain) {
   dnsController.addRecord(type, ptrRecord);
 };
 
-exports.receivedPacket = function(packets, queryName) {
+exports.receivedResponsePacket = function(packets, queryName) {
   for (var i = 0; i < packets.length; i++) {
     var packet = packets[i];
-    if (exports.packetIsForQuery(packet, queryName)) {
-      console.log('isQuery: ', packet.isQuery);
+    if (exports.packetIsForQuery(packet, queryName) && !packet.isQuery) {
       return true;
     }
   }
@@ -229,8 +228,7 @@ exports.issueProbe = function(queryName, queryType, queryClass) {
         );
         return exports.wait(MAX_PROBE_WAIT);
       }).then(function success() {
-        console.log('added for probe time');
-        if (exports.receivedPacket(packets, queryName)) {
+        if (exports.receivedResponsePacket(packets, queryName)) {
           throw new Error('received a packet, jump to catch');
         } else {
           dnsController.query(
@@ -242,7 +240,7 @@ exports.issueProbe = function(queryName, queryType, queryClass) {
         }
       })
       .then(function success() {
-        if (exports.receivedPacket(packets, queryName)) {
+        if (exports.receivedResponsePacket(packets, queryName)) {
           throw new Error('received a packet, jump to catch');
         } else {
           dnsController.query(
@@ -254,7 +252,7 @@ exports.issueProbe = function(queryName, queryType, queryClass) {
         }
       })
       .then(function success() {
-        if (exports.receivedPacket(packets, queryName)) {
+        if (exports.receivedResponsePacket(packets, queryName)) {
           throw new Error('received a packet, jump to catch');
         } else {
           resolve();

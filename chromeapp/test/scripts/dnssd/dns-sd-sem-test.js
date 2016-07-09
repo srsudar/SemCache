@@ -1,3 +1,5 @@
+/*jshint esnext:true*/
+/* globals Promise */
 'use strict';
 var test = require('tape');
 var proxyquire = require('proxyquire');
@@ -9,6 +11,7 @@ var dnsPacket = require('../../../app/scripts/dnssd/dns-packet-sem');
 var resRec = require('../../../app/scripts/dnssd/resource-record');
 var dnsUtil = require('../../../app/scripts/dnssd/dns-util');
 var dnsCodes = require('../../../app/scripts/dnssd/dns-codes-sem');
+var qSection = require('../../../app/scripts/dnssd/question-section');
 
 /**
  * Manipulating the object directly leads to polluting the require cache. Any
@@ -24,20 +27,20 @@ function resetDnsSdSem() {
 /**
  * Helper to reject a probe promise due to receiving packets.
  *
- * returnTrueAfterCall: the call number after which receivedPacket should
- *   return true.
+ * returnTrueAfterCall: the call number after which receivedResponsePacket
+ *   should return true.
  */
 function probeRejectsHelper(returnTrueAfterCall, t) {
   var addOnReceiveCallbackSpy = sinon.spy();
   var removeOnReceiveCallbackSpy = sinon.spy();
 
-  var receivedPacketCallCount = 0;
-  var receivedPacketSpy = function() {
-    if (receivedPacketCallCount === returnTrueAfterCall) {
-      receivedPacketCallCount += 1;
+  var receivedResponsePacketCallCount = 0;
+  var receivedResponsePacketSpy = function() {
+    if (receivedResponsePacketCallCount === returnTrueAfterCall) {
+      receivedResponsePacketCallCount += 1;
       return true;
     } else {
-      receivedPacketCallCount += 1;
+      receivedResponsePacketCallCount += 1;
       return false;
     }
   };
@@ -54,24 +57,24 @@ function probeRejectsHelper(returnTrueAfterCall, t) {
     }
   );
 
-  dnssdSem.receivedPacket = receivedPacketSpy;
+  dnssdSem.receivedResponsePacket = receivedResponsePacketSpy;
   dnssdSem.wait = () => Promise.resolve();
-
-  t.plan(3);
 
   var issuePromise = dnssdSem.issueProbe('queryname', 4, 5);
   issuePromise.then(function success() {
     // We should never succeed in this case.
     resetDnsSdSem();
     t.fail();
+    t.end();
   })
   .catch(function failure() {
     // our promise didn't resolve, meaning we failed.
     // We should have been called one more than we were permitting (i.e. a call
     // on the 0th call leads to a single call
-    t.equal(returnTrueAfterCall + 1, receivedPacketCallCount);
+    t.equal(returnTrueAfterCall + 1, receivedResponsePacketCallCount);
     t.equal(addOnReceiveCallbackSpy.callCount, 1);
     t.equal(removeOnReceiveCallbackSpy.callCount, 1);
+    t.end();
     resetDnsSdSem();
   });
 }
@@ -80,9 +83,9 @@ test('issueProbe succeeds correctly', function(t) {
   var addOnReceiveCallbackSpy = sinon.spy();
   var removeOnReceiveCallbackSpy = sinon.spy();
 
-  var receivedPacketCallCount = 0;
-  var receivedPacketSpy = function() {
-    receivedPacketCallCount += 1;
+  var receivedResponsePacketCallCount = 0;
+  var receivedResponsePacketSpy = function() {
+    receivedResponsePacketCallCount += 1;
     return false;
   };
 
@@ -98,22 +101,22 @@ test('issueProbe succeeds correctly', function(t) {
     }
   );
 
-  dnssdSem.receivedPacket = receivedPacketSpy;
+  dnssdSem.receivedResponsePacket = receivedResponsePacketSpy;
   dnssdSem.wait = () => Promise.resolve();
-
-  t.plan(3);
 
   var issuePromise = dnssdSem.issueProbe('queryname', 4, 5);
   issuePromise.then(function success() {
-    t.equal(receivedPacketCallCount, 3);
+    t.equal(receivedResponsePacketCallCount, 3);
     t.true(addOnReceiveCallbackSpy.calledOnce);
     t.true(removeOnReceiveCallbackSpy.calledOnce);
     resetDnsSdSem();
+    t.end();
   })
   .catch(function failure() {
     // our promise didn't resolve, meaning we failed.
     resetDnsSdSem();
     t.fail();
+    t.end();
   });
 });
 
@@ -176,7 +179,7 @@ test('receivedPacket calls packetIsForQuery on each packet', function(t) {
   packets.push(third);
 
   var queryName = 'foobar';
-  dnssdSem.receivedPacket(packets, queryName);
+  dnssdSem.receivedResponsePacket(packets, queryName);
 
   t.equal(packetIsForQuerySpy.callCount, packets.length);
   t.true(packetIsForQuerySpy.calledWith(first, queryName));
@@ -187,35 +190,106 @@ test('receivedPacket calls packetIsForQuery on each packet', function(t) {
   resetDnsSdSem();
 });
 
-test('receivedPacket true if packetIsForQuery true', function(t) {
+test('receivedResponsePacket true correctly', function(t) {
+  // Should be true if the packet is for the query and it is a response
+  // TODO: above
   var dnssdSem = require('../../../app/scripts/dnssd/dns-sd-sem');
 
   var packetIsForQueryStub = sinon.stub().returns(true);
-  dnssdSem.packetIsForQuery = packetIsForQueryStub; 
+  dnssdSem.packetIsForQuery = packetIsForQueryStub;
+
+  var isResponsePacket = new dnsPacket.DnsPacket(
+    0,
+    false,
+    0,
+    true,
+    false,
+    false,
+    false,
+    0
+  );
+  // var question = qS
 
   var packets = [];
-  packets.push('a');
+  packets.push(isResponsePacket);
 
-  var actual = dnssdSem.receivedPacket(packets, 'foo');
+  var actual = dnssdSem.receivedResponsePacket(packets, 'foo');
   t.true(actual);
   t.end();
 
   resetDnsSdSem();
 });
 
-test('receivedPacket false if packetIsForQuery false', function(t) {
+test('receivedResponsePacket false correctly', function(t) {
+  // Three conditions where this is false:
+  // 1) received no packets
+  // 2) received a packet that is NOT for the query
+  // 3) received a packet for the query that is NOT a response
+  // Should be false if the packet is not for the query and it is a query
+  // packet
   var dnssdSem = require('../../../app/scripts/dnssd/dns-sd-sem');
 
-  var packetIsForQueryStub = sinon.stub().returns(false);
-  dnssdSem.packetIsForQuery = packetIsForQueryStub; 
+  // var packetIsForQueryStub = sinon.stub().returns(false);
+  // dnssdSem.packetIsForQuery = packetIsForQueryStub;
 
   var packets = [];
-  packets.push('a');
 
-  var actual = dnssdSem.receivedPacket(packets, 'foo');
-  t.false(actual);
+  var queryName = 'foo';
+
+  // 1) received no packets
+  var actualForNoPackets = dnssdSem.receivedResponsePacket(packets, queryName);
+  t.false(actualForNoPackets);
+
+  // 2) received packet NOT for this query
+  // Make a packet that is a response but is not for this query.
+  var packetNotForQuery = new dnsPacket.DnsPacket(
+    0,
+    false,
+    0,
+    true,
+    false,
+    false,
+    false,
+    0
+  );
+  var questionForOtherQuery = new qSection.QuestionSection(
+    'other query',
+    2,
+    5
+  );
+  packetNotForQuery.addQuestion(questionForOtherQuery);
+  packets = [packetNotForQuery];
+  var actualForOtherQuery = dnssdSem.receivedResponsePacket(
+    packets,
+    queryName
+  );
+  t.false(actualForOtherQuery);
+
+  // 3) received packet for this query that is a question
+  var packetForQuery = new dnsPacket.DnsPacket(
+    0,
+    true,
+    0,
+    true,
+    false,
+    false,
+    false,
+    0
+  );
+  var questionForThisQuery = new qSection.QuestionSection(
+    queryName,
+    2,
+    5
+  );
+  packetForQuery.addQuestion(questionForThisQuery);
+  packets = [packetForQuery];
+  var actualForQuestion = dnssdSem.receivedResponsePacket(
+    [packetForQuery],
+    queryName
+  );
+  t.false(actualForQuestion);
+
   t.end();
-
   resetDnsSdSem();
 });
 

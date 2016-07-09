@@ -3479,6 +3479,7 @@ exports.waitForProbeTime = function() {
  * Returns true if the DnsPacket is for this queryName.
  */
 exports.packetIsForQuery = function(packet, queryName) {
+  console.log('PACKET IS FOR QUERY');
   for (var i = 0; i < packet.questions.length; i++) {
     var question = packet.questions[i];
     if (question.queryName === queryName) {
@@ -3620,10 +3621,11 @@ exports.createServiceRecords = function(name, type, port, domain) {
   dnsController.addRecord(type, ptrRecord);
 };
 
-exports.receivedPacket = function(packets, queryName) {
+exports.receivedResponsePacket = function(packets, queryName) {
+  console.log('CALLED FUNCTION');
   for (var i = 0; i < packets.length; i++) {
     var packet = packets[i];
-    if (exports.packetIsForQuery(packet, queryName)) {
+    if (exports.packetIsForQuery(packet, queryName) && !packet.isQuery) {
       console.log('isQuery: ', packet.isQuery);
       return true;
     }
@@ -3659,7 +3661,7 @@ exports.issueProbe = function(queryName, queryType, queryClass) {
         return exports.wait(MAX_PROBE_WAIT);
       }).then(function success() {
         console.log('added for probe time');
-        if (exports.receivedPacket(packets, queryName)) {
+        if (exports.receivedResponsePacket(packets, queryName)) {
           throw new Error('received a packet, jump to catch');
         } else {
           dnsController.query(
@@ -3671,7 +3673,7 @@ exports.issueProbe = function(queryName, queryType, queryClass) {
         }
       })
       .then(function success() {
-        if (exports.receivedPacket(packets, queryName)) {
+        if (exports.receivedResponsePacket(packets, queryName)) {
           throw new Error('received a packet, jump to catch');
         } else {
           dnsController.query(
@@ -3683,7 +3685,7 @@ exports.issueProbe = function(queryName, queryType, queryClass) {
         }
       })
       .then(function success() {
-        if (exports.receivedPacket(packets, queryName)) {
+        if (exports.receivedResponsePacket(packets, queryName)) {
           throw new Error('received a packet, jump to catch');
         } else {
           resolve();
