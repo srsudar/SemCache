@@ -3155,6 +3155,7 @@ exports.getNetworkInterfaces = function() {
 
 },{}],"dnsc":[function(require,module,exports){
 /*jshint esnext:true*/
+/* globals Promise */
 'use strict';
 
 var chromeUdp = require('./chromeUdp');
@@ -3229,7 +3230,10 @@ exports.addOnReceiveCallback = function(callback) {
  * Remove the callback.
  */
 exports.removeOnReceiveCallback = function(callback) {
-  onReceiveCallbacks.remove(callback);
+  var index = onReceiveCallbacks.indexOf(callback);
+  if (index >= 0) {
+    onReceiveCallbacks.splice(index, 1);
+  }
 };
 
 /**
@@ -3305,7 +3309,7 @@ exports.getSocket = function() {
     .then(function success() {
       // We've bound to the DNSSD port successfully.
       return chromeUdp.joinGroup(socketInfo.socketId, DNSSD_MULTICAST_GROUP);
-    }, function error(error) {
+    }, function err(error) {
       chromeUdp.closeAllSockets();
       reject(new Error('Error when binding DNSSD port:', error));
     })
@@ -3424,6 +3428,7 @@ exports.addRecord = function(name, record) {
 
 },{"./byte-array-sem":1,"./chromeUdp":"chromeUdp","./dns-codes-sem":3,"./dns-packet-sem":5,"./dns-util":9,"./question-section":13}],"dnssd-sem":[function(require,module,exports){
 /*jshint esnext:true*/
+/* globals Promise */
 'use strict';
 
 /**
@@ -3619,6 +3624,7 @@ exports.receivedPacket = function(packets, queryName) {
   for (var i = 0; i < packets.length; i++) {
     var packet = packets[i];
     if (exports.packetIsForQuery(packet, queryName)) {
+      console.log('isQuery: ', packet.isQuery);
       return true;
     }
   }

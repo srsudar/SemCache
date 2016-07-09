@@ -68,7 +68,7 @@ test('getSocket follows success chain and resolves with socket', function(t) {
     t.true(mockedController.isStarted());
     t.end();
   }, function error() {
-    t.fail(); 
+    t.fail();
     t.end();
   });
 
@@ -290,4 +290,53 @@ test('addRecord updates data structures', function(t) {
   t.end();
 
   resetDnsController();
+});
+
+test('addOnReceiveCallback adds function', function(t) {
+  var fn1 = function() {};
+  var fn2 = function() {};
+  var startingCallbacks = dnsController.getOnReceiveCallbacks();
+
+  t.deepEqual(startingCallbacks, []);
+
+  dnsController.addOnReceiveCallback(fn1);
+  t.deepEqual([fn1], dnsController.getOnReceiveCallbacks());
+
+  dnsController.addOnReceiveCallback(fn2);
+  t.deepEqual([fn1, fn2], dnsController.getOnReceiveCallbacks());
+
+  t.end();
+
+  resetDnsController();
+});
+
+test('removeOnReceiveCallback removes function', function(t) {
+  var fn1 = function() {};
+  var fn2 = function() {};
+  var fn3 = function() {};
+
+  t.deepEqual(dnsController.getOnReceiveCallbacks(), []);
+
+  // Does not error with zero functions
+  dnsController.removeOnReceiveCallback(fn1);
+
+  // Succeeds with only one function
+  dnsController.addOnReceiveCallback(fn1);
+  dnsController.removeOnReceiveCallback(fn1);
+  t.deepEqual(dnsController.getOnReceiveCallbacks(), []);
+
+  // Succeeds with 3 and removing last function
+  dnsController.addOnReceiveCallback(fn1);
+  dnsController.addOnReceiveCallback(fn2);
+  dnsController.addOnReceiveCallback(fn3);
+  dnsController.removeOnReceiveCallback(fn3);
+  t.deepEqual(dnsController.getOnReceiveCallbacks(), [fn1, fn2]);
+
+  // Add it back to make sure we can remove from the middle.
+  dnsController.addOnReceiveCallback(fn3);
+  t.deepEqual(dnsController.getOnReceiveCallbacks(), [fn1, fn2, fn3]);
+  dnsController.removeOnReceiveCallback(fn2);
+  t.deepEqual(dnsController.getOnReceiveCallbacks(), [fn1, fn3]);
+
+  t.end();
 });

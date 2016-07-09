@@ -1,4 +1,5 @@
 /*jshint esnext:true*/
+/* globals Promise */
 'use strict';
 
 var chromeUdp = require('./chromeUdp');
@@ -73,7 +74,10 @@ exports.addOnReceiveCallback = function(callback) {
  * Remove the callback.
  */
 exports.removeOnReceiveCallback = function(callback) {
-  onReceiveCallbacks.remove(callback);
+  var index = onReceiveCallbacks.indexOf(callback);
+  if (index >= 0) {
+    onReceiveCallbacks.splice(index, 1);
+  }
 };
 
 /**
@@ -149,7 +153,7 @@ exports.getSocket = function() {
     .then(function success() {
       // We've bound to the DNSSD port successfully.
       return chromeUdp.joinGroup(socketInfo.socketId, DNSSD_MULTICAST_GROUP);
-    }, function error(error) {
+    }, function err(error) {
       chromeUdp.closeAllSockets();
       reject(new Error('Error when binding DNSSD port:', error));
     })
@@ -211,7 +215,7 @@ exports.query = function(queryName, queryType, queryClass) {
   var uint8Arr = byteArray.getByteArrayAsUint8Array(byteArr);
 
   exports.getSocket().then(socket => {
-    socket.send(uint8Arr, DNSSD_MULTICAST_GROUP, DNSSD_PORT);
+    socket.send(uint8Arr.buffer, DNSSD_MULTICAST_GROUP, DNSSD_PORT);
   });
 };
 

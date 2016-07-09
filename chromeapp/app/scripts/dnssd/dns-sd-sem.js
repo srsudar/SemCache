@@ -1,4 +1,5 @@
 /*jshint esnext:true*/
+/* globals Promise */
 'use strict';
 
 /**
@@ -194,6 +195,7 @@ exports.receivedPacket = function(packets, queryName) {
   for (var i = 0; i < packets.length; i++) {
     var packet = packets[i];
     if (exports.packetIsForQuery(packet, queryName)) {
+      console.log('isQuery: ', packet.isQuery);
       return true;
     }
   }
