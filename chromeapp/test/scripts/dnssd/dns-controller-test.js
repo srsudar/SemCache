@@ -24,14 +24,15 @@ function resetDnsController() {
   dnsController = require('../../../app/scripts/dnssd/dns-controller');
 }
 
-test('getSocket resolves immediately if is already started', function(t) {
+test('getSocket resolves immediately if socket is present', function(t) {
   // Make the module think it has started.
-  dnsController.isStarted = () => true;
+  var dummySocket = {};
+  dnsController.socket = dummySocket;
 
   var result = dnsController.getSocket();
   result.then(function success(socket) {
     // It should return null by default, as we don't have the socket set yet.
-    t.equal(socket, null);
+    t.equal(socket, dummySocket);
     t.end();
   }, function failure() {
     t.fail();

@@ -57,9 +57,9 @@ exports.getOnReceiveCallbacks = function() {
  * The socket used for accessing the network. Object of type
  * chromeUdp.ChromeUdpSocket.
  */
-var socket = null;
+exports.socket = null;
 /** The information about the socket we are using. */
-var socketInfo = null;
+exports.socketInfo = null;
 
 /**
  * True if the service is started.
@@ -108,12 +108,12 @@ exports.onReceiveListener = function(info) {
     chromeUdp.logSocketInfo(info);
   }
 
-  if (!socket) {
+  if (!exports.socket) {
     // We don't have a socket with which to listen.
     return;
   }
 
-  if (socket.socketId !== info.socketId) {
+  if (exports.socket.socketId !== info.socketId) {
     if (dnsUtil.DEBUG) {
       console.log('Message is not for us, ignoring');
     }
@@ -147,9 +147,9 @@ exports.handleIncomingPacket = function(packet) {
  * Returns a promise that resolves with the socket.
  */
 exports.getSocket = function() {
-  if (socket) {
+  if (exports.socket) {
     // Already started, resolve immediately.
-    return new Promise(resolve => { resolve(socket); });
+    return new Promise(resolve => { resolve(exports.socket); });
   }
 
   // Attach our listeners.
@@ -160,7 +160,7 @@ exports.getSocket = function() {
     // mDNS port.
     var createPromise = chromeUdp.create({});
     createPromise.then(info => {
-      socketInfo = info;
+      exports.socketInfo = info;
       return info;
     })
     .then(info => {
@@ -168,15 +168,18 @@ exports.getSocket = function() {
     })
     .then(function success() {
       // We've bound to the DNSSD port successfully.
-      return chromeUdp.joinGroup(socketInfo.socketId, DNSSD_MULTICAST_GROUP);
+      return chromeUdp.joinGroup(
+        exports.socketInfo.socketId,
+        DNSSD_MULTICAST_GROUP
+      );
     }, function err(error) {
       chromeUdp.closeAllSockets();
       reject(new Error('Error when binding DNSSD port:', error));
     })
     .then(function joinedGroup() {
-      socket = new chromeUdp.ChromeUdpSocket(socketInfo);
+      exports.socket = new chromeUdp.ChromeUdpSocket(exports.socketInfo);
       started = true;
-      resolve(socket);
+      resolve(exports.socket);
     }, function failedToJoinGroup(result) {
       chromeUdp.closeAllSockets();
       reject(new Error('Error when joining DNSSD group: ', result));
@@ -215,12 +218,12 @@ exports.start = function() {
  * Shuts down the system.
  */
 exports.stop = function() {
-  if (socket) {
+  if (exports.socket) {
     if (dnsUtil.DEBUG) {
       console.log('Stopping: found socket, closing');
     }
     chromeUdp.closeAllSockets();
-    socket = null;
+    exports.socket = null;
     started = false;
   } else {
     if (dnsUtil.DEBUG) {

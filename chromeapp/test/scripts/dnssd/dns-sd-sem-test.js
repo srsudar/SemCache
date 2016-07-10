@@ -12,6 +12,7 @@ var resRec = require('../../../app/scripts/dnssd/resource-record');
 var dnsUtil = require('../../../app/scripts/dnssd/dns-util');
 var dnsCodes = require('../../../app/scripts/dnssd/dns-codes-sem');
 var qSection = require('../../../app/scripts/dnssd/question-section');
+var dnsController = require('../../../app/scripts/dnssd/dns-controller');
 
 /**
  * Manipulating the object directly leads to polluting the require cache. Any
@@ -568,6 +569,52 @@ test('register resolves if name and host probe succeed', function(t) {
 });
 
 test('advertiseService advertises', function(t) {
-  t.fail('unimplemented');
+  var sendPacketSpy = sinon.spy();
+  var dnssdSem = proxyquire(
+    '../../../app/scripts/dnssd/dns-sd-sem',
+    {
+      './dns-controller':
+      {
+        sendPacket: sendPacketSpy
+      }
+    }
+  );
+
+  var aRecord = new resRec.ARecord('domain', 11, '123.4.5.6', 5);
+  var srvRecord = new resRec.SrvRecord(
+    'service name',
+    14,
+    0,
+    14,
+    9988,
+    'domain.local'
+  );
+  var records = [aRecord, srvRecord];
+
+  var expectedPacket = new dnsPacket.DnsPacket(
+    0,
+    false,
+    0,
+    false,
+    false,
+    false,
+    false,
+    false
+  );
+  records.forEach(record => {
+    expectedPacket.addAnswer(record);
+  });
+
+  dnssdSem.advertiseService(records);
+
+  var expectedArgs = [
+    expectedPacket,
+    dnsController.DNSSD_MULTICAST_GROUP,
+    dnsController.DNSSD_PORT
+  ];
+
+  t.deepEqual(sendPacketSpy.args[0], expectedArgs);
   t.end();
+  
+  resetDnsSdSem();
 });
