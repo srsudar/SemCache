@@ -187,6 +187,24 @@ exports.stop = function() {
 };
 
 /**
+ * Send the packet to the given address and port.
+ *
+ * @param {DnsPacket} packet the packet to send
+ * @param {string} address the address to which to send the packet
+ * @param {number} port the port to sent the packet to
+ */
+exports.sendPacket = function(packet, address, port) {
+  var byteArr = packet.convertToByteArray();
+  // And now we need the underlying buffer of the byteArray, truncated to the
+  // correct size.
+  var uint8Arr = byteArray.getByteArrayAsUint8Array(byteArr);
+
+  exports.getSocket().then(socket => {
+    socket.send(uint8Arr.buffer, address, port);
+  });
+};
+
+/**
  * Perform an mDNS query on the network.
  */
 exports.query = function(queryName, queryType, queryClass) {
@@ -209,14 +227,7 @@ exports.query = function(queryName, queryType, queryClass) {
   );
   packet.addQuestion(question);
 
-  var byteArr = packet.convertToByteArray();
-  // And now we need the underlying buffer of the byteArray, truncated to the
-  // correct size.
-  var uint8Arr = byteArray.getByteArrayAsUint8Array(byteArr);
-
-  exports.getSocket().then(socket => {
-    socket.send(uint8Arr.buffer, DNSSD_MULTICAST_GROUP, DNSSD_PORT);
-  });
+  exports.sendPacket(packet, DNSSD_MULTICAST_GROUP, DNSSD_PORT);
 };
 
 /**

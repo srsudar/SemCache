@@ -216,7 +216,7 @@ test('queryForSrvRecord calls query with correct args', function(t) {
   resetDnsController();
 });
 
-test('query calls send with correct args', function(t) {
+test('query calls sendPacket with correct args', function(t) {
   var mockedController = require(
     '../../../app/scripts/dnssd/dns-controller'
   );
@@ -238,20 +238,18 @@ test('query calls send with correct args', function(t) {
   var targetQuestion = new qSection.QuestionSection(qName, qType, qClass);
   targetPacket.addQuestion(targetQuestion);
 
-  var byteArr = targetPacket.convertToByteArray();
-  var expectedArr = byteArray.getByteArrayAsUint8Array(byteArr).buffer;
+  var sendPacketSpy = sinon.spy();
 
-  // We need a socket that has a send function we can spy on.
-  var socket = new chromeUdp.ChromeUdpSocket({socketId: 123, port: 333});
-  socket.send = function(uint8Arr, group, port) {
-    t.deepEqual(uint8Arr, expectedArr);
-    t.equal(group, mockedController.DNSSD_MULTICAST_GROUP);
-    t.equal(port, mockedController.DNSSD_PORT);
-    t.end();
-  };
-
-  mockedController.getSocket = sinon.stub().resolves(socket);
+  mockedController.sendPacket = sendPacketSpy;
   mockedController.query(qName, qType, qClass);
+
+  var args = sendPacketSpy.args[0];
+
+  t.true(sendPacketSpy.calledOnce);
+  t.deepEqual(args[0], targetPacket);
+  t.deepEqual(args[1], mockedController.DNSSD_MULTICAST_GROUP);
+  t.deepEqual(args[2], mockedController.DNSSD_PORT);
+  t.end();
 
   resetDnsController();
 });
@@ -339,4 +337,38 @@ test('removeOnReceiveCallback removes function', function(t) {
   t.deepEqual(dnsController.getOnReceiveCallbacks(), [fn1, fn3]);
 
   t.end();
+});
+
+test('sendPacket gets socket and sends', function(t) {
+  var packet = new dnsPacket.DnsPacket(
+    0,
+    true,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+  );
+
+  var byteArr = packet.convertToByteArray();
+  var expectedBuffer = byteArray.getByteArrayAsUint8Array(byteArr).buffer;
+  var address = 'hello';
+  var port = '6789';
+
+  // getSocket() should resolve with an object that exposes the 'send'
+  // function.
+  var sendSpy = {
+    send: function(bufferParam, addressParam, portParam) {
+      t.deepEqual(bufferParam, expectedBuffer);
+      t.deepEqual(addressParam, address);
+      t.deepEqual(portParam, port);
+      resetDnsController();
+      t.end();
+    }
+  };
+  var getSocketSpy = sinon.stub().resolves(sendSpy);
+  dnsController.getSocket = getSocketSpy;
+
+  dnsController.sendPacket(packet, address, port);
 });
