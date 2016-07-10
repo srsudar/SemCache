@@ -115,7 +115,7 @@ exports.onReceiveListener = function(info) {
 
   if (exports.socket.socketId !== info.socketId) {
     if (dnsUtil.DEBUG) {
-      console.log('Message is not for us, ignoring');
+      console.log('Message is for this address but not this socket, ignoring');
     }
     return;
   }
@@ -156,8 +156,8 @@ exports.getSocket = function() {
   chromeUdp.addOnReceiveListener(exports.onReceiveListener);
 
   return new Promise((resolve, reject) => {
-    // We have two steps to do here: create a socket and bind that socket to the
-    // mDNS port.
+    // We have two steps to do here: create a socket and bind that socket to
+    // the mDNS port.
     var createPromise = chromeUdp.create({});
     createPromise.then(info => {
       exports.socketInfo = info;
@@ -189,6 +189,8 @@ exports.getSocket = function() {
 
 /**
  * Start the service.
+ *
+ * Returns a Promise that resolves when everything is up and running.
  */
 exports.start = function() {
   if (exports.isStarted()) {
@@ -198,20 +200,37 @@ exports.start = function() {
     // Already started, resolve immediately.
     return new Promise();
   } else {
-    // All the initialization we need to do is create the 
-    return new Promise(function(resolve) {
-      chromeUdp.getNetworkInterfaces().then(function success(interfaces) {
-        interfaces.forEach(iface => {
-          if (iface.address.indexOf(':') !== -1) {
-            console.log('Not yet supporting IPv6: ', iface);
-          } else {
-            ipv4Interfaces.push(iface);
-          }
-        });
+    // All the initialization we need to do is create the socket (so that we
+    // can receive even if we aren't advertising ourselves) and retrieve our
+    // network interfaces.
+    return new Promise(function(resolve, reject) {
+      exports.getSocket()
+      .then(function startedSocket() {
+        exports.initializeNetworkInterfaceCache();
+      })
+      .then(function initializedInterfaces() {
         resolve();
+      })
+      .catch(function startWhenWrong() {
+        reject();
       });
     });
   }
+};
+
+exports.initializeNetworkInterfaceCache = function() {
+  return new Promise(function(resolve) {
+    chromeUdp.getNetworkInterfaces().then(function success(interfaces) {
+      interfaces.forEach(iface => {
+        if (iface.address.indexOf(':') !== -1) {
+          console.log('Not yet supporting IPv6: ', iface);
+        } else {
+          ipv4Interfaces.push(iface);
+        }
+      });
+      resolve();
+    });
+  });
 };
 
 /**

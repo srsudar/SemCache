@@ -1,3 +1,5 @@
+/*jshint esnext:true*/
+/* globals Promise */
 'use strict';
 var test = require('tape');
 var proxyquire = require('proxyquire');
@@ -372,4 +374,63 @@ test('sendPacket gets socket and sends', function(t) {
   dnsController.getSocket = getSocketSpy;
 
   dnsController.sendPacket(packet, address, port);
+});
+
+test('start initializes correctly', function(t) {
+  // getSocket() should resolve and initializeNetworkInetfaceCache() should
+  // resolve
+  var calledGetSocket = false;
+  var calledInitializeCaches = false;
+
+  var getSocketStub = function() {
+    calledGetSocket = true;
+    return Promise.resolve();
+  };
+
+  var initializeCacheStub = function() {
+    calledInitializeCaches = true;
+    return new Promise(function tests() {
+      t.true(calledGetSocket);
+      t.true(calledInitializeCaches);
+      resetDnsController();
+      t.end();
+    });
+  };
+
+  dnsController.getSocket = getSocketStub;
+  dnsController.initializeNetworkInterfaceCache = initializeCacheStub;
+  
+  dnsController.start();
+});
+
+test('initializeNetworkInterfaceCache initializes cache', function(t) {
+  // We should initialize the interfaces and call getSocket() the first time to
+  // make sure all is well.
+  var iface = {
+    name: 'eth0',
+    address: '123.456.789.91',
+    prefixLength: 0
+  };
+  var ifaces = [iface];
+
+  var getInterfacesStub = sinon.stub().resolves(ifaces);
+
+  var mockedController = proxyquire(
+    '../../../app/scripts/dnssd/dns-controller.js',
+    {
+      './chromeUdp': {
+        getNetworkInterfaces: getInterfacesStub
+      }
+    }
+  );
+  
+  t.deepEqual(mockedController.getIPv4Interfaces(), []);
+
+  mockedController.initializeNetworkInterfaceCache()
+  .then(function addedInterfaces() {
+    var expectedInterfaces = [iface];
+    t.deepEqual(mockedController.getIPv4Interfaces(), expectedInterfaces);
+    t.end();
+    resetDnsController();
+  });
 });
