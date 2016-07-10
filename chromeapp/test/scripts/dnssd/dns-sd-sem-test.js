@@ -385,7 +385,7 @@ test('register rejects if instance taken', function(t) {
   });
 });
 
-test('createServiceRecords calls to create records correctly', function(t) {
+test('createServiceRecords creates and returns', function(t) {
   var addRecordSpy = sinon.spy();
   var dnssdSem = proxyquire(
     '../../../app/scripts/dnssd/dns-sd-sem',
@@ -418,7 +418,9 @@ test('createServiceRecords calls to create records correctly', function(t) {
     dnsCodes.CLASS_CODES.IN
   );
 
-  dnssdSem.createServiceRecords(name, type, port, domain);
+  var targetReturn = [expectedSrvRecord, expectedPtrRecord];
+  var actualReturn = dnssdSem.createServiceRecords(name, type, port, domain);
+  t.deepEqual(actualReturn, targetReturn);
 
   t.equal(addRecordSpy.callCount, 2);
 
@@ -454,24 +456,23 @@ test('createHostRecords calls to create records correctly', function(t) {
   var addRecordSpy = function(hostParam, recordParam) {
     t.equal(hostParam, host);
     t.deepEqual(recordParam, expectedRecord);
-    t.end();
   };
 
   var dnssdSem = proxyquire(
     '../../../app/scripts/dnssd/dns-sd-sem',
     {
-      './chromeUdp':
-      {
-        getNetworkInterfaces: sinon.stub().resolves([iface])
-      },
       './dns-controller':
       {
-        addRecord: addRecordSpy
+        addRecord: addRecordSpy,
+        getIPv4Interfaces: () => [iface]
       }
     }
   );
 
-  dnssdSem.createHostRecords(host);
+  var actualReturn = dnssdSem.createHostRecords(host);
+  var expectedReturn = [expectedRecord];
+  t.deepEqual(actualReturn, expectedReturn);
+  t.end();
   resetDnsSdSem();
 });
 
@@ -491,10 +492,40 @@ test('register resolves if name and host probe succeed', function(t) {
   };
   dnssdSem.issueProbe = issueProbeSpy;
 
-  var createHostRecordsSpy = sinon.spy();
-  var createServiceRecordsSpy = sinon.spy();
+  // Create host record should have been called with the correct host, and it
+  // should have return some known records.
+  var calledHostForCreateHost;
+  var hostRecord = ['a'];
+  var createHostRecordsSpy = function(hostParam) {
+    calledHostForCreateHost = hostParam;
+    return hostRecord;
+  };
+
+  var calledName;
+  var calledType;
+  var calledPort;
+  var calledHostForCreateService;
+  var serviceRecords = ['b', 'c'];
+  var createServiceRecordsSpy = function(
+    nameParam,
+    typeParam,
+    portParam,
+    hostParam
+  ) {
+    calledName = nameParam;
+    calledType = typeParam;
+    calledPort = portParam;
+    calledHostForCreateService = hostParam;
+    return serviceRecords;
+  };
+
+  var allRecords = hostRecord.concat(serviceRecords);
+
+  var advertiseServiceSpy = sinon.spy();
+
   dnssdSem.createHostRecords = createHostRecordsSpy;
-  dnssdSem.createServiceRecords= createServiceRecordsSpy;
+  dnssdSem.createServiceRecords = createServiceRecordsSpy;
+  dnssdSem.advertiseService = advertiseServiceSpy;
 
   var resultPromise = dnssdSem.register(host, instanceName, type, port);
 
@@ -509,10 +540,24 @@ test('register resolves if name and host probe succeed', function(t) {
     // We are expecting to fail if the host is taken, so we should never
     // resolve.
     t.deepEqual(resolveObj, expected);
-    t.true(createHostRecordsSpy.calledWith(host));
-    t.true(createServiceRecordsSpy.calledWith(instanceName, type, port, host));
+
     // We should have issued 2 probes
     t.equal(issueProbeCallCount, 2);
+
+    // We should have called createServiceRecords with the correct params.
+    t.equal(calledName, instanceName);
+    t.equal(calledType, type);
+    t.equal(calledPort, port);
+    t.equal(calledHostForCreateService, host);
+
+    // We should have called createHostRecords with the correct params.
+    t.equal(calledHostForCreateHost, host);
+    
+    // And finally, we should have called advertiseService with all the records
+    // we created.
+    t.true(advertiseServiceSpy.calledOnce);
+    t.deepEqual(advertiseServiceSpy.args[0][0], allRecords);
+
     resetDnsSdSem();
     t.end();
   }, function failed() {
@@ -520,4 +565,9 @@ test('register resolves if name and host probe succeed', function(t) {
     t.fail('we should not reject in this case');
     resetDnsSdSem();
   });
+});
+
+test('advertiseService advertises', function(t) {
+  t.fail('unimplemented');
+  t.end();
 });

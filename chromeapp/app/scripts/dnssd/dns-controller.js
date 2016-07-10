@@ -34,6 +34,11 @@ var records = {};
 var onReceiveCallbacks = [];
 
 /**
+ * The IPv4 interfaces for this machine, cached to provide synchronous calls.
+ */
+var ipv4Interfaces = [];
+
+/**
  * Returns all records known to this module.
  */
 exports.getRecords = function() {
@@ -61,6 +66,20 @@ var socketInfo = null;
  */
 exports.isStarted = function() {
   return started;
+};
+
+/**
+ * Return a cached array of IPv4 interfaces for this machine.
+ */
+exports.getIPv4Interfaces = function() {
+  if (!exports.isStarted()) {
+    console.log('Called getIPv4Interfaces when controller was not started');
+  }
+  if (!ipv4Interfaces) {
+    return [];
+  } else {
+    return ipv4Interfaces;
+  }
 };
 
 /**
@@ -128,10 +147,7 @@ exports.handleIncomingPacket = function(packet) {
  * Returns a promise that resolves with the socket.
  */
 exports.getSocket = function() {
-  if (exports.isStarted()) {
-    if (dnsUtil.DEBUG) {
-      console.log('start called when already started');
-    }
+  if (socket) {
     // Already started, resolve immediately.
     return new Promise(resolve => { resolve(socket); });
   }
@@ -166,6 +182,33 @@ exports.getSocket = function() {
       reject(new Error('Error when joining DNSSD group: ', result));
     });
   });
+};
+
+/**
+ * Start the service.
+ */
+exports.start = function() {
+  if (exports.isStarted()) {
+    if (dnsUtil.DEBUG) {
+      console.log('start called when already started');
+    }
+    // Already started, resolve immediately.
+    return new Promise();
+  } else {
+    // All the initialization we need to do is create the 
+    return new Promise(function(resolve) {
+      chromeUdp.getNetworkInterfaces().then(function success(interfaces) {
+        interfaces.forEach(iface => {
+          if (iface.address.indexOf(':') !== -1) {
+            console.log('Not yet supporting IPv6: ', iface);
+          } else {
+            ipv4Interfaces.push(iface);
+          }
+        });
+        resolve();
+      });
+    });
+  }
 };
 
 /**

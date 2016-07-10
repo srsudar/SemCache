@@ -25,7 +25,7 @@ var dnsUtil = require('./dns-util');
 var dnsController = require('./dns-controller');
 var dnsCodes = require('./dns-codes-sem');
 var resRec = require('./resource-record');
-var chromeUdp = require('./chromeUdp');
+var dnsPacket = require('./dns-packet-sem');
 
 var MAX_PROBE_WAIT = 250;
 
@@ -69,6 +69,34 @@ exports.createHostName = function() {
   var randomInt = dnsUtil.randomInt(0, 1001);
   var result = start + randomInt + dnsUtil.getLocalSuffix();
   return result;
+};
+
+/**
+ * Advertise the resource records.
+ *
+ * @param {Array<resource records>} resourceRecords the records to advertise
+ */
+exports.advertiseService = function(resourceRecords) {
+  var advertisePacket = new dnsPacket.DnsPacket(
+    0,      // id 0 for mDNS
+    false,  // not a query
+    0,      // opCode must be 0 on transmit (18.3)
+    false,  // authoritative must be false on transmit (18.4)
+    false,  // isTruncated must be false on transmit (18.5)
+    false,  // recursion desired should be 0 (18.6)
+    false,  // recursion available must be 0 (18.7)
+    false   // return code must be 0 (18.11)
+  );
+
+  // advertisements should be sent in the answer section
+  resourceRecords.forEach(record => {
+    advertisePacket.addAnswer(record);
+  });
+  dnsController.sendPacket(
+    advertisePacket,
+    dnsController.DNSSD_MULTICAST_GROUP,
+    dnsController.DNSSD_PORT
+  );
 };
 
 /**
@@ -122,10 +150,16 @@ exports.register = function(host, name, type, port) {
     }, function hostTaken() {
       reject(new Error('host taken: ' + host));
     }).then(function instanceFree() {
-      // TODO: make records and issue records now that we know we don't have
-      // conflicts.
-      exports.createHostRecords(host);
-      exports.createServiceRecords(name, type, port, host);
+      var hostRecords = exports.createHostRecords(host);
+      var serviceRecords = exports.createServiceRecords(
+        name,
+        type,
+        port,
+        host
+      );
+      var allRecords = hostRecords.concat(serviceRecords);
+      exports.advertiseService(allRecords);
+
       resolve(
         {
           serviceName: name,
@@ -145,29 +179,30 @@ exports.register = function(host, name, type, port) {
 /**
  * Register the host on the network. Assumes that a probe has occurred and the
  * hostname is free.
+ *
+ * @return {Array<resource records>} an Array of the records that were added.
  */
 exports.createHostRecords = function(host) {
   // This just consists of an A Record. Make an entry for every IPv4 address.
-  chromeUdp.getNetworkInterfaces().then(function success(interfaces) {
-    interfaces.forEach(iface => {
-      if (iface.address.indexOf(':') !== -1) {
-        console.log('Not yet supporting IPv6: ', iface);
-      } else {
-        var aRecord = new resRec.ARecord(
-          host,
-          dnsUtil.DEFAULT_TTL,
-          iface.address,
-          dnsCodes.CLASS_CODES.IN
-        );
-        dnsController.addRecord(host, aRecord);
-      }
-    });
+  var result = [];
+  dnsController.getIPv4Interfaces().forEach(iface => {
+    var aRecord = new resRec.ARecord(
+      host,
+      dnsUtil.DEFAULT_TTL,
+      iface.address,
+      dnsCodes.CLASS_CODES.IN
+    );
+    result.push(aRecord);
+    dnsController.addRecord(host, aRecord);
   });
+  return result;
 };
 
 /**
  * Register the service on the network. Assumes that a probe has occured and
  * the service name is free.
+ *
+ * @return {Array<resource records>} an Array of the records that were added.
  */
 exports.createServiceRecords = function(name, type, port, domain) {
   // We need to add a PTR record and an SRV record.
@@ -189,6 +224,9 @@ exports.createServiceRecords = function(name, type, port, domain) {
 
   dnsController.addRecord(name, srvRecord);
   dnsController.addRecord(type, ptrRecord);
+
+  var result = [srvRecord, ptrRecord];
+  return result;
 };
 
 exports.receivedResponsePacket = function(packets, queryName) {
