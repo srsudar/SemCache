@@ -16,13 +16,14 @@ var qSection = require('./question-section');
 
 var DNSSD_MULTICAST_GROUP = '224.0.0.251';
 var DNSSD_PORT = 53531;
-// var DNSSD_SERVICE_NAME = '_services._snd-sd._udp.local';
+var DNSSD_SERVICE_NAME = '_services._snd-sd._udp.local';
 
 /** True if the service has started. */
 var started = false;
 
 exports.DNSSD_MULTICAST_GROUP = DNSSD_MULTICAST_GROUP;
 exports.DNSSD_PORT = DNSSD_PORT;
+exports.DNSSD_SERVICE_NAME = DNSSD_SERVICE_NAME;
 
 /**
  * These are the records owned by this module. They are maintained in an object
@@ -249,6 +250,23 @@ exports.getResourcesForQuery = function(qName, qType, qClass) {
 
   // records stored as {qName: [record, record, record] }
   var namedRecords = records[qName];
+
+  // We need to special case the DNSSD service enumeration string, as specified
+  // in RFC 6763, Section 9.
+  if (qName === DNSSD_SERVICE_NAME) {
+    // This essentially is just a request for all PTR records, regardless of
+    // name. We will just get all the records and let the later machinery
+    // filter as necessary for class and type.
+    namedRecords = [];
+    Object.keys(records).forEach(key => {
+      var keyRecords = records[key];
+      keyRecords.forEach(record => {
+        if (record.recordType === dnsCodes.RECORD_TYPES.PTR) {
+          namedRecords.push(record);
+        }
+      });
+    });
+  }
 
   if (!namedRecords) {
     // Nothing at all--return an empty array

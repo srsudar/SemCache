@@ -823,3 +823,44 @@ test('getResourcesForQuery returns empty array if no records', function(t) {
   t.end();
   resetDnsController();
 });
+
+test('getResourcesForQuery performs service type enumeration', function(t) {
+  // This is a special case for the enumeration of services, as specified in
+  // RFC 6763, section 9. We should return ALL ptr records.
+
+  // Create PTR records across multiple names.
+  var name1 = 'name1';
+  var name2 = 'name2';
+  var record1 = new resRec.PtrRecord(
+    name1,
+    10,
+    'instance1',
+    dnsCodes.CLASS_CODES.IN
+  );
+  var record1Srv = new resRec.SrvRecord(name1, 10, 0, 0, 8866, 'me.local');
+  var record2 = new resRec.PtrRecord(
+    name2,
+    10,
+    'instance2',
+    dnsCodes.CLASS_CODES.IN
+  );
+
+  dnsController.addRecord(name1, record1);
+  dnsController.addRecord(name1, record1Srv);
+  dnsController.addRecord(name2, record2);
+
+  // We can't assume anything about order here.
+  var actual = dnsController.getResourcesForQuery(
+    dnsController.DNSSD_SERVICE_NAME,
+    dnsCodes.RECORD_TYPES.PTR,
+    dnsCodes.CLASS_CODES.IN
+  );
+
+  t.equal(actual.length, 2);
+  var record1Index = actual.indexOf(record1);
+  var record2Index = actual.indexOf(record2);
+  t.deepEqual(actual[record1Index], record1);
+  t.deepEqual(actual[record2Index], record2);
+  t.end();
+  resetDnsController();
+});
