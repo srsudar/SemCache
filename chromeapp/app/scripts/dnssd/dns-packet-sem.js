@@ -121,13 +121,6 @@ exports.DnsPacket = function DnsPacket(
 };
 
 /**
- * Returns true if the packet has requested a unicast response, else false.
- */
-exports.DnsPacket.prototype.unicastResponseRequested = function() {
-  return false;
-};
-
-/**
  * Convert the DnsPacket to a ByteArray object. The format of a DNS Packet is
  * as specified in 'TCP/IP Illustrated, Volume 1' by Stevens, as follows:
  *

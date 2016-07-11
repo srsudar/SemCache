@@ -180,11 +180,10 @@ exports.handleIncomingPacket = function(packet, remoteAddress, remotePort) {
     // We may be multicasting, or we may be unicast responding.
     var sendAddr = DNSSD_MULTICAST_GROUP;
     var sendPort = DNSSD_PORT;
-    if (responsePacket.unicastResponseRequested()) {
+    if (question.unicastResponseRequested()) {
       sendAddr = remoteAddress;
       sendPort = remotePort;
     }
-
     exports.sendPacket(responsePacket, sendAddr, sendPort);
   });
 };

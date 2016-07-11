@@ -65,6 +65,15 @@ exports.QuestionSection.prototype.convertToByteArray = function() {
 };
 
 /**
+ * Returns true if the question has requested a unicast response, else false.
+ */
+exports.QuestionSection.prototype.unicastResponseRequested = function() {
+  // For now, since we can't share a port in Chrome, we will assume that
+  // unicast responses are always requested.
+  return true;
+};
+
+/**
  * Create a QuestionSection from a ByteArrayReader as serialized by
  * convertToByteArray().
  */

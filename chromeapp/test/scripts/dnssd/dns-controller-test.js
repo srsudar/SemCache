@@ -61,7 +61,7 @@ function helperTestForSendAddress(t, isUnicast, address, port) {
     0
   );
   // We will return a response packet regardless of the other parameters.
-  responsePacket.unicastResponseRequested = () => isUnicast;
+  question1.unicastResponseRequested = () => isUnicast;
   dnsController.createResponsePacket = () => responsePacket;
 
   // Return a single item to indicate that we should respond to the query.
@@ -77,8 +77,8 @@ function helperTestForSendAddress(t, isUnicast, address, port) {
   // test the content of the packet. We're interested only in the address and
   // port.
   t.equal(sendSpy.callCount, 1);
-  t.equal(sendSpy.args[0][1], address);
-  t.equal(sendSpy.args[0][2], port);
+  t.deepEqual(sendSpy.args[0][1], address);
+  t.deepEqual(sendSpy.args[0][2], port);
 
   resetDnsController();
   t.end();
@@ -641,7 +641,9 @@ test('handleIncomingPacket sends packet for each question', function(t) {
   dnsController.sendPacket = sendSpy;
 
   // After all this setup, make the call we're actually testing.
-  dnsController.handleIncomingPacket(queryPacket);
+  var address = '9.8.7.6';
+  var port = 1111;
+  dnsController.handleIncomingPacket(queryPacket, address, port);
 
   // And now for the asserstions.
   // Create response packet should have been called twice--once for each
@@ -654,13 +656,13 @@ test('handleIncomingPacket sends packet for each question', function(t) {
 
   // First call
   t.deepEqual(sendArgs1[0], responsePacket1);
-  t.deepEqual(sendArgs1[1], dnsController.DNSSD_MULTICAST_GROUP);
-  t.deepEqual(sendArgs1[2], dnsController.DNSSD_PORT);
+  t.deepEqual(sendArgs1[1], address);
+  t.deepEqual(sendArgs1[2], port);
 
   // Second call
   t.deepEqual(sendArgs2[0], responsePacket2);
-  t.deepEqual(sendArgs2[1], dnsController.DNSSD_MULTICAST_GROUP);
-  t.deepEqual(sendArgs2[2], dnsController.DNSSD_PORT);
+  t.deepEqual(sendArgs2[1], address);
+  t.deepEqual(sendArgs2[2], port);
 
   t.end();
   resetDnsController();
