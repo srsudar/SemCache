@@ -134,11 +134,107 @@ exports.onReceiveListener = function(info) {
 /**
  * Respond to an incoming packet.
  */
-exports.handleIncomingPacket = function(packet) {
+exports.handleIncomingPacket = function(packet, remoteAddress, remotePort) {
+  // For now, we are expecting callers to register and de-register their own
+  // onReceiveCallback to track responses. This means if it's a response we
+  // will just ignore invoke the callbacks and return. If it is a query, we
+  // need to respond to it.
+
+  // First, invoke all the callbacks.
   for (var i = 0; i < onReceiveCallbacks.length; i++) {
     var fn = onReceiveCallbacks[i];
     fn(packet);
   }
+
+  // Second, see if it's a query. If it is, get the requested records,
+  // construct a packet, and send the packet.
+  if (!packet.isQuery) {
+    return;
+  }
+
+  if (packet.questions.length === 0) {
+    console.log('Query packet has no questions: ', packet.questions);
+    return;
+  }
+
+  // According to the RFC, multiple questions in the same packet are an
+  // optimization and nothing more. We will respond to each question with its
+  // own packet while still being compliant.
+  packet.questions.forEach(question => {
+    var responsePacket = exports.createResponsePacket(packet);
+    var records = exports.getResourcesForQuery(
+      question.queryName,
+      question.queryType,
+      question.queryClass
+    );
+
+    // If we didn't get any records, don't send anything.
+    if (records.length === 0) {
+      return;
+    }
+
+    records.forEach(record => {
+      responsePacket.addAnswer(record);
+    });
+
+    // We may be multicasting, or we may be unicast responding.
+    var sendAddr = DNSSD_MULTICAST_GROUP;
+    var sendPort = DNSSD_PORT;
+    if (responsePacket.unicastResponseRequested()) {
+      sendAddr = remoteAddress;
+      sendPort = remotePort;
+    }
+
+    exports.sendPacket(responsePacket, sendAddr, sendPort);
+  });
+};
+
+/**
+ * Create a response packet with the appropriate parameters for the given
+ * query. It does not include any resource records (including questions).
+ *
+ * @param {DnsPacket} queryPacket the query packet to create a response to.
+ *
+ * @return {DnsPacket} the packet in response. No records are included.
+ */
+exports.createResponsePacket = function(queryPacket) {
+  // According to section 6 of the RFC we do not include the question we are
+  // answering in response packets:
+  // "Multicast DNS responses MUST NOT contain any questions in the Question
+  // Section.  Any questions in the Question Section of a received Multicast
+  // DNS response MUST be silently ignored.  Multicast DNS queriers receiving
+  // Multicast DNS responses do not care what question elicited the response;
+  // they care only that the information in the response is true and accurate."
+  console.log('UNIMPLEMENTED: createResponsePacket', queryPacket);
+};
+
+/**
+ * Return the resource records belonging to this server that are appropriate
+ * for this query. According to section 6 of the RFC, we only respond with
+ * records for which we are authoritative. Thus we also must omit records from
+ * any cache we are maintaining, unless those records originated from us and
+ * are thus considered authoritative.
+ *
+ * @param {String} qName the query name
+ * @param {number} qType the query type
+ * @param {number} qClass the query class
+ *
+ * @return {Array<resource record>} the array of resource records appropriate
+ * for this query
+ */
+exports.getResourcesForQuery = function(qName, qType, qClass) {
+  // According to RFC section 6: 
+  // "The determination of whether a given record answers a given question is
+  // made using the standard DNS rules: the record name must match the question
+  // name, the record rrtype must match the question qtype unless the qtype is
+  // "ANY" (255) or the rrtype is "CNAME" (5), and the record rrclass must
+  // match the question qclass unless the qclass is "ANY" (255).  As with
+  // Unicast DNS, generally only DNS class 1 ("Internet") is used, but should
+  // client software use classes other than 1, the matching rules described
+  // above MUST be used."
+  // TODO: implement
+  console.log('UNIMPLEMENTED: ', qName, qType, qClass);
+  return [];
 };
 
 /**

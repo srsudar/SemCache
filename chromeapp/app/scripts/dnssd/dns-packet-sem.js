@@ -33,13 +33,13 @@ function parseResourceRecordsFromReader(reader, numRecords) {
     var record = null;
     switch (recordType) {
       case dnsCodes.RECORD_TYPES.A:
-        record = resRec.createARecordFromReader(reader); 
+        record = resRec.createARecordFromReader(reader);
         break;
       case dnsCodes.RECORD_TYPES.PTR:
-        record = resRec.createPtrRecordFromReader(reader); 
+        record = resRec.createPtrRecordFromReader(reader);
         break;
       case dnsCodes.RECORD_TYPES.SRV:
-        record = resRec.createSrvRecordFromReader(reader); 
+        record = resRec.createSrvRecordFromReader(reader);
         break;
       default:
         throw new Error('Unsupported record type: ' + recordType);
@@ -118,6 +118,13 @@ exports.DnsPacket = function DnsPacket(
   this.answers = [];
   this.authority = [];
   this.additionalInfo = [];
+};
+
+/**
+ * Returns true if the packet has requested a unicast response, else false.
+ */
+exports.DnsPacket.prototype.unicastResponseRequested = function() {
+  return false;
 };
 
 /**

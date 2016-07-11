@@ -26,6 +26,64 @@ function resetDnsController() {
   dnsController = require('../../../app/scripts/dnssd/dns-controller');
 }
 
+/**
+ * Helper function to test for multicast/unicast sending.
+ */
+function helperTestForSendAddress(t, isUnicast, address, port) {
+  var queryPacket = new dnsPacket.DnsPacket(
+    0,
+    true,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+  );
+  // We want to include a question to make sure we don't not send a response
+  // just because there are no questions rather than due to the fact that it
+  // isn't a query.
+  var q1name = 'domain';
+  var q1type = 2;
+  var q1class = 1;
+
+  var question1 = new qSection.QuestionSection(q1name, q1type, q1class);
+  queryPacket.addQuestion(question1);
+
+  var responsePacket = new dnsPacket.DnsPacket(
+    0,
+    false,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+  );
+  // We will return a response packet regardless of the other parameters.
+  responsePacket.unicastResponseRequested = () => isUnicast;
+  dnsController.createResponsePacket = () => responsePacket;
+
+  // Return a single item to indicate that we should respond to the query.
+  var aRecord = new resRec.ARecord('domainname', 10, '123.42.61.123', 2);
+  dnsController.getResourcesForQuery = () => [aRecord];
+
+  var sendSpy = sinon.spy();
+  dnsController.sendPacket = sendSpy;
+
+  dnsController.handleIncomingPacket(queryPacket, address, port);
+
+  // We are going to ignore the first parameter, as we trust other methods to
+  // test the content of the packet. We're interested only in the address and
+  // port.
+  t.equal(sendSpy.callCount, 1);
+  t.equal(sendSpy.args[0][1], address);
+  t.equal(sendSpy.args[0][2], port);
+
+  resetDnsController();
+  t.end();
+}
+
 test('getSocket resolves immediately if socket is present', function(t) {
   // Make the module think it has started.
   var dummySocket = {};
@@ -433,4 +491,226 @@ test('initializeNetworkInterfaceCache initializes cache', function(t) {
     t.end();
     resetDnsController();
   });
+});
+
+test('handleIncomingPacket invokes all callbacks', function(t) {
+  // All the registered callbacks should be given a chance at the packets
+  var responsePacket = new dnsPacket.DnsPacket(
+    0,
+    false,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+  );
+  
+  var callback1 = sinon.spy();
+  var callback2 = sinon.spy();
+  dnsController.addOnReceiveCallback(callback1);
+  dnsController.addOnReceiveCallback(callback2);
+
+  dnsController.handleIncomingPacket(responsePacket, '123.4.5.6', 7777);
+
+  t.true(callback1.calledOnce);
+  t.true(callback2.calledOnce);
+  t.deepEqual(callback1.args[0], [responsePacket]);
+  t.deepEqual(callback2.args[0], [responsePacket]);
+
+  resetDnsController();
+  t.end();
+});
+
+test('handleIncomingPacket does not send packets if not query', function(t) {
+  var responsePacket = new dnsPacket.DnsPacket(
+    0,
+    false,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+  );
+  // We want to include a question to make sure we don't not send a response
+  // just because there are no questions rather than due to the fact that it
+  // isn't a query.
+  var question = new qSection.QuestionSection('hiname', 'hitype', 'hiclass');
+  responsePacket.addQuestion(question);
+
+  var sendSpy = sinon.spy();
+  dnsController.sendPacket = sendSpy;
+
+  dnsController.handleIncomingPacket(responsePacket, 'addr', 4444);
+
+  t.equal(sendSpy.callCount, 0);
+  t.end();
+
+  resetDnsController();
+});
+
+test('handleIncomingPacket sends packet for each question', function(t) {
+  var queryPacket = new dnsPacket.DnsPacket(
+    0,
+    true,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+  );
+  // We want to include a question to make sure we don't not send a response
+  // just because there are no questions rather than due to the fact that it
+  // isn't a query.
+  var q1name = 'domain';
+  var q1type = 2;
+  var q1class = 1;
+  var q2name = 'domain2';
+  var q2type = 3;
+  var q2class = 2;
+
+  var question1 = new qSection.QuestionSection(q1name, q1type, q1class);
+  var question2 = new qSection.QuestionSection(q2name, q2type, q2class);
+  queryPacket.addQuestion(question1);
+  queryPacket.addQuestion(question2);
+
+  // The response packets we are going to generate. Note that we should NOT
+  // include questions in these responses, as according to section 6 of the RFC
+  // we don't put questions in responses.
+  var responsePacket1 = new dnsPacket.DnsPacket(
+    0,
+    false,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+  );
+  var responsePacket2 = new dnsPacket.DnsPacket(
+    0,
+    false,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+  );
+
+  // The arguments passed to our createResponsePacket spy.
+  var responsePacketArgs = [];
+  var responsePacketCallCount = 0;
+  var createResponsePacketSpy = function(packetArg) {
+    responsePacketArgs.push(packetArg);
+    if (responsePacketCallCount === 0) {
+      responsePacketCallCount += 1;
+      return responsePacket1;
+    } else {
+      responsePacketCallCount += 1;
+      return responsePacket2;
+    }
+  };
+  dnsController.createResponsePacket = createResponsePacketSpy;
+
+  // Now we need to make sure we add the correct records to the response.
+  var q1record1 = new resRec.ARecord('domain', 1, '1.1.1.1', 2);
+  var q2record1 = new resRec.ARecord('domain2', 4, '1.1.1.1', 2);
+  var q2record2 = new resRec.PtrRecord('service', 5, 'instance', 1);
+
+  // We will maintain the arguments we expect.
+  var getResourcesArgs = [];
+  var getResourcesCallCount = 0;
+  var getResourcesForQuerySpy = function(qName, qClass, qType) {
+    var args = [qName, qClass, qType];
+    getResourcesArgs.push(args);
+    if (getResourcesCallCount === 0) {
+      getResourcesCallCount += 1;
+      return [q1record1];
+    } else {
+      getResourcesCallCount += 1;
+      return [q2record1, q2record2];
+    }
+    getResourcesCallCount += 1;
+  };
+  dnsController.getResourcesForQuery = getResourcesForQuerySpy;
+
+  var sendSpy = sinon.spy();
+  dnsController.sendPacket = sendSpy;
+
+  // After all this setup, make the call we're actually testing.
+  dnsController.handleIncomingPacket(queryPacket);
+
+  // And now for the asserstions.
+  // Create response packet should have been called twice--once for each
+  // question.
+  t.deepEqual(responsePacketArgs, [queryPacket, queryPacket]);
+
+  // Send should have been called with two packets--both to the multicast
+  var sendArgs1 = sendSpy.args[0];
+  var sendArgs2 = sendSpy.args[1];
+
+  // First call
+  t.deepEqual(sendArgs1[0], responsePacket1);
+  t.deepEqual(sendArgs1[1], dnsController.DNSSD_MULTICAST_GROUP);
+  t.deepEqual(sendArgs1[2], dnsController.DNSSD_PORT);
+
+  // Second call
+  t.deepEqual(sendArgs2[0], responsePacket2);
+  t.deepEqual(sendArgs2[1], dnsController.DNSSD_MULTICAST_GROUP);
+  t.deepEqual(sendArgs2[2], dnsController.DNSSD_PORT);
+
+  t.end();
+  resetDnsController();
+});
+
+test('handleIncomingPacket does not send if no records found', function(t) {
+  var queryPacket = new dnsPacket.DnsPacket(
+    0,
+    true,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+  );
+  // We want to include a question to make sure we don't not send a response
+  // just because there are no questions rather than due to the fact that it
+  // isn't a query.
+  var q1name = 'domain';
+  var q1type = 2;
+  var q1class = 1;
+
+  var question1 = new qSection.QuestionSection(q1name, q1type, q1class);
+  queryPacket.addQuestion(question1);
+
+  // Return an empty array to indicate no records found.
+  dnsController.getResourcesForQuery = () => [];
+
+  var sendSpy = sinon.spy();
+  dnsController.sendPacket = sendSpy;
+
+  dnsController.handleIncomingPacket(queryPacket);
+
+  // Make sure we never sent something.
+  t.equal(sendSpy.callCount, 0);
+
+  resetDnsController();
+  t.end();
+});
+
+test('handleIncomingPacket sends to multicast address', function(t) {
+  helperTestForSendAddress(
+    t,
+    false,
+    dnsController.DNSSD_MULTICAST_GROUP,
+    dnsController.DNSSD_PORT
+  );
+});
+
+test('handleIncomingPacket sends to unicast address', function(t) {
+  helperTestForSendAddress(t, true, '123.9.8.7', 5555);
 });
