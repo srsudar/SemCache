@@ -307,6 +307,73 @@ exports.issueProbe = function(queryName, queryType, queryClass) {
 };
 
 /**
+ * Query for instances of a particular service type.
+ *
+ * Returns a Promise that resolves with a list of objects like the following:
+ *
+ * {
+ *   serviceType: '_http._tcp',
+ *   serviceName: 'Sams Server.local'
+ * }
+ *
+ * @param {String} serviceName the name/type of the service to query for
+ */
+exports.queryForService = function(serviceName) {
+  // Track the packets we received while querying.
+  var packets = [];
+  var callback = function(packet) {
+    packets.push(packet);
+  };
+  dnsController.addOnReceiveCallback(callback);
+
+  // We will wait 2 seconds for responses.
+  var timeToWaitForResponses = 2000;
+  // A browse for a service corresponds to queries for PTR records.
+  dnsController.query(
+    serviceName,
+    dnsCodes.RECORD_TYPES.PTR,
+    dnsCodes.CLASS_CODES.IN
+  );
+  // For the purposes of this implementation, we are going to Issue a single
+  // query and return after two seconds.
+
+  return new Promise(function(resolve) {
+    exports.wait(timeToWaitForResponses)
+      .then(function waited() {
+        dnsController.removeOnReceiveCallback(callback);
+        var ourPackets = [];
+        var ptrAnswers = [];
+        packets.forEach(packet => {
+          if (exports.packetIsForQuery(packet, serviceName)) {
+            ourPackets.push(packet);
+            packet.answers.forEach(answer => {
+              if (answer.recordType === dnsCodes.RECORD_TYPES.PTR) {
+                ptrAnswers.push(answer);
+              }
+            });
+          }
+        });
+
+        var result = [];
+        ptrAnswers.forEach(answer => {
+          result.push(
+            {
+              serviceType: answer.serviceType,
+              instanceName: answer.instanceName
+            }
+          );
+
+        });
+
+        resolve(result);
+      })
+      .catch(function somethingWentWrong(err) {
+        console.log('Something went wrong in query: ', err);
+      });
+  });
+};
+
+/**
  * Browse for services of a given type. Returns a promise that resolves with
  * a list of objects like the following:
  *
@@ -321,5 +388,22 @@ exports.issueProbe = function(queryName, queryType, queryClass) {
  * "_http._tcp".
  */
 exports.browse = function(type) {
+  // Browse is a somewhat under-specified term with regards to the mDNS RFC.
+  // Browsing is essentially querying for a particular type, which is most
+  // similar to RFC 6762 Section 5.2: Continuous Multicast DNS Querying. This
+  // scenario essentially allows for a standing request for notifications of
+  // instances of a particular type. This is useful for to automatically update
+  // a list of available printers, for example. For the current implementation,
+  // we are instead going to just issue a query for PTR records of the given
+  // type.
+  //
+  // Several considerations are made in the RFC for how to responsibly browse
+  // the network. First, queries should be delayed by a random value between
+  // 20 and 120ms, in order to not collide or flood in the event that a browse
+  // is triggered at the same time, e.g. by a common event. Second, the first
+  // two queries must take place 1 second apart. Third, the period between
+  // queries must increase by at least a factor of 2. Finally, known-answer
+  // suppression must be employed.
+  
   throw new Error('Unimplemented ' + type);
 };

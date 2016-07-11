@@ -618,3 +618,95 @@ test('advertiseService advertises', function(t) {
   
   resetDnsSdSem();
 });
+
+test('queryForService returns correct values', function(t) {
+  // we added a callback
+  // we issued a query
+  // we waited 2 seconds
+  // we resolved with the appropriate list
+
+ // We're querying for services anemd this.
+  var serviceName = '_test._name';
+  // Add two packets. One will have an A record and a PTR, the other will have
+  // just a PTR.
+  var packet1 = new dnsPacket.DnsPacket(
+    0, false, 0, false, false, false, false, 0
+  );
+  var packet2 = new dnsPacket.DnsPacket(
+    0, false, 0, false, false, false, false, 0
+  );
+  var aRecord = new resRec.ARecord(
+    'www.eg.com', 10, '1.2.3.4', dnsCodes.CLASS_CODES.IN
+  );
+  var ptrRecord1 = new resRec.PtrRecord(
+    serviceName, 8, 'instance name 1', dnsCodes.CLASS_CODES.IN
+  );
+  var ptrRecord2 = new resRec.PtrRecord(
+    serviceName, 8, 'instance name 2', dnsCodes.CLASS_CODES.IN
+  );
+  packet1.addAnswer(aRecord);
+  packet1.addAnswer(ptrRecord1);
+  packet2.addAnswer(ptrRecord2);
+  var expectedRecords = [
+    {
+      serviceType: ptrRecord1.serviceType,
+      instanceName: ptrRecord1.instanceName
+    },
+    {
+      serviceType: ptrRecord2.serviceType,
+      instanceName: ptrRecord2.instanceName
+    }
+  ];
+
+
+  var addOnReceiveCallbackCount = 0;
+  var addOnReceiveCallbackSpy = function(callbackParam) {
+    addOnReceiveCallbackCount += 1;
+    // Add both packets here when called.
+    callbackParam(packet1);
+    callbackParam(packet2);
+  };
+  var removeOnReceiveCallbackSpy = sinon.spy();
+  var querySpy = sinon.spy();
+  var waitArg = null;
+  var waitSpy = function(waitParam) {
+    waitArg = waitParam;
+    // Don't actually wait during tests.
+    return Promise.resolve();
+  };
+
+  var dnssdSem = proxyquire(
+    '../../../app/scripts/dnssd/dns-sd-sem',
+    {
+      './dns-controller':
+      {
+        addOnReceiveCallback: addOnReceiveCallbackSpy,
+        removeOnReceiveCallback: removeOnReceiveCallbackSpy,
+        query: querySpy
+      }
+    }
+  );
+  dnssdSem.wait = waitSpy;
+  var packetIsForQueryCallCount = 0;
+  dnssdSem.packetIsForQuery = function() {
+    packetIsForQueryCallCount += 1;
+    return true;
+  };
+
+  dnssdSem.queryForService(serviceName)
+    .then(function success(records) {
+        // Assertions
+        t.equal(addOnReceiveCallbackCount, 1);
+        t.equal(removeOnReceiveCallbackSpy.callCount, 1);
+        // We expect to wait for 2 seconds.
+        t.equal(waitArg, 2000);
+        t.equal(packetIsForQueryCallCount, 2);
+        t.deepEqual(records, expectedRecords);
+        t.end();
+        resetDnsSdSem();
+    })
+    .catch(function failed(err) {
+      t.fail('should not have caught error: ' + err);
+      t.end();
+    });
+});
