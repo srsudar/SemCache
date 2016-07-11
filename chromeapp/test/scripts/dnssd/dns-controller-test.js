@@ -220,7 +220,7 @@ test('queryForARecord calls query with correct args', function(t) {
     '../../../app/scripts/dnssd/dns-controller'
   );
 
-  mockedController.query = querySpy;
+  mockedController.getResourcesForQuery = querySpy;
 
   var domainName = 'www.example.com';
 
@@ -241,7 +241,7 @@ test('queryForPtrRecord calls query with correct args', function(t) {
     '../../../app/scripts/dnssd/dns-controller'
   );
 
-  mockedController.query = querySpy;
+  mockedController.getResourcesForQuery = querySpy;
 
   var serviceName = '_semcache._tcp';
 
@@ -262,7 +262,7 @@ test('queryForSrvRecord calls query with correct args', function(t) {
     '../../../app/scripts/dnssd/dns-controller'
   );
 
-  mockedController.query = querySpy;
+  mockedController.getResourcesForQuery = querySpy;
 
   var instanceName = 'Fancy Cache._semcache._tcp';
 
@@ -715,4 +715,111 @@ test('handleIncomingPacket sends to multicast address', function(t) {
 
 test('handleIncomingPacket sends to unicast address', function(t) {
   helperTestForSendAddress(t, true, '123.9.8.7', 5555);
+});
+
+test('createResponsePacket correct', function(t) {
+  // We should create a response that is not a query.
+  var expected = new dnsPacket.DnsPacket(
+    0,
+    false,  // not a query.
+    0,
+    true,
+    0,
+    0,
+    0,
+    0
+  );
+  var actual = dnsController.createResponsePacket(expected);
+  t.deepEqual(actual, expected);
+  t.end();
+});
+
+test('getResourcesForQuery respects ANY in type', function(t) {
+  var qName = 'www.example.com';
+  var qType = dnsCodes.RECORD_TYPES.ANY;
+  var qClass = dnsCodes.CLASS_CODES.IN;
+
+  // First make some records for this class with a matching name.
+  var aRecord1 = new resRec.ARecord(qName, 10, '1.2.3.4', qClass);
+  var aRecord2 = new resRec.ARecord(qName, 10, '9.8.7.6', qClass);
+  var srvRecord = new resRec.SrvRecord(qName, 11, 0, 0, 8888, 'domain.local');
+
+  dnsController.addRecord(qName, aRecord1);
+  dnsController.addRecord(qName, aRecord2);
+  dnsController.addRecord(qName, srvRecord);
+
+  // We don't strictly care about the order of returned responses, but we'll
+  // expect the order we put them in just to use deepEqual as a single
+  // assertion.
+  var expected = [aRecord1, aRecord2, srvRecord];
+  var actual = dnsController.getResourcesForQuery(qName, qType, qClass);
+
+  t.deepEqual(actual, expected);
+  t.end();
+  resetDnsController();
+});
+
+test('getResourcesForQuery respects class', function(t) {
+  var qName = 'www.example.com';
+  var qType = dnsCodes.RECORD_TYPES.A;
+  var qClass = dnsCodes.CLASS_CODES.IN;
+
+  var unwantedClass = dnsCodes.CLASS_CODES.CS;
+
+  // First make some records for this class with a matching name.
+  var unwantedRecord = new resRec.ARecord(qName, 10, '1.2.3.4', unwantedClass);
+  var wantedRecord = new resRec.ARecord(qName, 10, '9.8.7.6', qClass);
+
+  dnsController.addRecord(qName, unwantedRecord);
+  dnsController.addRecord(qName, wantedRecord);
+
+  // We don't strictly care about the order of returned responses, but we'll
+  // expect the order we put them in just to use deepEqual as a single
+  // assertion.
+  var expected = [wantedRecord];
+  var actual = dnsController.getResourcesForQuery(qName, qType, qClass);
+
+  t.deepEqual(actual, expected);
+  t.end();
+  resetDnsController();
+});
+
+test('getResourcesForQuery respects type', function(t) {
+  var qName = 'www.example.com';
+  // We'll query for a SRV record
+  var qType = dnsCodes.RECORD_TYPES.SRV;
+  var qClass = dnsCodes.CLASS_CODES.IN;
+
+  // First make some records for this class with a matching name.
+  var aRecord1 = new resRec.ARecord(qName, 10, '1.2.3.4', qClass);
+  var aRecord2 = new resRec.ARecord(qName, 10, '9.8.7.6', qClass);
+  var srvRecord = new resRec.SrvRecord(qName, 11, 0, 0, 8888, 'domain.local');
+
+  dnsController.addRecord(qName, aRecord1);
+  dnsController.addRecord(qName, aRecord2);
+  dnsController.addRecord(qName, srvRecord);
+
+  // We don't strictly care about the order of returned responses, but we'll
+  // expect the order we put them in just to use deepEqual as a single
+  // assertion.
+  var expected = [srvRecord];
+  var actual = dnsController.getResourcesForQuery(qName, qType, qClass);
+
+  t.deepEqual(actual, expected);
+  t.end();
+  resetDnsController();
+});
+
+test('getResourcesForQuery returns empty array if no records', function(t) {
+  var qName = 'www.example.com';
+  // We'll query for a SRV record
+  var qType = dnsCodes.RECORD_TYPES.SRV;
+  var qClass = dnsCodes.CLASS_CODES.IN;
+
+  var expected = [];
+  var actual = dnsController.getResourcesForQuery(qName, qType, qClass);
+
+  t.deepEqual(actual, expected);
+  t.end();
+  resetDnsController();
 });

@@ -204,7 +204,22 @@ exports.createResponsePacket = function(queryPacket) {
   // DNS response MUST be silently ignored.  Multicast DNS queriers receiving
   // Multicast DNS responses do not care what question elicited the response;
   // they care only that the information in the response is true and accurate."
-  console.log('UNIMPLEMENTED: createResponsePacket', queryPacket);
+  if (queryPacket) {
+    // We aren't actually using the query packet yet, but we might be in the
+    // future, so the API includes it.
+    // no op.
+  }
+  var result = new dnsPacket.DnsPacket(
+    0,      // 18.1: IDs in responses MUST be set to 0
+    false,  // not a query.
+    0,      // 18.3: MUST be set to 0
+    true,   // 18.4: in response MUST be set to one
+    0,      // 18.5: might be non-0, but caller can adjust if truncated
+    0,      // 18.6: SHOULD be 0
+    0,      // 18.7 MUST be 0
+    0       // 18.11 MUST be 0
+  );
+  return result;
 };
 
 /**
@@ -231,9 +246,33 @@ exports.getResourcesForQuery = function(qName, qType, qClass) {
   // Unicast DNS, generally only DNS class 1 ("Internet") is used, but should
   // client software use classes other than 1, the matching rules described
   // above MUST be used."
-  // TODO: implement
-  console.log('UNIMPLEMENTED: ', qName, qType, qClass);
-  return [];
+
+  // records stored as {qName: [record, record, record] }
+  var namedRecords = records[qName];
+
+  if (!namedRecords) {
+    // Nothing at all--return an empty array
+    return [];
+  }
+  
+  var result = [];
+
+  namedRecords.forEach(record => {
+    var meetsType = false;
+    var meetsClass = false;
+    if (qType === dnsCodes.RECORD_TYPES.ANY || record.recordType === qType) {
+      meetsType = true;
+    }
+    if (qClass === dnsCodes.CLASS_CODES.ANY || record.recordClass === qClass) {
+      meetsClass = true;
+    }
+
+    if (meetsType && meetsClass) {
+      result.push(record);
+    }
+  });
+
+  return result;
 };
 
 /**
@@ -396,7 +435,7 @@ exports.query = function(queryName, queryType, queryClass) {
  * empty list if none are found.
  */
 exports.queryForARecord = function(domainName) {
-  exports.query(
+  exports.getResourcesForQuery(
     domainName,
     dnsCodes.RECORD_TYPES.A,
     dnsCodes.CLASS_CODES.IN
@@ -409,7 +448,7 @@ exports.queryForARecord = function(domainName) {
  * Resolves with an empty list if none are found.
  */
 exports.queryForPtrRecord = function(serviceName) {
-  exports.query(
+  exports.getResourcesForQuery(
     serviceName,
     dnsCodes.RECORD_TYPES.PTR,
     dnsCodes.CLASS_CODES.IN
@@ -422,7 +461,7 @@ exports.queryForPtrRecord = function(serviceName) {
  * response. Resolves with an empty list if none are found.
  */
 exports.queryForSrvRecord = function(instanceName) {
-  exports.query(
+  exports.getResourcesForQuery(
     instanceName,
     dnsCodes.RECORD_TYPES.SRV,
     dnsCodes.CLASS_CODES.IN
