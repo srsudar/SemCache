@@ -450,8 +450,9 @@ test('createServiceRecords creates and returns', function(t) {
   var port = 8817;
   var domain = 'computer.local';
 
+  var nameTypeDomain = [name, type, 'local'].join('.');
   var expectedSrvRecord = new resRec.SrvRecord(
-    name,
+    nameTypeDomain,
     dnsUtil.DEFAULT_TTL,
     dnsUtil.DEFAULT_PRIORITY,
     dnsUtil.DEFAULT_WEIGHT,
@@ -462,7 +463,7 @@ test('createServiceRecords creates and returns', function(t) {
   var expectedPtrRecord = new resRec.PtrRecord(
     type,
     dnsUtil.DEFAULT_TTL,
-    name,
+    nameTypeDomain,
     dnsCodes.CLASS_CODES.IN
   );
 
@@ -475,7 +476,7 @@ test('createServiceRecords creates and returns', function(t) {
   var firstArgs = addRecordSpy.args[0];
   var secondArgs = addRecordSpy.args[1];
 
-  t.equal(firstArgs[0], name);
+  t.equal(firstArgs[0], nameTypeDomain);
   t.deepEqual(firstArgs[1], expectedSrvRecord);
 
   t.equal(secondArgs[0], type);

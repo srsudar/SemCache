@@ -829,6 +829,12 @@ var NUM_OCTETS_SECTION_LENGTHS = 2;
 /**
  * Parse numRecords Resource Records from a ByteArrayReader object. Returns an
  * array of resource record objects.
+ *
+ * @param {ByteArrayReader} reader the reader from which to construct resource
+ * records. reader should have been moved to the correct cursor position
+ * @param {integer} numRecords the number of records to parse
+ *
+ * @return {Array<resource record>} an Array of the parsed resource records
  */
 function parseResourceRecordsFromReader(reader, numRecords) {
   var result = [];
@@ -861,17 +867,18 @@ function parseResourceRecordsFromReader(reader, numRecords) {
  * packet is not converted to byte format until a call is made to
  * getAsByteArray().
  *
- * id: a 2-octet identifier for the packet
- * isQuery: true if packet is a query, false if it is a response
- * opCode: a 4-bit field. 0 is a standard query
- * isAuthoritativeAnswer: true if the response is authoritative for the domain
- *   in the question section
- * isTruncated: true if the reply is truncated
- * recursionIsDesired: true if recursion is desired
- * recursionAvailable: true or recursion is available
- * returnCode: a 4-bit field. 0 is no error and 3 is a name error. Name errors
- *   are returned only from the authoritative name server and means the domain
- *   name specified does not exist
+ * @param {integer} id a 2-octet identifier for the packet
+ * @param {boolean} isQuery true if packet is a query, false if it is a
+ * response
+ * @param {integer} opCode a 4-bit field. 0 is a standard query
+ * @param {boolea} isAuthoritativeAnswer true if the response is authoritative
+ * for the domain in the question section
+ * @param {boolean} isTruncated true if the reply is truncated
+ * @param {boolean} recursionIsDesired true if recursion is desired
+ * @param {boolean} recursionAvailable true or recursion is available
+ * @param {integer} returnCode a 4-bit field. 0 is no error and 3 is a name
+ * error. Name errors are returned only from the authoritative name server and
+ * means the domain name specified does not exist
  */
 exports.DnsPacket = function DnsPacket(
   id,
@@ -1004,6 +1011,11 @@ exports.DnsPacket.prototype.convertToByteArray = function() {
 /**
  * Create a DNS Packet from a ByteArrayReader object. The contents of the
  * reader are as expected to be output from convertToByteArray().
+ *
+ * @param {ByteArrayReader} reader the reader from which to construct the
+ * DnsPacket. Should be moved to the correct cursor position
+ *
+ * @return {DnsPacket} the packet constructed
  */
 exports.createPacketFromReader = function(reader) {
   var id = reader.getValue(NUM_OCTETS_ID);
@@ -1032,7 +1044,6 @@ exports.createPacketFromReader = function(reader) {
   var isTruncated = flags.tc ? true : false;
   var recursionDesired = flags.rd ? true : false;
   var recursionAvailable = flags.ra ? true : false;
-
 
   var result = new exports.DnsPacket(
     id,
@@ -1070,7 +1081,7 @@ exports.createPacketFromReader = function(reader) {
 /**
  * Add a question resource to the DNS Packet.
  *
- * question must be a QuestionSection object.
+ * @param {QuestionSection} question the question to add to this packet 
  */
 exports.DnsPacket.prototype.addQuestion = function(question) {
   if (!(question instanceof qSection.QuestionSection)) {
@@ -1081,6 +1092,9 @@ exports.DnsPacket.prototype.addQuestion = function(question) {
 
 /**
  * Add a Resource Record to the answer section.
+ *
+ * @param {resource record} resourceRecord the record to add to the answer
+ * section
  */
 exports.DnsPacket.prototype.addAnswer = function(resourceRecord) {
   this.answers.push(resourceRecord);
@@ -1088,6 +1102,9 @@ exports.DnsPacket.prototype.addAnswer = function(resourceRecord) {
 
 /**
  * Add a Resource Record to the authority section.
+ *
+ * @param {resource record} resourceRecord the record to add to the authority
+ * section
  */
 exports.DnsPacket.prototype.addAuthority = function(resourceRecord) {
   this.authority.push(resourceRecord);
@@ -1095,6 +1112,9 @@ exports.DnsPacket.prototype.addAuthority = function(resourceRecord) {
 
 /**
  * Add a Resource Record to the additional info section.
+ *
+ * @param {resource record} resourceRecord the record to add to the additional
+ * info section
  */
 exports.DnsPacket.prototype.addAdditionalInfo = function(resourceRecord) {
   this.additionalInfo.push(resourceRecord);
@@ -1104,6 +1124,20 @@ exports.DnsPacket.prototype.addAdditionalInfo = function(resourceRecord) {
  * Convert the given value (in 16 bits) to an object containing the DNS header
  * flags. The returned object will have the following properties: qr, opcdoe,
  * aa, tc, rd, ra, rcode.
+ *
+ * @param {integer} value a number those lowest order 16 bits will be parsed to
+ * an object representing packet flags
+ *
+ * @return {object} a flag object like the following:
+ * {
+ *   qr: integer,
+ *   opcode: integer,
+ *   aa: integer,
+ *   tc: integer,
+ *   rd: integer,
+ *   ra: integer,
+ *   rcode integer
+ * }
  */
 exports.getValueAsFlags = function(value) {
   var qr = (value & 0x8000) >> 15;
@@ -1129,14 +1163,17 @@ exports.getValueAsFlags = function(value) {
  * Convert DNS packet flags to a value that represents the flags (using bitwise
  * operators), fitting in the last 16 bits. All parameters must be numbers.
  *
- * qr: 0 if it is a query, 1 if it is a response
- * opcode: 0 for a standard query
- * aa: 1 if it is authoritative, else 0
- * tc: 1 if truncated
- * rd: 1 if recursion desired
- * ra: 1 if recursion available
- * rcode: 4-bit return code field. 0 for no error, 3 for name error (if this is
- *   the authoritative name server and the name does not exist)
+ * @param {integer} qr 0 if it is a query, 1 if it is a response
+ * @param {integer} opcode 0 for a standard query
+ * @param {integer} aa 1 if it is authoritative, else 0
+ * @param {integer} tc 1 if truncated
+ * @param {integer} rd 1 if recursion desired
+ * @param {integer} ra 1 if recursion available
+ * @param {integer} rcode 4-bit return code field. 0 for no error, 3 for name
+ * error (if this is the authoritative name server and the name does not exist)
+ *
+ * @return {integer} an integer representing the flag values in the lowest
+ * order 16 bits
  */
 exports.getFlagsAsValue = function(qr, opcode, aa, tc, rd, ra, rcode) {
   var value = 0x0000;
@@ -1816,6 +1853,8 @@ exports.DEFAULT_WEIGHT = 0;
 
 /**
  * Return the local suffix, i.e. ".local". The leading dot is included.
+ *
+ * @return {string}
  */
 exports.getLocalSuffix = function() {
   return '.local';
@@ -1823,6 +1862,11 @@ exports.getLocalSuffix = function() {
 
 /**
  * Return a random integer between [min, max).
+ *
+ * @param {integer} min
+ * @param {integer} max
+ *
+ * @return {integer} random value >= min and < max
  */
 exports.randomInt = function(min, max) {
   return Math.floor(Math.random() * (max - min)) + min;
@@ -1844,6 +1888,10 @@ exports.randomInt = function(min, max) {
  * labels.
  *
  * Labels are limited to 63 bytes.
+ *
+ * @param {string} domain
+ *
+ * @return {ByteArray} a ByteArray containing the serialized domain
  */
 exports.getDomainAsByteArray = function(domain) {
   var result = new byteArray.ByteArray();
@@ -1875,9 +1923,11 @@ exports.getDomainAsByteArray = function(domain) {
  * Convert a serialized domain name from its DNS representation to a string.
  * The byteArray should contain bytes as output by getDomainAsByteArray.
  *
- * byteArr: the ByteArray containing the serialized labels
- * startByte: an optional index indicating the start point of the
- *   serialization. If not present, assumes a starting index ov 0.
+ * @param {ByteArray} byteArr the ByteArray containing the serialized labels
+ * @param {integer} startByte an optional index indicating the start point of
+ * the serialization. If not present, assumes a starting index ov 0.
+ *
+ * @return {string}
  */
 exports.getDomainFromByteArray = function(byteArr, startByte) {
   if (!(byteArr instanceof byteArray.ByteArray)) {
@@ -1899,8 +1949,10 @@ exports.getDomainFromByteArray = function(byteArr, startByte) {
  * Convert a serialized domain name from its DNS representation to a string.
  * The reader should contain bytes as output from getDomainAsByteArray.
  *
- * reader: a ByteArrayReader containing the bytes to be deserialized. The
- *   reader will have all the domain bytes consumed.
+ * @param {ByteArrayReader} reader a ByteArrayReader containing the bytes to be
+ * deserialized. The reader will have all the domain bytes consumed.
+ *
+ * @return {string}
  */
 exports.getDomainFromByteArrayReader = function(reader) {
   var result = '';
@@ -1956,6 +2008,10 @@ exports.getDomainFromByteArrayReader = function(reader) {
  * Convert a string representation of an IP address to a ByteArray.
  * '155.33.17.68' would return a ByteArray with length 4, corresponding to the
  * bytes 155, 33, 17, 68.
+ *
+ * @param {string} ipAddress
+ *
+ * @return {ByteArray}
  */
 exports.getIpStringAsByteArray = function(ipAddress) {
   var parts = ipAddress.split('.');
@@ -1979,6 +2035,10 @@ exports.getIpStringAsByteArray = function(ipAddress) {
 
 /**
  * Recover an IP address in string representation from the ByteArrayReader.
+ *
+ * @param {ByteArrayReader} reader
+ *
+ * @return {string}
  */
 exports.getIpStringFromByteArrayReader = function(reader) {
   // We assume a single byte representing each string.
@@ -2333,6 +2393,10 @@ var MAX_QUERY_CLASS = 65535;
 
 /**
  * A DNS Question section.
+ *
+ * @param {string} qName the name of the query
+ * @param {integer} qType the type of the query
+ * @param {integer} qClass the class of the query
  */
 exports.QuestionSection = function QuestionSection(qName, qType, qClass) {
   if (!(this instanceof QuestionSection)) {
@@ -2372,6 +2436,8 @@ exports.QuestionSection = function QuestionSection(qName, qType, qClass) {
  * 2 octets representing the query type
  *
  * 2 octets representing the query class
+ *
+ * @return {ByteArray}
  */
 exports.QuestionSection.prototype.convertToByteArray = function() {
   var result = new byteArray.ByteArray();
@@ -2387,6 +2453,8 @@ exports.QuestionSection.prototype.convertToByteArray = function() {
 
 /**
  * Returns true if the question has requested a unicast response, else false.
+ *
+ * @return {boolean}
  */
 exports.QuestionSection.prototype.unicastResponseRequested = function() {
   // For now, since we can't share a port in Chrome, we will assume that
@@ -2464,12 +2532,12 @@ var dnsCodes = require('./dns-codes-sem');
  * An A record. A records respond to queries for a domain name to an IP
  * address.
  *
- * domainName: the domain name, e.g. www.example.com
- * ttl: the time to live
- * ipAddress: the IP address of the domainName. This must be a string
- *   representation (e.g. '192.3.34.17').
- * recordClass: the class of the record type. This is optional, and if not
- *   present or is not truthy will be set as IN for internet traffic.
+ * @param {string} domainName: the domain name, e.g. www.example.com
+ * @param {integer} ttl: the time to live
+ * @param {string} ipAddress: the IP address of the domainName. This must be a string
+ * (e.g. '192.3.34.17').
+ * @param {integer} recordClass: the class of the record type. This is optional, and if not
+ * present or is not truthy will be set as IN for internet traffic.
  */
 exports.ARecord = function ARecord(
   domainName,
@@ -2508,6 +2576,8 @@ exports.ARecord = function ARecord(
  * 2 octets representing the number 4, to indicate that 4 bytes follow.
  *
  * 4 octets representing a 4-byte IP address
+ *
+ * @return {ByteArray}
  */
 exports.ARecord.prototype.convertToByteArray = function() {
   var result = exports.getCommonFieldsAsByteArray(
@@ -2533,6 +2603,10 @@ exports.ARecord.prototype.convertToByteArray = function() {
 /**
  * Create an A Record from a ByteArrayReader object. The reader should be at
  * the correct cursor position, at the domain name of the A Record.
+ *
+ * @param {ByteArrayReader} reader
+ *
+ * @return {ARecord}
  */
 exports.createARecordFromReader = function(reader) {
   var commonFields = exports.getCommonFieldsFromByteArrayReader(reader);
@@ -2571,6 +2645,10 @@ exports.createARecordFromReader = function(reader) {
 /**
  * Create a PTR Record from a ByteArrayReader object. The reader should be at
  * the correct cursor position, at the service type query of the PTR Record.
+ *
+ * @param {ByteArrayReader} reader
+ *
+ * @return {PtrRecord}
  */
 exports.createPtrRecordFromReader = function(reader) {
   var commonFields = exports.getCommonFieldsFromByteArrayReader(reader);
@@ -2608,6 +2686,10 @@ exports.createPtrRecordFromReader = function(reader) {
 /**
  * Create an SRV Record from a ByteArrayReader object. The reader should be at
  * the correct cursor position, at the service type query of the SRV Record.
+ *
+ * @param {ByteArrayReader} reader
+ *
+ * @return {SrvRecord}
  */
 exports.createSrvRecordFromReader = function(reader) {
   var commonFields = exports.getCommonFieldsFromByteArrayReader(reader);
@@ -2666,12 +2748,13 @@ exports.createSrvRecordFromReader = function(reader) {
  * '_printer._tcp.local'. They return the name of an instance offering the
  * service (eg 'Printsalot._printer._tcp.local').
  *
- * serviceType: the string representation of the service that has been queried
- *   for.
- * ttl: the time to live
- * instanceName: the name of the instance providing the serviceType
- * rrClass: the class of the record. If not truthy, will be set to IN for
- *   internet traffic.
+ * @param {string} serviceType the string representation of the service that
+ * has been queried for.
+ * @param {integer} ttl the time to live
+ * @param {string} instanceName the name of the instance providing the
+ * serviceType
+ * @param {integer} rrClass the class of the record. If not truthy, will be set
+ * to IN for internet traffic.
  */
 exports.PtrRecord = function PtrRecord(
   serviceType,
@@ -2718,6 +2801,8 @@ exports.PtrRecord = function PtrRecord(
  * some location in the domain name space". In the context of mDNS, this would
  * be the name of the instance that actually provides the service that is being
  * queried for.
+ *
+ * @return {ByteArray}
  */
 exports.PtrRecord.prototype.convertToByteArray = function() {
   var result = exports.getCommonFieldsAsByteArray(
@@ -2746,16 +2831,17 @@ exports.PtrRecord.prototype.convertToByteArray = function() {
  * An SRV record. SRV records map the name of a service instance to the
  * information needed to connect to the service. 
  *
- * instanceTypeDomain: the name being queried for, e.g.
- *   'PrintsALot._printer._tcp.local'
- * ttl: the time to live
- * priority: the priority of this record if multiple records are found. This
- *   must be a number from 0 to 65535.
- * weight: the weight of the record if two records have the same priority. This
- *   must be a number from 0 to 65535.
- * port: the port number on which to find the service. This must be a number
- *   from 0 to 65535.
- * targetDomain: the domain hosting the service (e.g. 'blackhawk.local')
+ * @param {string} instanceTypeDomain: the name being queried for, e.g.
+ * 'PrintsALot._printer._tcp.local'
+ * @param {integer} ttl: the time to live
+ * @param {integer} priority: the priority of this record if multiple records
+ * are found. This must be a number from 0 to 65535.
+ * @param {integer} weight: the weight of the record if two records have the
+ * same priority. This must be a number from 0 to 65535.
+ * @param {integer} port: the port number on which to find the service. This
+ * must be a number from 0 to 65535.
+ * @param {string} targetDomain: the domain hosting the service (e.g.
+ * 'blackhawk.local')
  */
 exports.SrvRecord = function SrvRecord(
   instanceTypeDomain,
@@ -2801,6 +2887,8 @@ exports.SrvRecord = function SrvRecord(
  *
  * A variable number of octets encoding the target name (e.g.
  * PrintsALot.local), encoded as a domain name.
+ *
+ * @return {ByteArray}
  */
 exports.SrvRecord.prototype.convertToByteArray = function() {
   var result = exports.getCommonFieldsAsByteArray(
@@ -2846,6 +2934,8 @@ exports.SrvRecord.prototype.convertToByteArray = function() {
  * 2 octets representing the RR class
  *
  * 4 octets representing the TTL
+ *
+ * @return {ByteArray}
  */
 exports.getCommonFieldsAsByteArray = function(
   domainName,
@@ -2869,7 +2959,10 @@ exports.getCommonFieldsAsByteArray = function(
  * Extract the common fields from the reader as encoded by
  * getCommonFieldsAsByteArray.
  *
- * Returns an object with fields domainName, rrType, rrClass, and ttl.
+ * @param {ByteArrayReader} reader
+ *
+ * @return {object} Returns an object with fields: domainName, rrType, rrClass,
+ * and ttl.
  */
 exports.getCommonFieldsFromByteArrayReader = function(reader) {
   var domainName = dnsUtil.getDomainFromByteArrayReader(reader);
@@ -2890,6 +2983,10 @@ exports.getCommonFieldsFromByteArrayReader = function(reader) {
 /**
  * Return type of the Resource Record queued up in the reader. Peaking does not
  * affect the position of the underlying reader.
+ *
+ * @param {ByteArrayReader} reader
+ *
+ * @return {integer}
  */
 exports.peekTypeInReader = function(reader) {
   // Getting values from the reader normally consumes bytes. Create a defensive
@@ -2933,7 +3030,6 @@ console.log('loaded?');
 
 },{"./dnssd/dns-sd":"dnssd"}],"binaryUtils":[function(require,module,exports){
 /*jshint esnext:true*/
-/*exported BinaryUtils*/
 /*
  * https://github.com/justindarc/dns-sd.js
  *
@@ -3211,6 +3307,9 @@ var ipv4Interfaces = [];
 
 /**
  * Returns all records known to this module.
+ *
+ * @return {Array<resource record>} all the resource records known to this
+ * module
  */
 exports.getRecords = function() {
   return records;
@@ -3219,6 +3318,9 @@ exports.getRecords = function() {
 /**
  * Returns all the callbacks currently registered to be invoked with incoming
  * packets.
+ *
+ * @return {Array<function>} all the onReceive callbacks that have been
+ * registered
  */
 exports.getOnReceiveCallbacks = function() {
   return onReceiveCallbacks;
@@ -3234,6 +3336,8 @@ exports.socketInfo = null;
 
 /**
  * True if the service is started.
+ *
+ * @return {boolean} representing whether or not the service has started
  */
 exports.isStarted = function() {
   return started;
@@ -3241,6 +3345,14 @@ exports.isStarted = function() {
 
 /**
  * Return a cached array of IPv4 interfaces for this machine.
+ *
+ * @return {object} an array of all the IPv4 interfaces known to this machine.
+ * The objects have the form: 
+ * {
+ *   name: string,
+ *   address: string,
+ *   prefixLength: integer
+ * }
  */
 exports.getIPv4Interfaces = function() {
   if (!exports.isStarted()) {
@@ -3255,6 +3367,8 @@ exports.getIPv4Interfaces = function() {
 
 /**
  * Add a callback to be invoked with received packets.
+ *
+ * @param {function} callback a callback to be invoked with received packets.
  */
 exports.addOnReceiveCallback = function(callback) {
   onReceiveCallbacks.push(callback);
@@ -3262,6 +3376,9 @@ exports.addOnReceiveCallback = function(callback) {
 
 /**
  * Remove the callback.
+ *
+ * @param {function} callback the callback function to be removed. The callback
+ * should already have been added via a call to addOnReceiveCallback().
  */
 exports.removeOnReceiveCallback = function(callback) {
   var index = onReceiveCallbacks.indexOf(callback);
@@ -3273,6 +3390,14 @@ exports.removeOnReceiveCallback = function(callback) {
 /**
  * The listener that is attached to chrome.sockets.udp.onReceive.addListener
  * when the service is started.
+ *
+ * @param {object} info the object that is called by the chrome.sockets.udp
+ * API. It is expected to look like:
+ * {
+ *   data: ArrayBuffer,
+ *   remoteAddress: string,
+ *   remotePort: integer
+ * }
  */
 exports.onReceiveListener = function(info) {
   if (dnsUtil.DEBUG) {
@@ -3304,6 +3429,10 @@ exports.onReceiveListener = function(info) {
 
 /**
  * Respond to an incoming packet.
+ *
+ * @param {DnsPacket} packet the incoming packet
+ * @param {string} remoteAddress the remote address sending the packet
+ * @param {integer} remotePort the remote port sending the packet
  */
 exports.handleIncomingPacket = function(packet, remoteAddress, remotePort) {
   // For now, we are expecting callers to register and de-register their own
@@ -3467,6 +3596,8 @@ exports.getResourcesForQuery = function(qName, qType, qClass) {
  * Start the system. This must be called before any other calls to this module.
  *
  * Returns a promise that resolves with the socket.
+ *
+ * @return {Promise} that resolves with a ChromeUdpSocket
  */
 exports.getSocket = function() {
   if (exports.socket) {
@@ -3513,6 +3644,8 @@ exports.getSocket = function() {
  * Start the service.
  *
  * Returns a Promise that resolves when everything is up and running.
+ *
+ * @return {Promise}
  */
 exports.start = function() {
   if (exports.isStarted()) {
@@ -3540,6 +3673,11 @@ exports.start = function() {
   }
 };
 
+/**
+ * Initialize the cache of network interfaces known to this machine.
+ *
+ * @return {Promise} resolves when the cache is initialized
+ */
 exports.initializeNetworkInterfaceCache = function() {
   return new Promise(function(resolve) {
     chromeUdp.getNetworkInterfaces().then(function success(interfaces) {
@@ -3593,6 +3731,10 @@ exports.sendPacket = function(packet, address, port) {
 
 /**
  * Perform an mDNS query on the network.
+ *
+ * @param {string} queryName
+ * @param {integer} queryType
+ * @param {integer} queryClass
  */
 exports.query = function(queryName, queryType, queryClass) {
   // ID is zero, as mDNS ignores the id field.
@@ -3621,9 +3763,14 @@ exports.query = function(queryName, queryType, queryClass) {
  * Issue a query for an A Record with the given domain name. Returns a promise
  * that resolves with a list of ARecords received in response. Resolves with an
  * empty list if none are found.
+ *
+ * @param {string} domainName the domain name for which to return A Records
+ *
+ * @return {Array<resource record>} the A Records corresponding to this domain
+ * name
  */
 exports.queryForARecord = function(domainName) {
-  exports.getResourcesForQuery(
+  return exports.getResourcesForQuery(
     domainName,
     dnsCodes.RECORD_TYPES.A,
     dnsCodes.CLASS_CODES.IN
@@ -3634,9 +3781,14 @@ exports.queryForARecord = function(domainName) {
  * Issue a query for PTR Records advertising the given service name. Returns a
  * promise that resolves with a list of PtrRecords received in response.
  * Resolves with an empty list if none are found.
+ *
+ * @param {string} serviceName the serviceName for which to query for PTR
+ * Records
+ *
+ * @return {Array<resource record> the PTR Records for the service
  */
 exports.queryForPtrRecord = function(serviceName) {
-  exports.getResourcesForQuery(
+  return exports.getResourcesForQuery(
     serviceName,
     dnsCodes.RECORD_TYPES.PTR,
     dnsCodes.CLASS_CODES.IN
@@ -3647,9 +3799,14 @@ exports.queryForPtrRecord = function(serviceName) {
  * Issue a query for SRV Records corresponding to the given instance name.
  * Returns a promise that resolves with a list of SrvRecords received in
  * response. Resolves with an empty list if none are found.
+ *
+ * @param {string} instanceName the instance name for which you are querying
+ * for SRV Records
+ *
+ * @return {Array<resource record>} the SRV Records matching this query
  */
 exports.queryForSrvRecord = function(instanceName) {
-  exports.getResourcesForQuery(
+  return exports.getResourcesForQuery(
     instanceName,
     dnsCodes.RECORD_TYPES.SRV,
     dnsCodes.CLASS_CODES.IN
@@ -3658,6 +3815,9 @@ exports.queryForSrvRecord = function(instanceName) {
 
 /**
  * Add a record corresponding to name to the internal data structures.
+ *
+ * @param {string} name the name of the resource record to add
+ * @param {resource record} record the record to add
  */
 exports.addRecord = function(name, record) {
   var existingRecords = records[name];
@@ -3703,8 +3863,12 @@ var DEFAULT_QUERY_WAIT_TIME = 2000;
 
 exports.DEFAULT_QUERY_WAIT_TIME = DEFAULT_QUERY_WAIT_TIME;
 
+exports.LOCAL_SUFFIX = 'local';
+
 /**
  * Returns a promise that resolves after the given time (in ms).
+ *
+ * @param {integer} ms the number of milliseconds to wait before resolving
  */
 exports.wait = function(ms) {
   return new Promise(resolve => {
@@ -3714,6 +3878,8 @@ exports.wait = function(ms) {
 
 /**
  * Returns a Promise that resolves after 0-250 ms (inclusive).
+ *
+ * @return {Promise}
  */
 exports.waitForProbeTime = function() {
   // +1 because randomInt is by default [min, max)
@@ -3722,6 +3888,11 @@ exports.waitForProbeTime = function() {
 
 /**
  * Returns true if the DnsPacket is for this queryName.
+ *
+ * @param {DnsPacket} packet
+ * @param {string} queryName
+ *
+ * @return {boolean}
  */
 exports.packetIsForQuery = function(packet, queryName) {
   for (var i = 0; i < packet.questions.length; i++) {
@@ -3736,6 +3907,8 @@ exports.packetIsForQuery = function(packet, queryName) {
 /**
  * Generates a semi-random hostname ending with ".local". An example might be
  * 'host123.local'.
+ *
+ * @param {string}
  */
 exports.createHostName = function() {
   var start = 'host';
@@ -3784,11 +3957,12 @@ exports.advertiseService = function(resourceRecords) {
  *   port: 1234
  * }
  *
- * name: a user-friendly string to be the name of the instance, e.g. "Sam's
- *   SemCache".
- * type: the service type string. This should be the protocol spoken and the
- *   transport protocol, eg "_http._tcp".
- * port: the port the service is available on.
+ * @param {string} host the host of the service, e.g. 'laptop.local'
+ * @param {string} name a user-friendly string to be the name of the instance,
+ * e.g. "Sam's SemCache".
+ * @param {string} type the service type string. This should be the protocol
+ * spoken and the transport protocol, eg "_http._tcp".
+ * @param {integer} port the port the service is available on
  */
 exports.register = function(host, name, type, port) {
   // Registration is a multi-step process. According to the RFC, section 8.
@@ -3854,6 +4028,8 @@ exports.register = function(host, name, type, port) {
  * Register the host on the network. Assumes that a probe has occurred and the
  * hostname is free.
  *
+ * @param {string} host
+ *
  * @return {Array<resource records>} an Array of the records that were added.
  */
 exports.createHostRecords = function(host) {
@@ -3876,12 +4052,22 @@ exports.createHostRecords = function(host) {
  * Register the service on the network. Assumes that a probe has occured and
  * the service name is free.
  *
+ * @param {string} name name of the instance, e.g. 'Sam Cache'
+ * @param {string} type type of the service, e.g. _semcache._tcp
+ * @param {integer} port port the service is running on, eg 7777
+ * @param {string} domain target domain/host the service is running on, e.g.
+ * 'blackhack.local'
+ *
  * @return {Array<resource records>} an Array of the records that were added.
  */
 exports.createServiceRecords = function(name, type, port, domain) {
   // We need to add a PTR record and an SRV record.
+
+  // SRV Records are named according to name.type.domain, which we always
+  // assume to be local.
+  var srvName = [name, type, exports.LOCAL_SUFFIX].join('.');
   var srvRecord = new resRec.SrvRecord(
-    name,
+    srvName,
     dnsUtil.DEFAULT_TTL,
     dnsUtil.DEFAULT_PRIORITY,
     dnsUtil.DEFAULT_WEIGHT,
@@ -3892,11 +4078,11 @@ exports.createServiceRecords = function(name, type, port, domain) {
   var ptrRecord = new resRec.PtrRecord(
     type,
     dnsUtil.DEFAULT_TTL,
-    name,
+    srvName,
     dnsCodes.CLASS_CODES.IN
   );
 
-  dnsController.addRecord(name, srvRecord);
+  dnsController.addRecord(srvName, srvRecord);
   dnsController.addRecord(type, ptrRecord);
 
   var result = [srvRecord, ptrRecord];
@@ -3917,8 +4103,13 @@ exports.receivedResponsePacket = function(packets, queryName) {
  * Issue a probe compliant with the mDNS spec, which specifies that a probe
  * happen three times at random intervals.
  *
- * Returns a promise that resolves if the probe returns nothing, meaning that
- * the queryName is available, and rejects if it is taken.
+ * @param {string} queryName
+ * @param {integer} queryType
+ * @param {integer} queryClass
+ *
+ * @return {Promise} Returns a promise that resolves if the probe returns
+ * nothing, meaning that the queryName is available, and rejects if it is
+ * taken.
  */
 exports.issueProbe = function(queryName, queryType, queryClass) {
   // Track the packets we receive whilst querying.
@@ -3984,26 +4175,25 @@ exports.issueProbe = function(queryName, queryType, queryClass) {
  * Issue a query for instances of a particular service type. Tantamout to
  * issueing PTR requests.
  *
- * Returns a Promise that resolves with a list of objects representing
- * services, like the following:
- *
- * {
- *   serviceType: '_semcache._tcp',
- *   instanceName: 'Magic Cache'
- * }
- *
  * @param {string} serviceType the service string to query for
  * @param {number} waitTime the time to wait for responses. As multiple
  * responses can be expected in response to a query for instances of a service
  * (as multiple instances can exist on the same network), the Promise will
  * always resolve after this many milliseconds.
+ *
+ * @return {Promise} Returns a Promise that resolves with a list of objects
+ * representing services, like the following:
+ * {
+ *   serviceType: '_semcache._tcp',
+ *   instanceName: 'Magic Cache'
+ * }
  */
 exports.queryForServiceInstances = function(serviceType, timeout) {
   timeout = timeout || exports.DEFAULT_QUERY_WAIT_TIME;
   var rType = dnsCodes.RECORD_TYPES.PTR;
   var rClass = dnsCodes.CLASS_CODES.IN;
   return new Promise(function(resolve) {
-    exports.queryAndRespond(
+    exports.queryForResponses(
       serviceType,
       rType,
       rClass,
@@ -4032,16 +4222,15 @@ exports.queryForServiceInstances = function(serviceType, timeout) {
 /**
  * Issue a query for an IP address mapping to a domain.
  *
- * Returns a Promise that resolves with a list of objects representing
- * services, like the following:
+ * @param {string} domainName the domain name to query for
+ * @param {number} timeout the number of ms after which to time out
  *
+ * @return {Promise} Returns a Promise that resolves with a list of objects
+ * representing services, like the following:
  * {
  *   domainName: 'example.local',
  *   ipAddress: '123.4.5.6'
  * }
- *
- * @param {string} domainName the domain name to query for
- * @param {number} timeout the number of ms after which to time out
  */
 exports.queryForIpAddress = function(domainName, timeout) {
   // Note that this method ignores the fact that you could have multiple IP
@@ -4051,7 +4240,7 @@ exports.queryForIpAddress = function(domainName, timeout) {
   var rType = dnsCodes.RECORD_TYPES.A;
   var rClass = dnsCodes.CLASS_CODES.IN;
   return new Promise(function(resolve) {
-    exports.queryAndRespond(
+    exports.queryForResponses(
       domainName,
       rType,
       rClass,
@@ -4081,25 +4270,23 @@ exports.queryForIpAddress = function(domainName, timeout) {
  * Issue a query for information about a service instance name, including the
  * port and domain name on which it is active.
  *
- * Returns a Promise that resolves with a list of objects representing
- * services, like the following:
+ * @param {string} instanceName the instance name to query for
+ * @param {number} timeout the number of ms after which to time out
  *
+ * @return {Promise} Returns a Promise that resolves with a list of objects
+ * representing services, like the following:
  * {
  *   instanceName: 'Sam Cache',
  *   domain: 'example.local',
  *   port: 1234
  * }
- * 
- *
- * @param {string} instanceName the instance name to query for
- * @param {number} timeout the number of ms after which to time out
  */
 exports.queryForInstanceInfo = function(instanceName, timeout) {
   timeout = timeout || exports.DEFAULT_QUERY_WAIT_TIME;
   var rType = dnsCodes.RECORD_TYPES.SRV;
   var rClass = dnsCodes.CLASS_CODES.IN;
   return new Promise(function(resolve) {
-    exports.queryAndRespond(
+    exports.queryForResponses(
       instanceName,
       rType,
       rClass,
@@ -4129,11 +4316,6 @@ exports.queryForInstanceInfo = function(instanceName, timeout) {
 /**
  * Issue a query and listen for responses. (As opposed to simply issuing a DNS
  * query without being interested in the responses.)
- *
- * Returns a Promise that resolves with an Array of Packets received in
- * response to the query. If multipleResponses is true, will not resolve until
- * timeoutOrWait milliseconds. If multipleResponses is false, will resolve
- * after the first packet is received or after timeoutOrWait is satifised.
  * 
  * @param {String} qName the name of the query to issue
  * @param {number} qType the type of the query to issue
@@ -4145,6 +4327,12 @@ exports.queryForInstanceInfo = function(instanceName, timeout) {
  * false (e.g. querying for an A Record, which should have a single answer),
  * this is the amount of time we wait before timing out and resolving with an
  * empty list.
+ *
+ * @return {Promise} Returns a Promise that resolves with an Array of Packets
+ * received in response to the query. If multipleResponses is true, will not
+ * resolve until timeoutOrWait milliseconds. If multipleResponses is false,
+ * will resolve after the first packet is received or after timeoutOrWait is
+ * satifised. 
  */
 exports.queryForResponses = function(
   qName,

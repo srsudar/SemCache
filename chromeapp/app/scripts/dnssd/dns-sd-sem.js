@@ -32,6 +32,8 @@ var DEFAULT_QUERY_WAIT_TIME = 2000;
 
 exports.DEFAULT_QUERY_WAIT_TIME = DEFAULT_QUERY_WAIT_TIME;
 
+exports.LOCAL_SUFFIX = 'local';
+
 /**
  * Returns a promise that resolves after the given time (in ms).
  *
@@ -62,6 +64,8 @@ exports.waitForProbeTime = function() {
  * @return {boolean}
  */
 exports.packetIsForQuery = function(packet, queryName) {
+  // TODO: this is incorrect, responses don't include the query name, so we
+  // have to pass in more information.
   for (var i = 0; i < packet.questions.length; i++) {
     var question = packet.questions[i];
     if (question.queryName === queryName) {
@@ -124,6 +128,7 @@ exports.advertiseService = function(resourceRecords) {
  *   port: 1234
  * }
  *
+ * @param {string} host the host of the service, e.g. 'laptop.local'
  * @param {string} name a user-friendly string to be the name of the instance,
  * e.g. "Sam's SemCache".
  * @param {string} type the service type string. This should be the protocol
@@ -218,17 +223,22 @@ exports.createHostRecords = function(host) {
  * Register the service on the network. Assumes that a probe has occured and
  * the service name is free.
  *
- * @param {string} name
- * @param {string} type
- * @param {integer} port
- * @param {string} domain
+ * @param {string} name name of the instance, e.g. 'Sam Cache'
+ * @param {string} type type of the service, e.g. _semcache._tcp
+ * @param {integer} port port the service is running on, eg 7777
+ * @param {string} domain target domain/host the service is running on, e.g.
+ * 'blackhack.local'
  *
  * @return {Array<resource records>} an Array of the records that were added.
  */
 exports.createServiceRecords = function(name, type, port, domain) {
   // We need to add a PTR record and an SRV record.
+
+  // SRV Records are named according to name.type.domain, which we always
+  // assume to be local.
+  var srvName = [name, type, exports.LOCAL_SUFFIX].join('.');
   var srvRecord = new resRec.SrvRecord(
-    name,
+    srvName,
     dnsUtil.DEFAULT_TTL,
     dnsUtil.DEFAULT_PRIORITY,
     dnsUtil.DEFAULT_WEIGHT,
@@ -239,11 +249,11 @@ exports.createServiceRecords = function(name, type, port, domain) {
   var ptrRecord = new resRec.PtrRecord(
     type,
     dnsUtil.DEFAULT_TTL,
-    name,
+    srvName,
     dnsCodes.CLASS_CODES.IN
   );
 
-  dnsController.addRecord(name, srvRecord);
+  dnsController.addRecord(srvName, srvRecord);
   dnsController.addRecord(type, ptrRecord);
 
   var result = [srvRecord, ptrRecord];
