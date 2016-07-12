@@ -26,6 +26,54 @@ function resetDnsSdSem() {
 }
 
 /**
+ * Helper for asserting the queryFor* methods are invoked correctly.
+ */
+function callsQueryForResponsesHelper(
+  dnssdSem,
+  qName,
+  qType,
+  qClass,
+  multipleResponses,
+  timeout,
+  packets,
+  result,
+  method,
+  t
+) {
+  var qNameArg = null;
+  var qTypeArg = null;
+  var qClassArg = null;
+  var multipleArg = null;
+  var timeoutArg = null;
+  var queryCallCount = 0;
+  var querySpy = function(
+    nameParam, typeParam, classParam, multParam, timeParam
+  ) {
+    queryCallCount += 1;
+    qNameArg = nameParam;
+    qTypeArg = typeParam;
+    qClassArg = classParam;
+    multipleArg = multParam;
+    timeoutArg = timeParam;
+    return Promise.resolve(packets);
+  };
+  dnssdSem.queryAndRespond = querySpy;
+
+  method(qName, timeout)
+    .then(function resolved(services) {
+      t.equal(queryCallCount, 1);
+      t.equal(qNameArg, qName);
+      t.equal(qTypeArg, qType);
+      t.equal(qClassArg, qClass);
+      t.equal(multipleArg, multipleResponses);
+      t.equal(timeoutArg, timeout);
+      t.deepEqual(services, result);
+      t.end();
+      resetDnsSdSem();
+    });
+}
+
+/**
  * Helper to reject a probe promise due to receiving packets.
  *
  * returnTrueAfterCall: the call number after which receivedResponsePacket
@@ -325,7 +373,6 @@ test('register rejects if host taken', function(t) {
   }, function failed(failObj) {
     // We rejected, as expected because the host was taken.
     // Make sure we called issueProbe with the host
-    // console.log(failObj);
     t.equal(calledHost, host);
     t.equal(failObj.message, 'host taken: ' + host);
     // We should only ever issue a single probe.
@@ -619,45 +666,157 @@ test('advertiseService advertises', function(t) {
   resetDnsSdSem();
 });
 
-test('queryForService returns correct values', function(t) {
+test('queryForResponses times out for if no responses', function(t) {
   // we added a callback
   // we issued a query
   // we waited 2 seconds
   // we resolved with the appropriate list
+  // we removed the callback
 
- // We're querying for services anemd this.
-  var serviceName = '_test._name';
+  var qName = 'hello there';
+  var qType = 4;
+  var qClass = 2;
+  var qTime = 4000;
+  // we want no packets.
+
+  var expectedPackets = [];
+
+  var addOnReceiveCallbackSpy = sinon.spy();
+  var removeOnReceiveCallbackSpy = sinon.spy();
+  var querySpy = sinon.spy();
+  var waitArg = null;
+  var waitSpy = function(waitParam) {
+    waitArg = waitParam;
+    // Don't actually wait during tests.
+    return Promise.resolve();
+  };
+
+  var dnssdSem = proxyquire(
+    '../../../app/scripts/dnssd/dns-sd-sem',
+    {
+      './dns-controller':
+      {
+        addOnReceiveCallback: addOnReceiveCallbackSpy,
+        removeOnReceiveCallback: removeOnReceiveCallbackSpy,
+        query: querySpy
+      }
+    }
+  );
+  dnssdSem.wait = waitSpy;
+  var packetIsForQueryCallCount = 0;
+  dnssdSem.packetIsForQuery = function() {
+    packetIsForQueryCallCount += 1;
+    return true;
+  };
+
+  dnssdSem.queryForResponses(qName, qType, qClass, true, qTime)
+    .then(function success(records) {
+        // Assertions
+        t.equal(addOnReceiveCallbackSpy.callCount, 1);
+        t.equal(removeOnReceiveCallbackSpy.callCount, 1);
+        // We expect to wait for 2 seconds.
+        t.equal(waitArg, qTime);
+        t.equal(packetIsForQueryCallCount, 0);
+        t.deepEqual(records, expectedPackets);
+        t.end();
+        resetDnsSdSem();
+    })
+    .catch(function failed(err) {
+      t.fail('should not have caught error: ' + err);
+      t.end();
+    });
+});
+
+test('queryForResponses returns immediately for single response', function(t) {
+  // we added a callback
+  // we issued a query
+  // we waited 2 seconds
+  // we resolved with the appropriate list
+  // we removed the callback
+
+  var qName = 'hello there';
+  var qType = 4;
+  var qClass = 2;
+  var qTime = 4000;
   // Add two packets. One will have an A record and a PTR, the other will have
   // just a PTR.
+  var packet1 = new dnsPacket.DnsPacket(
+    0, false, 0, false, false, false, false, 0
+  );
+
+  var expectedPackets = [packet1];
+
+  var addOnReceiveCallbackCount = 0;
+  var callback = null;
+  var addOnReceiveCallbackSpy = function(callbackParam) {
+    addOnReceiveCallbackCount += 1;
+    callback = callbackParam;
+    callbackParam(packet1);
+  };
+  var removeOnReceiveCallbackSpy = sinon.spy();
+  var querySpy = sinon.spy();
+  var waitArg = null;
+  var waitSpy = function(waitParam) {
+    waitArg = waitParam;
+    // Don't actually wait during tests.
+    return Promise.resolve();
+  };
+
+  var dnssdSem = proxyquire(
+    '../../../app/scripts/dnssd/dns-sd-sem',
+    {
+      './dns-controller':
+      {
+        addOnReceiveCallback: addOnReceiveCallbackSpy,
+        removeOnReceiveCallback: removeOnReceiveCallbackSpy,
+        query: querySpy
+      }
+    }
+  );
+  dnssdSem.wait = waitSpy;
+  var packetIsForQueryCallCount = 0;
+  dnssdSem.packetIsForQuery = function() {
+    packetIsForQueryCallCount += 1;
+    return true;
+  };
+
+  dnssdSem.queryForResponses(qName, qType, qClass, false, qTime)
+    .then(function success(records) {
+        // Assertions
+        t.equal(addOnReceiveCallbackCount, 1);
+        t.equal(removeOnReceiveCallbackSpy.callCount, 1);
+        // We expect to wait for 2 seconds.
+        t.equal(waitArg, qTime);
+        t.equal(packetIsForQueryCallCount, 1);
+        t.deepEqual(records, expectedPackets);
+        t.end();
+        resetDnsSdSem();
+    })
+    .catch(function failed(err) {
+      t.fail('should not have caught error: ' + err);
+      t.end();
+    });
+});
+
+test('queryForResponses correct for multiple', function(t) {
+  // we added a callback
+  // we issued a query
+  // we waited 2 seconds
+  // we resolved with the appropriate list
+  // we removed the callback
+
+  var qName = '_test._name';
+  var qType = 2;
+  var qClass = 3;
+  var qTime = 2000;
   var packet1 = new dnsPacket.DnsPacket(
     0, false, 0, false, false, false, false, 0
   );
   var packet2 = new dnsPacket.DnsPacket(
     0, false, 0, false, false, false, false, 0
   );
-  var aRecord = new resRec.ARecord(
-    'www.eg.com', 10, '1.2.3.4', dnsCodes.CLASS_CODES.IN
-  );
-  var ptrRecord1 = new resRec.PtrRecord(
-    serviceName, 8, 'instance name 1', dnsCodes.CLASS_CODES.IN
-  );
-  var ptrRecord2 = new resRec.PtrRecord(
-    serviceName, 8, 'instance name 2', dnsCodes.CLASS_CODES.IN
-  );
-  packet1.addAnswer(aRecord);
-  packet1.addAnswer(ptrRecord1);
-  packet2.addAnswer(ptrRecord2);
-  var expectedRecords = [
-    {
-      serviceType: ptrRecord1.serviceType,
-      instanceName: ptrRecord1.instanceName
-    },
-    {
-      serviceType: ptrRecord2.serviceType,
-      instanceName: ptrRecord2.instanceName
-    }
-  ];
 
+  var expectedPackets = [packet1, packet2];
 
   var addOnReceiveCallbackCount = 0;
   var addOnReceiveCallbackSpy = function(callbackParam) {
@@ -693,15 +852,15 @@ test('queryForService returns correct values', function(t) {
     return true;
   };
 
-  dnssdSem.queryForService(serviceName)
+  dnssdSem.queryForResponses(qName, qType, qClass, true, qTime)
     .then(function success(records) {
         // Assertions
         t.equal(addOnReceiveCallbackCount, 1);
         t.equal(removeOnReceiveCallbackSpy.callCount, 1);
         // We expect to wait for 2 seconds.
-        t.equal(waitArg, 2000);
+        t.equal(waitArg, qTime);
         t.equal(packetIsForQueryCallCount, 2);
-        t.deepEqual(records, expectedRecords);
+        t.deepEqual(records, expectedPackets);
         t.end();
         resetDnsSdSem();
     })
@@ -709,4 +868,138 @@ test('queryForService returns correct values', function(t) {
       t.fail('should not have caught error: ' + err);
       t.end();
     });
+});
+
+test('queryForServiceInstances correct', function(t) {
+  var dnssdSem = require('../../../app/scripts/dnssd/dns-sd-sem');
+  var serviceType = '_semcache._tcp';
+
+  var packet1 = new dnsPacket.DnsPacket(
+    0, false, 0, false, false, false, false, 0
+  );
+  var packet2 = new dnsPacket.DnsPacket(
+    0, false, 0, false, false, false, false, 0
+  );
+  // Two packets, one with an A Record and both with PTR records.
+  var aRecord = new resRec.ARecord(
+    'www.eg.com', 100, '1.2.3.4', dnsCodes.CLASS_CODES.IN
+  );
+  var ptrRecord1 = new resRec.PtrRecord(
+    serviceType, 10, 'Sam Cache', dnsCodes.CLASS_CODES.IN
+  );
+  var ptrRecord2 = new resRec.PtrRecord(
+    serviceType, 10, 'Felix', dnsCodes.CLASS_CODES.IN
+  );
+
+  packet1.addAnswer(aRecord);
+  packet1.addAnswer(ptrRecord1);
+  packet2.addAnswer(ptrRecord2);
+
+  var packets = [packet1, packet2];
+
+  var expected = [
+    {
+      serviceType: serviceType,
+      serviceName: ptrRecord1.instanceName
+    },
+    {
+      serviceType: serviceType,
+      serviceName: ptrRecord2.instanceName
+    }
+  ];
+
+  callsQueryForResponsesHelper(
+    dnssdSem,
+    serviceType,
+    dnsCodes.RECORD_TYPES.PTR,
+    dnsCodes.CLASS_CODES.IN,
+    true,
+    112233,
+    packets,
+    expected,
+    dnssdSem.queryForServiceInstances,
+    t
+  );
+});
+
+
+test('queryForIpAddress correct', function(t) {
+  var dnssdSem = require('../../../app/scripts/dnssd/dns-sd-sem');
+  var domainName = 'www.example.com';
+
+  var packet1 = new dnsPacket.DnsPacket(
+    0, false, 0, false, false, false, false, 0
+  );
+  var aRecord = new resRec.ARecord(
+    domainName, 100, '1.2.3.4', dnsCodes.CLASS_CODES.IN
+  );
+  var ptrRecord1 = new resRec.PtrRecord(
+    '_semcache._tcp', 10, 'Sam Cache', dnsCodes.CLASS_CODES.IN
+  );
+
+  packet1.addAnswer(aRecord);
+  packet1.addAnswer(ptrRecord1);
+
+  var packets = [packet1];
+
+  var expected = [
+    {
+      domainName: domainName,
+      ipAddress: aRecord.ipAddress
+    }
+  ];
+
+  callsQueryForResponsesHelper(
+    dnssdSem,
+    domainName,
+    dnsCodes.RECORD_TYPES.A,
+    dnsCodes.CLASS_CODES.IN,
+    false,
+    112233,
+    packets,
+    expected,
+    dnssdSem.queryForIpAddress,
+    t
+  );
+});
+
+test('queryForInstanceInfo correct', function(t) {
+  var dnssdSem = require('../../../app/scripts/dnssd/dns-sd-sem');
+  var instanceName = 'Sams Cache._semcache._tcp.local';
+
+  var packet1 = new dnsPacket.DnsPacket(
+    0, false, 0, false, false, false, false, 0
+  );
+  var aRecord = new resRec.ARecord(
+    'www.foo.org', 100, '1.2.3.4', dnsCodes.CLASS_CODES.IN
+  );
+  var srvRecord = new resRec.SrvRecord(
+    instanceName, 100, 0, 10, 7777, 'blackhawk.local'
+  );
+
+  packet1.addAnswer(aRecord);
+  packet1.addAnswer(srvRecord);
+
+  var packets = [packet1];
+
+  var expected = [
+    {
+      instanceName: instanceName,
+      domain: srvRecord.targetDomain,
+      port: srvRecord.port
+    }
+  ];
+
+  callsQueryForResponsesHelper(
+    dnssdSem,
+    instanceName,
+    dnsCodes.RECORD_TYPES.SRV,
+    dnsCodes.CLASS_CODES.IN,
+    false,
+    112233,
+    packets,
+    expected,
+    dnssdSem.queryForInstanceInfo,
+    t
+  );
 });

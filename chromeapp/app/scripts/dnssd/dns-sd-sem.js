@@ -28,6 +28,9 @@ var resRec = require('./resource-record');
 var dnsPacket = require('./dns-packet-sem');
 
 var MAX_PROBE_WAIT = 250;
+var DEFAULT_QUERY_WAIT_TIME = 2000;
+
+exports.DEFAULT_QUERY_WAIT_TIME = DEFAULT_QUERY_WAIT_TIME;
 
 /**
  * Returns a promise that resolves after the given time (in ms).
@@ -307,95 +310,184 @@ exports.issueProbe = function(queryName, queryType, queryClass) {
 };
 
 /**
- * Query for instances of a particular service type.
+ * Issue a query for instances of a particular service type. Tantamout to
+ * issueing PTR requests.
  *
- * Returns a Promise that resolves with a list of objects like the following:
+ * Returns a Promise that resolves with a list of objects representing
+ * services, like the following:
  *
  * {
- *   serviceType: '_http._tcp',
- *   serviceName: 'Sams Server.local'
+ *   serviceType: '_semcache._tcp',
+ *   instanceName: 'Magic Cache'
  * }
  *
- * @param {String} serviceName the name/type of the service to query for
+ * @param {string} serviceType the service string to query for
+ * @param {number} waitTime the time to wait for responses. As multiple
+ * responses can be expected in response to a query for instances of a service
+ * (as multiple instances can exist on the same network), the Promise will
+ * always resolve after this many milliseconds.
  */
-exports.queryForService = function(serviceName) {
-  // Track the packets we received while querying.
-  var packets = [];
-  var callback = function(packet) {
-    packets.push(packet);
-  };
-  dnsController.addOnReceiveCallback(callback);
-
-  // We will wait 2 seconds for responses.
-  var timeToWaitForResponses = 2000;
-  // A browse for a service corresponds to queries for PTR records.
-  dnsController.query(
-    serviceName,
-    dnsCodes.RECORD_TYPES.PTR,
-    dnsCodes.CLASS_CODES.IN
-  );
-  // For the purposes of this implementation, we are going to Issue a single
-  // query and return after two seconds.
-
+exports.queryForServiceInstances = function(serviceType, timeout) {
+  timeout = timeout || exports.DEFAULT_QUERY_WAIT_TIME;
+  var rType = dnsCodes.RECORD_TYPES.PTR;
+  var rClass = dnsCodes.CLASS_CODES.IN;
   return new Promise(function(resolve) {
-    exports.wait(timeToWaitForResponses)
-      .then(function waited() {
-        dnsController.removeOnReceiveCallback(callback);
-        var ourPackets = [];
-        var ptrAnswers = [];
-        packets.forEach(packet => {
-          if (exports.packetIsForQuery(packet, serviceName)) {
-            ourPackets.push(packet);
-            packet.answers.forEach(answer => {
-              if (answer.recordType === dnsCodes.RECORD_TYPES.PTR) {
-                ptrAnswers.push(answer);
+    exports.queryAndRespond(
+      serviceType,
+      rType,
+      rClass,
+      true,
+      timeout
+    )
+    .then(function gotPackets(packets) {
+      var result = [];
+      packets.forEach(packet => {
+        packet.answers.forEach(answer => {
+          if (answer.recordType === rType && answer.recordClass === rClass) {
+            result.push(
+              {
+                serviceType: answer.serviceType,
+                serviceName: answer.instanceName
               }
-            });
+            );
           }
         });
-
-        var result = [];
-        ptrAnswers.forEach(answer => {
-          result.push(
-            {
-              serviceType: answer.serviceType,
-              instanceName: answer.instanceName
-            }
-          );
-
-        });
-
-        resolve(result);
-      })
-      .catch(function somethingWentWrong(err) {
-        console.log('Something went wrong in query: ', err);
       });
+      resolve(result);
+    });
   });
 };
 
 /**
- * Browse for services of a given type. Returns a promise that resolves with
- * a list of objects like the following:
+ * Issue a query for an IP address mapping to a domain.
+ *
+ * Returns a Promise that resolves with a list of objects representing
+ * services, like the following:
  *
  * {
- *   serviceName: "Sam's SemCache",
- *   type: "_http._local",
- *   domain: "laptop.local",
- *   port: 8889
+ *   domainName: 'example.local',
+ *   ipAddress: '123.4.5.6'
  * }
  *
- * type: the service string for the type of services queried for, eg
- * "_http._tcp".
+ * @param {string} domainName the domain name to query for
+ * @param {number} timeout the number of ms after which to time out
  */
-exports.browse = function(type) {
-  // Browse is a somewhat under-specified term with regards to the mDNS RFC.
-  // Browsing is essentially querying for a particular type, which is most
-  // similar to RFC 6762 Section 5.2: Continuous Multicast DNS Querying. This
-  // scenario essentially allows for a standing request for notifications of
-  // instances of a particular type. This is useful for to automatically update
-  // a list of available printers, for example. For the current implementation,
-  // we are instead going to just issue a query for PTR records of the given
-  // type.
+exports.queryForIpAddress = function(domainName, timeout) {
+  // Note that this method ignores the fact that you could have multiple IP
+  // addresses per domain name. At a minimum, you could have IPv6 and IPv4
+  // addresses. For prototyping purposes, a single IP address is sufficient.
+  timeout = timeout || exports.DEFAULT_QUERY_WAIT_TIME;
+  var rType = dnsCodes.RECORD_TYPES.A;
+  var rClass = dnsCodes.CLASS_CODES.IN;
+  return new Promise(function(resolve) {
+    exports.queryAndRespond(
+      domainName,
+      rType,
+      rClass,
+      false,
+      timeout
+    )
+    .then(function gotPackets(packets) {
+      var result = [];
+      packets.forEach(packet => {
+        packet.answers.forEach(answer => {
+          if (answer.recordType === rType && answer.recordClass === rClass) {
+            result.push(
+              {
+                domainName: answer.domainName,
+                ipAddress: answer.ipAddress
+              }
+            );
+          }
+        });
+      });
+      resolve(result);
+    });
+  });
+};
+
+/**
+ * Issue a query for information about a service instance name, including the
+ * port and domain name on which it is active.
+ *
+ * Returns a Promise that resolves with a list of objects representing
+ * services, like the following:
+ *
+ * {
+ *   instanceName: 'Sam Cache',
+ *   domain: 'example.local',
+ *   port: 1234
+ * }
+ * 
+ *
+ * @param {string} instanceName the instance name to query for
+ * @param {number} timeout the number of ms after which to time out
+ */
+exports.queryForInstanceInfo = function(instanceName, timeout) {
+  timeout = timeout || exports.DEFAULT_QUERY_WAIT_TIME;
+  var rType = dnsCodes.RECORD_TYPES.SRV;
+  var rClass = dnsCodes.CLASS_CODES.IN;
+  return new Promise(function(resolve) {
+    exports.queryAndRespond(
+      instanceName,
+      rType,
+      rClass,
+      false,
+      timeout
+    )
+    .then(function gotPackets(packets) {
+      var result = [];
+      packets.forEach(packet => {
+        packet.answers.forEach(answer => {
+          if (answer.recordType === rType && answer.recordClass === rClass) {
+            result.push(
+              {
+                instanceName: answer.instanceTypeDomain,
+                domain: answer.targetDomain,
+                port: answer.port
+              }
+            );
+          }
+        });
+      });
+      resolve(result);
+    });
+  });
+};
+
+/**
+ * Issue a query and listen for responses. (As opposed to simply issuing a DNS
+ * query without being interested in the responses.)
+ *
+ * Returns a Promise that resolves with an Array of Packets received in
+ * response to the query. If multipleResponses is true, will not resolve until
+ * timeoutOrWait milliseconds. If multipleResponses is false, will resolve
+ * after the first packet is received or after timeoutOrWait is satifised.
+ * 
+ * @param {String} qName the name of the query to issue
+ * @param {number} qType the type of the query to issue
+ * @param {number} qClass the class of the query to issue
+ * @param {boolean} multipleResponses true if we can expect multiple or an open
+ * ended number of responses to this query
+ * @param {number} timeoutOrWait if multipleExpected is true, this is the
+ * amount of time we wait before returning results. If multipleExpected is
+ * false (e.g. querying for an A Record, which should have a single answer),
+ * this is the amount of time we wait before timing out and resolving with an
+ * empty list.
+ */
+exports.queryForResponses = function(
+  qName,
+  qType,
+  qClass,
+  multipleResponses,
+  timeoutOrWait
+) {
+  // Considerations for querying exist in RFC 6762 Section 5.2: Continuous
+  // Multicast DNS Querying. This scenario essentially allows for a standing
+  // request for notifications of instances of a particular type. This is
+  // useful for to automatically update a list of available printers, for
+  // example. For the current implementation, we are instead going to just
+  // issue a query for PTR records of the given type.
   //
   // Several considerations are made in the RFC for how to responsibly browse
   // the network. First, queries should be delayed by a random value between
@@ -404,6 +496,49 @@ exports.browse = function(type) {
   // two queries must take place 1 second apart. Third, the period between
   // queries must increase by at least a factor of 2. Finally, known-answer
   // suppression must be employed.
-  
-  throw new Error('Unimplemented ' + type);
+  //
+  // For now, we are not implementing those more sophisticated features.
+  // Instead, this method provides a way to issue a query immediately. This can
+  // include a general standing query (if multipleResponses is true), or a
+  // query for the first response (if multipleResponses is false).
+
+  return new Promise(function(resolve) {
+    // Code executes even after a promise resolves, so we will use this flag to
+    // make sure we never try to resolve more than once.
+    var resolved = false;
+
+    // Track the packets we received while querying.
+    var packets = [];
+    var callback = function(packet) {
+      if (exports.packetIsForQuery(packet, qName)) {
+        packets.push(packet);
+        if (!multipleResponses) {
+          // We can go ahead an resolve.
+          resolved = true;
+          dnsController.removeOnReceiveCallback(callback);
+          resolve(packets);
+        }
+      }
+    };
+    dnsController.addOnReceiveCallback(callback);
+
+    // A browse for a service corresponds to queries for PTR records.
+    dnsController.query(
+      qName,
+      dnsCodes.RECORD_TYPES.PTR,
+      dnsCodes.CLASS_CODES.IN
+    );
+    
+    exports.wait(timeoutOrWait)
+      .then(function waited() {
+        if (!resolved) {
+          dnsController.removeOnReceiveCallback(callback);
+          resolved = true;
+          resolve(packets);
+        }
+      })
+      .catch(function somethingWentWrong(err) {
+        console.log('Something went wrong in query: ', err);
+      });
+  });
 };
