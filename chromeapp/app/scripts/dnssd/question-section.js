@@ -12,6 +12,10 @@ var MAX_QUERY_CLASS = 65535;
 
 /**
  * A DNS Question section.
+ *
+ * @param {string} qName the name of the query
+ * @param {integer} qType the type of the query
+ * @param {integer} qClass the class of the query
  */
 exports.QuestionSection = function QuestionSection(qName, qType, qClass) {
   if (!(this instanceof QuestionSection)) {
@@ -51,6 +55,8 @@ exports.QuestionSection = function QuestionSection(qName, qType, qClass) {
  * 2 octets representing the query type
  *
  * 2 octets representing the query class
+ *
+ * @return {ByteArray}
  */
 exports.QuestionSection.prototype.convertToByteArray = function() {
   var result = new byteArray.ByteArray();
@@ -66,6 +72,8 @@ exports.QuestionSection.prototype.convertToByteArray = function() {
 
 /**
  * Returns true if the question has requested a unicast response, else false.
+ *
+ * @return {boolean}
  */
 exports.QuestionSection.prototype.unicastResponseRequested = function() {
   // For now, since we can't share a port in Chrome, we will assume that

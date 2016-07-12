@@ -19,9 +19,11 @@ var OCTETS_QUERY_CLASS = 2;
 /**
  * Creates a DNSQuery object.
  *
- * domainName: A string, like www.example.com
- * queryType: the type of record being queried for. Should be one of dnsCodes
- * queryClass: the class of the query, should be one of dnsCodes, likely IN
+ * @param {string} domainName A string, like www.example.com
+ * @param {integer} queryType the type of record being queried for. Should be
+ * one of dnsCodes
+ * @param {integer} queryClass the class of the query, should be one of the
+ * dnsCodes, likely IN
  */
 exports.DnsQuery = function DnsQuery(domainName, queryType, queryClass) {
   if (!(this instanceof DnsQuery)) {
@@ -36,6 +38,8 @@ exports.DnsQuery = function DnsQuery(domainName, queryType, queryClass) {
 /**
  * Serialize the query to accommodate the DNS spec. Returns a ByteArray
  * object.
+ *
+ * @return {ByteArray} 
  */
 exports.DnsQuery.prototype.serialize = function() {
     // The serialization is just the query name in label format, followed by a
@@ -54,8 +58,12 @@ exports.DnsQuery.prototype.serialize = function() {
 /**
  * Create a DnsQuery object from a byteArray as output by DnsQuery.serialize().
  *
- * byteArr: the ByteArray object from which to construct the DnsQuery
- * startByte: the offset into byteArr from which to start reconstruction
+ * @param {ByteArray} byteArr the ByteArray object from which to construct the
+ * DnsQuery
+ * @param {integer} startByte the offset into byteArr from which to start
+ * reconstruction
+ *
+ * @return {DnsQuery}
  */
 exports.createQueryFromByteArray = function(byteArr, startByte) {
   if (!startByte) {

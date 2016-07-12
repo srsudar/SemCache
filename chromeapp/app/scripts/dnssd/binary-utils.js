@@ -1,5 +1,4 @@
 /*jshint esnext:true*/
-/*exported BinaryUtils*/
 /*
  * https://github.com/justindarc/dns-sd.js
  *

@@ -17,6 +17,8 @@ exports.DEFAULT_WEIGHT = 0;
 
 /**
  * Return the local suffix, i.e. ".local". The leading dot is included.
+ *
+ * @return {string}
  */
 exports.getLocalSuffix = function() {
   return '.local';
@@ -24,6 +26,11 @@ exports.getLocalSuffix = function() {
 
 /**
  * Return a random integer between [min, max).
+ *
+ * @param {integer} min
+ * @param {integer} max
+ *
+ * @return {integer} random value >= min and < max
  */
 exports.randomInt = function(min, max) {
   return Math.floor(Math.random() * (max - min)) + min;
@@ -45,6 +52,10 @@ exports.randomInt = function(min, max) {
  * labels.
  *
  * Labels are limited to 63 bytes.
+ *
+ * @param {string} domain
+ *
+ * @return {ByteArray} a ByteArray containing the serialized domain
  */
 exports.getDomainAsByteArray = function(domain) {
   var result = new byteArray.ByteArray();
@@ -76,9 +87,11 @@ exports.getDomainAsByteArray = function(domain) {
  * Convert a serialized domain name from its DNS representation to a string.
  * The byteArray should contain bytes as output by getDomainAsByteArray.
  *
- * byteArr: the ByteArray containing the serialized labels
- * startByte: an optional index indicating the start point of the
- *   serialization. If not present, assumes a starting index ov 0.
+ * @param {ByteArray} byteArr the ByteArray containing the serialized labels
+ * @param {integer} startByte an optional index indicating the start point of
+ * the serialization. If not present, assumes a starting index ov 0.
+ *
+ * @return {string}
  */
 exports.getDomainFromByteArray = function(byteArr, startByte) {
   if (!(byteArr instanceof byteArray.ByteArray)) {
@@ -100,8 +113,10 @@ exports.getDomainFromByteArray = function(byteArr, startByte) {
  * Convert a serialized domain name from its DNS representation to a string.
  * The reader should contain bytes as output from getDomainAsByteArray.
  *
- * reader: a ByteArrayReader containing the bytes to be deserialized. The
- *   reader will have all the domain bytes consumed.
+ * @param {ByteArrayReader} reader a ByteArrayReader containing the bytes to be
+ * deserialized. The reader will have all the domain bytes consumed.
+ *
+ * @return {string}
  */
 exports.getDomainFromByteArrayReader = function(reader) {
   var result = '';
@@ -157,6 +172,10 @@ exports.getDomainFromByteArrayReader = function(reader) {
  * Convert a string representation of an IP address to a ByteArray.
  * '155.33.17.68' would return a ByteArray with length 4, corresponding to the
  * bytes 155, 33, 17, 68.
+ *
+ * @param {string} ipAddress
+ *
+ * @return {ByteArray}
  */
 exports.getIpStringAsByteArray = function(ipAddress) {
   var parts = ipAddress.split('.');
@@ -180,6 +199,10 @@ exports.getIpStringAsByteArray = function(ipAddress) {
 
 /**
  * Recover an IP address in string representation from the ByteArrayReader.
+ *
+ * @param {ByteArrayReader} reader
+ *
+ * @return {string}
  */
 exports.getIpStringFromByteArrayReader = function(reader) {
   // We assume a single byte representing each string.

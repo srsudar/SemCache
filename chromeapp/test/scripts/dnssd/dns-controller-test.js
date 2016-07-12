@@ -215,7 +215,14 @@ test('getSocket fails if join group fails', function(t) {
 });
 
 test('queryForARecord calls query with correct args', function(t) {
-  var querySpy = sinon.spy();
+  var args = [];
+  var returnArg = 'foo';
+  var querySpy = function(name, type, clazz) {
+    args.push(name);
+    args.push(type);
+    args.push(clazz);
+    return returnArg;
+  };
   var mockedController = require(
     '../../../app/scripts/dnssd/dns-controller'
   );
@@ -224,19 +231,27 @@ test('queryForARecord calls query with correct args', function(t) {
 
   var domainName = 'www.example.com';
 
-  mockedController.queryForARecord(domainName);
+  var actual = mockedController.queryForARecord(domainName);
 
-  t.equal(querySpy.firstCall.args[0], domainName);
-  t.equal(querySpy.firstCall.args[1], dnsCodes.RECORD_TYPES.A);
-  t.equal(querySpy.firstCall.args[2], dnsCodes.CLASS_CODES.IN);
-
+  t.equal(args[0], domainName);
+  t.equal(args[1], dnsCodes.RECORD_TYPES.A);
+  t.equal(args[2], dnsCodes.CLASS_CODES.IN);
+  console.log('actual: ', actual);
+  t.equal(actual, returnArg);
   t.end();
 
   resetDnsController();
 });
 
 test('queryForPtrRecord calls query with correct args', function(t) {
-  var querySpy = sinon.spy();
+  var args = [];
+  var returnArg = 'foo';
+  var querySpy = function(name, type, clazz) {
+    args.push(name);
+    args.push(type);
+    args.push(clazz);
+    return returnArg;
+  };
   var mockedController = require(
     '../../../app/scripts/dnssd/dns-controller'
   );
@@ -245,19 +260,26 @@ test('queryForPtrRecord calls query with correct args', function(t) {
 
   var serviceName = '_semcache._tcp';
 
-  mockedController.queryForPtrRecord(serviceName);
+  var actual = mockedController.queryForPtrRecord(serviceName);
 
-  t.equal(querySpy.firstCall.args[0], serviceName);
-  t.equal(querySpy.firstCall.args[1], dnsCodes.RECORD_TYPES.PTR);
-  t.equal(querySpy.firstCall.args[2], dnsCodes.CLASS_CODES.IN);
-
+  t.equal(args[0], serviceName);
+  t.equal(args[1], dnsCodes.RECORD_TYPES.PTR);
+  t.equal(args[2], dnsCodes.CLASS_CODES.IN);
+  t.equal(actual, returnArg);
   t.end();
 
   resetDnsController();
 });
 
 test('queryForSrvRecord calls query with correct args', function(t) {
-  var querySpy = sinon.spy();
+  var args = [];
+  var returnArg = 'foo';
+  var querySpy = function(name, type, clazz) {
+    args.push(name);
+    args.push(type);
+    args.push(clazz);
+    return returnArg;
+  };
   var mockedController = require(
     '../../../app/scripts/dnssd/dns-controller'
   );
@@ -266,12 +288,12 @@ test('queryForSrvRecord calls query with correct args', function(t) {
 
   var instanceName = 'Fancy Cache._semcache._tcp';
 
-  mockedController.queryForSrvRecord(instanceName);
+  var actual = mockedController.queryForSrvRecord(instanceName);
 
-  t.equal(querySpy.firstCall.args[0], instanceName);
-  t.equal(querySpy.firstCall.args[1], dnsCodes.RECORD_TYPES.SRV);
-  t.equal(querySpy.firstCall.args[2], dnsCodes.CLASS_CODES.IN);
-
+  t.equal(args[0], instanceName);
+  t.equal(args[1], dnsCodes.RECORD_TYPES.SRV);
+  t.equal(args[2], dnsCodes.CLASS_CODES.IN);
+  t.equal(actual, returnArg);
   t.end();
 
   resetDnsController();

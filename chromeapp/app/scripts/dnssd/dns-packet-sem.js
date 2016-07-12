@@ -24,6 +24,12 @@ var NUM_OCTETS_SECTION_LENGTHS = 2;
 /**
  * Parse numRecords Resource Records from a ByteArrayReader object. Returns an
  * array of resource record objects.
+ *
+ * @param {ByteArrayReader} reader the reader from which to construct resource
+ * records. reader should have been moved to the correct cursor position
+ * @param {integer} numRecords the number of records to parse
+ *
+ * @return {Array<resource record>} an Array of the parsed resource records
  */
 function parseResourceRecordsFromReader(reader, numRecords) {
   var result = [];
@@ -56,17 +62,18 @@ function parseResourceRecordsFromReader(reader, numRecords) {
  * packet is not converted to byte format until a call is made to
  * getAsByteArray().
  *
- * id: a 2-octet identifier for the packet
- * isQuery: true if packet is a query, false if it is a response
- * opCode: a 4-bit field. 0 is a standard query
- * isAuthoritativeAnswer: true if the response is authoritative for the domain
- *   in the question section
- * isTruncated: true if the reply is truncated
- * recursionIsDesired: true if recursion is desired
- * recursionAvailable: true or recursion is available
- * returnCode: a 4-bit field. 0 is no error and 3 is a name error. Name errors
- *   are returned only from the authoritative name server and means the domain
- *   name specified does not exist
+ * @param {integer} id a 2-octet identifier for the packet
+ * @param {boolean} isQuery true if packet is a query, false if it is a
+ * response
+ * @param {integer} opCode a 4-bit field. 0 is a standard query
+ * @param {boolea} isAuthoritativeAnswer true if the response is authoritative
+ * for the domain in the question section
+ * @param {boolean} isTruncated true if the reply is truncated
+ * @param {boolean} recursionIsDesired true if recursion is desired
+ * @param {boolean} recursionAvailable true or recursion is available
+ * @param {integer} returnCode a 4-bit field. 0 is no error and 3 is a name
+ * error. Name errors are returned only from the authoritative name server and
+ * means the domain name specified does not exist
  */
 exports.DnsPacket = function DnsPacket(
   id,
@@ -199,6 +206,11 @@ exports.DnsPacket.prototype.convertToByteArray = function() {
 /**
  * Create a DNS Packet from a ByteArrayReader object. The contents of the
  * reader are as expected to be output from convertToByteArray().
+ *
+ * @param {ByteArrayReader} reader the reader from which to construct the
+ * DnsPacket. Should be moved to the correct cursor position
+ *
+ * @return {DnsPacket} the packet constructed
  */
 exports.createPacketFromReader = function(reader) {
   var id = reader.getValue(NUM_OCTETS_ID);
@@ -227,7 +239,6 @@ exports.createPacketFromReader = function(reader) {
   var isTruncated = flags.tc ? true : false;
   var recursionDesired = flags.rd ? true : false;
   var recursionAvailable = flags.ra ? true : false;
-
 
   var result = new exports.DnsPacket(
     id,
@@ -265,7 +276,7 @@ exports.createPacketFromReader = function(reader) {
 /**
  * Add a question resource to the DNS Packet.
  *
- * question must be a QuestionSection object.
+ * @param {QuestionSection} question the question to add to this packet 
  */
 exports.DnsPacket.prototype.addQuestion = function(question) {
   if (!(question instanceof qSection.QuestionSection)) {
@@ -276,6 +287,9 @@ exports.DnsPacket.prototype.addQuestion = function(question) {
 
 /**
  * Add a Resource Record to the answer section.
+ *
+ * @param {resource record} resourceRecord the record to add to the answer
+ * section
  */
 exports.DnsPacket.prototype.addAnswer = function(resourceRecord) {
   this.answers.push(resourceRecord);
@@ -283,6 +297,9 @@ exports.DnsPacket.prototype.addAnswer = function(resourceRecord) {
 
 /**
  * Add a Resource Record to the authority section.
+ *
+ * @param {resource record} resourceRecord the record to add to the authority
+ * section
  */
 exports.DnsPacket.prototype.addAuthority = function(resourceRecord) {
   this.authority.push(resourceRecord);
@@ -290,6 +307,9 @@ exports.DnsPacket.prototype.addAuthority = function(resourceRecord) {
 
 /**
  * Add a Resource Record to the additional info section.
+ *
+ * @param {resource record} resourceRecord the record to add to the additional
+ * info section
  */
 exports.DnsPacket.prototype.addAdditionalInfo = function(resourceRecord) {
   this.additionalInfo.push(resourceRecord);
@@ -299,6 +319,20 @@ exports.DnsPacket.prototype.addAdditionalInfo = function(resourceRecord) {
  * Convert the given value (in 16 bits) to an object containing the DNS header
  * flags. The returned object will have the following properties: qr, opcdoe,
  * aa, tc, rd, ra, rcode.
+ *
+ * @param {integer} value a number those lowest order 16 bits will be parsed to
+ * an object representing packet flags
+ *
+ * @return {object} a flag object like the following:
+ * {
+ *   qr: integer,
+ *   opcode: integer,
+ *   aa: integer,
+ *   tc: integer,
+ *   rd: integer,
+ *   ra: integer,
+ *   rcode integer
+ * }
  */
 exports.getValueAsFlags = function(value) {
   var qr = (value & 0x8000) >> 15;
@@ -324,14 +358,17 @@ exports.getValueAsFlags = function(value) {
  * Convert DNS packet flags to a value that represents the flags (using bitwise
  * operators), fitting in the last 16 bits. All parameters must be numbers.
  *
- * qr: 0 if it is a query, 1 if it is a response
- * opcode: 0 for a standard query
- * aa: 1 if it is authoritative, else 0
- * tc: 1 if truncated
- * rd: 1 if recursion desired
- * ra: 1 if recursion available
- * rcode: 4-bit return code field. 0 for no error, 3 for name error (if this is
- *   the authoritative name server and the name does not exist)
+ * @param {integer} qr 0 if it is a query, 1 if it is a response
+ * @param {integer} opcode 0 for a standard query
+ * @param {integer} aa 1 if it is authoritative, else 0
+ * @param {integer} tc 1 if truncated
+ * @param {integer} rd 1 if recursion desired
+ * @param {integer} ra 1 if recursion available
+ * @param {integer} rcode 4-bit return code field. 0 for no error, 3 for name
+ * error (if this is the authoritative name server and the name does not exist)
+ *
+ * @return {integer} an integer representing the flag values in the lowest
+ * order 16 bits
  */
 exports.getFlagsAsValue = function(qr, opcode, aa, tc, rd, ra, rcode) {
   var value = 0x0000;

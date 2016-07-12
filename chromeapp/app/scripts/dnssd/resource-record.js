@@ -45,12 +45,12 @@ var dnsCodes = require('./dns-codes-sem');
  * An A record. A records respond to queries for a domain name to an IP
  * address.
  *
- * domainName: the domain name, e.g. www.example.com
- * ttl: the time to live
- * ipAddress: the IP address of the domainName. This must be a string
- *   representation (e.g. '192.3.34.17').
- * recordClass: the class of the record type. This is optional, and if not
- *   present or is not truthy will be set as IN for internet traffic.
+ * @param {string} domainName: the domain name, e.g. www.example.com
+ * @param {integer} ttl: the time to live
+ * @param {string} ipAddress: the IP address of the domainName. This must be a string
+ * (e.g. '192.3.34.17').
+ * @param {integer} recordClass: the class of the record type. This is optional, and if not
+ * present or is not truthy will be set as IN for internet traffic.
  */
 exports.ARecord = function ARecord(
   domainName,
@@ -89,6 +89,8 @@ exports.ARecord = function ARecord(
  * 2 octets representing the number 4, to indicate that 4 bytes follow.
  *
  * 4 octets representing a 4-byte IP address
+ *
+ * @return {ByteArray}
  */
 exports.ARecord.prototype.convertToByteArray = function() {
   var result = exports.getCommonFieldsAsByteArray(
@@ -114,6 +116,10 @@ exports.ARecord.prototype.convertToByteArray = function() {
 /**
  * Create an A Record from a ByteArrayReader object. The reader should be at
  * the correct cursor position, at the domain name of the A Record.
+ *
+ * @param {ByteArrayReader} reader
+ *
+ * @return {ARecord}
  */
 exports.createARecordFromReader = function(reader) {
   var commonFields = exports.getCommonFieldsFromByteArrayReader(reader);
@@ -152,6 +158,10 @@ exports.createARecordFromReader = function(reader) {
 /**
  * Create a PTR Record from a ByteArrayReader object. The reader should be at
  * the correct cursor position, at the service type query of the PTR Record.
+ *
+ * @param {ByteArrayReader} reader
+ *
+ * @return {PtrRecord}
  */
 exports.createPtrRecordFromReader = function(reader) {
   var commonFields = exports.getCommonFieldsFromByteArrayReader(reader);
@@ -189,6 +199,10 @@ exports.createPtrRecordFromReader = function(reader) {
 /**
  * Create an SRV Record from a ByteArrayReader object. The reader should be at
  * the correct cursor position, at the service type query of the SRV Record.
+ *
+ * @param {ByteArrayReader} reader
+ *
+ * @return {SrvRecord}
  */
 exports.createSrvRecordFromReader = function(reader) {
   var commonFields = exports.getCommonFieldsFromByteArrayReader(reader);
@@ -247,12 +261,13 @@ exports.createSrvRecordFromReader = function(reader) {
  * '_printer._tcp.local'. They return the name of an instance offering the
  * service (eg 'Printsalot._printer._tcp.local').
  *
- * serviceType: the string representation of the service that has been queried
- *   for.
- * ttl: the time to live
- * instanceName: the name of the instance providing the serviceType
- * rrClass: the class of the record. If not truthy, will be set to IN for
- *   internet traffic.
+ * @param {string} serviceType the string representation of the service that
+ * has been queried for.
+ * @param {integer} ttl the time to live
+ * @param {string} instanceName the name of the instance providing the
+ * serviceType
+ * @param {integer} rrClass the class of the record. If not truthy, will be set
+ * to IN for internet traffic.
  */
 exports.PtrRecord = function PtrRecord(
   serviceType,
@@ -299,6 +314,8 @@ exports.PtrRecord = function PtrRecord(
  * some location in the domain name space". In the context of mDNS, this would
  * be the name of the instance that actually provides the service that is being
  * queried for.
+ *
+ * @return {ByteArray}
  */
 exports.PtrRecord.prototype.convertToByteArray = function() {
   var result = exports.getCommonFieldsAsByteArray(
@@ -327,16 +344,17 @@ exports.PtrRecord.prototype.convertToByteArray = function() {
  * An SRV record. SRV records map the name of a service instance to the
  * information needed to connect to the service. 
  *
- * instanceTypeDomain: the name being queried for, e.g.
- *   'PrintsALot._printer._tcp.local'
- * ttl: the time to live
- * priority: the priority of this record if multiple records are found. This
- *   must be a number from 0 to 65535.
- * weight: the weight of the record if two records have the same priority. This
- *   must be a number from 0 to 65535.
- * port: the port number on which to find the service. This must be a number
- *   from 0 to 65535.
- * targetDomain: the domain hosting the service (e.g. 'blackhawk.local')
+ * @param {string} instanceTypeDomain: the name being queried for, e.g.
+ * 'PrintsALot._printer._tcp.local'
+ * @param {integer} ttl: the time to live
+ * @param {integer} priority: the priority of this record if multiple records
+ * are found. This must be a number from 0 to 65535.
+ * @param {integer} weight: the weight of the record if two records have the
+ * same priority. This must be a number from 0 to 65535.
+ * @param {integer} port: the port number on which to find the service. This
+ * must be a number from 0 to 65535.
+ * @param {string} targetDomain: the domain hosting the service (e.g.
+ * 'blackhawk.local')
  */
 exports.SrvRecord = function SrvRecord(
   instanceTypeDomain,
@@ -382,6 +400,8 @@ exports.SrvRecord = function SrvRecord(
  *
  * A variable number of octets encoding the target name (e.g.
  * PrintsALot.local), encoded as a domain name.
+ *
+ * @return {ByteArray}
  */
 exports.SrvRecord.prototype.convertToByteArray = function() {
   var result = exports.getCommonFieldsAsByteArray(
@@ -427,6 +447,8 @@ exports.SrvRecord.prototype.convertToByteArray = function() {
  * 2 octets representing the RR class
  *
  * 4 octets representing the TTL
+ *
+ * @return {ByteArray}
  */
 exports.getCommonFieldsAsByteArray = function(
   domainName,
@@ -450,7 +472,10 @@ exports.getCommonFieldsAsByteArray = function(
  * Extract the common fields from the reader as encoded by
  * getCommonFieldsAsByteArray.
  *
- * Returns an object with fields domainName, rrType, rrClass, and ttl.
+ * @param {ByteArrayReader} reader
+ *
+ * @return {object} Returns an object with fields: domainName, rrType, rrClass,
+ * and ttl.
  */
 exports.getCommonFieldsFromByteArrayReader = function(reader) {
   var domainName = dnsUtil.getDomainFromByteArrayReader(reader);
@@ -471,6 +496,10 @@ exports.getCommonFieldsFromByteArrayReader = function(reader) {
 /**
  * Return type of the Resource Record queued up in the reader. Peaking does not
  * affect the position of the underlying reader.
+ *
+ * @param {ByteArrayReader} reader
+ *
+ * @return {integer}
  */
 exports.peekTypeInReader = function(reader) {
   // Getting values from the reader normally consumes bytes. Create a defensive

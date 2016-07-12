@@ -34,6 +34,8 @@ exports.DEFAULT_QUERY_WAIT_TIME = DEFAULT_QUERY_WAIT_TIME;
 
 /**
  * Returns a promise that resolves after the given time (in ms).
+ *
+ * @param {integer} ms the number of milliseconds to wait before resolving
  */
 exports.wait = function(ms) {
   return new Promise(resolve => {
@@ -43,6 +45,8 @@ exports.wait = function(ms) {
 
 /**
  * Returns a Promise that resolves after 0-250 ms (inclusive).
+ *
+ * @return {Promise}
  */
 exports.waitForProbeTime = function() {
   // +1 because randomInt is by default [min, max)
@@ -51,6 +55,11 @@ exports.waitForProbeTime = function() {
 
 /**
  * Returns true if the DnsPacket is for this queryName.
+ *
+ * @param {DnsPacket} packet
+ * @param {string} queryName
+ *
+ * @return {boolean}
  */
 exports.packetIsForQuery = function(packet, queryName) {
   for (var i = 0; i < packet.questions.length; i++) {
@@ -65,6 +74,8 @@ exports.packetIsForQuery = function(packet, queryName) {
 /**
  * Generates a semi-random hostname ending with ".local". An example might be
  * 'host123.local'.
+ *
+ * @param {string}
  */
 exports.createHostName = function() {
   var start = 'host';
@@ -113,11 +124,11 @@ exports.advertiseService = function(resourceRecords) {
  *   port: 1234
  * }
  *
- * name: a user-friendly string to be the name of the instance, e.g. "Sam's
- *   SemCache".
- * type: the service type string. This should be the protocol spoken and the
- *   transport protocol, eg "_http._tcp".
- * port: the port the service is available on.
+ * @param {string} name a user-friendly string to be the name of the instance,
+ * e.g. "Sam's SemCache".
+ * @param {string} type the service type string. This should be the protocol
+ * spoken and the transport protocol, eg "_http._tcp".
+ * @param {integer} port the port the service is available on
  */
 exports.register = function(host, name, type, port) {
   // Registration is a multi-step process. According to the RFC, section 8.
@@ -183,6 +194,8 @@ exports.register = function(host, name, type, port) {
  * Register the host on the network. Assumes that a probe has occurred and the
  * hostname is free.
  *
+ * @param {string} host
+ *
  * @return {Array<resource records>} an Array of the records that were added.
  */
 exports.createHostRecords = function(host) {
@@ -204,6 +217,11 @@ exports.createHostRecords = function(host) {
 /**
  * Register the service on the network. Assumes that a probe has occured and
  * the service name is free.
+ *
+ * @param {string} name
+ * @param {string} type
+ * @param {integer} port
+ * @param {string} domain
  *
  * @return {Array<resource records>} an Array of the records that were added.
  */
@@ -246,8 +264,13 @@ exports.receivedResponsePacket = function(packets, queryName) {
  * Issue a probe compliant with the mDNS spec, which specifies that a probe
  * happen three times at random intervals.
  *
- * Returns a promise that resolves if the probe returns nothing, meaning that
- * the queryName is available, and rejects if it is taken.
+ * @param {string} queryName
+ * @param {integer} queryType
+ * @param {integer} queryClass
+ *
+ * @return {Promise} Returns a promise that resolves if the probe returns
+ * nothing, meaning that the queryName is available, and rejects if it is
+ * taken.
  */
 exports.issueProbe = function(queryName, queryType, queryClass) {
   // Track the packets we receive whilst querying.
@@ -313,26 +336,25 @@ exports.issueProbe = function(queryName, queryType, queryClass) {
  * Issue a query for instances of a particular service type. Tantamout to
  * issueing PTR requests.
  *
- * Returns a Promise that resolves with a list of objects representing
- * services, like the following:
- *
- * {
- *   serviceType: '_semcache._tcp',
- *   instanceName: 'Magic Cache'
- * }
- *
  * @param {string} serviceType the service string to query for
  * @param {number} waitTime the time to wait for responses. As multiple
  * responses can be expected in response to a query for instances of a service
  * (as multiple instances can exist on the same network), the Promise will
  * always resolve after this many milliseconds.
+ *
+ * @return {Promise} Returns a Promise that resolves with a list of objects
+ * representing services, like the following:
+ * {
+ *   serviceType: '_semcache._tcp',
+ *   instanceName: 'Magic Cache'
+ * }
  */
 exports.queryForServiceInstances = function(serviceType, timeout) {
   timeout = timeout || exports.DEFAULT_QUERY_WAIT_TIME;
   var rType = dnsCodes.RECORD_TYPES.PTR;
   var rClass = dnsCodes.CLASS_CODES.IN;
   return new Promise(function(resolve) {
-    exports.queryAndRespond(
+    exports.queryForResponses(
       serviceType,
       rType,
       rClass,
@@ -361,16 +383,15 @@ exports.queryForServiceInstances = function(serviceType, timeout) {
 /**
  * Issue a query for an IP address mapping to a domain.
  *
- * Returns a Promise that resolves with a list of objects representing
- * services, like the following:
+ * @param {string} domainName the domain name to query for
+ * @param {number} timeout the number of ms after which to time out
  *
+ * @return {Promise} Returns a Promise that resolves with a list of objects
+ * representing services, like the following:
  * {
  *   domainName: 'example.local',
  *   ipAddress: '123.4.5.6'
  * }
- *
- * @param {string} domainName the domain name to query for
- * @param {number} timeout the number of ms after which to time out
  */
 exports.queryForIpAddress = function(domainName, timeout) {
   // Note that this method ignores the fact that you could have multiple IP
@@ -380,7 +401,7 @@ exports.queryForIpAddress = function(domainName, timeout) {
   var rType = dnsCodes.RECORD_TYPES.A;
   var rClass = dnsCodes.CLASS_CODES.IN;
   return new Promise(function(resolve) {
-    exports.queryAndRespond(
+    exports.queryForResponses(
       domainName,
       rType,
       rClass,
@@ -410,25 +431,23 @@ exports.queryForIpAddress = function(domainName, timeout) {
  * Issue a query for information about a service instance name, including the
  * port and domain name on which it is active.
  *
- * Returns a Promise that resolves with a list of objects representing
- * services, like the following:
+ * @param {string} instanceName the instance name to query for
+ * @param {number} timeout the number of ms after which to time out
  *
+ * @return {Promise} Returns a Promise that resolves with a list of objects
+ * representing services, like the following:
  * {
  *   instanceName: 'Sam Cache',
  *   domain: 'example.local',
  *   port: 1234
  * }
- * 
- *
- * @param {string} instanceName the instance name to query for
- * @param {number} timeout the number of ms after which to time out
  */
 exports.queryForInstanceInfo = function(instanceName, timeout) {
   timeout = timeout || exports.DEFAULT_QUERY_WAIT_TIME;
   var rType = dnsCodes.RECORD_TYPES.SRV;
   var rClass = dnsCodes.CLASS_CODES.IN;
   return new Promise(function(resolve) {
-    exports.queryAndRespond(
+    exports.queryForResponses(
       instanceName,
       rType,
       rClass,
@@ -458,11 +477,6 @@ exports.queryForInstanceInfo = function(instanceName, timeout) {
 /**
  * Issue a query and listen for responses. (As opposed to simply issuing a DNS
  * query without being interested in the responses.)
- *
- * Returns a Promise that resolves with an Array of Packets received in
- * response to the query. If multipleResponses is true, will not resolve until
- * timeoutOrWait milliseconds. If multipleResponses is false, will resolve
- * after the first packet is received or after timeoutOrWait is satifised.
  * 
  * @param {String} qName the name of the query to issue
  * @param {number} qType the type of the query to issue
@@ -474,6 +488,12 @@ exports.queryForInstanceInfo = function(instanceName, timeout) {
  * false (e.g. querying for an A Record, which should have a single answer),
  * this is the amount of time we wait before timing out and resolving with an
  * empty list.
+ *
+ * @return {Promise} Returns a Promise that resolves with an Array of Packets
+ * received in response to the query. If multipleResponses is true, will not
+ * resolve until timeoutOrWait milliseconds. If multipleResponses is false,
+ * will resolve after the first packet is received or after timeoutOrWait is
+ * satifised. 
  */
 exports.queryForResponses = function(
   qName,

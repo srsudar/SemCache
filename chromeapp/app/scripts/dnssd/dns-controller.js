@@ -41,6 +41,9 @@ var ipv4Interfaces = [];
 
 /**
  * Returns all records known to this module.
+ *
+ * @return {Array<resource record>} all the resource records known to this
+ * module
  */
 exports.getRecords = function() {
   return records;
@@ -49,6 +52,9 @@ exports.getRecords = function() {
 /**
  * Returns all the callbacks currently registered to be invoked with incoming
  * packets.
+ *
+ * @return {Array<function>} all the onReceive callbacks that have been
+ * registered
  */
 exports.getOnReceiveCallbacks = function() {
   return onReceiveCallbacks;
@@ -64,6 +70,8 @@ exports.socketInfo = null;
 
 /**
  * True if the service is started.
+ *
+ * @return {boolean} representing whether or not the service has started
  */
 exports.isStarted = function() {
   return started;
@@ -71,6 +79,14 @@ exports.isStarted = function() {
 
 /**
  * Return a cached array of IPv4 interfaces for this machine.
+ *
+ * @return {object} an array of all the IPv4 interfaces known to this machine.
+ * The objects have the form: 
+ * {
+ *   name: string,
+ *   address: string,
+ *   prefixLength: integer
+ * }
  */
 exports.getIPv4Interfaces = function() {
   if (!exports.isStarted()) {
@@ -85,6 +101,8 @@ exports.getIPv4Interfaces = function() {
 
 /**
  * Add a callback to be invoked with received packets.
+ *
+ * @param {function} callback a callback to be invoked with received packets.
  */
 exports.addOnReceiveCallback = function(callback) {
   onReceiveCallbacks.push(callback);
@@ -92,6 +110,9 @@ exports.addOnReceiveCallback = function(callback) {
 
 /**
  * Remove the callback.
+ *
+ * @param {function} callback the callback function to be removed. The callback
+ * should already have been added via a call to addOnReceiveCallback().
  */
 exports.removeOnReceiveCallback = function(callback) {
   var index = onReceiveCallbacks.indexOf(callback);
@@ -103,6 +124,14 @@ exports.removeOnReceiveCallback = function(callback) {
 /**
  * The listener that is attached to chrome.sockets.udp.onReceive.addListener
  * when the service is started.
+ *
+ * @param {object} info the object that is called by the chrome.sockets.udp
+ * API. It is expected to look like:
+ * {
+ *   data: ArrayBuffer,
+ *   remoteAddress: string,
+ *   remotePort: integer
+ * }
  */
 exports.onReceiveListener = function(info) {
   if (dnsUtil.DEBUG) {
@@ -134,6 +163,10 @@ exports.onReceiveListener = function(info) {
 
 /**
  * Respond to an incoming packet.
+ *
+ * @param {DnsPacket} packet the incoming packet
+ * @param {string} remoteAddress the remote address sending the packet
+ * @param {integer} remotePort the remote port sending the packet
  */
 exports.handleIncomingPacket = function(packet, remoteAddress, remotePort) {
   // For now, we are expecting callers to register and de-register their own
@@ -297,6 +330,8 @@ exports.getResourcesForQuery = function(qName, qType, qClass) {
  * Start the system. This must be called before any other calls to this module.
  *
  * Returns a promise that resolves with the socket.
+ *
+ * @return {Promise} that resolves with a ChromeUdpSocket
  */
 exports.getSocket = function() {
   if (exports.socket) {
@@ -343,6 +378,8 @@ exports.getSocket = function() {
  * Start the service.
  *
  * Returns a Promise that resolves when everything is up and running.
+ *
+ * @return {Promise}
  */
 exports.start = function() {
   if (exports.isStarted()) {
@@ -370,6 +407,11 @@ exports.start = function() {
   }
 };
 
+/**
+ * Initialize the cache of network interfaces known to this machine.
+ *
+ * @return {Promise} resolves when the cache is initialized
+ */
 exports.initializeNetworkInterfaceCache = function() {
   return new Promise(function(resolve) {
     chromeUdp.getNetworkInterfaces().then(function success(interfaces) {
@@ -423,6 +465,10 @@ exports.sendPacket = function(packet, address, port) {
 
 /**
  * Perform an mDNS query on the network.
+ *
+ * @param {string} queryName
+ * @param {integer} queryType
+ * @param {integer} queryClass
  */
 exports.query = function(queryName, queryType, queryClass) {
   // ID is zero, as mDNS ignores the id field.
@@ -451,9 +497,14 @@ exports.query = function(queryName, queryType, queryClass) {
  * Issue a query for an A Record with the given domain name. Returns a promise
  * that resolves with a list of ARecords received in response. Resolves with an
  * empty list if none are found.
+ *
+ * @param {string} domainName the domain name for which to return A Records
+ *
+ * @return {Array<resource record>} the A Records corresponding to this domain
+ * name
  */
 exports.queryForARecord = function(domainName) {
-  exports.getResourcesForQuery(
+  return exports.getResourcesForQuery(
     domainName,
     dnsCodes.RECORD_TYPES.A,
     dnsCodes.CLASS_CODES.IN
@@ -464,9 +515,14 @@ exports.queryForARecord = function(domainName) {
  * Issue a query for PTR Records advertising the given service name. Returns a
  * promise that resolves with a list of PtrRecords received in response.
  * Resolves with an empty list if none are found.
+ *
+ * @param {string} serviceName the serviceName for which to query for PTR
+ * Records
+ *
+ * @return {Array<resource record> the PTR Records for the service
  */
 exports.queryForPtrRecord = function(serviceName) {
-  exports.getResourcesForQuery(
+  return exports.getResourcesForQuery(
     serviceName,
     dnsCodes.RECORD_TYPES.PTR,
     dnsCodes.CLASS_CODES.IN
@@ -477,9 +533,14 @@ exports.queryForPtrRecord = function(serviceName) {
  * Issue a query for SRV Records corresponding to the given instance name.
  * Returns a promise that resolves with a list of SrvRecords received in
  * response. Resolves with an empty list if none are found.
+ *
+ * @param {string} instanceName the instance name for which you are querying
+ * for SRV Records
+ *
+ * @return {Array<resource record>} the SRV Records matching this query
  */
 exports.queryForSrvRecord = function(instanceName) {
-  exports.getResourcesForQuery(
+  return exports.getResourcesForQuery(
     instanceName,
     dnsCodes.RECORD_TYPES.SRV,
     dnsCodes.CLASS_CODES.IN
@@ -488,6 +549,9 @@ exports.queryForSrvRecord = function(instanceName) {
 
 /**
  * Add a record corresponding to name to the internal data structures.
+ *
+ * @param {string} name the name of the resource record to add
+ * @param {resource record} record the record to add
  */
 exports.addRecord = function(name, record) {
   var existingRecords = records[name];

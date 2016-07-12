@@ -57,7 +57,7 @@ function callsQueryForResponsesHelper(
     timeoutArg = timeParam;
     return Promise.resolve(packets);
   };
-  dnssdSem.queryAndRespond = querySpy;
+  dnssdSem.queryForResponses = querySpy;
 
   method(qName, timeout)
     .then(function resolved(services) {
