@@ -864,3 +864,40 @@ test('getResourcesForQuery performs service type enumeration', function(t) {
   t.end();
   resetDnsController();
 });
+
+test('onReceiveListener calls to send', function(t) {
+  var handleIncomingPacketSpy = sinon.spy();
+  var byteArrayConstructorStub = sinon.stub().returns({getReader: () => {} });
+  var packetMock = 'fake packet';
+  var createPacketStub = sinon.stub().returns(packetMock);
+
+  var mockedController = proxyquire(
+    '../../../app/scripts/dnssd/dns-controller.js',
+    {
+      './byte-array-sem': {
+        ByteArray: byteArrayConstructorStub
+      },
+      './dns-packet-sem': {
+        createPacketFromReader: createPacketStub
+      }
+    }
+  );
+
+  var incomingInfo = {
+    remoteAddress: 'remote addr',
+    remotePort: 4433
+  };
+
+  mockedController.socket = {};
+  mockedController.handleIncomingPacket = handleIncomingPacketSpy;
+  mockedController.onReceiveListener(incomingInfo);
+
+  // We should parse the packet and call handleIncomingPacket with the address
+  // and port.
+  t.true(handleIncomingPacketSpy.calledOnce, 'called handle packet once');
+  t.equal(handleIncomingPacketSpy.args[0][0], packetMock);
+  t.equal(handleIncomingPacketSpy.args[0][1], incomingInfo.remoteAddress);
+  t.equal(handleIncomingPacketSpy.args[0][2], incomingInfo.remotePort);
+  t.end();
+  resetDnsController();
+});

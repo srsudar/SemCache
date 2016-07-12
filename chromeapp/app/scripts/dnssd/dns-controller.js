@@ -16,7 +16,7 @@ var qSection = require('./question-section');
 
 var DNSSD_MULTICAST_GROUP = '224.0.0.251';
 var DNSSD_PORT = 53531;
-var DNSSD_SERVICE_NAME = '_services._snd-sd._udp.local';
+var DNSSD_SERVICE_NAME = '_services._dns-sd._udp.local';
 
 /** True if the service has started. */
 var started = false;
@@ -129,7 +129,7 @@ exports.onReceiveListener = function(info) {
   var byteArr = new byteArray.ByteArray(info.data);
   var packet = dnsPacket.createPacketFromReader(byteArr.getReader());
 
-  exports.handleIncomingPacket(packet);
+  exports.handleIncomingPacket(packet, info.remoteAddress, info.remotePort);
 };
 
 /**

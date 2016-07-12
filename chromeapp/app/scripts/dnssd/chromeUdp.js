@@ -58,6 +58,11 @@ exports.bind = function(socketId, address, port) {
 };
 
 exports.send = function(socketId, arrayBuffer, address, port) {
+  if (!socketId || !arrayBuffer || !address || !port) {
+    console.warn(
+      'send received bad arg: ', socketId, arrayBuffer, address, port
+    );
+  }
   return new Promise(function(resolve, reject) {
     if (DEBUG) {
       console.log('chromeUdp.send');
