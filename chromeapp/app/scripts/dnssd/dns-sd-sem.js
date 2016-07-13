@@ -152,39 +152,48 @@ exports.register = function(host, name, type, port) {
   // performed twice, one second apart.
 
   var result = new Promise(function(resolve, reject) {
+    var foundHostFree = null;
     // We start by probing for messages of type ANY with the hostname.
     exports.issueProbe(
       host,
       dnsCodes.RECORD_TYPES.ANY,
       dnsCodes.CLASS_CODES.IN
     ).then(function hostFree() {
+      foundHostFree = true;
+      // We need to probe for the name under which a SRV record would be, which
+      // is name.type.local
+      var srvName = exports.createSrvName(name, type, 'local');
       return exports.issueProbe(
-        name,
+        srvName,
         dnsCodes.RECORD_TYPES.ANY,
         dnsCodes.CLASS_CODES.IN
       );
     }, function hostTaken() {
+      foundHostFree = false;
       reject(new Error('host taken: ' + host));
     }).then(function instanceFree() {
-      var hostRecords = exports.createHostRecords(host);
-      var serviceRecords = exports.createServiceRecords(
-        name,
-        type,
-        port,
-        host
-      );
-      var allRecords = hostRecords.concat(serviceRecords);
-      exports.advertiseService(allRecords);
+      if (foundHostFree) {
+        var hostRecords = exports.createHostRecords(host);
+        var serviceRecords = exports.createServiceRecords(
+          name,
+          type,
+          port,
+          host
+        );
+        var allRecords = hostRecords.concat(serviceRecords);
+        exports.advertiseService(allRecords);
 
-      resolve(
-        {
-          serviceName: name,
-          type: type,
-          domain: host,
-          port: port
-        }
-      );
+        resolve(
+          {
+            serviceName: name,
+            type: type,
+            domain: host,
+            port: port
+          }
+        );
+      }
     }, function instanceTaken() {
+      console.log('INSTANCE TAKEN');
       reject(new Error('instance taken: ' + name));
     });
   });
@@ -217,6 +226,21 @@ exports.createHostRecords = function(host) {
 };
 
 /**
+ * Create the complete name of the service as is appropriate for a SRV record,
+ * e.g. "Sam Cache._semcache._tcp.local".
+ *
+ * @param {string} userFriendlyName the friendly name of the instance, e.g.
+ * "Sam Cache"
+ * @param {string} type the type string of the service, e.g. "_semcache._tcp"
+ * @param {string} domain the domain in which to find the service, e.g. "local"
+ *
+ * @return {string}
+ */
+exports.createSrvName = function(userFriendlyName, type, domain) {
+  return [userFriendlyName, type, domain].join('.');
+};
+
+/**
  * Register the service on the network. Assumes that a probe has occured and
  * the service name is free.
  *
@@ -233,7 +257,7 @@ exports.createServiceRecords = function(name, type, port, domain) {
 
   // SRV Records are named according to name.type.domain, which we always
   // assume to be local.
-  var srvName = [name, type, exports.LOCAL_SUFFIX].join('.');
+  var srvName = exports.createSrvName(name, type, 'local');
   var srvRecord = new resRec.SrvRecord(
     srvName,
     dnsUtil.DEFAULT_TTL,

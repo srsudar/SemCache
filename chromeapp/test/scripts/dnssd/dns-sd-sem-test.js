@@ -426,7 +426,6 @@ test('register rejects if host taken', function(t) {
   var port = 1234;
 
   var calledHost;
-
   var issueProbeCallCount = 0;
   var issueProbeSpy = function(
     hostParam
@@ -437,6 +436,11 @@ test('register rejects if host taken', function(t) {
   };
   dnssdSem.issueProbe = issueProbeSpy;
   dnssdSem.wait = () => Promise.resolve();
+
+  var createHostRecordsSpy = sinon.spy();
+  var createServiceRecordsSpy = sinon.spy();
+  dnssdSem.createHostRecords = createHostRecordsSpy;
+  dnssdSem.createServiceRecords = createServiceRecordsSpy;
 
   var resultPromise = dnssdSem.register(host, instanceName, type, port);
 
@@ -452,6 +456,9 @@ test('register rejects if host taken', function(t) {
     t.equal(failObj.message, 'host taken: ' + host);
     // We should only ever issue a single probe.
     t.equal(issueProbeCallCount, 1);
+    // We should not have registered any services
+    t.equal(createHostRecordsSpy.callCount, 0);
+    t.equal(createServiceRecordsSpy.callCount, 0);
     t.true(true);
     t.end();
     resetDnsSdSem();
@@ -498,7 +505,7 @@ test('register rejects if instance taken', function(t) {
   }, function failed(failObj) {
     // We rejected, as expected because the instance was taken.
     // Make sure we called issueProbe with the instance
-    t.equal(calledHost, instanceName);
+    t.equal(calledHost, 'my instance._semcache._tcp.local');
     t.equal(failObj.message, 'instance taken: ' + instanceName);
     // We should issue two probes.
     t.equal(issueProbeCallCount, 2);
