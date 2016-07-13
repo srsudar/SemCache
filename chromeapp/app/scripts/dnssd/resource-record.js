@@ -74,6 +74,7 @@ exports.ARecord = function ARecord(
   this.recordClass = recordClass;
 
   this.domainName = domainName;
+  this.name = domainName;
   this.ttl = ttl;
   this.ipAddress = ipAddress;
 };
@@ -295,6 +296,7 @@ exports.PtrRecord = function PtrRecord(
   this.recordClass = rrClass;
 
   this.serviceType = serviceType;
+  this.name = serviceType;
   this.ttl = ttl;
   this.instanceName = instanceName;
 };
@@ -373,6 +375,7 @@ exports.SrvRecord = function SrvRecord(
   this.recordClass = dnsCodes.CLASS_CODES.IN;
 
   this.instanceTypeDomain = instanceTypeDomain;
+  this.name = instanceTypeDomain;
   this.ttl = ttl;
   this.priority = priority;
   this.weight = weight;

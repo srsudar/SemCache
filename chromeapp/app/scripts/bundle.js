@@ -2561,6 +2561,7 @@ exports.ARecord = function ARecord(
   this.recordClass = recordClass;
 
   this.domainName = domainName;
+  this.name = domainName;
   this.ttl = ttl;
   this.ipAddress = ipAddress;
 };
@@ -2782,6 +2783,7 @@ exports.PtrRecord = function PtrRecord(
   this.recordClass = rrClass;
 
   this.serviceType = serviceType;
+  this.name = serviceType;
   this.ttl = ttl;
   this.instanceName = instanceName;
 };
@@ -2860,6 +2862,7 @@ exports.SrvRecord = function SrvRecord(
   this.recordClass = dnsCodes.CLASS_CODES.IN;
 
   this.instanceTypeDomain = instanceTypeDomain;
+  this.name = instanceTypeDomain;
   this.ttl = ttl;
   this.priority = priority;
   this.weight = weight;
@@ -3027,8 +3030,9 @@ var dnssd = require('./dnssd/dns-sd');
 console.log('required dns?');
 console.log(dnssd);
 console.log('loaded?');
+var dnsc = require('dnsc');
 
-},{"./dnssd/dns-sd":"dnssd"}],"binaryUtils":[function(require,module,exports){
+},{"./dnssd/dns-sd":"dnssd","dnsc":"dnsc"}],"binaryUtils":[function(require,module,exports){
 /*jshint esnext:true*/
 /*
  * https://github.com/justindarc/dns-sd.js
@@ -3571,12 +3575,37 @@ exports.getResourcesForQuery = function(qName, qType, qClass) {
     // Nothing at all--return an empty array
     return [];
   }
-  
+
+  var result = exports.filterResourcesForQuery(
+    namedRecords, qName, qType, qClass
+  );
+
+  return result;
+};
+
+/**
+ * Return an Array with only the elements of resources that match the query
+ * terms.
+ * 
+ * @param {Array<resource record>} resources an Array of resource records that
+ * will be filtered
+ * @param {string} qName the name of the query
+ * @param {integer} qType the type of the query
+ * @param {integer} qClass the class of the query
+ *
+ * @return {Array<resource record>} the subset of resources that match the
+ * query terms
+ */
+exports.filterResourcesForQuery = function(resources, qName, qType, qClass) {
   var result = [];
 
-  namedRecords.forEach(record => {
+  resources.forEach(record => {
+    var meetsName = false;
     var meetsType = false;
     var meetsClass = false;
+    if (qName === record.name || qName === DNSSD_SERVICE_NAME) {
+      meetsName = true;
+    }
     if (qType === dnsCodes.RECORD_TYPES.ANY || record.recordType === qType) {
       meetsType = true;
     }
@@ -3584,7 +3613,7 @@ exports.getResourcesForQuery = function(qName, qType, qClass) {
       meetsClass = true;
     }
 
-    if (meetsType && meetsClass) {
+    if (meetsName && meetsType && meetsClass) {
       result.push(record);
     }
   });
@@ -3890,18 +3919,17 @@ exports.waitForProbeTime = function() {
  * Returns true if the DnsPacket is for this queryName.
  *
  * @param {DnsPacket} packet
- * @param {string} queryName
+ * @param {string} qName
+ * @param {integer} qType
+ * @param {integer} qClass
  *
  * @return {boolean}
  */
-exports.packetIsForQuery = function(packet, queryName) {
-  for (var i = 0; i < packet.questions.length; i++) {
-    var question = packet.questions[i];
-    if (question.queryName === queryName) {
-      return true;
-    }
-  }
-  return false;
+exports.packetIsForQuery = function(packet, qName, qType, qClass) {
+  var filteredRecords = dnsController.filterResourcesForQuery(
+    packet.answers, qName, qType, qClass
+  );
+  return filteredRecords.length !== 0;
 };
 
 /**
@@ -4089,10 +4117,13 @@ exports.createServiceRecords = function(name, type, port, domain) {
   return result;
 };
 
-exports.receivedResponsePacket = function(packets, queryName) {
+exports.receivedResponsePacket = function(packets, qName, qType, qClass) {
   for (var i = 0; i < packets.length; i++) {
     var packet = packets[i];
-    if (exports.packetIsForQuery(packet, queryName) && !packet.isQuery) {
+    if (
+      !packet.isQuery &&
+        exports.packetIsForQuery(packet, qName, qType, qClass)
+    ) {
       return true;
     }
   }
@@ -4131,7 +4162,9 @@ exports.issueProbe = function(queryName, queryType, queryClass) {
         );
         return exports.wait(MAX_PROBE_WAIT);
       }).then(function success() {
-        if (exports.receivedResponsePacket(packets, queryName)) {
+        if (exports.receivedResponsePacket(
+          packets, queryName, queryType, queryClass
+        )) {
           throw new Error('received a packet, jump to catch');
         } else {
           dnsController.query(
@@ -4143,7 +4176,9 @@ exports.issueProbe = function(queryName, queryType, queryClass) {
         }
       })
       .then(function success() {
-        if (exports.receivedResponsePacket(packets, queryName)) {
+        if (exports.receivedResponsePacket(
+          packets, queryName, queryType, queryClass
+        )) {
           throw new Error('received a packet, jump to catch');
         } else {
           dnsController.query(
@@ -4155,7 +4190,9 @@ exports.issueProbe = function(queryName, queryType, queryClass) {
         }
       })
       .then(function success() {
-        if (exports.receivedResponsePacket(packets, queryName)) {
+        if (exports.receivedResponsePacket(
+          packets, queryName, queryType, queryClass
+        )) {
           throw new Error('received a packet, jump to catch');
         } else {
           resolve();

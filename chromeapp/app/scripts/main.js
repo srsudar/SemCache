@@ -21,3 +21,4 @@ var dnssd = require('./dnssd/dns-sd');
 console.log('required dns?');
 console.log(dnssd);
 console.log('loaded?');
+var dnsc = require('dnsc');

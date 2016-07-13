@@ -6,7 +6,6 @@ var proxyquire = require('proxyquire');
 var sinon = require('sinon');
 require('sinon-as-promised');
 
-var qRec = require('../../../app/scripts/dnssd/question-section');
 var dnsPacket = require('../../../app/scripts/dnssd/dns-packet-sem');
 var resRec = require('../../../app/scripts/dnssd/resource-record');
 var dnsUtil = require('../../../app/scripts/dnssd/dns-util');
@@ -181,35 +180,91 @@ test('issueProbe fails if received packets on third probe', function(t) {
   probeRejectsHelper(2, t);
 });
 
-test('packetIsForQuery true if owns question', function(t) {
-  var dnssdSem = require('../../../app/scripts/dnssd/dns-sd-sem');
-
+test('packetIsForQuery true if appropriate resource', function(t) {
   var qName = 'www.example.com';
-  var question = new qRec.QuestionSection(qName, 4, 5);
+  var qClass = 2;
   var packet = new dnsPacket.DnsPacket(
     0, false, 0, false, false, false, false, 0
   );
+  var aRecord = new resRec.ARecord(qName, 15, '15.14.13.12', qClass);
+  packet.addAnswer(aRecord);
 
-  packet.addQuestion(question);
+  var resourceArg = null;
+  var qNameArg = null;
+  var qTypeArg = null;
+  var qClassArg = null;
+  var filterSpy = function(
+    resourceParam, qNameParam, qTypeParam, qClassParam
+  ) {
+    resourceArg = resourceParam;
+    qNameArg = qNameParam;
+    qTypeArg = qTypeParam;
+    qClassArg = qClassParam;
+    return [aRecord];
+  };
+  var dnssdSem = proxyquire(
+    '../../../app/scripts/dnssd/dns-sd-sem',
+    {
+      './dns-controller':
+      {
+        filterResourcesForQuery: filterSpy
+      }
+    }
+  );
 
-  var actual = dnssdSem.packetIsForQuery(packet, qName);
+  var actual = dnssdSem.packetIsForQuery(
+    packet, qName, aRecord.recordType, qClass
+  );
+
   t.true(actual);
+  t.deepEqual(resourceArg, [aRecord]);
+  t.equal(qNameArg, qName);
+  t.equal(qTypeArg, aRecord.recordType);
+  t.equal(qClassArg, qClass);
   t.end();
 });
 
-test('packetIsForQuery false if doesn not own question', function(t) {
-  var dnssdSem = require('../../../app/scripts/dnssd/dns-sd-sem');
-
+test('packetIsForQuery false if resource does not match query', function(t) {
   var qName = 'www.example.com';
-  var question = new qRec.QuestionSection('other name', 4, 5);
+  var qClass = 2;
   var packet = new dnsPacket.DnsPacket(
     0, false, 0, false, false, false, false, 0
   );
+  var aRecord = new resRec.ARecord(qName, 15, '15.14.13.12', qClass);
+  packet.addAnswer(aRecord);
 
-  packet.addQuestion(question);
+  var resourceArg = null;
+  var qNameArg = null;
+  var qTypeArg = null;
+  var qClassArg = null;
+  var filterSpy = function(
+    resourceParam, qNameParam, qTypeParam, qClassParam
+  ) {
+    resourceArg = resourceParam;
+    qNameArg = qNameParam;
+    qTypeArg = qTypeParam;
+    qClassArg = qClassParam;
+    return [];
+  };
+  var dnssdSem = proxyquire(
+    '../../../app/scripts/dnssd/dns-sd-sem',
+    {
+      './dns-controller':
+      {
+        filterResourcesForQuery: filterSpy
+      }
+    }
+  );
 
-  var actual = dnssdSem.packetIsForQuery(packet, qName);
+  var actual = dnssdSem.packetIsForQuery(
+    packet, qName, aRecord.recordType, qClass
+  );
+
   t.false(actual);
+  t.deepEqual(resourceArg, [aRecord]);
+  t.equal(qNameArg, qName);
+  t.equal(qTypeArg, aRecord.recordType);
+  t.equal(qClassArg, qClass);
   t.end();
 });
 
@@ -227,25 +282,38 @@ test('receivedPacket calls packetIsForQuery on each packet', function(t) {
   packets.push(second);
   packets.push(third);
 
-  var queryName = 'foobar';
-  dnssdSem.receivedResponsePacket(packets, queryName);
+  var qName = 'foobar';
+  var qType = 1234;
+  var qClass = 5432;
+  dnssdSem.receivedResponsePacket(packets, qName, qType, qClass);
 
   t.equal(packetIsForQuerySpy.callCount, packets.length);
-  t.true(packetIsForQuerySpy.calledWith(first, queryName));
-  t.true(packetIsForQuerySpy.calledWith(second, queryName));
-  t.true(packetIsForQuerySpy.calledWith(third, queryName));
+  t.true(packetIsForQuerySpy.calledWith(first, qName, qType, qClass));
+  t.true(packetIsForQuerySpy.calledWith(second, qName, qType, qClass));
+  t.true(packetIsForQuerySpy.calledWith(third, qName, qType, qClass));
   t.end();
 
   resetDnsSdSem();
 });
 
-test('receivedResponsePacket true correctly', function(t) {
-  // Should be true if the packet is for the query and it is a response
-  // TODO: above
+test('receivedResponsePacket true based on resources', function(t) {
   var dnssdSem = require('../../../app/scripts/dnssd/dns-sd-sem');
 
-  var packetIsForQueryStub = sinon.stub().returns(true);
-  dnssdSem.packetIsForQuery = packetIsForQueryStub;
+  var packetArg = null;
+  var qNameArg = null;
+  var qTypeArg = null;
+  var qClassArg = null;
+  var packetIsForQuerySpy = function(
+    packetParam, qNameParam, qTypeParam, qClassParam
+  ) {
+    packetArg = packetParam;
+    qNameArg = qNameParam;
+    qTypeArg = qTypeParam;
+    qClassArg = qClassParam;
+    return true;
+  };
+
+  dnssdSem.packetIsForQuery = packetIsForQuerySpy;
 
   var isResponsePacket = new dnsPacket.DnsPacket(
     0,
@@ -257,13 +325,20 @@ test('receivedResponsePacket true correctly', function(t) {
     false,
     0
   );
-  // var question = qS
 
   var packets = [];
   packets.push(isResponsePacket);
 
-  var actual = dnssdSem.receivedResponsePacket(packets, 'foo');
+  var qName = 'foo';
+  var qType = 3;
+  var qClass = 1;
+
+  var actual = dnssdSem.receivedResponsePacket(packets, qName, qType, qClass);
   t.true(actual);
+  t.deepEqual(packetArg, isResponsePacket);
+  t.equal(qNameArg, qName);
+  t.equal(qTypeArg, qType);
+  t.equal(qClassArg, qClass);
   t.end();
 
   resetDnsSdSem();

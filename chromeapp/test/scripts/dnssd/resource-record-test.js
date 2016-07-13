@@ -12,6 +12,7 @@ test('create an ARecord', function(t) {
   var result = new resRec.ARecord(domainName, ttl, ipAddress);
 
   t.equal(result.domainName, domainName);
+  t.equal(result.name, domainName);
   t.equal(result.ttl, ttl);
   t.equal(result.ipAddress, ipAddress);
   t.equal(result.recordType, dnsCodes.RECORD_TYPES.A);
@@ -28,6 +29,7 @@ test('create a PtrRecord', function(t) {
   var result = new resRec.PtrRecord(serviceType, ttl, instanceName);
 
   t.equal(result.serviceType, serviceType);
+  t.equal(result.name, serviceType);
   t.equal(result.ttl, ttl);
   t.equal(result.instanceName, instanceName);
   t.equal(result.recordType, dnsCodes.RECORD_TYPES.PTR);
@@ -54,6 +56,7 @@ test('create an SrvRecord', function(t) {
   );
 
   t.equal(result.instanceTypeDomain, serviceInstanceName);
+  t.equal(result.name, serviceInstanceName);
   t.equal(result.ttl, ttl);
   t.equal(result.priority, priority);
   t.equal(result.weight, weight);

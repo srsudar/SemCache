@@ -59,20 +59,17 @@ exports.waitForProbeTime = function() {
  * Returns true if the DnsPacket is for this queryName.
  *
  * @param {DnsPacket} packet
- * @param {string} queryName
+ * @param {string} qName
+ * @param {integer} qType
+ * @param {integer} qClass
  *
  * @return {boolean}
  */
-exports.packetIsForQuery = function(packet, queryName) {
-  // TODO: this is incorrect, responses don't include the query name, so we
-  // have to pass in more information.
-  for (var i = 0; i < packet.questions.length; i++) {
-    var question = packet.questions[i];
-    if (question.queryName === queryName) {
-      return true;
-    }
-  }
-  return false;
+exports.packetIsForQuery = function(packet, qName, qType, qClass) {
+  var filteredRecords = dnsController.filterResourcesForQuery(
+    packet.answers, qName, qType, qClass
+  );
+  return filteredRecords.length !== 0;
 };
 
 /**
@@ -260,10 +257,13 @@ exports.createServiceRecords = function(name, type, port, domain) {
   return result;
 };
 
-exports.receivedResponsePacket = function(packets, queryName) {
+exports.receivedResponsePacket = function(packets, qName, qType, qClass) {
   for (var i = 0; i < packets.length; i++) {
     var packet = packets[i];
-    if (exports.packetIsForQuery(packet, queryName) && !packet.isQuery) {
+    if (
+      !packet.isQuery &&
+        exports.packetIsForQuery(packet, qName, qType, qClass)
+    ) {
       return true;
     }
   }
@@ -302,7 +302,9 @@ exports.issueProbe = function(queryName, queryType, queryClass) {
         );
         return exports.wait(MAX_PROBE_WAIT);
       }).then(function success() {
-        if (exports.receivedResponsePacket(packets, queryName)) {
+        if (exports.receivedResponsePacket(
+          packets, queryName, queryType, queryClass
+        )) {
           throw new Error('received a packet, jump to catch');
         } else {
           dnsController.query(
@@ -314,7 +316,9 @@ exports.issueProbe = function(queryName, queryType, queryClass) {
         }
       })
       .then(function success() {
-        if (exports.receivedResponsePacket(packets, queryName)) {
+        if (exports.receivedResponsePacket(
+          packets, queryName, queryType, queryClass
+        )) {
           throw new Error('received a packet, jump to catch');
         } else {
           dnsController.query(
@@ -326,7 +330,9 @@ exports.issueProbe = function(queryName, queryType, queryClass) {
         }
       })
       .then(function success() {
-        if (exports.receivedResponsePacket(packets, queryName)) {
+        if (exports.receivedResponsePacket(
+          packets, queryName, queryType, queryClass
+        )) {
           throw new Error('received a packet, jump to catch');
         } else {
           resolve();

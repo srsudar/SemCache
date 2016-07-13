@@ -305,12 +305,37 @@ exports.getResourcesForQuery = function(qName, qType, qClass) {
     // Nothing at all--return an empty array
     return [];
   }
-  
+
+  var result = exports.filterResourcesForQuery(
+    namedRecords, qName, qType, qClass
+  );
+
+  return result;
+};
+
+/**
+ * Return an Array with only the elements of resources that match the query
+ * terms.
+ * 
+ * @param {Array<resource record>} resources an Array of resource records that
+ * will be filtered
+ * @param {string} qName the name of the query
+ * @param {integer} qType the type of the query
+ * @param {integer} qClass the class of the query
+ *
+ * @return {Array<resource record>} the subset of resources that match the
+ * query terms
+ */
+exports.filterResourcesForQuery = function(resources, qName, qType, qClass) {
   var result = [];
 
-  namedRecords.forEach(record => {
+  resources.forEach(record => {
+    var meetsName = false;
     var meetsType = false;
     var meetsClass = false;
+    if (qName === record.name || qName === DNSSD_SERVICE_NAME) {
+      meetsName = true;
+    }
     if (qType === dnsCodes.RECORD_TYPES.ANY || record.recordType === qType) {
       meetsType = true;
     }
@@ -318,7 +343,7 @@ exports.getResourcesForQuery = function(qName, qType, qClass) {
       meetsClass = true;
     }
 
-    if (meetsType && meetsClass) {
+    if (meetsName && meetsType && meetsClass) {
       result.push(record);
     }
   });

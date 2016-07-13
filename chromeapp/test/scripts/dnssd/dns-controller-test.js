@@ -923,3 +923,91 @@ test('onReceiveListener calls to send', function(t) {
   t.end();
   resetDnsController();
 });
+
+test('filterResourcesForQuery respects ANY in type', function(t) {
+  var qName = 'www.example.com';
+  var qType = dnsCodes.RECORD_TYPES.ANY;
+  var qClass = dnsCodes.CLASS_CODES.IN;
+
+  // First make some records for this class with a matching name.
+  var aRecord1 = new resRec.ARecord(qName, 10, '1.2.3.4', qClass);
+  var aRecord2 = new resRec.ARecord(qName, 10, '9.8.7.6', qClass);
+  var srvRecord = new resRec.SrvRecord(qName, 11, 0, 0, 8888, 'domain.local');
+  var resources = [aRecord1, aRecord2, srvRecord];
+
+  // We don't strictly care about the order of returned responses, but we'll
+  // expect the order we put them in just to use deepEqual as a single
+  // assertion.
+  var expected = [aRecord1, aRecord2, srvRecord];
+  var actual = dnsController.filterResourcesForQuery(
+    resources, qName, qType, qClass
+  );
+
+  t.deepEqual(actual, expected);
+  t.end();
+  resetDnsController();
+});
+
+test('filterResourcesForQuery respects class', function(t) {
+  var qName = 'www.example.com';
+  var qType = dnsCodes.RECORD_TYPES.A;
+  var qClass = dnsCodes.CLASS_CODES.IN;
+
+  var unwantedClass = dnsCodes.CLASS_CODES.CS;
+
+  // First make some records for this class with a matching name.
+  var unwantedRecord = new resRec.ARecord(qName, 10, '1.2.3.4', unwantedClass);
+  var wantedRecord = new resRec.ARecord(qName, 10, '9.8.7.6', qClass);
+  var resources = [unwantedRecord, wantedRecord];
+
+  // We don't strictly care about the order of returned responses, but we'll
+  // expect the order we put them in just to use deepEqual as a single
+  // assertion.
+  var expected = [wantedRecord];
+  var actual = dnsController.filterResourcesForQuery(
+    resources, qName, qType, qClass
+  );
+
+  t.deepEqual(actual, expected);
+  t.end();
+  resetDnsController();
+});
+
+test('filterResourcesForQuery respects type', function(t) {
+  var qName = 'www.example.com';
+  // We'll query for a SRV record
+  var qType = dnsCodes.RECORD_TYPES.SRV;
+  var qClass = dnsCodes.CLASS_CODES.IN;
+
+  // First make some records for this class with a matching name.
+  var aRecord1 = new resRec.ARecord(qName, 10, '1.2.3.4', qClass);
+  var aRecord2 = new resRec.ARecord(qName, 10, '9.8.7.6', qClass);
+  var srvRecord = new resRec.SrvRecord(qName, 11, 0, 0, 8888, 'domain.local');
+  var resources = [aRecord1, aRecord2, srvRecord];
+
+  // We don't strictly care about the order of returned responses, but we'll
+  // expect the order we put them in just to use deepEqual as a single
+  // assertion.
+  var expected = [srvRecord];
+  var actual = dnsController.filterResourcesForQuery(
+    resources, qName, qType, qClass
+  );
+
+  t.deepEqual(actual, expected);
+  t.end();
+  resetDnsController();
+});
+
+test('filterResourcesForQuery returns empty array if no records', function(t) {
+  var qName = 'www.example.com';
+  // We'll query for a SRV record
+  var qType = dnsCodes.RECORD_TYPES.SRV;
+  var qClass = dnsCodes.CLASS_CODES.IN;
+
+  var expected = [];
+  var actual = dnsController.filterResourcesForQuery([], qName, qType, qClass);
+
+  t.deepEqual(actual, expected);
+  t.end();
+  resetDnsController();
+});
