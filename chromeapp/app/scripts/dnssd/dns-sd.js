@@ -411,6 +411,7 @@ exports.browseServiceInstances = function(serviceType) {
         return Promise.all(srvRequests);
       })
       .then(function success(srvInfos) {
+        console.log('RESOLVED WITH srvInfos');
         console.log(srvInfos);
       })
       .then(function success(aInfos) {
