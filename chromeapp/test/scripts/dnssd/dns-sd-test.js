@@ -797,6 +797,7 @@ test('queryForResponses times out for if no responses', function(t) {
         // Assertions
         t.equal(addOnReceiveCallbackSpy.callCount, 1);
         t.equal(removeOnReceiveCallbackSpy.callCount, 1);
+        t.true(querySpy.calledWith(qName, qType, qClass));
         // We expect to wait for 2 seconds.
         t.equal(waitArg, qTime);
         t.equal(packetIsForQueryCallCount, 0);
@@ -868,6 +869,7 @@ test('queryForResponses returns immediately for single response', function(t) {
         // Assertions
         t.equal(addOnReceiveCallbackCount, 1);
         t.equal(removeOnReceiveCallbackSpy.callCount, 1);
+        t.true(querySpy.calledWith(qName, qType, qClass));
         // We expect to wait for 2 seconds.
         t.equal(waitArg, qTime);
         t.equal(packetIsForQueryCallCount, 1);
@@ -940,6 +942,7 @@ test('queryForResponses correct for multiple', function(t) {
         // Assertions
         t.equal(addOnReceiveCallbackCount, 1);
         t.equal(removeOnReceiveCallbackSpy.callCount, 1);
+        t.true(querySpy.calledWith(qName, qType, qClass));
         // We expect to wait for 2 seconds.
         t.equal(waitArg, qTime);
         t.equal(packetIsForQueryCallCount, 2);
@@ -1085,4 +1088,9 @@ test('queryForInstanceInfo correct', function(t) {
     dnssdSem.queryForInstanceInfo,
     t
   );
+});
+
+test('browseServiceInstances queries all types and returns', function(t) {
+  t.fail('unimplemented');
+  t.end();
 });

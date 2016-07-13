@@ -373,6 +373,57 @@ exports.issueProbe = function(queryName, queryType, queryClass) {
 };
 
 /**
+ * Get operational information on all services of a given type on the network.
+ *
+ * This is a convenience method for issuing a series of requests--for PTR
+ * records to find the specific instances providing a service, SRV records for
+ * finding the port and host name of those instances, and finally A records for
+ * determining the IP addresses of the hosts.
+ *
+ * @param {string} serviceType the type of the service to browse for
+ *
+ * @return {Promise} a Promise that resolves with operational information for
+ * all instances. This is an Array of objects like the following:
+ * {
+ *   serviceType: '_semcache._tcp',
+ *   instanceName: 'Sam Cache',
+ *   domainName: 'laptop.local',
+ *   ipAddress: '123.4.5.6',
+ *   port: 8888
+ * }
+ */
+exports.browseServiceInstances = function(serviceType) {
+  return new Promise(function(reject, resolve) {
+    var ptrResponses = [];
+    var srvResponses = [];
+    var aResponses = [];
+    exports.queryForServiceInstances(serviceType)
+      .then(function success(ptrInfos) {
+        var srvRequests = [];
+        ptrInfos.forEach(ptr => {
+          ptrResponses.push(ptr);
+          var instanceName = ptr.serviceName;
+          var req = exports.queryForInstanceInfo(
+            instanceName, exports.DEFAULT_QUERY_WAIT_TIME
+          );
+          srvRequests.push(req);
+        });
+        return Promise.all(srvRequests);
+      })
+      .then(function success(srvInfos) {
+        console.log(srvInfos);
+      })
+      .then(function success(aInfos) {
+
+      })
+      .catch(function failed(err) {
+
+      });
+  });
+  throw new Error('unimplemented', serviceType);
+};
+
+/**
  * Issue a query for instances of a particular service type. Tantamout to
  * issueing PTR requests.
  *
@@ -386,7 +437,7 @@ exports.issueProbe = function(queryName, queryType, queryClass) {
  * representing services, like the following:
  * {
  *   serviceType: '_semcache._tcp',
- *   instanceName: 'Magic Cache'
+ *   serviceName: 'Magic Cache'
  * }
  */
 exports.queryForServiceInstances = function(serviceType, timeout) {
@@ -570,7 +621,7 @@ exports.queryForResponses = function(
     // Track the packets we received while querying.
     var packets = [];
     var callback = function(packet) {
-      if (exports.packetIsForQuery(packet, qName)) {
+      if (exports.packetIsForQuery(packet, qName, qType, qClass)) {
         packets.push(packet);
         if (!multipleResponses) {
           // We can go ahead an resolve.
@@ -582,11 +633,10 @@ exports.queryForResponses = function(
     };
     dnsController.addOnReceiveCallback(callback);
 
-    // A browse for a service corresponds to queries for PTR records.
     dnsController.query(
       qName,
-      dnsCodes.RECORD_TYPES.PTR,
-      dnsCodes.CLASS_CODES.IN
+      qType,
+      qClass
     );
     
     exports.wait(timeoutOrWait)
