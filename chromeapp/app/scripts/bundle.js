@@ -1657,7 +1657,7 @@ exports.peekTypeInReader = function(reader) {
 };
 
 },{"./byte-array":1,"./dns-codes":2,"./dns-util":4}],7:[function(require,module,exports){
-/* globals Promise */
+/* globals chrome */
 'use strict';
 
 // Listens for the app launching then creates the window
@@ -1676,11 +1676,8 @@ chrome.app.runtime.onLaunched.addListener(function() {
   });
 });
 
-var dnssd = require('./dnssd/dns-sd');
-console.log('required dns?');
-console.log(dnssd);
-console.log('loaded?');
-var dnsc = require('dnsc');
+window.dnssd = require('./dnssd/dns-sd');
+window.dnsc = require('dnsc');
 
 },{"./dnssd/dns-sd":"dnssd","dnsc":"dnsc"}],"binaryUtils":[function(require,module,exports){
 /*jshint esnext:true*/

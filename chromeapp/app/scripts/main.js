@@ -1,4 +1,4 @@
-/* globals Promise */
+/* globals chrome */
 'use strict';
 
 // Listens for the app launching then creates the window
@@ -17,8 +17,5 @@ chrome.app.runtime.onLaunched.addListener(function() {
   });
 });
 
-var dnssd = require('./dnssd/dns-sd');
-console.log('required dns?');
-console.log(dnssd);
-console.log('loaded?');
-var dnsc = require('dnsc');
+window.dnssd = require('./dnssd/dns-sd');
+window.dnsc = require('dnsc');
