@@ -2,7 +2,7 @@
 
 var test = require('tape');
 var dnsUtil = require('../../../app/scripts/dnssd/dns-util');
-var byteArray = require('../../../app/scripts/dnssd/byte-array-sem');
+var byteArray = require('../../../app/scripts/dnssd/byte-array');
 
 var EXAMPLE_URL = 'gemini.tuc.noao.edu';
 

@@ -1,5 +1,4 @@
 /*jshint esnext:true*/
-/*exported DNSCodes*/
 /*
  * https://github.com/justindarc/dns-sd.js
  *
@@ -28,14 +27,12 @@
 
 'use strict';
 
-exports.DNSCodes = (function() {
-
-const QUERY_RESPONSE_CODES = defineType({
+exports.QUERY_RESPONSE_CODES = defineType({
   QUERY       : 0,      // RFC 1035 - Query
   RESPONSE    : 1       // RFC 1035 - Reponse
 });
 
-const OPERATION_CODES = defineType({
+exports.OPERATION_CODES = defineType({
   QUERY       : 0,      // RFC 1035 - Query
   IQUERY      : 1,      // RFC 1035 - Inverse Query
   STATUS      : 2,      // RFC 1035 - Status
@@ -43,37 +40,37 @@ const OPERATION_CODES = defineType({
   UPDATE      : 5       // RFC 2136 - Update
 });
 
-const AUTHORITATIVE_ANSWER_CODES = defineType({
+exports.AUTHORITATIVE_ANSWER_CODES = defineType({
   NO          : 0,      // RFC 1035 - Not Authoritative
   YES         : 1       // RFC 1035 - Is Authoritative
 });
 
-const TRUNCATED_RESPONSE_CODES = defineType({
+exports.TRUNCATED_RESPONSE_CODES = defineType({
   NO          : 0,      // RFC 1035 - Not Truncated
   YES         : 1       // RFC 1035 - Is Truncated
 });
 
-const RECURSION_DESIRED_CODES = defineType({
+exports.RECURSION_DESIRED_CODES = defineType({
   NO          : 0,      // RFC 1035 - Recursion Not Desired
   YES         : 1       // RFC 1035 - Recursion Is Desired
 });
 
-const RECURSION_AVAILABLE_CODES = defineType({
+exports.RECURSION_AVAILABLE_CODES = defineType({
   NO          : 0,      // RFC 1035 - Recursive Query Support Not Available
   YES         : 1       // RFC 1035 - Recursive Query Support Is Available
 });
 
-const AUTHENTIC_DATA_CODES = defineType({
+exports.AUTHENTIC_DATA_CODES = defineType({
   NO          : 0,      // RFC 4035 - Response Has Not Been Authenticated/Verified
   YES         : 1       // RFC 4035 - Response Has Been Authenticated/Verified
 });
 
-const CHECKING_DISABLED_CODES = defineType({
+exports.CHECKING_DISABLED_CODES = defineType({
   NO          : 0,      // RFC 4035 - Authentication/Verification Checking Not Disabled
   YES         : 1       // RFC 4035 - Authentication/Verification Checking Is Disabled
 });
 
-const RETURN_CODES = defineType({
+exports.RETURN_CODES = defineType({
   NOERROR     : 0,      // RFC 1035 - No Error
   FORMERR     : 1,      // RFC 1035 - Format Error
   SERVFAIL    : 2,      // RFC 1035 - Server Failure
@@ -87,7 +84,7 @@ const RETURN_CODES = defineType({
   NOTZONE     : 10      // RFC 2136 - NotZone Name not contained in zone
 });
 
-const CLASS_CODES = defineType({
+exports.CLASS_CODES = defineType({
   IN          : 1,      // RFC 1035 - Internet
   CS          : 2,      // RFC 1035 - CSNET
   CH          : 3,      // RFC 1035 - CHAOS
@@ -96,7 +93,7 @@ const CLASS_CODES = defineType({
   ANY         : 255     // RFC 1035 - Any
 });
 
-const OPTION_CODES = defineType({
+exports.OPTION_CODES = defineType({
   LLQ         : 1,      // RFC ???? - Long-Lived Queries
   UL          : 2,      // RFC ???? - Update Leases
   NSID        : 3,      // RFC ???? - Name Server Identifier
@@ -104,7 +101,7 @@ const OPTION_CODES = defineType({
   UNKNOWN     : 65535   // RFC ???? - Token
 });
 
-const RECORD_TYPES = defineType({
+exports.RECORD_TYPES = defineType({
   SIGZERO     : 0,      // RFC 2931
   A           : 1,      // RFC 1035
   NS          : 2,      // RFC 1035
@@ -188,22 +185,3 @@ function defineType(values) {
 
   return T;
 }
-
-var DNSCodes = {
-  QUERY_RESPONSE_CODES        : QUERY_RESPONSE_CODES,
-  OPERATION_CODES             : OPERATION_CODES,
-  AUTHORITATIVE_ANSWER_CODES  : AUTHORITATIVE_ANSWER_CODES,
-  TRUNCATED_RESPONSE_CODES    : TRUNCATED_RESPONSE_CODES,
-  RECURSION_DESIRED_CODES     : RECURSION_DESIRED_CODES,
-  RECURSION_AVAILABLE_CODES   : RECURSION_AVAILABLE_CODES,
-  AUTHENTIC_DATA_CODES        : AUTHENTIC_DATA_CODES,
-  CHECKING_DISABLED_CODES     : CHECKING_DISABLED_CODES,
-  RETURN_CODES                : RETURN_CODES,
-  CLASS_CODES                 : CLASS_CODES,
-  OPTION_CODES                : OPTION_CODES,
-  RECORD_TYPES                : RECORD_TYPES
-};
-
-return DNSCodes;
-
-})();

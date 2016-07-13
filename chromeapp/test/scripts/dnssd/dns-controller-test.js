@@ -8,10 +8,10 @@ require('sinon-as-promised');
 
 var dnsController = require('../../../app/scripts/dnssd/dns-controller');
 var chromeUdp = require('../../../app/scripts/dnssd/chromeUdp');
-var dnsCodes = require('../../../app/scripts/dnssd/dns-codes-sem');
-var dnsPacket = require('../../../app/scripts/dnssd/dns-packet-sem');
+var dnsCodes = require('../../../app/scripts/dnssd/dns-codes');
+var dnsPacket = require('../../../app/scripts/dnssd/dns-packet');
 var qSection = require('../../../app/scripts/dnssd/question-section');
-var byteArray = require('../../../app/scripts/dnssd/byte-array-sem');
+var byteArray = require('../../../app/scripts/dnssd/byte-array');
 var resRec = require('../../../app/scripts/dnssd/resource-record');
 
 /**
@@ -896,10 +896,10 @@ test('onReceiveListener calls to send', function(t) {
   var mockedController = proxyquire(
     '../../../app/scripts/dnssd/dns-controller.js',
     {
-      './byte-array-sem': {
+      './byte-array': {
         ByteArray: byteArrayConstructorStub
       },
-      './dns-packet-sem': {
+      './dns-packet': {
         createPacketFromReader: createPacketStub
       }
     }

@@ -1,8 +1,8 @@
 'use strict';
 var test = require('tape');
 var resRec = require('../../../app/scripts/dnssd/resource-record');
-var dnsCodes = require('../../../app/scripts/dnssd/dns-codes-sem');
-var byteArray = require('../../../app/scripts/dnssd/byte-array-sem');
+var dnsCodes = require('../../../app/scripts/dnssd/dns-codes');
+var byteArray = require('../../../app/scripts/dnssd/byte-array');
 
 test('create an ARecord', function(t) {
   var domainName = 'www.example.com';

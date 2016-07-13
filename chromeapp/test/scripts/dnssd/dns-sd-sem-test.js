@@ -6,10 +6,10 @@ var proxyquire = require('proxyquire');
 var sinon = require('sinon');
 require('sinon-as-promised');
 
-var dnsPacket = require('../../../app/scripts/dnssd/dns-packet-sem');
+var dnsPacket = require('../../../app/scripts/dnssd/dns-packet');
 var resRec = require('../../../app/scripts/dnssd/resource-record');
 var dnsUtil = require('../../../app/scripts/dnssd/dns-util');
-var dnsCodes = require('../../../app/scripts/dnssd/dns-codes-sem');
+var dnsCodes = require('../../../app/scripts/dnssd/dns-codes');
 var qSection = require('../../../app/scripts/dnssd/question-section');
 var dnsController = require('../../../app/scripts/dnssd/dns-controller');
 
@@ -20,7 +20,7 @@ var dnsController = require('../../../app/scripts/dnssd/dns-controller');
  */
 function resetDnsSdSem() {
   delete require.cache[
-    require.resolve('../../../app/scripts/dnssd/dns-sd-sem')
+    require.resolve('../../../app/scripts/dnssd/dns-sd')
   ];
 }
 
@@ -94,7 +94,7 @@ function probeRejectsHelper(returnTrueAfterCall, t) {
   };
 
   var dnssdSem = proxyquire(
-    '../../../app/scripts/dnssd/dns-sd-sem',
+    '../../../app/scripts/dnssd/dns-sd',
     {
       './dns-controller':
       {
@@ -138,7 +138,7 @@ test('issueProbe succeeds correctly', function(t) {
   };
 
   var dnssdSem = proxyquire(
-    '../../../app/scripts/dnssd/dns-sd-sem',
+    '../../../app/scripts/dnssd/dns-sd',
     {
       './dns-controller':
       {
@@ -203,7 +203,7 @@ test('packetIsForQuery true if appropriate resource', function(t) {
     return [aRecord];
   };
   var dnssdSem = proxyquire(
-    '../../../app/scripts/dnssd/dns-sd-sem',
+    '../../../app/scripts/dnssd/dns-sd',
     {
       './dns-controller':
       {
@@ -247,7 +247,7 @@ test('packetIsForQuery false if resource does not match query', function(t) {
     return [];
   };
   var dnssdSem = proxyquire(
-    '../../../app/scripts/dnssd/dns-sd-sem',
+    '../../../app/scripts/dnssd/dns-sd',
     {
       './dns-controller':
       {
@@ -269,7 +269,7 @@ test('packetIsForQuery false if resource does not match query', function(t) {
 });
 
 test('receivedPacket calls packetIsForQuery on each packet', function(t) {
-  var dnssdSem = require('../../../app/scripts/dnssd/dns-sd-sem');
+  var dnssdSem = require('../../../app/scripts/dnssd/dns-sd');
 
   var packetIsForQuerySpy = sinon.spy();
   dnssdSem.packetIsForQuery = packetIsForQuerySpy;
@@ -297,7 +297,7 @@ test('receivedPacket calls packetIsForQuery on each packet', function(t) {
 });
 
 test('receivedResponsePacket true based on resources', function(t) {
-  var dnssdSem = require('../../../app/scripts/dnssd/dns-sd-sem');
+  var dnssdSem = require('../../../app/scripts/dnssd/dns-sd');
 
   var packetArg = null;
   var qNameArg = null;
@@ -351,7 +351,7 @@ test('receivedResponsePacket false correctly', function(t) {
   // 3) received a packet for the query that is NOT a response
   // Should be false if the packet is not for the query and it is a query
   // packet
-  var dnssdSem = require('../../../app/scripts/dnssd/dns-sd-sem');
+  var dnssdSem = require('../../../app/scripts/dnssd/dns-sd');
 
   // var packetIsForQueryStub = sinon.stub().returns(false);
   // dnssdSem.packetIsForQuery = packetIsForQueryStub;
@@ -418,7 +418,7 @@ test('receivedResponsePacket false correctly', function(t) {
 });
 
 test('register rejects if host taken', function(t) {
-  var dnssdSem = require('../../../app/scripts/dnssd/dns-sd-sem');
+  var dnssdSem = require('../../../app/scripts/dnssd/dns-sd');
   
   var host = 'hostname.local';
   var instanceName = 'my instance';
@@ -466,7 +466,7 @@ test('register rejects if host taken', function(t) {
 });
 
 test('register rejects if instance taken', function(t) {
-  var dnssdSem = require('../../../app/scripts/dnssd/dns-sd-sem');
+  var dnssdSem = require('../../../app/scripts/dnssd/dns-sd');
   
   var host = 'hostname.local';
   var instanceName = 'my instance';
@@ -518,7 +518,7 @@ test('register rejects if instance taken', function(t) {
 test('createServiceRecords creates and returns', function(t) {
   var addRecordSpy = sinon.spy();
   var dnssdSem = proxyquire(
-    '../../../app/scripts/dnssd/dns-sd-sem',
+    '../../../app/scripts/dnssd/dns-sd',
     {
       './dns-controller':
       {
@@ -590,7 +590,7 @@ test('createHostRecords calls to create records correctly', function(t) {
   };
 
   var dnssdSem = proxyquire(
-    '../../../app/scripts/dnssd/dns-sd-sem',
+    '../../../app/scripts/dnssd/dns-sd',
     {
       './dns-controller':
       {
@@ -608,7 +608,7 @@ test('createHostRecords calls to create records correctly', function(t) {
 });
 
 test('register resolves if name and host probe succeed', function(t) {
-  var dnssdSem = require('../../../app/scripts/dnssd/dns-sd-sem');
+  var dnssdSem = require('../../../app/scripts/dnssd/dns-sd');
   
   var host = 'hostname.local';
   var instanceName = 'my instance';
@@ -701,7 +701,7 @@ test('register resolves if name and host probe succeed', function(t) {
 test('advertiseService advertises', function(t) {
   var sendPacketSpy = sinon.spy();
   var dnssdSem = proxyquire(
-    '../../../app/scripts/dnssd/dns-sd-sem',
+    '../../../app/scripts/dnssd/dns-sd',
     {
       './dns-controller':
       {
@@ -775,7 +775,7 @@ test('queryForResponses times out for if no responses', function(t) {
   };
 
   var dnssdSem = proxyquire(
-    '../../../app/scripts/dnssd/dns-sd-sem',
+    '../../../app/scripts/dnssd/dns-sd',
     {
       './dns-controller':
       {
@@ -846,7 +846,7 @@ test('queryForResponses returns immediately for single response', function(t) {
   };
 
   var dnssdSem = proxyquire(
-    '../../../app/scripts/dnssd/dns-sd-sem',
+    '../../../app/scripts/dnssd/dns-sd',
     {
       './dns-controller':
       {
@@ -918,7 +918,7 @@ test('queryForResponses correct for multiple', function(t) {
   };
 
   var dnssdSem = proxyquire(
-    '../../../app/scripts/dnssd/dns-sd-sem',
+    '../../../app/scripts/dnssd/dns-sd',
     {
       './dns-controller':
       {
@@ -954,7 +954,7 @@ test('queryForResponses correct for multiple', function(t) {
 });
 
 test('queryForServiceInstances correct', function(t) {
-  var dnssdSem = require('../../../app/scripts/dnssd/dns-sd-sem');
+  var dnssdSem = require('../../../app/scripts/dnssd/dns-sd');
   var serviceType = '_semcache._tcp';
 
   var packet1 = new dnsPacket.DnsPacket(
@@ -1007,7 +1007,7 @@ test('queryForServiceInstances correct', function(t) {
 
 
 test('queryForIpAddress correct', function(t) {
-  var dnssdSem = require('../../../app/scripts/dnssd/dns-sd-sem');
+  var dnssdSem = require('../../../app/scripts/dnssd/dns-sd');
   var domainName = 'www.example.com';
 
   var packet1 = new dnsPacket.DnsPacket(
@@ -1047,7 +1047,7 @@ test('queryForIpAddress correct', function(t) {
 });
 
 test('queryForInstanceInfo correct', function(t) {
-  var dnssdSem = require('../../../app/scripts/dnssd/dns-sd-sem');
+  var dnssdSem = require('../../../app/scripts/dnssd/dns-sd');
   var instanceName = 'Sams Cache._semcache._tcp.local';
 
   var packet1 = new dnsPacket.DnsPacket(

@@ -8,7 +8,7 @@
  * use the dns-sd module.
  */
 
-var dnssd = require('./dns-sd-sem');
+var dnssd = require('./dns-sd');
 
 var SEMCACHE_SERVICE_STRING = '_semcache._tcp';
 

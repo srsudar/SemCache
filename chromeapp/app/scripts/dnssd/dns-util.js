@@ -1,6 +1,6 @@
 'use strict';
 
-var byteArray = require('./byte-array-sem');
+var byteArray = require('./byte-array');
 
 /**
  * Various methods for common DNS-related operations.

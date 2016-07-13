@@ -31,10 +31,9 @@ module.exports = function (grunt) {
     browserify: {
       options: {
         require: [
-          './app/scripts/dnssd/dns-sd:dnssd',
           './app/scripts/dnssd/chromeUdp:chromeUdp',
           './app/scripts/dnssd/binary-utils:binaryUtils',
-          './app/scripts/dnssd/dns-sd-sem:dnssd-sem',
+          './app/scripts/dnssd/dns-sd:dnssd',
           './app/scripts/dnssd/dns-controller:dnsc',
         ],
       },

@@ -1,7 +1,7 @@
 'use strict';
 
 var test = require('tape');
-var dnsPacket = require('../../../app/scripts/dnssd/dns-packet-sem');
+var dnsPacket = require('../../../app/scripts/dnssd/dns-packet');
 var resRec = require('../../../app/scripts/dnssd/resource-record');
 var qSection = require('../../../app/scripts/dnssd/question-section');
 

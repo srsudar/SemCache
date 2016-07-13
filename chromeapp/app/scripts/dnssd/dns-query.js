@@ -10,7 +10,7 @@
  * | the 2-octet query class
  */
 
-var byteArray = require('./byte-array-sem');
+var byteArray = require('./byte-array');
 var dnsUtil = require('./dns-util');
 
 var OCTETS_QUERY_TYPE = 2;

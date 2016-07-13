@@ -1,7 +1,7 @@
 /* global exports, require */
 'use strict';
 
-var byteArray = require('./byte-array-sem');
+var byteArray = require('./byte-array');
 var dnsUtil = require('./dns-util');
 
 var NUM_OCTETS_QUERY_TYPE = 2;

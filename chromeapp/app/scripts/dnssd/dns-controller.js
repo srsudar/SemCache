@@ -4,9 +4,9 @@
 
 var chromeUdp = require('./chromeUdp');
 var dnsUtil = require('./dns-util');
-var dnsPacket = require('./dns-packet-sem');
-var byteArray = require('./byte-array-sem');
-var dnsCodes = require('./dns-codes-sem');
+var dnsPacket = require('./dns-packet');
+var byteArray = require('./byte-array');
+var dnsCodes = require('./dns-codes');
 var qSection = require('./question-section');
 
 /**

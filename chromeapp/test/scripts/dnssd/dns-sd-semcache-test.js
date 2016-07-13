@@ -4,10 +4,10 @@ var proxyquire = require('proxyquire');
 var sinon = require('sinon');
 
 test('registerSemCache calls dnssd.register with correct args', function(t) {
-  // This function should just call through to dns-sd-sem.
+  // This function should just call through to dns-sd.
   var registerMock = sinon.spy();
-  var dnssdSem = proxyquire('../../../app/scripts/dnssd/dsn-sd-semcache', {
-    './dns-sd-sem': {register: registerMock}
+  var dnssdSem = proxyquire('../../../app/scripts/dnssd/dns-sd-semcache', {
+    './dns-sd': {register: registerMock}
   });
 
   var name = 'Fancy SemCache';
@@ -24,11 +24,11 @@ test('registerSemCache calls dnssd.register with correct args', function(t) {
 });
 
 test('registerSemCache returns dnssd.register result', function(t) {
-  // This function should just call through to dns-sd-sem.
+  // This function should just call through to dns-sd.
   var returnResult = 'foobar';
   var registerMock = sinon.stub().returns(returnResult);
-  var dnssdSem = proxyquire('../../../app/scripts/dnssd/dsn-sd-semcache', {
-    './dns-sd-sem': {register: registerMock}
+  var dnssdSem = proxyquire('../../../app/scripts/dnssd/dns-sd-semcache', {
+    './dns-sd': {register: registerMock}
   });
 
   var actualReturn = dnssdSem.registerSemCache('myname', 1111);
@@ -38,10 +38,10 @@ test('registerSemCache returns dnssd.register result', function(t) {
 });
 
 test('browseForSemCacheInstances calls browse with correct args', function(t) {
-  // This function should just call through to dns-sd-sem.
+  // This function should just call through to dns-sd.
   var browseMock = sinon.spy();
-  var dnssdSem = proxyquire('../../../app/scripts/dnssd/dsn-sd-semcache', {
-    './dns-sd-sem': {browse: browseMock}
+  var dnssdSem = proxyquire('../../../app/scripts/dnssd/dns-sd-semcache', {
+    './dns-sd': {browse: browseMock}
   });
 
   dnssdSem.browseForSemCacheInstances();
@@ -53,11 +53,11 @@ test('browseForSemCacheInstances calls browse with correct args', function(t) {
 });
 
 test('browseForSemCacheInstances returns dnssd.browse result', function(t) {
-  // This function should just call through to dns-sd-sem.
+  // This function should just call through to dns-sd.
   var returnResult = 'manyinstances';
   var browseMock = sinon.stub().returns(returnResult);
-  var dnssdSem = proxyquire('../../../app/scripts/dnssd/dsn-sd-semcache', {
-    './dns-sd-sem': {browse: browseMock}
+  var dnssdSem = proxyquire('../../../app/scripts/dnssd/dns-sd-semcache', {
+    './dns-sd': {browse: browseMock}
   });
 
   var actualReturn = dnssdSem.browseForSemCacheInstances();

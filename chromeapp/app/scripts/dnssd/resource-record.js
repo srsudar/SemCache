@@ -1,8 +1,9 @@
 /* global exports, require */
 'use strict';
 
-var byteArray = require('./byte-array-sem');
+var byteArray = require('./byte-array');
 var dnsUtil = require('./dns-util');
+var dnsCodes = require('./dns-codes');
 
 var NUM_OCTETS_TYPE = 2;
 var NUM_OCTETS_CLASS = 2;
@@ -38,8 +39,6 @@ var NUM_OCTETS_PORT = 2;
  *
  * https://developer.apple.com/library/mac/documentation/Cocoa/Conceptual/NetServices/Articles/NetServicesArchitecture.html#//apple_ref/doc/uid/20001074-SW1
  */
-
-var dnsCodes = require('./dns-codes-sem');
 
 /**
  * An A record. A records respond to queries for a domain name to an IP
