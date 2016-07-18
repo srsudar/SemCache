@@ -33,13 +33,19 @@
             "scripts": [
                 "scripts/main.js",
                 "scripts/bundle.js",
-                "scripts/chromereload.js"
+                "scripts/chromereload.js",
+                "scripts/web-server-chrome/wsc-chrome.js",
+                "scripts/server/dummy-handler.js",
+                "scripts/server/app.js"
             ]
         }
     },
     "sockets": {
         "tcp": {
             "connect": "*:*"
+        },
+        "tcpServer": {
+            "listen": ["*:*"]
         },
         "udp": {
             "send": "*:*",
