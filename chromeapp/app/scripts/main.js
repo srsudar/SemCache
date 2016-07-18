@@ -17,5 +17,6 @@ chrome.app.runtime.onLaunched.addListener(function() {
   });
 });
 
-window.dnssd = require('./dnssd/dns-sd');
+window.dnssd = require('dnssd');
 window.dnsc = require('dnsc');
+window.dnsSem = require('dnsSem');

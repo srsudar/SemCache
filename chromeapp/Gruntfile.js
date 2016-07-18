@@ -34,6 +34,7 @@ module.exports = function (grunt) {
           './app/scripts/dnssd/chromeUdp:chromeUdp',
           './app/scripts/dnssd/binary-utils:binaryUtils',
           './app/scripts/dnssd/dns-sd:dnssd',
+          './app/scripts/dnssd/dns-sd-semcache:dnsSem',
           './app/scripts/dnssd/dns-controller:dnsc',
         ],
       },

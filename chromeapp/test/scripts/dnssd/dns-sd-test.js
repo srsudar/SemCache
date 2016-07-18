@@ -793,22 +793,22 @@ test('queryForResponses times out for if no responses', function(t) {
   };
 
   dnssdSem.queryForResponses(qName, qType, qClass, true, qTime)
-    .then(function success(records) {
-        // Assertions
-        t.equal(addOnReceiveCallbackSpy.callCount, 1);
-        t.equal(removeOnReceiveCallbackSpy.callCount, 1);
-        t.true(querySpy.calledWith(qName, qType, qClass));
-        // We expect to wait for 2 seconds.
-        t.equal(waitArg, qTime);
-        t.equal(packetIsForQueryCallCount, 0);
-        t.deepEqual(records, expectedPackets);
-        t.end();
-        resetDnsSdSem();
-    })
-    .catch(function failed(err) {
-      t.fail('should not have caught error: ' + err);
-      t.end();
-    });
+  .then(function success(records) {
+    // Assertions
+    t.equal(addOnReceiveCallbackSpy.callCount, 1);
+    t.equal(removeOnReceiveCallbackSpy.callCount, 1);
+    t.true(querySpy.calledWith(qName, qType, qClass));
+    // We expect to wait for 2 seconds.
+    t.equal(waitArg, qTime);
+    t.equal(packetIsForQueryCallCount, 0);
+    t.deepEqual(records, expectedPackets);
+    t.end();
+    resetDnsSdSem();
+  })
+  .catch(function failed(err) {
+    t.fail('should not have caught error: ' + err);
+    t.end();
+  });
 });
 
 test('queryForResponses returns immediately for single response', function(t) {
@@ -865,22 +865,22 @@ test('queryForResponses returns immediately for single response', function(t) {
   };
 
   dnssdSem.queryForResponses(qName, qType, qClass, false, qTime)
-    .then(function success(records) {
-        // Assertions
-        t.equal(addOnReceiveCallbackCount, 1);
-        t.equal(removeOnReceiveCallbackSpy.callCount, 1);
-        t.true(querySpy.calledWith(qName, qType, qClass));
-        // We expect to wait for 2 seconds.
-        t.equal(waitArg, qTime);
-        t.equal(packetIsForQueryCallCount, 1);
-        t.deepEqual(records, expectedPackets);
-        t.end();
-        resetDnsSdSem();
-    })
-    .catch(function failed(err) {
-      t.fail('should not have caught error: ' + err);
-      t.end();
-    });
+  .then(function success(records) {
+    // Assertions
+    t.equal(addOnReceiveCallbackCount, 1);
+    t.equal(removeOnReceiveCallbackSpy.callCount, 1);
+    t.true(querySpy.calledWith(qName, qType, qClass));
+    // We expect to wait for 2 seconds.
+    t.equal(waitArg, qTime);
+    t.equal(packetIsForQueryCallCount, 1);
+    t.deepEqual(records, expectedPackets);
+    t.end();
+    resetDnsSdSem();
+  })
+  .catch(function failed(err) {
+    t.fail('should not have caught error: ' + err);
+    t.end();
+  });
 });
 
 test('queryForResponses correct for multiple', function(t) {
@@ -938,22 +938,22 @@ test('queryForResponses correct for multiple', function(t) {
   };
 
   dnssdSem.queryForResponses(qName, qType, qClass, true, qTime)
-    .then(function success(records) {
-        // Assertions
-        t.equal(addOnReceiveCallbackCount, 1);
-        t.equal(removeOnReceiveCallbackSpy.callCount, 1);
-        t.true(querySpy.calledWith(qName, qType, qClass));
-        // We expect to wait for 2 seconds.
-        t.equal(waitArg, qTime);
-        t.equal(packetIsForQueryCallCount, 2);
-        t.deepEqual(records, expectedPackets);
-        t.end();
-        resetDnsSdSem();
-    })
-    .catch(function failed(err) {
-      t.fail('should not have caught error: ' + err);
-      t.end();
-    });
+  .then(function success(records) {
+    // Assertions
+    t.equal(addOnReceiveCallbackCount, 1);
+    t.equal(removeOnReceiveCallbackSpy.callCount, 1);
+    t.true(querySpy.calledWith(qName, qType, qClass));
+    // We expect to wait for 2 seconds.
+    t.equal(waitArg, qTime);
+    t.equal(packetIsForQueryCallCount, 2);
+    t.deepEqual(records, expectedPackets);
+    t.end();
+    resetDnsSdSem();
+  })
+  .catch(function failed(err) {
+    t.fail('should not have caught error: ' + err);
+    t.end();
+  });
 });
 
 test('queryForServiceInstances correct', function(t) {
@@ -1091,6 +1091,137 @@ test('queryForInstanceInfo correct', function(t) {
 });
 
 test('browseServiceInstances queries all types and returns', function(t) {
-  t.fail('unimplemented');
-  t.end();
+  var ptrInfo1 = {
+    serviceType: '_semcache._tcp',
+    serviceName: 'Sam Cache._semcache._tcp.local'
+  };
+  var ptrInfo2 = {
+    serviceType: '_semcache._tcp',
+    serviceName: 'Joe Cache._semcache._tcp.local'
+  };
+
+  var srvInfo1 = {
+    instanceName: 'Sam Cache._semcache._tcp.local',
+    domain: 'laptop.local',
+    port: 8888
+  };
+  var srvInfo2 = {
+    instanceName: 'Joe Cache._semcache._tcp.local',
+    domain: 'desktop.local',
+    port: 9999
+  };
+
+  var aInfo1 = {
+    domainName: 'laptop.local',
+    ipAddress: '1.2.3.4'
+  };
+  var aInfo2 = {
+    domainName: 'desktop.local',
+    ipAddress: '9.8.7.6'
+  };
+
+  var serviceType = '_semcache._tcp';
+  var serviceTypeArg = null;
+  var serviceQueryCallCount = 0;
+  var queryForServiceInstancesSpy = function(serviceTypeParam) {
+    serviceTypeArg = serviceTypeParam;
+    serviceQueryCallCount += 1;
+    return Promise.resolve([ptrInfo1, ptrInfo2]);
+  };
+
+  var domainNameArgs = [];
+  var domainNameCallCount = 0;
+  var queryForIpAddressSpy = function(domainNameParam, timeoutParam) {
+    domainNameArgs.push([domainNameParam, timeoutParam]);
+    if (domainNameParam === srvInfo1.domain) {
+      domainNameCallCount += 1;
+      return Promise.resolve([aInfo1]);
+    } else if (domainNameParam === srvInfo2.domain) {
+      domainNameCallCount += 1;
+      return Promise.resolve([aInfo2]);
+    } else {
+      domainNameCallCount += 1;
+      throw new Error('unrecognized domainNameParam: ', domainNameParam);
+    }
+  };
+
+  var instanceInfoArgs = [];
+  var instanceInfoCallCount = 0;
+  var queryForInstanceInfoSpy = function(instanceNameParam, timeoutParam) {
+    instanceInfoArgs.push([instanceNameParam, timeoutParam]);
+    if (instanceNameParam === srvInfo1.instanceName) {
+      instanceInfoCallCount += 1;
+      return Promise.resolve([srvInfo1]);
+    } else if (instanceNameParam === srvInfo2.instanceName) {
+      instanceInfoCallCount += 1;
+      return Promise.resolve([srvInfo2]);
+    } else {
+      instanceInfoCallCount += 1;
+      throw new Error('unrecognized instanceNameParam: ', instanceNameParam);
+    }
+  };
+
+  var expected1 = {
+    serviceType: serviceType,
+    instanceName: ptrInfo1.serviceName,
+    domainName: srvInfo1.domain,
+    ipAddress: aInfo1.ipAddress,
+    port: srvInfo1.port
+  };
+  var expected2 = {
+    serviceType: serviceType,
+    instanceName: ptrInfo2.serviceName,
+    domainName: srvInfo2.domain,
+    ipAddress: aInfo2.ipAddress,
+    port: srvInfo2.port
+  };
+
+  var dnssdSem = require('../../../app/scripts/dnssd/dns-sd');
+  dnssdSem.queryForServiceInstances = queryForServiceInstancesSpy;
+  dnssdSem.queryForIpAddress = queryForIpAddressSpy;
+  dnssdSem.queryForInstanceInfo = queryForInstanceInfoSpy;
+
+  var resultPromise = dnssdSem.browseServiceInstances(serviceType);
+  resultPromise.then(function gotInstances(instances) {
+    // Each spy called the appropriate number of times with the appropriate
+    // arguments
+    // 1 call resolves all services
+    t.equal(serviceQueryCallCount, 1);
+    // 2 instances, thus 2 address resolutions required
+    t.equal(domainNameCallCount, 2);
+    t.equal(instanceInfoCallCount, 2);
+
+    // Called with correct args
+    // PTR records
+    t.equal(serviceTypeArg, serviceType);
+    // SRV records
+    t.deepEqual(
+      instanceInfoArgs[0],
+      [ptrInfo1.serviceName, dnssdSem.DEFAULT_QUERY_WAIT_TIME]
+    );
+    t.deepEqual(
+      instanceInfoArgs[1],
+      [ptrInfo2.serviceName, dnssdSem.DEFAULT_QUERY_WAIT_TIME]
+    );
+    // A records
+    t.deepEqual(
+      domainNameArgs[0],
+      [srvInfo1.domain, dnssdSem.DEFAULT_QUERY_WAIT_TIME]
+    );
+    t.deepEqual(
+      domainNameArgs[1],
+      [srvInfo2.domain, dnssdSem.DEFAULT_QUERY_WAIT_TIME]
+    );
+
+    // Result promise resolves with the correct objects.
+    t.deepEqual(instances, [expected1, expected2]);
+    resetDnsSdSem();
+    t.end();
+  });
+  
+  resultPromise.catch(function failed(errObj) {
+    t.fail('unexpected catch: ' + errObj);
+    resetDnsSdSem();
+    t.end();
+  });
 });

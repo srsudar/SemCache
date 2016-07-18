@@ -1676,10 +1676,11 @@ chrome.app.runtime.onLaunched.addListener(function() {
   });
 });
 
-window.dnssd = require('./dnssd/dns-sd');
+window.dnssd = require('dnssd');
 window.dnsc = require('dnsc');
+window.dnsSem = require('dnsSem');
 
-},{"./dnssd/dns-sd":"dnssd","dnsc":"dnsc"}],"binaryUtils":[function(require,module,exports){
+},{"dnsSem":"dnsSem","dnsc":"dnsc","dnssd":"dnssd"}],"binaryUtils":[function(require,module,exports){
 /*jshint esnext:true*/
 /*
  * https://github.com/justindarc/dns-sd.js
@@ -1914,7 +1915,65 @@ exports.getNetworkInterfaces = function() {
   });
 };
 
-},{}],"dnsc":[function(require,module,exports){
+},{}],"dnsSem":[function(require,module,exports){
+/*jshint esnext:true*/
+'use strict';
+
+/**
+ * A SemCache-specific wrapper around the mDNS and DNSSD APIs. SemCache clients
+ * should use this module, as it handles things like service strings. More
+ * general clients--i.e. those not implementing a SemCache instance--should
+ * use the dns-sd module.
+ */
+
+var dnssd = require('./dns-sd');
+
+var SEMCACHE_SERVICE_STRING = '_semcache._tcp';
+
+/**
+ * Return the service string representing SemCache, e.g. "_semcache._tcp".
+ */
+exports.getSemCacheServiceString = function() {
+  return SEMCACHE_SERVICE_STRING;
+};
+
+/**
+ * Register a SemCache instance. Returns a Promise that resolves with an object
+ * like the following:
+ *
+ * {
+ *   serviceName: "Sam's SemCache",
+ *   type: "_http._local",
+ *   domain: "laptop.local"
+ * }
+ *
+ * name: the user-friendly name of the instance, e.g. "Sam's SemCache".
+ * port: the port on which the SemCache instance is running.
+ */
+exports.registerSemCache = function(host, name, port) {
+  var result = dnssd.register(host, name, SEMCACHE_SERVICE_STRING, port);
+  return result;
+};
+
+/**
+ * Browse for SemCache instances on the local network. Returns a Promise that
+ * resolves with a list of objects like the following:
+ *
+ * {
+ *   serviceName: "Sam's SemCache",
+ *   type: "_http._local",
+ *   domain: "laptop.local",
+ *   port: 8889
+ * }
+ *
+ * Resolves with an empty list if no instances are found.
+ */
+exports.browseForSemCacheInstances = function() {
+  var result = dnssd.browseServiceInstances(SEMCACHE_SERVICE_STRING);
+  return result;
+};
+
+},{"./dns-sd":"dnssd"}],"dnsc":[function(require,module,exports){
 /*jshint esnext:true*/
 /* globals Promise */
 'use strict';
@@ -2900,7 +2959,7 @@ exports.issueProbe = function(queryName, queryType, queryClass) {
  * }
  */
 exports.browseServiceInstances = function(serviceType) {
-  return new Promise(function(reject, resolve) {
+  return new Promise(function(resolve, reject) {
     var ptrResponses = [];
     var srvResponses = [];
     var aResponses = [];
@@ -2918,16 +2977,53 @@ exports.browseServiceInstances = function(serviceType) {
         return Promise.all(srvRequests);
       })
       .then(function success(srvInfos) {
-        console.log(srvInfos);
+        var aRequests = [];
+        srvInfos.forEach(srv => {
+          // the query methods return an Array of responses, even if only a
+          // single response is requested. This allows for for API similarity
+          // across calls and for an eventual implementation that permits both
+          // A and AAAA records when querying for IP addresses, e.g., but means
+          // that we are effectively iterating over an array of arrays. For
+          // simplicity, however, we will assume at this stage that we only
+          // ever expect a single response, which is correct in the vast
+          // majority of cases.
+          srv = srv[0];
+          srvResponses.push(srv);
+          var hostname = srv.domain;
+          var req = exports.queryForIpAddress(
+            hostname, exports.DEFAULT_QUERY_WAIT_TIME
+          );
+          aRequests.push(req);
+        });
+        return Promise.all(aRequests);
       })
       .then(function success(aInfos) {
+        aInfos.forEach(aInfo => {
+          aInfo = aInfo[0];
+          aResponses.push(aInfo);
+        });
+        
+        var result = [];
+        for (var i = 0; i < ptrResponses.length; i++) {
+          var ptr = ptrResponses[i];
+          var srv = srvResponses[i];
+          var aRec = aResponses[i];
+          result.push({
+            serviceType: serviceType,
+            instanceName: ptr.serviceName,
+            domainName: srv.domain,
+            ipAddress: aRec.ipAddress,
+            port: srv.port
+          });
+        }
 
+        resolve(result);
       })
       .catch(function failed(err) {
-
+        console.log(err);
+        reject('Caught error in browsing for service: ' + err);
       });
   });
-  throw new Error('unimplemented', serviceType);
 };
 
 /**

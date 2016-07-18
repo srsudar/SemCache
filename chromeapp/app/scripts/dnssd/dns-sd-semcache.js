@@ -32,8 +32,8 @@ exports.getSemCacheServiceString = function() {
  * name: the user-friendly name of the instance, e.g. "Sam's SemCache".
  * port: the port on which the SemCache instance is running.
  */
-exports.registerSemCache = function(name, port) {
-  var result = dnssd.register(name, SEMCACHE_SERVICE_STRING, port);
+exports.registerSemCache = function(host, name, port) {
+  var result = dnssd.register(host, name, SEMCACHE_SERVICE_STRING, port);
   return result;
 };
 
@@ -51,6 +51,6 @@ exports.registerSemCache = function(name, port) {
  * Resolves with an empty list if no instances are found.
  */
 exports.browseForSemCacheInstances = function() {
-  var result = dnssd.browse(SEMCACHE_SERVICE_STRING);
+  var result = dnssd.browseServiceInstances(SEMCACHE_SERVICE_STRING);
   return result;
 };

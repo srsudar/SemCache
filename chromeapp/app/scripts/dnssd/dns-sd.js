@@ -393,7 +393,7 @@ exports.issueProbe = function(queryName, queryType, queryClass) {
  * }
  */
 exports.browseServiceInstances = function(serviceType) {
-  return new Promise(function(reject, resolve) {
+  return new Promise(function(resolve, reject) {
     var ptrResponses = [];
     var srvResponses = [];
     var aResponses = [];
@@ -411,17 +411,53 @@ exports.browseServiceInstances = function(serviceType) {
         return Promise.all(srvRequests);
       })
       .then(function success(srvInfos) {
-        console.log('RESOLVED WITH srvInfos');
-        console.log(srvInfos);
+        var aRequests = [];
+        srvInfos.forEach(srv => {
+          // the query methods return an Array of responses, even if only a
+          // single response is requested. This allows for for API similarity
+          // across calls and for an eventual implementation that permits both
+          // A and AAAA records when querying for IP addresses, e.g., but means
+          // that we are effectively iterating over an array of arrays. For
+          // simplicity, however, we will assume at this stage that we only
+          // ever expect a single response, which is correct in the vast
+          // majority of cases.
+          srv = srv[0];
+          srvResponses.push(srv);
+          var hostname = srv.domain;
+          var req = exports.queryForIpAddress(
+            hostname, exports.DEFAULT_QUERY_WAIT_TIME
+          );
+          aRequests.push(req);
+        });
+        return Promise.all(aRequests);
       })
       .then(function success(aInfos) {
+        aInfos.forEach(aInfo => {
+          aInfo = aInfo[0];
+          aResponses.push(aInfo);
+        });
+        
+        var result = [];
+        for (var i = 0; i < ptrResponses.length; i++) {
+          var ptr = ptrResponses[i];
+          var srv = srvResponses[i];
+          var aRec = aResponses[i];
+          result.push({
+            serviceType: serviceType,
+            instanceName: ptr.serviceName,
+            domainName: srv.domain,
+            ipAddress: aRec.ipAddress,
+            port: srv.port
+          });
+        }
 
+        resolve(result);
       })
       .catch(function failed(err) {
-
+        console.log(err);
+        reject('Caught error in browsing for service: ' + err);
       });
   });
-  throw new Error('unimplemented', serviceType);
 };
 
 /**
