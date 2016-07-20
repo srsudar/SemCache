@@ -22,7 +22,8 @@
         },
         "storage",
         "<all_urls>",
-        "system.network"
+        "system.network",
+        "file:///*"
     ],
     "icons": {
         "16": "images/icon-16.png",

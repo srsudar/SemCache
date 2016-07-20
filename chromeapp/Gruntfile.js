@@ -42,6 +42,10 @@ module.exports = function (grunt) {
         // A single entry point for the app.
         src: 'app/scripts/main.js',
         dest: 'app/scripts/bundle.js'
+      },
+      frontEnd: {
+        src: 'app/scripts/index.js',
+        dest: 'app/scripts/indexBundle.js'
       }
     },
 
