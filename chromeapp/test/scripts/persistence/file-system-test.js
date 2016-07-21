@@ -134,3 +134,44 @@ test('baseDirIsSet true correctly', function(t) {
   });
 
 });
+
+test('getPersistedBaseDir returns null if not set', function(t) {
+  var fileSystem = require('../../../app/scripts/persistence/file-system');
+  fileSystem.baseDirIsSet = sinon.stub().resolves(false);
+
+  var expected = null;
+  fileSystem.getPersistedBaseDir()
+  .then(dirEntry => {
+    t.equal(dirEntry, expected);
+    t.end();
+    resetFileSystem();
+  });
+});
+
+test('getPersistedBaseDir retrieves from storage', function(t) {
+  var savedId = 'persisted identifier';
+  var expectedDirEntry = 'expected directory';
+
+  var getSpy = sinon.stub().resolves({baseDir: savedId});
+  var restoreEntrySpy = sinon.stub().resolves(expectedDirEntry);
+
+  var fileSystem = proxyquire(
+    '../../../app/scripts/persistence/file-system',
+    {
+      './chromeStorage': {
+        get: getSpy
+      },
+      './chromeFileSystem': {
+        restoreEntry: restoreEntrySpy
+      }
+    }
+  );
+
+  fileSystem.getPersistedBaseDir()
+  .then(actualDir => {
+    t.equal(actualDir, expectedDirEntry);
+    t.true(getSpy.calledWith(fileSystem.KEY_BASE_DIR));
+    t.end();
+    resetFileSystem();
+  });
+});

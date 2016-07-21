@@ -18,7 +18,24 @@ exports.KEY_BASE_DIR = 'baseDir';
  * SemCache file system. Returns null if the directory has not been set.
  */
 exports.getPersistedBaseDir = function() {
-
+  return new Promise(function(resolve) {
+    exports.baseDirIsSet()
+    .then(isSet => {
+      if (isSet) {
+        chromeStorage.get(exports.KEY_BASE_DIR)
+        .then(keyValue => {
+          var id = keyValue[exports.KEY_BASE_DIR];
+          return chromefs.restoreEntry(id);
+        })
+        .then(dirEntry => {
+          resolve(dirEntry);
+        });
+      } else {
+        // Null if not set.
+        resolve(null);
+      }
+    });
+  });
 };
 
 /**
