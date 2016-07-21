@@ -1657,10 +1657,9 @@ exports.peekTypeInReader = function(reader) {
 };
 
 },{"./byte-array":1,"./dns-codes":2,"./dns-util":4}],7:[function(require,module,exports){
-/* global chrome */
 'use strict';
 
-var fs = require('./persistence/filesystem');
+var fs = require('./persistence/file-system');
 
 document.addEventListener('DOMContentLoaded', function() {
   var h1 = document.getElementsByTagName('h1');
@@ -1668,7 +1667,7 @@ document.addEventListener('DOMContentLoaded', function() {
     h1[0].innerText = h1[0].innerText + ' \'Allo';
   }
   var chooseDirButton = document.getElementById('choose_dir');
-  chooseDirButton.addEventListener('click', function(e) {
+  chooseDirButton.addEventListener('click', function() {
     fs.promptForDir().then(function(entry) {
       console.log('GOT NEW BASE DIR: ', entry);
     });
@@ -1676,7 +1675,7 @@ document.addEventListener('DOMContentLoaded', function() {
 }, false);
 
 
-},{"./persistence/filesystem":10}],8:[function(require,module,exports){
+},{"./persistence/file-system":10}],8:[function(require,module,exports){
 /* globals Promise, chrome */
 'use strict';
 
@@ -1934,7 +1933,7 @@ var chromefs = require('./chromeFileSystem');
 var chromeStorage = require('./chromeStorage');
 
 /** The local storage key for the entry ID of the base directory. */
-var KEY_BASE_DIR = 'baseDir';
+exports.KEY_BASE_DIR = 'baseDir';
 
 /**
  * Return the base directory behaving as the root of the SemCache file system.
@@ -1946,7 +1945,40 @@ var KEY_BASE_DIR = 'baseDir';
  * SemCache file system. Returns null if the directory has not been set.
  */
 exports.getPersistedBaseDir = function() {
+  return new Promise(function(resolve) {
+    exports.baseDirIsSet()
+    .then(isSet => {
+      if (isSet) {
+        chromeStorage.get(exports.KEY_BASE_DIR)
+        .then(keyValue => {
+          var id = keyValue[exports.KEY_BASE_DIR];
+          return chromefs.restoreEntry(id);
+        })
+        .then(dirEntry => {
+          resolve(dirEntry);
+        });
+      } else {
+        // Null if not set.
+        resolve(null);
+      }
+    });
+  });
+};
 
+/**
+ * @return {Promise} Promise that resolves with a boolean
+ */
+exports.baseDirIsSet = function() {
+  return new Promise(function(resolve) {
+    chromeStorage.get(exports.KEY_BASE_DIR)
+    .then(keyValue => {
+      var isSet = false;
+      if (keyValue && keyValue[exports.KEY_BASE_DIR]) {
+        isSet = true;
+      }
+      resolve(isSet);
+    });
+  });
 };
 
 /**
@@ -1955,11 +1987,10 @@ exports.getPersistedBaseDir = function() {
  * @param {DirectoryEntry} dirEntry the entry that will be set as the base
  */
 exports.setBaseCacheDir = function(dirEntry) {
-
-    // use local storage to retain access to this file
-    // chrome.storage.local.set({'chosenFile': chrome.fileSystem.retainEntry(theEntry)});
-    // loadDirEntry(theEntry);
-  // });
+  var keyObj = {};
+  var id = chromefs.retainEntrySync(dirEntry);
+  keyObj[exports.KEY_BASE_DIR] = id;
+  chromeStorage.set(keyObj);
 };
 
 /**
@@ -3553,4 +3584,62 @@ exports.queryForResponses = function(
   });
 };
 
-},{"./dns-codes":2,"./dns-controller":"dnsc","./dns-packet":3,"./dns-util":4,"./resource-record":6}]},{},[7]);
+},{"./dns-codes":2,"./dns-controller":"dnsc","./dns-packet":3,"./dns-util":4,"./resource-record":6}],"fsUtil":[function(require,module,exports){
+/* globals Promise */
+'use strict';
+
+/**
+ * General file system operations.
+ */
+
+/*
+ * This code is based on the Mozilla and HTML5Rocks examples shown here:
+ * https://developer.mozilla.org/en/docs/Web/API/DirectoryReader
+ */
+function toArray(list) {
+  return Array.prototype.slice.call(list || [], 0);
+}
+
+/**
+ * @param {DirectoryEntry} dirEntry the directory to list
+ *
+ * @return {Promise} Promise that resolves with an Array of Entry objects
+ * that are the contents of the directory
+ */
+exports.listEntries = function(dirEntry) {
+  // This code is based on the Mozilla and HTML5Rocks examples shown here:
+  // https://developer.mozilla.org/en/docs/Web/API/DirectoryReader
+  var dirReader = dirEntry.createReader();
+  var entries = [];
+
+  return new Promise(function(resolve, reject) {
+
+    // Keep calling readEntries() until no more results are returned.
+    var readEntries = function() {
+      dirReader.readEntries (function(results) {
+        if (!results.length) {
+          resolve(entries.sort());
+        } else {
+          entries = entries.concat(toArray(results));
+          readEntries();
+        }
+      }, function(err) {
+        reject(err);
+      });
+    };
+
+    readEntries();
+  });
+};
+
+/**
+ * @param {DirectoryEntry} dirEntry the directory to contain the new file
+ * @param {string} path the name of the file
+ * @param {Blob} fileBlob the content to write
+ */
+exports.write = function(dirEntry, name, fileBlob) {
+  console.log('Unimplemented: ', dirEntry, name, fileBlob);
+};
+
+
+},{}]},{},[7]);
