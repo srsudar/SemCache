@@ -72,3 +72,100 @@ test('listEntries catches if error callback invoked', function(t) {
     t.end();
   });
 });
+
+test('writeToFile resolves on completion', function(t) {
+  var fileBlob = 'blobbity blob';
+
+  var writerSpy = {};
+  var fileBlobArg = null;
+  writerSpy.write = function(fileBlobParam) {
+    fileBlobArg = fileBlobParam;
+    // This indicates success. We're just scratching our own back to simulate
+    // the end of a write for testing purposes--i.e. a write finishes
+    // immediately.
+    writerSpy.onwriteend();
+  };
+
+  var fileEntry = {};
+  var createWriterSpy = sinon.stub();
+  createWriterSpy.callsArgWith(0, writerSpy);
+  fileEntry.createWriter = createWriterSpy;
+
+  util.writeToFile(fileEntry, fileBlob)
+  .then(function() {
+    t.equal(fileBlobArg, fileBlob);
+    t.end();
+  });
+});
+
+test('writeToFile rejects on error', function(t) {
+  var fileBlob = 'erroneous blob';
+  var error = 'the error';
+
+  var writerSpy = {};
+  var fileBlobArg = null;
+  writerSpy.write = function(fileBlobParam) {
+    fileBlobArg = fileBlobParam;
+    // This indicates success. We're just scratching our own back to simulate
+    // the end of a write for testing purposes--i.e. a write finishes
+    // immediately.
+    writerSpy.onerror(error);
+  };
+
+  var fileEntry = {};
+  var createWriterSpy = sinon.stub();
+  createWriterSpy.callsArgWith(0, writerSpy);
+  fileEntry.createWriter = createWriterSpy;
+
+  util.writeToFile(fileEntry, fileBlob)
+  .catch(function(actualError) {
+    t.equal(actualError, error);
+    t.equal(fileBlobArg, fileBlob);
+    t.end();
+  });
+});
+
+test('getFile resolves with entry', function(t) {
+  var getFileStub = sinon.stub();
+
+  var dirEntry = {};
+  dirEntry.getFile = getFileStub;
+
+  var fileEntry = 'the created file';
+
+  getFileStub.callsArgWith(2, fileEntry);
+
+  var options = {foo: 1, bar: '2'};
+  var name = 'fileName.txt';
+
+  util.getFile(dirEntry, options, name)
+  .then(actualEntry => {
+    t.deepEqual(getFileStub.args[0][0], name);
+    t.deepEqual(getFileStub.args[0][1], options);
+    t.equal(actualEntry, fileEntry);
+    t.end();
+  });
+});
+
+
+test('getFile rejects with error', function(t) {
+  var getFileStub = sinon.stub();
+
+  var dirEntry = {};
+  dirEntry.getFile = getFileStub;
+
+  var error = 'error whilst writing';
+
+  getFileStub.callsArgWith(3, error);
+
+  var options = {foo: 1, bar: '2'};
+  var name = 'fileName.txt';
+
+  util.getFile(dirEntry, options, name)
+  .catch(actualError => {
+    t.deepEqual(getFileStub.args[0][0], name);
+    t.deepEqual(getFileStub.args[0][1], options);
+    t.equal(actualError, error);
+    t.end();
+  });
+});

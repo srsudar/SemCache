@@ -2,7 +2,7 @@
 'use strict';
 
 /**
- * General file system operations.
+ * General file system operations on top of the web APIs.
  */
 
 /*
@@ -46,11 +46,46 @@ exports.listEntries = function(dirEntry) {
 };
 
 /**
- * @param {DirectoryEntry} dirEntry the directory to contain the new file
- * @param {string} path the name of the file
+ * @param {FileEntry} fileEntry the file that will be written to
  * @param {Blob} fileBlob the content to write
+ *
+ * @return {Promise} Promise that resolves when the write is complete or
+ * rejects with an error
  */
-exports.write = function(dirEntry, name, fileBlob) {
-  console.log('Unimplemented: ', dirEntry, name, fileBlob);
+exports.writeToFile = function(fileEntry, fileBlob) {
+  return new Promise(function(resolve, reject) {
+    fileEntry.createWriter(function(fileWriter) {
+
+      fileWriter.onwriteend = function() {
+        resolve();
+      };
+
+      fileWriter.onerror = function(err) {
+        reject(err);
+      };
+
+      fileWriter.write(fileBlob);
+    });
+  });
 };
 
+/**
+ * A Promise-ified version of DirectoryEntry.getFile().
+ *
+ * @param {DirectoryEntry} dirEntry
+ * @param {object} options object to pass to getFile function
+ * @param {string} name the file name in dirEntry
+ *
+ * @return {Promise} Promise that resolves with the FileEntry or rejects with
+ * an error
+ */
+exports.getFile = function(dirEntry, options, name) {
+  return new Promise(function(resolve, reject) {
+    dirEntry.getFile(name, options, function(fileEntry) {
+      resolve(fileEntry);
+    },
+    function(err) {
+      reject(err);
+    });
+  });
+};
