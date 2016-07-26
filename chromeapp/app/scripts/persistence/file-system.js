@@ -4,9 +4,43 @@
 
 var chromefs = require('./chromeFileSystem');
 var chromeStorage = require('./chromeStorage');
+var fsUtil = require('./file-system-util');
 
 /** The local storage key for the entry ID of the base directory. */
 exports.KEY_BASE_DIR = 'baseDir';
+
+/** 
+ * The path of the directory storing the cache entries relative to the root of
+ * the storage directory. Begins with './'.
+ */
+exports.PATH_CACHE_DIR = 'cacheEntries';
+
+/**
+ * Get the directory where cache entries are stored.
+ *
+ * @return {Promise} Promise that resolves with a DirectoryEntry that is the
+ * base cache directory. Rejects if the base directory has not been set.
+ */
+exports.getDirectoryForCacheEntries = function() {
+  return new Promise(function(resolve, reject) {
+    exports.getPersistedBaseDir()
+    .then(baseDir => {
+      var dirName = exports.PATH_CACHE_DIR;
+      var options = {
+        create: true,
+        exclusive: false
+      };
+      return fsUtil.getDirectory(baseDir, options, dirName);
+    })
+    .then(cacheDir => {
+      resolve(cacheDir);
+    })
+    .catch(err => {
+      reject(err);
+    });
+  });
+
+};
 
 /**
  * Return the base directory behaving as the root of the SemCache file system.

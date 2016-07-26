@@ -45,6 +45,42 @@ exports.CachedPage = function CachedPage(
 };
 
 /**
+ * Write a page into the cache.
+ *
+ * @param {string} captureUrl the URL that generated the MHTML
+ * @param {string} captureDate the toISOString() of the date the page was
+ * captured
+ * @param {Blob} mhtmlBlob the contents of hte page
+ *
+ * @return {Promise} a Promise that resolves when the write is complete
+ */
+exports.addPageToCache = function(captureUrl, captureDate, mhtmlBlob) {
+  return new Promise(function(resolve, reject) {
+    // Get the directory to write into
+    // Create the file entry
+    // Perform the write
+    fileSystem.getDirectoryForCacheEntries()
+    .then(cacheDir => {
+      var fileName = exports.createFileNameForPage(captureUrl, captureDate);
+      var createOptions = {
+        create: true,     // create if it doesn't exist
+        exclusive: false  // OK if it already exists--will overwrite
+      };
+      return fsUtil.getFile(cacheDir, createOptions, fileName);
+    })
+    .then(fileEntry => {
+      return fsUtil.writeToFile(fileEntry, mhtmlBlob);
+    })
+    .then(() => {
+      resolve();
+    })
+    .catch(err => {
+      reject(err);
+    });
+  });
+};
+
+/**
  * Get all the cached pages that are stored in the cache.
  *
  * @return {Promise} Promise that resolves with an Array of CachedPage objects

@@ -183,3 +183,129 @@ test('getEntryAsCachedPage returns CachedPage', function(t) {
   t.deepEqual(actual, expected);
   t.end();
 });
+
+test(
+  'addPageToCache rejects if getDirectoryForCacheEntries rejects',
+  function(t) {
+    var errObj = {msg: 'no base dir'};
+    var getDirectoryForCacheEntriesSpy = sinon.stub().rejects(errObj);
+    var fileSystemStub = {};
+    fileSystemStub.getDirectoryForCacheEntries =
+      getDirectoryForCacheEntriesSpy;
+
+    datastore = proxyquire(
+      '../../../app/scripts/persistence/datastore',
+      {
+        './file-system': fileSystemStub
+      }
+    );
+
+    datastore.addPageToCache('url', 'date', 'blob')
+      .catch(err => {
+        t.equal(err, errObj);
+        t.end();
+        resetDatastore();
+      });
+  }
+);
+
+test('addPageToCache rejects if getFile rejects', function(t) {
+  var errObj = {msg: 'no base dir'};
+  var getDirectoryForCacheEntriesSpy = sinon.stub().rejects(errObj);
+  var fileSystemStub = {};
+  fileSystemStub.getDirectoryForCacheEntries =
+    getDirectoryForCacheEntriesSpy;
+
+  var getFileSpy = sinon.stub().rejects(errObj);
+  var fsUtilStub = {};
+  fsUtilStub.getFile = getFileSpy;
+
+  datastore = proxyquire(
+    '../../../app/scripts/persistence/datastore',
+    {
+      './file-system': fileSystemStub,
+      './file-system-util': fsUtilStub
+    }
+  );
+
+  datastore.addPageToCache('url', 'date', 'blob')
+  .catch(err => {
+    t.equal(err, errObj);
+    t.end();
+    resetDatastore();
+  });
+});
+
+test('addPageToCache rejects if writeToFile rejects', function(t) {
+  var errObj = {msg: 'no base dir'};
+  var getDirectoryForCacheEntriesSpy = sinon.stub().rejects(errObj);
+  var fileSystemStub = {};
+  fileSystemStub.getDirectoryForCacheEntries =
+    getDirectoryForCacheEntriesSpy;
+
+  var getFileSpy = sinon.stub().resolves();
+  var writeToFileSpy = sinon.stub().rejects(errObj);
+  var fsUtilStub = {};
+  fsUtilStub.getFile = getFileSpy;
+  fsUtilStub.writeToFile = writeToFileSpy;
+
+  datastore = proxyquire(
+    '../../../app/scripts/persistence/datastore',
+    {
+      './file-system': fileSystemStub,
+      './file-system-util': fsUtilStub
+    }
+  );
+
+  datastore.addPageToCache('url', 'date', 'blob')
+  .catch(err => {
+    t.equal(err, errObj);
+    t.end();
+    resetDatastore();
+  });
+});
+
+test('addPageToCache resolves if all others succeed', function(t) {
+  var captureUrl = 'http://www.example.com/hilarious/kitty/cats.html';
+  var captureDate = 'today';
+  var blob = {much: 'blob'};
+  var fileName = 'file_entry_name.mhtml';
+  var dirEntryStub = {cacheDir: 'someDir'};
+  var fileEntryStub = {fileName: 'sofancy'};
+
+  var getDirectoryForCacheEntriesSpy = sinon.stub().resolves(dirEntryStub);
+  var fileSystemStub = {};
+  fileSystemStub.getDirectoryForCacheEntries =
+    getDirectoryForCacheEntriesSpy;
+
+  var getFileSpy = sinon.stub().resolves(fileEntryStub);
+  var writeToFileSpy = sinon.stub().resolves();
+  var fsUtilStub = {};
+  fsUtilStub.getFile = getFileSpy;
+  fsUtilStub.writeToFile = writeToFileSpy;
+
+  datastore = proxyquire(
+    '../../../app/scripts/persistence/datastore',
+    {
+      './file-system': fileSystemStub,
+      './file-system-util': fsUtilStub
+    }
+  );
+  var createFileNameSpy = sinon.stub().returns(fileName);
+  datastore.createFileNameForPage = createFileNameSpy;
+
+
+  datastore.addPageToCache(captureUrl, captureDate, blob)
+  .then(() => {
+    t.deepEqual(createFileNameSpy.args[0], [captureUrl, captureDate]);
+    t.deepEqual(getFileSpy.args[0],
+      [
+        dirEntryStub, {create: true, exclusive: false},
+        fileName
+      ]
+    );
+    t.deepEqual(writeToFileSpy.args[0], [fileEntryStub, blob]);
+    t.end();
+    resetDatastore();
+  });
+});

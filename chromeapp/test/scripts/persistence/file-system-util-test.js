@@ -169,3 +169,48 @@ test('getFile rejects with error', function(t) {
     t.end();
   });
 });
+
+test('getDirectory resolves with entry', function(t) {
+  var getDirectoryStub = sinon.stub();
+
+  var dirEntry = {};
+  dirEntry.getDirectory = getDirectoryStub;
+
+  var directoryEntry = 'the created dir';
+
+  getDirectoryStub.callsArgWith(2, directoryEntry);
+
+  var options = {foo: 1, bar: '2'};
+  var name = 'dirName';
+
+  util.getDirectory(dirEntry, options, name)
+  .then(actualEntry => {
+    t.deepEqual(getDirectoryStub.args[0][0], name);
+    t.deepEqual(getDirectoryStub.args[0][1], options);
+    t.equal(actualEntry, directoryEntry);
+    t.end();
+  });
+});
+
+
+test('getDirectory rejects with error', function(t) {
+  var getDirectoryStub = sinon.stub();
+
+  var dirEntry = {};
+  dirEntry.getDirectory = getDirectoryStub;
+
+  var error = 'error whilst creating dir';
+
+  getDirectoryStub.callsArgWith(3, error);
+
+  var options = {foo: 1, bar: '2'};
+  var name = 'erroneousDirName';
+
+  util.getDirectory(dirEntry, options, name)
+  .catch(actualError => {
+    t.deepEqual(getDirectoryStub.args[0][0], name);
+    t.deepEqual(getDirectoryStub.args[0][1], options);
+    t.equal(actualError, error);
+    t.end();
+  });
+});

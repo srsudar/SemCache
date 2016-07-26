@@ -175,3 +175,75 @@ test('getPersistedBaseDir retrieves from storage', function(t) {
     resetFileSystem();
   });
 });
+
+test('getDirectoryForCacheEntries rejects if no base dir', function(t) {
+  var errObj = {msg: 'no base dir'};
+  var getPersistedBaseDirSpy = sinon.stub().rejects(errObj);
+
+  var fileSystem = require('../../../app/scripts/persistence/file-system');
+  fileSystem.getPersistedBaseDir = getPersistedBaseDirSpy;
+
+  fileSystem.getDirectoryForCacheEntries()
+  .catch(actualErr => {
+    t.deepEqual(actualErr, errObj);
+    t.end();
+    resetFileSystem();
+  });
+});
+
+test(
+  'getDirectoryForCacheEntries rejects if getDirectory rejects',
+  function(t) {
+    var errObj = {msg: 'getDirectory failed'};
+    var getPersistedBaseDirSpy = sinon.stub().resolves();
+    var getDirectoryStub = sinon.stub().rejects(errObj);
+
+    var fileSystem = proxyquire(
+      '../../../app/scripts/persistence/file-system',
+      {
+        './file-system-util': {
+          getDirectory: getDirectoryStub
+        }
+      }
+    );
+    fileSystem.getPersistedBaseDir = getPersistedBaseDirSpy;
+
+    fileSystem.getDirectoryForCacheEntries()
+      .catch(actualErr => {
+        t.deepEqual(actualErr, errObj);
+        t.end();
+        resetFileSystem();
+      });
+  }
+);
+
+test('getDirectoryForCacheEntries resolves with entry', function(t) {
+  var baseDir = 'base directory';
+  var cacheDir = 'cache directory';
+
+  var getPersistedBaseDirSpy = sinon.stub().resolves(baseDir);
+  var getDirectoryStub = sinon.stub().resolves(cacheDir);
+
+  var fileSystem = proxyquire(
+    '../../../app/scripts/persistence/file-system',
+    {
+      './file-system-util': {
+        getDirectory: getDirectoryStub
+      }
+    }
+  );
+  fileSystem.getPersistedBaseDir = getPersistedBaseDirSpy;
+
+  fileSystem.getDirectoryForCacheEntries()
+    .then(actualDirEntry => {
+      t.deepEqual(actualDirEntry, cacheDir);
+      t.true(getPersistedBaseDirSpy.calledOnce);
+      t.deepEqual(getDirectoryStub.args[0],
+        [
+          baseDir, {create: true, exclusive: false}, fileSystem.PATH_CACHE_DIR
+        ]
+      );
+      t.end();
+      resetFileSystem();
+    });
+});

@@ -1931,9 +1931,43 @@ exports.clear = function(useSync) {
 
 var chromefs = require('./chromeFileSystem');
 var chromeStorage = require('./chromeStorage');
+var fsUtil = require('./file-system-util');
 
 /** The local storage key for the entry ID of the base directory. */
 exports.KEY_BASE_DIR = 'baseDir';
+
+/** 
+ * The path of the directory storing the cache entries relative to the root of
+ * the storage directory. Begins with './'.
+ */
+exports.PATH_CACHE_DIR = 'cacheEntries';
+
+/**
+ * Get the directory where cache entries are stored.
+ *
+ * @return {Promise} Promise that resolves with a DirectoryEntry that is the
+ * base cache directory. Rejects if the base directory has not been set.
+ */
+exports.getDirectoryForCacheEntries = function() {
+  return new Promise(function(resolve, reject) {
+    exports.getPersistedBaseDir()
+    .then(baseDir => {
+      var dirName = exports.PATH_CACHE_DIR;
+      var options = {
+        create: true,
+        exclusive: false
+      };
+      return fsUtil.getDirectory(baseDir, options, dirName);
+    })
+    .then(cacheDir => {
+      resolve(cacheDir);
+    })
+    .catch(err => {
+      reject(err);
+    });
+  });
+
+};
 
 /**
  * Return the base directory behaving as the root of the SemCache file system.
@@ -2008,7 +2042,7 @@ exports.promptForDir = function() {
   });
 };
 
-},{"./chromeFileSystem":8,"./chromeStorage":9}],"binaryUtils":[function(require,module,exports){
+},{"./chromeFileSystem":8,"./chromeStorage":9,"./file-system-util":"fsUtil"}],"binaryUtils":[function(require,module,exports){
 /*jshint esnext:true*/
 /*
  * https://github.com/justindarc/dns-sd.js
@@ -3589,7 +3623,7 @@ exports.queryForResponses = function(
 'use strict';
 
 /**
- * General file system operations.
+ * General file system operations on top of the web APIs.
  */
 
 /*
@@ -3633,13 +3667,69 @@ exports.listEntries = function(dirEntry) {
 };
 
 /**
- * @param {DirectoryEntry} dirEntry the directory to contain the new file
- * @param {string} path the name of the file
+ * @param {FileEntry} fileEntry the file that will be written to
  * @param {Blob} fileBlob the content to write
+ *
+ * @return {Promise} Promise that resolves when the write is complete or
+ * rejects with an error
  */
-exports.write = function(dirEntry, name, fileBlob) {
-  console.log('Unimplemented: ', dirEntry, name, fileBlob);
+exports.writeToFile = function(fileEntry, fileBlob) {
+  return new Promise(function(resolve, reject) {
+    fileEntry.createWriter(function(fileWriter) {
+
+      fileWriter.onwriteend = function() {
+        resolve();
+      };
+
+      fileWriter.onerror = function(err) {
+        reject(err);
+      };
+
+      fileWriter.write(fileBlob);
+    });
+  });
 };
 
+/**
+ * A Promise-ified version of DirectoryEntry.getFile().
+ *
+ * @param {DirectoryEntry} dirEntry the parent directory
+ * @param {object} options object to pass to getFile function
+ * @param {string} name the file name in dirEntry
+ *
+ * @return {Promise} Promise that resolves with the FileEntry or rejects with
+ * an error
+ */
+exports.getFile = function(dirEntry, options, name) {
+  return new Promise(function(resolve, reject) {
+    dirEntry.getFile(name, options, function(fileEntry) {
+      resolve(fileEntry);
+    },
+    function(err) {
+      reject(err);
+    });
+  });
+};
+
+/**
+ * A Promise-ified version of DirectoryEntry.getDirectory().
+ *
+ * @param {DirectoryEntry} dirEntry the parent directory
+ * @param {object} options object to pass to getDirectory function
+ * @param {string} name the file name in dirEntry
+ *
+ * @return {Promise} Promise that resolves with the DirectoryEntry or rejects
+ * with an error
+ */
+exports.getDirectory = function(dirEntry, options, name) {
+  return new Promise(function(resolve, reject) {
+    dirEntry.getDirectory(name, options, function(dirEntry) {
+      resolve(dirEntry);
+    },
+    function(err) {
+      reject(err);
+    });
+  });
+};
 
 },{}]},{},[7]);

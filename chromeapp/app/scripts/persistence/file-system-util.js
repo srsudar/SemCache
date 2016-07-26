@@ -72,7 +72,7 @@ exports.writeToFile = function(fileEntry, fileBlob) {
 /**
  * A Promise-ified version of DirectoryEntry.getFile().
  *
- * @param {DirectoryEntry} dirEntry
+ * @param {DirectoryEntry} dirEntry the parent directory
  * @param {object} options object to pass to getFile function
  * @param {string} name the file name in dirEntry
  *
@@ -83,6 +83,27 @@ exports.getFile = function(dirEntry, options, name) {
   return new Promise(function(resolve, reject) {
     dirEntry.getFile(name, options, function(fileEntry) {
       resolve(fileEntry);
+    },
+    function(err) {
+      reject(err);
+    });
+  });
+};
+
+/**
+ * A Promise-ified version of DirectoryEntry.getDirectory().
+ *
+ * @param {DirectoryEntry} dirEntry the parent directory
+ * @param {object} options object to pass to getDirectory function
+ * @param {string} name the file name in dirEntry
+ *
+ * @return {Promise} Promise that resolves with the DirectoryEntry or rejects
+ * with an error
+ */
+exports.getDirectory = function(dirEntry, options, name) {
+  return new Promise(function(resolve, reject) {
+    dirEntry.getDirectory(name, options, function(dirEntry) {
+      resolve(dirEntry);
     },
     function(err) {
       reject(err);
