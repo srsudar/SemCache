@@ -5954,7 +5954,8 @@ function startServer(host, port, endpointHandlers) {
     port: port,
     handlers: endpointHandlers,
     renderIndex: false,
-    optCORS: true
+    optCORS: true,
+    optAllInterfaces: true
   });
 
   window.httpServer.start();
