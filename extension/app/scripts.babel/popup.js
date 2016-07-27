@@ -1,3 +1,4 @@
+/* globals chrome */
 'use strict';
 
 console.log('SemCache Popup');
@@ -11,8 +12,11 @@ chrome.tabs.query({ currentWindow: true, active: true}, function(tabs) {
 
   chrome.pageCapture.saveAsMHTML({ tabId: tabId }, function(blob) {
     console.log('got blob: ' + blob);
-    var fileName = createFileName(tabUrl);
-    writeBlob(blob, fileName);
+    var captureUrl = createFileName(tabUrl);
+    var captureDate = new Date().toISOString();
+    savePage(captureUrl, captureDate, blob);
+    // var fileName = createFileName(tabUrl);
+    // writeBlob(blob, fileName);
   });
 });
 
@@ -68,3 +72,37 @@ function getDomain(fullUrl) {
 
   return domain;
 }
+
+/**
+ * ID of the Semcache Chrome App.
+ */
+var APP_ID = 'dfafijifolbgimhdeahdmkkpapjpabka';
+
+/**
+ * Send a message to the SemCache app.
+ */
+var sendMessageToApp = function(message, options, callback) {
+  chrome.sendMessage(APP_ID, message, options, callback);
+};
+
+/**
+ * Save a page as MHTML by calling the extension.
+ *
+ * @param {string} captureUrl the URL of the captured page
+ * @param {string} captureData the toISOString() of the date the page was
+ * captured
+ * @param {Blob} blob the blob of MHTMl data
+ * @param {object} options object
+ * @param {function} callback a callback that can be invoked by the receiver
+ */
+var savePage = function(captureUrl, captureDate, blob, options, callback) {
+  var message = {
+    type: 'write',
+    params: {
+      captureUrl: captureUrl,
+      captureData: captureDate,
+      mhtml: blob
+    }
+  };
+  sendMessageToApp(message, options, callback);
+};

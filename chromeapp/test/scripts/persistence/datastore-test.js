@@ -37,7 +37,7 @@ test('createFileNameForPage returns correct string', function(t) {
   var captureDate = '2016-07-22T08:49:19.182Z';
 
   var actual = datastore.createFileNameForPage(url, captureDate);
-  var expected = url + '_' + captureDate;
+  var expected = url + '_' + captureDate + '.mhtml';
 
   t.equal(expected, actual);
   t.end();
@@ -45,7 +45,7 @@ test('createFileNameForPage returns correct string', function(t) {
 
 test('getCaptureUrlFromName returns name', function(t) {
   var expected = 'www.example.com/hello_world.html';
-  var name = expected + '_2016-07-22T08:49:19.182Z';
+  var name = expected + '_2016-07-22T08:49:19.182Z.mhtml';
   var actual = datastore.getCaptureUrlFromName(name);
 
   t.equal(actual, expected);
@@ -54,7 +54,7 @@ test('getCaptureUrlFromName returns name', function(t) {
 
 test('getCaptureDateFromName returns date string', function(t) {
   var expected = '2016-07-22T08:49:19.182Z';
-  var name = 'www.example.com/hello_world.html_' + expected;
+  var name = 'www.example.com/hello_world.html_' + expected + '.mhtml';
   var actual = datastore.getCaptureDateFromName(name);
 
   t.equal(actual, expected);

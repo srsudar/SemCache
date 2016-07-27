@@ -1,7 +1,9 @@
 {
   "name": "semcacheapp",
   "version": "0.0.0",
-  "dependencies": {},
+  "dependencies": {
+    "base-64": "^0.1.0"
+  },
   "devDependencies": {
     "grunt": "~0.4.1",
     "grunt-contrib-copy": "~0.5.0",

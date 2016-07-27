@@ -1660,6 +1660,18 @@ exports.peekTypeInReader = function(reader) {
 /* globals chrome */
 'use strict';
 
+/**
+ * Add a callback function via chrome.runtime.onMessageExternal.addListener.
+ * @param {Function} fn
+ */
+exports.addOnMessageExternalListener = function(fn) {
+  chrome.runtime.onMessageExternal.addListener(fn);
+};
+
+},{}],8:[function(require,module,exports){
+/* globals chrome */
+'use strict';
+
 // Listens for the app launching then creates the window
 chrome.app.runtime.onLaunched.addListener(function() {
   var width = 500;
@@ -1680,7 +1692,806 @@ window.dnssd = require('dnssd');
 window.dnsc = require('dnsc');
 window.dnsSem = require('dnsSem');
 
-},{"dnsSem":"dnsSem","dnsc":"dnsc","dnssd":"dnssd"}],"binaryUtils":[function(require,module,exports){
+},{"dnsSem":"dnsSem","dnsc":"dnsc","dnssd":"dnssd"}],9:[function(require,module,exports){
+/* globals Promise, chrome */
+'use strict';
+
+/**
+ * This module provides a wrapper around the callback-heavy chrome.fileSystem
+ * API and provides an alternative based on Promises.
+ */
+
+/**
+ * @param {Entry} entry
+ *
+ * @return {Promise} Promise that resolves with the display path
+ */
+exports.getDisplayPath = function(entry) {
+  return new Promise(function(resolve) {
+    chrome.fileSystem.getDisplayPath(entry, function(displayPath) {
+      resolve(displayPath);
+    });
+  });
+};
+
+/**
+ * @param {Entry} entry the starting entry that will serve as the base for a
+ * writable entry
+ *
+ * @return {Promise} Promise that resolves with a writable entry
+ */
+exports.getWritableEntry = function(entry) {
+  return new Promise(function(resolve) {
+    chrome.fileSystem.getWritableEntry(entry, function(writableEntry) {
+      resolve(writableEntry);
+    });
+  });
+};
+
+/**
+ * @param {Entry} entry
+ *
+ * @return {Promise} Promise that resolves with a boolean
+ */
+exports.isWritableEntry = function(entry) {
+  return new Promise(function(resolve) {
+    chrome.fileSystem.isWritableEntry(entry, function(isWritable) {
+      resolve(isWritable);
+    });
+  });
+};
+
+/**
+ * The original Chrome callback takes two parameters: an entry and an array of
+ * FileEntries. No examples appear to make use of this second parameter,
+ * however, nor is it documented what the second parameter is for. For this
+ * reason we return only the first parameter, but callers should be aware of
+ * this difference compared to the original API.
+ *
+ * @param {object} options
+ *
+ * @return {Promise} Promise that resolves with an Entry
+ */
+exports.chooseEntry = function(options) {
+  return new Promise(function(resolve) {
+    chrome.fileSystem.chooseEntry(options, function(entry, arr) {
+      if (arr) {
+        console.warn(
+          'chrome.fileSystem.chooseEntry callback invoked with a 2nd ' +
+            'parameter that is being ignored: ',
+            arr);
+      }
+      resolve(entry);
+    });
+  });
+};
+
+/**
+ * @param {string} id id of a previous entry
+ *
+ * @return {Promise} Promise that resolves with an Entry
+ */
+exports.restoreEntry = function(id) {
+  return new Promise(function(resolve) {
+    chrome.fileSystem.restoreEntry(id, function(entry) {
+      resolve(entry);
+    });
+  });
+};
+
+/**
+ * @param {string} id
+ *
+ * @return {Promise} Promise that resolves with a boolean
+ */
+exports.isRestorable = function(id) {
+  return new Promise(function(resolve) {
+    chrome.fileSystem.isRestorable(id, function(isRestorable) {
+      resolve(isRestorable);
+    });
+  });
+};
+
+/**
+ * @param {Entry} entry
+ *
+ * @return {Promise} Promise that resolves with a string id that can be used to
+ * restore the Entry in the future. The underlying Chrome API is a synchronous
+ * call, but this is provided as a Promise to keep API parity with the rest of
+ * the module. A synchronous version is provided via retainEntrySync.
+ */
+exports.retainEntry = function(entry) {
+  var id = chrome.fileSystem.retainEntry(entry);
+  return Promise.resolve(id);
+};
+
+/**
+ * @param {Entry} entry
+ *
+ * @return {string} id that can be used to restore the Entry
+ */
+exports.retainEntrySync = function(entry) {
+  return chrome.fileSystem.retainEntry(entry);
+};
+
+/**
+ * @param {object} options
+ *
+ * @return {Promise} Promise that resolves with a FileSystem
+ */
+exports.requestFileSystem = function(options) {
+  return new Promise(function(resolve) {
+    chrome.fileSystem.requestFileSystem(options, function(fileSystem) {
+      resolve(fileSystem);
+    });
+  });
+};
+
+/**
+ * @return {Promise} Promise that resolves with a FileSystem
+ */
+exports.getVolumeList = function() {
+  return new Promise(function(resolve) {
+    chrome.fileSystem.getVolumeList(function(fileSystem) {
+      resolve(fileSystem);
+    });
+  });
+};
+
+},{}],10:[function(require,module,exports){
+/* globals Promise, chrome */
+'use strict';
+
+/**
+ * This module provides a wrapper around the chrome.storage.local API and
+ * provides an alternative based on Promises.
+ */
+
+/**
+ * @param {boolean} useSync
+ *
+ * @return {StorageArea} chrome.storage.sync or chrome.storage.local depending
+ * on the value of useSync
+ */
+function getStorageArea(useSync) {
+  if (useSync) {
+    return chrome.storage.sync;
+  } else {
+    return chrome.storage.local;
+  }
+}
+
+/**
+ * @param {string|Array<string>} keyOrKeys
+ * @param {boolean} useSync true to use chrome.storage.sync, otherwise will use
+ * chrome.storage.local
+ *
+ * @return {Promise} Promise that resolves with an object of key value mappings
+ */
+exports.get = function(keyOrKeys, useSync) {
+  var storageArea = getStorageArea(useSync);
+  return new Promise(function(resolve) {
+    storageArea.get(keyOrKeys, function(items) {
+      resolve(items);
+    });
+  });
+};
+
+/**
+ * @param {string|Array<string>} keyOrKeys
+ * @param {boolean} useSync true to use chrome.storage.sync, otherwise will use
+ * chrome.storage.local
+ *
+ * @return {Promise} Promise that resolves with an integer of the number of
+ * bytes in use for the given key or keys
+ */
+exports.getBytesInUse = function(keyOrKeys, useSync) {
+  var storageArea = getStorageArea(useSync);
+  return new Promise(function(resolve) {
+    storageArea.getBytesInUse(keyOrKeys, function(numBytes) {
+      resolve(numBytes);
+    });
+  });
+};
+
+/**
+ * @param {object} items an object of key value mappings
+ * @param {boolean} useSync true to use chrome.storage.sync, otherwise will use
+ * chrome.storage.local
+ *
+ * @return {Promise} Promise that resolves when the operation completes
+ */
+exports.set = function(items, useSync) {
+  var storageArea = getStorageArea(useSync);
+  return new Promise(function(resolve) {
+    storageArea.set(items, function() {
+      resolve();
+    });
+  });
+};
+
+/**
+ * @param {string|Array<string>} keyOrKeys
+ * @param {boolean} useSync true to use chrome.storage.sync, otherwise will use
+ * chrome.storage.local
+ *
+ * @return {Promise} Promise that resolves when the operation completes
+ */
+exports.remove = function(keyOrKeys, useSync) {
+  var storageArea = getStorageArea(useSync);
+  return new Promise(function(resolve) {
+    storageArea.remove(keyOrKeys, function() {
+      resolve();
+    });
+  });
+};
+
+/**
+ * @param {boolean} useSync true to use chrome.storage.sync, otherwise will use
+ * chrome.storage.local
+ *
+ * @return {Promise} Promise that resolves when the operation completes
+ */
+exports.clear = function(useSync) {
+  var storageArea = getStorageArea(useSync);
+  return new Promise(function(resolve) {
+    storageArea.clear(function() {
+      resolve();
+    });
+  });
+};
+
+},{}],11:[function(require,module,exports){
+/* globals Promise */
+'use strict';
+
+/**
+ * Abstractions for reading and writing cached pages. Clients of this class
+ * should not be concerned with the underlying file system.
+ */
+
+// Overview of the Datastore
+//
+// For the time being, there is no separate database or datastore. All
+// information is saved in the file name on disk, eg
+// "www.example.com_date". This will serve for a prototype but might become
+// limiting in the future.
+
+var fileSystem = require('./file-system');
+var fsUtil = require('./file-system-util');
+var serverApi = require('../server/server-api');
+
+/** The number of characters output by Date.toISOString() */
+var LENGTH_ISO_DATE_STR = 24;
+
+var URL_DATE_DELIMITER = '_';
+
+exports.MHTML_EXTENSION = '.mhtml';
+
+/**
+ * This object represents a page that is stored in the cache and can be browsed
+ * to.
+ *
+ * @param {string} captureUrl the URL of the original captured page
+ * @param {string} captureDate the ISO String representation of the datetime
+ * @param {string} accessPath the path in the cache that can be used to access
+ * the file the page was captured
+ */
+exports.CachedPage = function CachedPage(
+  captureUrl,
+  captureDate,
+  path
+) {
+  if (!(this instanceof CachedPage)) {
+    throw new Error('CachedPage must be called with new');
+  }
+  this.captureUrl = captureUrl;
+  this.captureDate = captureDate;
+  this.accessPath = path;
+};
+
+/**
+ * Write a page into the cache.
+ *
+ * @param {string} captureUrl the URL that generated the MHTML
+ * @param {string} captureDate the toISOString() of the date the page was
+ * captured
+ * @param {Blob} mhtmlBlob the contents of hte page
+ *
+ * @return {Promise} a Promise that resolves when the write is complete
+ */
+exports.addPageToCache = function(captureUrl, captureDate, mhtmlBlob) {
+  return new Promise(function(resolve, reject) {
+    // Get the directory to write into
+    // Create the file entry
+    // Perform the write
+    fileSystem.getDirectoryForCacheEntries()
+    .then(cacheDir => {
+      var fileName = exports.createFileNameForPage(captureUrl, captureDate);
+      var createOptions = {
+        create: true,     // create if it doesn't exist
+        exclusive: false  // OK if it already exists--will overwrite
+      };
+      return fsUtil.getFile(cacheDir, createOptions, fileName);
+    })
+    .then(fileEntry => {
+      return fsUtil.writeToFile(fileEntry, mhtmlBlob);
+    })
+    .then(() => {
+      resolve();
+    })
+    .catch(err => {
+      reject(err);
+    });
+  });
+};
+
+/**
+ * Get all the cached pages that are stored in the cache.
+ *
+ * @return {Promise} Promise that resolves with an Array of CachedPage objects
+ */
+exports.getAllCachedPages = function() {
+  return new Promise(function(resolve, reject) {
+    exports.getAllFileEntriesForPages()
+    .then(entries => {
+      var result = [];
+      entries.forEach(entry => {
+        var cachedPage = exports.getEntryAsCachedPage(entry);
+        result.push(cachedPage);
+      });
+      resolve(result);
+    })
+    .catch(err => {
+      reject(err);
+    });
+  });
+};
+
+/**
+ * Get all the FileEntries representing saved pages.
+ *
+ * @return {Promise} Promise that resolves with an array of FileEntry objects
+ */
+exports.getAllFileEntriesForPages = function() {
+  var flagDirNotSet = 1;
+  return new Promise(function(resolve, reject) {
+    fileSystem.getPersistedBaseDir()
+    .then(dirEntry => {
+      if (!dirEntry) {
+        // We haven't set an entry.
+        throw flagDirNotSet;
+      }
+      return fsUtil.listEntries(dirEntry);
+    })
+    .then(entries => {
+      resolve(entries);
+    })
+    .catch(errFlag => {
+      if (errFlag === flagDirNotSet) {
+        reject('dir not set');
+      } else {
+        console.warn('unrecognized error flag: ', errFlag);
+      }
+    });
+  });
+};
+
+/**
+ * Convert an entry as represented on the file system to a CachedPage that can
+ * be consumed by clients.
+ *
+ * This is the workhorse function for mapping between the two types.
+ *
+ * @param {FileEntry} entry
+ *
+ * @return {CachedPage}
+ */
+exports.getEntryAsCachedPage = function(entry) {
+  var captureUrl = exports.getCaptureUrlFromName(entry.name);
+  var captureDate = exports.getCaptureDateFromName(entry.name);
+  var accessUrl = serverApi.getAccessUrlForCachedPage(entry.fullPath);
+
+  var result = new exports.CachedPage(captureUrl, captureDate, accessUrl);
+  return result;
+};
+
+/**
+ * Create the file name for the cached page in a way that can later be parsed.
+ *
+ * @param {string} captureUrl
+ * @param {string} captureDate the toISOString() representation of the date the
+ * page was captured
+ *
+ * @return {string}
+ */
+exports.createFileNameForPage = function(captureUrl, captureDate) {
+  return captureUrl +
+    URL_DATE_DELIMITER +
+    captureDate +
+    exports.MHTML_EXTENSION;
+};
+
+/**
+ * @param {string} name the name of the file
+ *
+ * @return {string} the capture url
+ */
+exports.getCaptureUrlFromName = function(name) {
+  var nonNameLength = LENGTH_ISO_DATE_STR +
+    URL_DATE_DELIMITER.length +
+    exports.MHTML_EXTENSION.length;
+  if (name.length < nonNameLength) {
+    // The file name is too short, fail fast.
+    throw new Error('name too short to store a url: ', name);
+  }
+
+  var result = name.substring(
+    0,
+    name.length - nonNameLength
+  );
+  return result;
+};
+
+/**
+ * @param {string} name the name of the file
+ * 
+ * @return {string} the capture date's ISO string representation
+ */
+exports.getCaptureDateFromName = function(name) {
+  // The date is stored at the end of the string.
+  if (name.length < LENGTH_ISO_DATE_STR) {
+    // We've violated an invariant, fail fast.
+    throw new Error('name too short to store a date: ', name);
+  }
+
+  var dateStartIndex = name.length -
+    LENGTH_ISO_DATE_STR -
+    exports.MHTML_EXTENSION.length;
+  var dateEndIndex = name.length - exports.MHTML_EXTENSION.length;
+
+  var result = name.substring(dateStartIndex, dateEndIndex);
+  return result;
+};
+
+},{"../server/server-api":13,"./file-system":12,"./file-system-util":"fsUtil"}],12:[function(require,module,exports){
+/*jshint esnext:true*/
+/* globals Promise */
+'use strict';
+
+var chromefs = require('./chromeFileSystem');
+var chromeStorage = require('./chromeStorage');
+var fsUtil = require('./file-system-util');
+
+/** The local storage key for the entry ID of the base directory. */
+exports.KEY_BASE_DIR = 'baseDir';
+
+/** 
+ * The path of the directory storing the cache entries relative to the root of
+ * the storage directory. Begins with './'.
+ */
+exports.PATH_CACHE_DIR = 'cacheEntries';
+
+/**
+ * Get the directory where cache entries are stored.
+ *
+ * @return {Promise} Promise that resolves with a DirectoryEntry that is the
+ * base cache directory. Rejects if the base directory has not been set.
+ */
+exports.getDirectoryForCacheEntries = function() {
+  return new Promise(function(resolve, reject) {
+    exports.getPersistedBaseDir()
+    .then(baseDir => {
+      var dirName = exports.PATH_CACHE_DIR;
+      var options = {
+        create: true,
+        exclusive: false
+      };
+      return fsUtil.getDirectory(baseDir, options, dirName);
+    })
+    .then(cacheDir => {
+      resolve(cacheDir);
+    })
+    .catch(err => {
+      reject(err);
+    });
+  });
+
+};
+
+/**
+ * Return the base directory behaving as the root of the SemCache file system.
+ * This returns the "persisted" base directory in the sense that the directory
+ * must have already been chosen via a file chooser. If a base directory has
+ * not been chosen, it will return null.
+ *
+ * @return {DirectoryEntry} the directory that has been set as the root of the
+ * SemCache file system. Returns null if the directory has not been set.
+ */
+exports.getPersistedBaseDir = function() {
+  return new Promise(function(resolve) {
+    exports.baseDirIsSet()
+    .then(isSet => {
+      if (isSet) {
+        chromeStorage.get(exports.KEY_BASE_DIR)
+        .then(keyValue => {
+          var id = keyValue[exports.KEY_BASE_DIR];
+          return chromefs.restoreEntry(id);
+        })
+        .then(dirEntry => {
+          resolve(dirEntry);
+        });
+      } else {
+        // Null if not set.
+        resolve(null);
+      }
+    });
+  });
+};
+
+/**
+ * @return {Promise} Promise that resolves with a boolean
+ */
+exports.baseDirIsSet = function() {
+  return new Promise(function(resolve) {
+    chromeStorage.get(exports.KEY_BASE_DIR)
+    .then(keyValue => {
+      var isSet = false;
+      if (keyValue && keyValue[exports.KEY_BASE_DIR]) {
+        isSet = true;
+      }
+      resolve(isSet);
+    });
+  });
+};
+
+/**
+ * Set an entry as the base directory to be used for the SemCache file system.
+ *
+ * @param {DirectoryEntry} dirEntry the entry that will be set as the base
+ */
+exports.setBaseCacheDir = function(dirEntry) {
+  var keyObj = {};
+  var id = chromefs.retainEntrySync(dirEntry);
+  keyObj[exports.KEY_BASE_DIR] = id;
+  chromeStorage.set(keyObj);
+};
+
+/**
+ * Prompt the user to choose a directory.
+ *
+ * @return {Promise} a promise that resolves with a DirectoryEntry that has
+ * been chosen by the user.
+ */
+exports.promptForDir = function() {
+  return new Promise(function(resolve) {
+    chromefs.chooseEntry({type: 'openDirectory'})
+    .then(entry => {
+      resolve(entry);
+    });
+  });
+};
+
+},{"./chromeFileSystem":9,"./chromeStorage":10,"./file-system-util":"fsUtil"}],13:[function(require,module,exports){
+'use strict';
+
+/**
+ * Controls the API for the server backing SemCache.
+ */
+
+var HTTP_SCHEME = 'http://';
+
+/** 
+ * The path from the root of the server that serves cached pages.
+ */
+var PATH_PAGE_CACHE = 'pages';
+
+/**
+ * Returns an object mapping API end points to their paths. The paths do not
+ * include leading or trailing slashes, but they can contain internal slashes
+ * (e.g. 'foo' or 'foo/bar' but never '/foo/bar'). The paths do not contain
+ * scheme, host, or port.
+ *
+ * @return {object} an object mapping API end points to string paths, like the
+ * following:
+ * {
+ *   pageCache: ''
+ * }
+ */
+exports.getApiEndpoints = function() {
+  return {
+    pageCache: PATH_PAGE_CACHE
+  };
+};
+
+/**
+ * Create the full access path that can be used to access the cached page.
+ *
+ * @param {string} fullPath the full path of the file that is to be accessed
+ *
+ * @return {string} a fully qualified and valid URL
+ */
+exports.getAccessUrlForCachedPage = function(fullPath) {
+  var scheme = HTTP_SCHEME;
+  // TODO: expose a method that gets the current address and port.
+  // TODO: this might have to strip the path of directory where things are
+  // stored--it basically maps between the two urls.
+  var addressAndPort = '127.0.0.1:8081';
+  var apiPath = exports.getApiEndpoints().pageCache;
+  var result = scheme + [addressAndPort, apiPath, fullPath].join('/');
+  return result;
+};
+
+},{}],14:[function(require,module,exports){
+(function (global){
+/*! http://mths.be/base64 v0.1.0 by @mathias | MIT license */
+;(function(root) {
+
+	// Detect free variables `exports`.
+	var freeExports = typeof exports == 'object' && exports;
+
+	// Detect free variable `module`.
+	var freeModule = typeof module == 'object' && module &&
+		module.exports == freeExports && module;
+
+	// Detect free variable `global`, from Node.js or Browserified code, and use
+	// it as `root`.
+	var freeGlobal = typeof global == 'object' && global;
+	if (freeGlobal.global === freeGlobal || freeGlobal.window === freeGlobal) {
+		root = freeGlobal;
+	}
+
+	/*--------------------------------------------------------------------------*/
+
+	var InvalidCharacterError = function(message) {
+		this.message = message;
+	};
+	InvalidCharacterError.prototype = new Error;
+	InvalidCharacterError.prototype.name = 'InvalidCharacterError';
+
+	var error = function(message) {
+		// Note: the error messages used throughout this file match those used by
+		// the native `atob`/`btoa` implementation in Chromium.
+		throw new InvalidCharacterError(message);
+	};
+
+	var TABLE = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+	// http://whatwg.org/html/common-microsyntaxes.html#space-character
+	var REGEX_SPACE_CHARACTERS = /[\t\n\f\r ]/g;
+
+	// `decode` is designed to be fully compatible with `atob` as described in the
+	// HTML Standard. http://whatwg.org/html/webappapis.html#dom-windowbase64-atob
+	// The optimized base64-decoding algorithm used is based on @atk’s excellent
+	// implementation. https://gist.github.com/atk/1020396
+	var decode = function(input) {
+		input = String(input)
+			.replace(REGEX_SPACE_CHARACTERS, '');
+		var length = input.length;
+		if (length % 4 == 0) {
+			input = input.replace(/==?$/, '');
+			length = input.length;
+		}
+		if (
+			length % 4 == 1 ||
+			// http://whatwg.org/C#alphanumeric-ascii-characters
+			/[^+a-zA-Z0-9/]/.test(input)
+		) {
+			error(
+				'Invalid character: the string to be decoded is not correctly encoded.'
+			);
+		}
+		var bitCounter = 0;
+		var bitStorage;
+		var buffer;
+		var output = '';
+		var position = -1;
+		while (++position < length) {
+			buffer = TABLE.indexOf(input.charAt(position));
+			bitStorage = bitCounter % 4 ? bitStorage * 64 + buffer : buffer;
+			// Unless this is the first of a group of 4 characters…
+			if (bitCounter++ % 4) {
+				// …convert the first 8 bits to a single ASCII character.
+				output += String.fromCharCode(
+					0xFF & bitStorage >> (-2 * bitCounter & 6)
+				);
+			}
+		}
+		return output;
+	};
+
+	// `encode` is designed to be fully compatible with `btoa` as described in the
+	// HTML Standard: http://whatwg.org/html/webappapis.html#dom-windowbase64-btoa
+	var encode = function(input) {
+		input = String(input);
+		if (/[^\0-\xFF]/.test(input)) {
+			// Note: no need to special-case astral symbols here, as surrogates are
+			// matched, and the input is supposed to only contain ASCII anyway.
+			error(
+				'The string to be encoded contains characters outside of the ' +
+				'Latin1 range.'
+			);
+		}
+		var padding = input.length % 3;
+		var output = '';
+		var position = -1;
+		var a;
+		var b;
+		var c;
+		var d;
+		var buffer;
+		// Make sure any padding is handled outside of the loop.
+		var length = input.length - padding;
+
+		while (++position < length) {
+			// Read three bytes, i.e. 24 bits.
+			a = input.charCodeAt(position) << 16;
+			b = input.charCodeAt(++position) << 8;
+			c = input.charCodeAt(++position);
+			buffer = a + b + c;
+			// Turn the 24 bits into four chunks of 6 bits each, and append the
+			// matching character for each of them to the output.
+			output += (
+				TABLE.charAt(buffer >> 18 & 0x3F) +
+				TABLE.charAt(buffer >> 12 & 0x3F) +
+				TABLE.charAt(buffer >> 6 & 0x3F) +
+				TABLE.charAt(buffer & 0x3F)
+			);
+		}
+
+		if (padding == 2) {
+			a = input.charCodeAt(position) << 8;
+			b = input.charCodeAt(++position);
+			buffer = a + b;
+			output += (
+				TABLE.charAt(buffer >> 10) +
+				TABLE.charAt((buffer >> 4) & 0x3F) +
+				TABLE.charAt((buffer << 2) & 0x3F) +
+				'='
+			);
+		} else if (padding == 1) {
+			buffer = input.charCodeAt(position);
+			output += (
+				TABLE.charAt(buffer >> 2) +
+				TABLE.charAt((buffer << 4) & 0x3F) +
+				'=='
+			);
+		}
+
+		return output;
+	};
+
+	var base64 = {
+		'encode': encode,
+		'decode': decode,
+		'version': '0.1.0'
+	};
+
+	// Some AMD build optimizers, like r.js, check for specific condition patterns
+	// like the following:
+	if (
+		typeof define == 'function' &&
+		typeof define.amd == 'object' &&
+		define.amd
+	) {
+		define(function() {
+			return base64;
+		});
+	}	else if (freeExports && !freeExports.nodeType) {
+		if (freeModule) { // in Node.js or RingoJS v0.8.0+
+			freeModule.exports = base64;
+		} else { // in Narwhal or RingoJS v0.7.0-
+			for (var key in base64) {
+				base64.hasOwnProperty(key) && (freeExports[key] = base64[key]);
+			}
+		}
+	} else { // in Rhino or a web browser
+		root.base64 = base64;
+	}
+
+}(this));
+
+}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
+},{}],"binaryUtils":[function(require,module,exports){
 /*jshint esnext:true*/
 /*
  * https://github.com/justindarc/dns-sd.js
@@ -3256,7 +4067,74 @@ exports.queryForResponses = function(
   });
 };
 
-},{"./dns-codes":2,"./dns-controller":"dnsc","./dns-packet":3,"./dns-util":4,"./resource-record":6}],"fsUtil":[function(require,module,exports){
+},{"./dns-codes":2,"./dns-controller":"dnsc","./dns-packet":3,"./dns-util":4,"./resource-record":6}],"extBridge":[function(require,module,exports){
+'use strict';
+
+var chromeWrapper = require('./chromeRuntimeWrapper');
+var datastore = require('../persistence/datastore');
+var base64 = require('base-64');
+
+/**
+ * ID of the Semcache extension.
+ */
+exports.EXTENSION_ID = 'malgfdapbefeeidjfndgioclhfpfglhe';
+
+/**
+ * Function to handle messages coming from the SemCache extension.
+ *
+ * @param {object} message message sent by the extension. Expected to have the
+ * following format:
+ * {
+ *   type: 'write'
+ *   params: {captureUrl: 'url', captureDate: 'iso', dataUrl: 'string'}
+ * }
+ * @param {MessageSender}
+ * @param {function}
+ */
+exports.handleExternalMessage = function(message, sender, response) {
+  if (sender.id !== exports.EXTENSION_ID) {
+    console.log('ID not from SemCache extension: ', sender);
+    return;
+  }
+  if (message.type === 'write') {
+    var blob = exports.getBlobFromDataUrl(message.params.dataUrl);
+    var captureUrl = message.params.captureUrl;
+    var captureDate = message.params.captureDate;
+    datastore.addPageToCache(captureUrl, captureDate, blob);
+    if (response) {
+      response();
+    }
+  } else {
+    console.log('Unrecognized message type from extension: ', message.type);
+  }
+};
+
+/**
+ * @param {string} dataUrl a data url as encoded by FileReader.readAsDataURL
+ *
+ * @return {Blob}
+ */
+exports.getBlobFromDataUrl = function(dataUrl) {
+  // Decoding from data URL based on:
+  // https://gist.github.com/fupslot/5015897
+  var byteString = base64.decode(dataUrl.split(',')[1]);
+  var mime = dataUrl.split(',')[0].split(':')[1].split(';')[0];
+  // write the bytes of the string to an ArrayBuffer
+  var ab = new ArrayBuffer(byteString.length);
+  var ia = new Uint8Array(ab);
+  for (var i = 0; i < byteString.length; i++) {
+    ia[i] = byteString.charCodeAt(i);
+  }
+  // write the ArrayBuffer to a blob, and you're done
+  var result = new Blob([ab], {type: mime});
+  return result;
+};
+
+exports.attachListeners = function() {
+  chromeWrapper.addOnMessageExternalListener(exports.handleExternalMessage);
+};
+
+},{"../persistence/datastore":11,"./chromeRuntimeWrapper":7,"base-64":14}],"fsUtil":[function(require,module,exports){
 /* globals Promise */
 'use strict';
 
@@ -3370,4 +4248,4 @@ exports.getDirectory = function(dirEntry, options, name) {
   });
 };
 
-},{}]},{},[7]);
+},{}]},{},[8]);

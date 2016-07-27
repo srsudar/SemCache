@@ -22,6 +22,8 @@ var LENGTH_ISO_DATE_STR = 24;
 
 var URL_DATE_DELIMITER = '_';
 
+exports.MHTML_EXTENSION = '.mhtml';
+
 /**
  * This object represents a page that is stored in the cache and can be browsed
  * to.
@@ -160,7 +162,10 @@ exports.getEntryAsCachedPage = function(entry) {
  * @return {string}
  */
 exports.createFileNameForPage = function(captureUrl, captureDate) {
-  return captureUrl + URL_DATE_DELIMITER + captureDate;
+  return captureUrl +
+    URL_DATE_DELIMITER +
+    captureDate +
+    exports.MHTML_EXTENSION;
 };
 
 /**
@@ -169,16 +174,17 @@ exports.createFileNameForPage = function(captureUrl, captureDate) {
  * @return {string} the capture url
  */
 exports.getCaptureUrlFromName = function(name) {
-  // We expect file names to be stored as url_date, with an underscore
-  // delimiting.
-  if (name.length < LENGTH_ISO_DATE_STR + URL_DATE_DELIMITER.length) {
+  var nonNameLength = LENGTH_ISO_DATE_STR +
+    URL_DATE_DELIMITER.length +
+    exports.MHTML_EXTENSION.length;
+  if (name.length < nonNameLength) {
     // The file name is too short, fail fast.
     throw new Error('name too short to store a url: ', name);
   }
 
   var result = name.substring(
     0,
-    name.length - LENGTH_ISO_DATE_STR - URL_DATE_DELIMITER.length
+    name.length - nonNameLength
   );
   return result;
 };
@@ -195,6 +201,11 @@ exports.getCaptureDateFromName = function(name) {
     throw new Error('name too short to store a date: ', name);
   }
 
-  var result = name.substring(name.length - LENGTH_ISO_DATE_STR, name.length);
+  var dateStartIndex = name.length -
+    LENGTH_ISO_DATE_STR -
+    exports.MHTML_EXTENSION.length;
+  var dateEndIndex = name.length - exports.MHTML_EXTENSION.length;
+
+  var result = name.substring(dateStartIndex, dateEndIndex);
   return result;
 };
