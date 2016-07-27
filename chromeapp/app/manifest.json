@@ -37,8 +37,7 @@
                 "scripts/bundle.js",
                 "scripts/chromereload.js",
                 "scripts/web-server-chrome/wsc-chrome.js",
-                "scripts/server/dummy-handler.js",
-                "scripts/server/app.js"
+                "scripts/server/dummy-handler.js"
             ]
         }
     },

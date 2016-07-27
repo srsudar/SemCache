@@ -1,8 +1,8 @@
 'use strict';
 
 var fs = require('./persistence/file-system');
-
 var extensionBridge = require('extBridge');
+
 extensionBridge.attachListeners();
 
 document.addEventListener('DOMContentLoaded', function() {

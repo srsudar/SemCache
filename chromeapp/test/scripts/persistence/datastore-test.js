@@ -104,14 +104,14 @@ test('getAllCachedPages rejects if base dir not set', function(t) {
 });
 
 test('getAllFileEntriesForPages resolves all pages', function(t) {
-  var dirEntry = 'baseDir';
-  var getPersistedBaseDirSpy = sinon.stub().resolves(dirEntry);
+  var dirEntry = 'cacheDir';
+  var getDirectoryForCacheEntriesSpy = sinon.stub().resolves(dirEntry);
 
   var expectedEntries = ['a', 'b', 54321, 'foobar', {}];
   var listEntriesSpy = sinon.stub().resolves(expectedEntries);
 
   var fileSystemStub = {};
-  fileSystemStub.getPersistedBaseDir = getPersistedBaseDirSpy;
+  fileSystemStub.getDirectoryForCacheEntries = getDirectoryForCacheEntriesSpy;
   var fsUtilStub = {};
   fsUtilStub.listEntries = listEntriesSpy;
 
@@ -132,14 +132,14 @@ test('getAllFileEntriesForPages resolves all pages', function(t) {
 });
 
 test('getAllFileEntriesForPages rejects if base dir not set', function(t) {
-  var getPersistedBaseDirSpy = sinon.stub().resolves(null);
-  var fileSystemStub = {};
-  fileSystemStub.getPersistedBaseDir = getPersistedBaseDirSpy;
+  var getDirectoryForCacheEntriesSpy = sinon.stub().resolves(null);
 
   datastore = proxyquire(
     '../../../app/scripts/persistence/datastore',
     {
-      './file-system': fileSystemStub
+      './file-system': {
+        getDirectoryForCacheEntries: getDirectoryForCacheEntriesSpy
+      }
     }
   );
 

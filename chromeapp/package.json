@@ -2,7 +2,8 @@
   "name": "semcacheapp",
   "version": "0.0.0",
   "dependencies": {
-    "base-64": "^0.1.0"
+    "base-64": "^0.1.0",
+    "underscore": "^1.8.3"
   },
   "devDependencies": {
     "grunt": "~0.4.1",

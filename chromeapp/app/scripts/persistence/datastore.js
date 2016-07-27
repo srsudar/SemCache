@@ -112,7 +112,7 @@ exports.getAllCachedPages = function() {
 exports.getAllFileEntriesForPages = function() {
   var flagDirNotSet = 1;
   return new Promise(function(resolve, reject) {
-    fileSystem.getPersistedBaseDir()
+    fileSystem.getDirectoryForCacheEntries()
     .then(dirEntry => {
       if (!dirEntry) {
         // We haven't set an entry.
