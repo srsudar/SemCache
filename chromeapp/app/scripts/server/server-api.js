@@ -5,6 +5,7 @@
  */
 
 var datastore = require('../persistence/datastore');
+var appController = require('../app-controller');
 
 var HTTP_SCHEME = 'http://';
 
@@ -54,10 +55,10 @@ exports.getApiEndpoints = function() {
  */
 exports.getAccessUrlForCachedPage = function(fullPath) {
   var scheme = HTTP_SCHEME;
-  // TODO: expose a method that gets the current address and port.
   // TODO: this might have to strip the path of directory where things are
   // stored--it basically maps between the two urls.
-  var addressAndPort = '127.0.0.1:8081';
+  var httpIface = appController.getListeningHttpInterface();
+  var addressAndPort = httpIface.address + ':' + httpIface.port;
   var apiPath = exports.getApiEndpoints().pageCache;
   var result = scheme + [addressAndPort, apiPath, fullPath].join('/');
   return result;

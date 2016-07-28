@@ -39,6 +39,7 @@ module.exports = function (grunt) {
           './app/scripts/persistence/file-system-util:fsUtil',
           './app/scripts/extension-bridge/messaging:extBridge',
           './app/scripts/server/server-controller:serverController',
+          './app/scripts/app-controller:appController',
         ],
       },
       js: {

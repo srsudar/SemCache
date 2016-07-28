@@ -4,8 +4,6 @@ var sinon = require('sinon');
 var proxyquire = require('proxyquire');
 require('sinon-as-promised');
 
-var api = require('../../../app/scripts/server/server-api');
-
 /**
  * Manipulating the object directly leads to polluting the require cache. Any
  * test that modifies the required object should call this method to get a
@@ -19,14 +17,31 @@ function resetApi() {
 
 test('getAccessUrlForCachedPage outputs correct url', function(t) {
   var fullPath = 'www.example.com_somedate';
+  var iface = {
+    address: '172.9.18.145',
+    port: 1456
+  };
 
-  // TODO: For now we are hard-coding in the host and port, which we'll later
-  // have to inject in
-  var expected = 'http://127.0.0.1:8081/pages/' + fullPath;
-  var actual = api.getAccessUrlForCachedPage(fullPath);
+  var expected = 'http://' +
+    iface.address +
+    ':' +
+    iface.port +
+    '/pages/' +
+    fullPath;
 
+  var mockedApi = proxyquire(
+    '../../../app/scripts/server/server-api',
+    {
+      '../app-controller': {
+        getListeningHttpInterface: sinon.stub().returns(iface)
+      }
+    }
+  );
+
+  var actual = mockedApi.getAccessUrlForCachedPage(fullPath);
   t.equal(expected, actual);
   t.end();
+  resetApi();
 });
 
 test('getResponseForAllCachedPages rejects if read fails', function(t) {

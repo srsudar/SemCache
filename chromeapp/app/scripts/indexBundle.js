@@ -2371,6 +2371,7 @@ _.extend(exports.CachedPageHandler.prototype,
  */
 
 var datastore = require('../persistence/datastore');
+var appController = require('../app-controller');
 
 var HTTP_SCHEME = 'http://';
 
@@ -2420,10 +2421,10 @@ exports.getApiEndpoints = function() {
  */
 exports.getAccessUrlForCachedPage = function(fullPath) {
   var scheme = HTTP_SCHEME;
-  // TODO: expose a method that gets the current address and port.
   // TODO: this might have to strip the path of directory where things are
   // stored--it basically maps between the two urls.
-  var addressAndPort = '127.0.0.1:8081';
+  var httpIface = appController.getListeningHttpInterface();
+  var addressAndPort = httpIface.address + ':' + httpIface.port;
   var apiPath = exports.getApiEndpoints().pageCache;
   var result = scheme + [addressAndPort, apiPath, fullPath].join('/');
   return result;
@@ -2465,7 +2466,7 @@ exports.getCachedFileNameFromPath = function(path) {
   return result;
 };
 
-},{"../persistence/datastore":11}],15:[function(require,module,exports){
+},{"../app-controller":"appController","../persistence/datastore":11}],15:[function(require,module,exports){
 (function (global){
 /*! http://mths.be/base64 v0.1.0 by @mathias | MIT license */
 ;(function(root) {
@@ -4184,7 +4185,71 @@ exports.getCachedFileNameFromPath = function(path) {
   }
 }.call(this));
 
-},{}],"binaryUtils":[function(require,module,exports){
+},{}],"appController":[function(require,module,exports){
+'use strict';
+
+/**
+ * The main controlling piece of the app. It composes the other modules.
+ */
+
+var chromeUdp = require('./dnssd/chromeUdp');
+
+var LISTENING_HTTP_INTERFACE = null;
+
+/**
+ * This port is hard-coded for now, as the web server requires that we pass a
+ * port. This will be amended and should be dynamically allocated.
+ */
+var HTTP_PORT = 9876;
+
+/**
+ * Get the interface on which the app is listening for incoming http
+ * connections.
+ *
+ * @return {object} an object of the form:
+ * {
+ *   name: string,
+ *   address: string,
+ *   prefixLength: integer,
+ *   port: integer
+ * }
+ */
+exports.getListeningHttpInterface = function() {
+  if (!LISTENING_HTTP_INTERFACE) {
+    console.warn('listening http interface not set, is app started?');
+  }
+  return LISTENING_HTTP_INTERFACE;
+};
+
+/**
+ * Start the app.
+ *
+ * @return {Promise} Promise that resolves when the app is started
+ */
+exports.start = function() {
+  return new Promise(function(resolve) {
+    chromeUdp.getNetworkInterfaces()
+      .then(interfaces => {
+        var ipv4Interfaces = [];
+        interfaces.forEach(iface => {
+          if (iface.address.indexOf(':') === -1) {
+            // ipv4
+            ipv4Interfaces.push(iface);
+          }
+        });
+        if (ipv4Interfaces.length === 0) {
+          console.log('Could not find ipv4 interface: ', interfaces);
+        } else {
+          var iface = ipv4Interfaces[0];
+          iface.port = HTTP_PORT;
+          LISTENING_HTTP_INTERFACE = iface;
+        }
+        resolve();
+      });
+  });
+};
+
+},{"./dnssd/chromeUdp":"chromeUdp"}],"binaryUtils":[function(require,module,exports){
 /*jshint esnext:true*/
 /*
  * https://github.com/justindarc/dns-sd.js
