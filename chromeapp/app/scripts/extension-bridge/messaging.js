@@ -10,6 +10,15 @@ var base64 = require('base-64');
 exports.EXTENSION_ID = 'malgfdapbefeeidjfndgioclhfpfglhe';
 
 /**
+ * Send a message to the extension.
+ *
+ * @param {any} message
+ */
+exports.sendMessageToExtension = function(message) {
+  chromeWrapper.sendMessage(exports.EXTENSION_ID, message);
+};
+
+/**
  * Function to handle messages coming from the SemCache extension.
  *
  * @param {object} message message sent by the extension. Expected to have the
@@ -62,4 +71,19 @@ exports.getBlobFromDataUrl = function(dataUrl) {
 
 exports.attachListeners = function() {
   chromeWrapper.addOnMessageExternalListener(exports.handleExternalMessage);
+};
+
+/**
+ * Send a message to the Extension instructing it to open the URL.
+ *
+ * @param {string} url
+ */
+exports.sendMessageToOpenUrl = function(url) {
+  var message = {
+    type: 'open',
+    params: {
+      url: url
+    }
+  };
+  exports.sendMessageToExtension(message);
 };
