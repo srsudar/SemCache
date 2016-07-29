@@ -11,9 +11,25 @@
 
         <!-- build:css styles/main.css -->
         <link rel="stylesheet" href="styles/main.css">
+        <link type="text/css" rel="stylesheet" href="styles/materialize.css">
         <!-- endbuild -->
     </head>
     <body>
+
+      <header>
+        <ul id="left-nav" class="side-nav fixed" style="transform: translateX(0%);">
+          <li id="my-cache"><a>My SemCache</a></li>
+          <br>
+          <li id="settings"><a>Settings</a></li>
+
+        </ul>
+
+      </header>
+
+      <main>
+      <div class="section">
+        <div id="content-container" class="container">
+
         <h1>'Allo</h1>
 
         <!-- build:js scripts/vendor.js -->
@@ -31,15 +47,31 @@
 
         <br>
         <a href="file:///Users/sudars/Downloads/Venezuela.png" target="_blank">venezuela</a>
+
+  <button id="choose_dir">Choose Directory for SemCache</button>
+
+        <div id="settings-container" class="container">
+          <div class="row">
+            <div class="col s12 m6">
+              <div class="card blue-grey darken-1">
+                <div class="card-content white-text">
+                  <span class="card-title">Settings</span>
+                  <p>Control SemCache settings here.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+        </div>
+      </main>
         <!-- build:js scripts/index.js -->
+        <script type="text/javascript" src="scripts/external/jquery.js"></script>
+        <script type="text/javascript" src="scripts/external/materialize.js"></script>
         <script src="scripts/web-server-chrome/wsc-chrome.js"></script>
         <script src="scripts/server/dummy-handler.js"></script>
-        <script src="scripts/index.js"></script>
         <script src="scripts/bundle.js"></script>
         <script src="scripts/indexBundle.js"></script>
         <!-- endbuild -->
-<nav>
-  <button id="choose_dir">Choose Directory for SemCache</button>
-</nav>
     </body>
 </html>

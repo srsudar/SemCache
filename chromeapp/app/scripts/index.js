@@ -1,6 +1,7 @@
+/* globals $ */
 'use strict';
 
-var fs = require('./persistence/file-system');
+var fileSystem = require('fileSystem');
 var extensionBridge = require('extBridge');
 
 extensionBridge.attachListeners();
@@ -12,10 +13,34 @@ document.addEventListener('DOMContentLoaded', function() {
   }
   var chooseDirButton = document.getElementById('choose_dir');
   chooseDirButton.addEventListener('click', function() {
-    fs.promptForDir().then(function(entry) {
+    fileSystem.promptForDir().then(function(entry) {
       console.log('GOT NEW BASE DIR: ', entry);
-      fs.setBaseCacheDir(entry);
+      fileSystem.setBaseCacheDir(entry);
     });
   });
 }, false);
 
+function clearContainer() {
+  var $container = $('#content-container');
+  $container.children().hide();
+}
+
+function initUi() {
+  $('.button-collapse').sideNav();
+
+
+  var $settingsContainer = $('#settings-container');
+  var $settingsMenuItem = $('#settings');
+
+  $settingsMenuItem.on('click', function() {
+    clearContainer();
+    $settingsContainer.show();
+  });
+
+}
+
+$(function() {
+  console.log('SETTING UP READY BUSINESS');
+
+  initUi();
+});

@@ -1669,9 +1669,10 @@ exports.addOnMessageExternalListener = function(fn) {
 };
 
 },{}],8:[function(require,module,exports){
+/* globals $ */
 'use strict';
 
-var fs = require('./persistence/file-system');
+var fileSystem = require('fileSystem');
 var extensionBridge = require('extBridge');
 
 extensionBridge.attachListeners();
@@ -1683,15 +1684,39 @@ document.addEventListener('DOMContentLoaded', function() {
   }
   var chooseDirButton = document.getElementById('choose_dir');
   chooseDirButton.addEventListener('click', function() {
-    fs.promptForDir().then(function(entry) {
+    fileSystem.promptForDir().then(function(entry) {
       console.log('GOT NEW BASE DIR: ', entry);
-      fs.setBaseCacheDir(entry);
+      fileSystem.setBaseCacheDir(entry);
     });
   });
 }, false);
 
+function clearContainer() {
+  var $container = $('#content-container');
+  $container.children().hide();
+}
 
-},{"./persistence/file-system":12,"extBridge":"extBridge"}],9:[function(require,module,exports){
+function initUi() {
+  $('.button-collapse').sideNav();
+
+
+  var $settingsContainer = $('#settings-container');
+  var $settingsMenuItem = $('#settings');
+
+  $settingsMenuItem.on('click', function() {
+    clearContainer();
+    $settingsContainer.show();
+  });
+
+}
+
+$(function() {
+  console.log('SETTING UP READY BUSINESS');
+
+  initUi();
+});
+
+},{"extBridge":"extBridge","fileSystem":"fileSystem"}],9:[function(require,module,exports){
 /* globals Promise, chrome */
 'use strict';
 
@@ -2153,125 +2178,7 @@ exports.getCaptureDateFromName = function(name) {
   return result;
 };
 
-},{"../server/server-api":14,"./file-system":12,"./file-system-util":"fsUtil"}],12:[function(require,module,exports){
-/*jshint esnext:true*/
-/* globals Promise */
-'use strict';
-
-var chromefs = require('./chromeFileSystem');
-var chromeStorage = require('./chromeStorage');
-var fsUtil = require('./file-system-util');
-
-/** The local storage key for the entry ID of the base directory. */
-exports.KEY_BASE_DIR = 'baseDir';
-
-/** 
- * The path of the directory storing the cache entries relative to the root of
- * the storage directory. Begins with './'.
- */
-exports.PATH_CACHE_DIR = 'cacheEntries';
-
-/**
- * Get the directory where cache entries are stored.
- *
- * @return {Promise} Promise that resolves with a DirectoryEntry that is the
- * base cache directory. Rejects if the base directory has not been set.
- */
-exports.getDirectoryForCacheEntries = function() {
-  return new Promise(function(resolve, reject) {
-    exports.getPersistedBaseDir()
-    .then(baseDir => {
-      var dirName = exports.PATH_CACHE_DIR;
-      var options = {
-        create: true,
-        exclusive: false
-      };
-      return fsUtil.getDirectory(baseDir, options, dirName);
-    })
-    .then(cacheDir => {
-      resolve(cacheDir);
-    })
-    .catch(err => {
-      reject(err);
-    });
-  });
-
-};
-
-/**
- * Return the base directory behaving as the root of the SemCache file system.
- * This returns the "persisted" base directory in the sense that the directory
- * must have already been chosen via a file chooser. If a base directory has
- * not been chosen, it will return null.
- *
- * @return {DirectoryEntry} the directory that has been set as the root of the
- * SemCache file system. Returns null if the directory has not been set.
- */
-exports.getPersistedBaseDir = function() {
-  return new Promise(function(resolve) {
-    exports.baseDirIsSet()
-    .then(isSet => {
-      if (isSet) {
-        chromeStorage.get(exports.KEY_BASE_DIR)
-        .then(keyValue => {
-          var id = keyValue[exports.KEY_BASE_DIR];
-          return chromefs.restoreEntry(id);
-        })
-        .then(dirEntry => {
-          resolve(dirEntry);
-        });
-      } else {
-        // Null if not set.
-        resolve(null);
-      }
-    });
-  });
-};
-
-/**
- * @return {Promise} Promise that resolves with a boolean
- */
-exports.baseDirIsSet = function() {
-  return new Promise(function(resolve) {
-    chromeStorage.get(exports.KEY_BASE_DIR)
-    .then(keyValue => {
-      var isSet = false;
-      if (keyValue && keyValue[exports.KEY_BASE_DIR]) {
-        isSet = true;
-      }
-      resolve(isSet);
-    });
-  });
-};
-
-/**
- * Set an entry as the base directory to be used for the SemCache file system.
- *
- * @param {DirectoryEntry} dirEntry the entry that will be set as the base
- */
-exports.setBaseCacheDir = function(dirEntry) {
-  var keyObj = {};
-  var id = chromefs.retainEntrySync(dirEntry);
-  keyObj[exports.KEY_BASE_DIR] = id;
-  chromeStorage.set(keyObj);
-};
-
-/**
- * Prompt the user to choose a directory.
- *
- * @return {Promise} a promise that resolves with a DirectoryEntry that has
- * been chosen by the user.
- */
-exports.promptForDir = function() {
-  return new Promise(function(resolve) {
-    chromefs.chooseEntry({type: 'openDirectory'})
-    .then(entry => {
-      resolve(entry);
-    });
-  });
-};
-
-},{"./chromeFileSystem":9,"./chromeStorage":10,"./file-system-util":"fsUtil"}],13:[function(require,module,exports){
+},{"../server/server-api":13,"./file-system":"fileSystem","./file-system-util":"fsUtil"}],12:[function(require,module,exports){
 /* globals WSC */
 'use strict';
 
@@ -2363,7 +2270,7 @@ _.extend(exports.CachedPageHandler.prototype,
   WSC.BaseHandler.prototype
 );
 
-},{"../persistence/file-system":12,"../persistence/file-system-util":"fsUtil","./server-api":14,"underscore":16}],14:[function(require,module,exports){
+},{"../persistence/file-system":"fileSystem","../persistence/file-system-util":"fsUtil","./server-api":13,"underscore":15}],13:[function(require,module,exports){
 'use strict';
 
 /**
@@ -2466,7 +2373,7 @@ exports.getCachedFileNameFromPath = function(path) {
   return result;
 };
 
-},{"../app-controller":"appController","../persistence/datastore":11}],15:[function(require,module,exports){
+},{"../app-controller":"appController","../persistence/datastore":11}],14:[function(require,module,exports){
 (function (global){
 /*! http://mths.be/base64 v0.1.0 by @mathias | MIT license */
 ;(function(root) {
@@ -2635,7 +2542,7 @@ exports.getCachedFileNameFromPath = function(path) {
 }(this));
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],16:[function(require,module,exports){
+},{}],15:[function(require,module,exports){
 //     Underscore.js 1.8.3
 //     http://underscorejs.org
 //     (c) 2009-2015 Jeremy Ashkenas, DocumentCloud and Investigative Reporters & Editors
@@ -5892,7 +5799,125 @@ exports.attachListeners = function() {
   chromeWrapper.addOnMessageExternalListener(exports.handleExternalMessage);
 };
 
-},{"../persistence/datastore":11,"./chromeRuntimeWrapper":7,"base-64":15}],"fsUtil":[function(require,module,exports){
+},{"../persistence/datastore":11,"./chromeRuntimeWrapper":7,"base-64":14}],"fileSystem":[function(require,module,exports){
+/*jshint esnext:true*/
+/* globals Promise */
+'use strict';
+
+var chromefs = require('./chromeFileSystem');
+var chromeStorage = require('./chromeStorage');
+var fsUtil = require('./file-system-util');
+
+/** The local storage key for the entry ID of the base directory. */
+exports.KEY_BASE_DIR = 'baseDir';
+
+/** 
+ * The path of the directory storing the cache entries relative to the root of
+ * the storage directory. Begins with './'.
+ */
+exports.PATH_CACHE_DIR = 'cacheEntries';
+
+/**
+ * Get the directory where cache entries are stored.
+ *
+ * @return {Promise} Promise that resolves with a DirectoryEntry that is the
+ * base cache directory. Rejects if the base directory has not been set.
+ */
+exports.getDirectoryForCacheEntries = function() {
+  return new Promise(function(resolve, reject) {
+    exports.getPersistedBaseDir()
+    .then(baseDir => {
+      var dirName = exports.PATH_CACHE_DIR;
+      var options = {
+        create: true,
+        exclusive: false
+      };
+      return fsUtil.getDirectory(baseDir, options, dirName);
+    })
+    .then(cacheDir => {
+      resolve(cacheDir);
+    })
+    .catch(err => {
+      reject(err);
+    });
+  });
+
+};
+
+/**
+ * Return the base directory behaving as the root of the SemCache file system.
+ * This returns the "persisted" base directory in the sense that the directory
+ * must have already been chosen via a file chooser. If a base directory has
+ * not been chosen, it will return null.
+ *
+ * @return {DirectoryEntry} the directory that has been set as the root of the
+ * SemCache file system. Returns null if the directory has not been set.
+ */
+exports.getPersistedBaseDir = function() {
+  return new Promise(function(resolve) {
+    exports.baseDirIsSet()
+    .then(isSet => {
+      if (isSet) {
+        chromeStorage.get(exports.KEY_BASE_DIR)
+        .then(keyValue => {
+          var id = keyValue[exports.KEY_BASE_DIR];
+          return chromefs.restoreEntry(id);
+        })
+        .then(dirEntry => {
+          resolve(dirEntry);
+        });
+      } else {
+        // Null if not set.
+        resolve(null);
+      }
+    });
+  });
+};
+
+/**
+ * @return {Promise} Promise that resolves with a boolean
+ */
+exports.baseDirIsSet = function() {
+  return new Promise(function(resolve) {
+    chromeStorage.get(exports.KEY_BASE_DIR)
+    .then(keyValue => {
+      var isSet = false;
+      if (keyValue && keyValue[exports.KEY_BASE_DIR]) {
+        isSet = true;
+      }
+      resolve(isSet);
+    });
+  });
+};
+
+/**
+ * Set an entry as the base directory to be used for the SemCache file system.
+ *
+ * @param {DirectoryEntry} dirEntry the entry that will be set as the base
+ */
+exports.setBaseCacheDir = function(dirEntry) {
+  var keyObj = {};
+  var id = chromefs.retainEntrySync(dirEntry);
+  keyObj[exports.KEY_BASE_DIR] = id;
+  chromeStorage.set(keyObj);
+};
+
+/**
+ * Prompt the user to choose a directory.
+ *
+ * @return {Promise} a promise that resolves with a DirectoryEntry that has
+ * been chosen by the user.
+ */
+exports.promptForDir = function() {
+  return new Promise(function(resolve) {
+    chromefs.chooseEntry({type: 'openDirectory'})
+    .then(entry => {
+      resolve(entry);
+    });
+  });
+};
+
+},{"./chromeFileSystem":9,"./chromeStorage":10,"./file-system-util":"fsUtil"}],"fsUtil":[function(require,module,exports){
 /* globals Promise */
 'use strict';
 
@@ -6055,4 +6080,4 @@ exports.start = function(host, port) {
   startServer(host, port, endpointHandlers);
 };
 
-},{"./handlers":13,"./server-api":14}]},{},[8]);
+},{"./handlers":12,"./server-api":13}]},{},[8]);

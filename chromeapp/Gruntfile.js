@@ -37,6 +37,7 @@ module.exports = function (grunt) {
           './app/scripts/dnssd/dns-sd-semcache:dnsSem',
           './app/scripts/dnssd/dns-controller:dnsc',
           './app/scripts/persistence/file-system-util:fsUtil',
+          './app/scripts/persistence/file-system:fileSystem',
           './app/scripts/extension-bridge/messaging:extBridge',
           './app/scripts/server/server-controller:serverController',
           './app/scripts/app-controller:appController',
