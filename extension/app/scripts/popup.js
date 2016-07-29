@@ -1,7 +1,7 @@
 /* globals chrome, Promise */
 'use strict';
 
-console.log('SemCache Popup');
+var messaging = require('./app-bridge/messaging');
 
 /**
  * Return the URL from the string representation. fullUrl must begin with the
@@ -48,66 +48,6 @@ function getBlobAsDataUrl(blob) {
   });
 }
 
-// function writeBlob(blob, fileName) {
-//   console.log('trying to save blob');
-//   var saveData = (function () {
-//     var a = document.createElement('a');
-//     document.body.appendChild(a);
-//     a.style = 'display: none';
-//     return function (fileName) {
-//       var url = window.URL.createObjectURL(blob);
-//       a.href = url;
-//       a.download = fileName;
-//       a.click();
-//       window.URL.revokeObjectURL(url);
-//     };
-//   }())(fileName);
-// }
-
-// function createFileName(fullUrl) {
-//   var domain = getDomain(fullUrl);
-//   // We will format this in yyyy-mm-dd in utc.
-//   var utcDay = new Date().toISOString().split('T')[0];
-//   var result = domain + '_UTC_' + utcDay + '.mhtml';
-//   return result;
-// }
-/**
- * ID of the Semcache Chrome App.
- */
-var APP_ID = 'dfafijifolbgimhdeahdmkkpapjpabka';
-
-/**
- * Send a message to the SemCache app.
- */
-var sendMessageToApp = function(message, options, callback) {
-  console.log('Sendimg message: ');
-  console.log('  app id: ', APP_ID);
-  console.log('  message: ', message);
-  chrome.runtime.sendMessage(APP_ID, message);
-};
-
-/**
- * Save a page as MHTML by calling the extension.
- *
- * @param {string} captureUrl the URL of the captured page
- * @param {string} captureDate the toISOString() of the date the page was
- * captured
- * @param {string} dataUrl the blob of MHTMl data as a data URL
- * @param {object} options object
- * @param {function} callback a callback that can be invoked by the receiver
- */
-var savePage = function(captureUrl, captureDate, dataUrl, options, callback) {
-  var message = {
-    type: 'write',
-    params: {
-      captureUrl: captureUrl,
-      captureDate: captureDate,
-      dataUrl: dataUrl
-    }
-  };
-  sendMessageToApp(message, options, callback);
-};
-
 chrome.tabs.query({ currentWindow: true, active: true}, function(tabs) {
   var tab = tabs[0];
   var tabId = tab.id;
@@ -120,7 +60,7 @@ chrome.tabs.query({ currentWindow: true, active: true}, function(tabs) {
     var domain = getDomain(tabUrl);
     var captureDate = new Date().toISOString();
     getBlobAsDataUrl(blob).then(base64 => {
-      savePage(domain, captureDate, base64);
+      messaging.savePage(domain, captureDate, base64);
     });
     // var fileName = createFileName(tabUrl);
     // writeBlob(blob, fileName);
