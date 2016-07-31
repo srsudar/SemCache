@@ -9,6 +9,7 @@ package
 
 chromeapp/app/bower_components
 chromeapp/test/bower_components
+chromeapp/bower_components
 chromeapp/node_modules
 
 # OSX

@@ -1,9 +1,13 @@
 {
   "name": "semcacheapp",
   "version": "0.0.0",
-  "dependencies": {},
+  "dependencies": {
+    "polymer": "Polymer/polymer#^1.2.0"
+  },
   "devDependencies": {
     "chai": "^3.5.0",
-    "mocha": "^2.5.3"
+    "mocha": "^2.5.3",
+    "iron-component-page": "PolymerElements/iron-component-page#^1.0.0",
+    "web-component-tester": "^4.0.0"
   }
 }
