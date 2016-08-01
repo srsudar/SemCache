@@ -48,6 +48,10 @@ module.exports = function (grunt) {
         src: 'app/scripts/popup.js',
         dest: 'app/scripts/popupBundle.js'
       },
+      background: {
+        src: 'app/scripts/background.js',
+        dest: 'app/scripts/backgroundBundle.js'
+      }
     },
 
     // Watches files for changes and runs tasks based on the changed files

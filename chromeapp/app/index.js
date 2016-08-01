@@ -14231,6 +14231,13 @@ Polymer({
         },
       },
 
+      openUrl: function(url) {
+        console.log('TAPPED OPEN, url: ', url);
+        console.log('access path: ', this.accessPath);
+        var extBridge = require('extBridge');
+        extBridge.sendMessageToOpenUrl(this.accessPath);
+      },
+
 
       // Element Lifecycle
 
