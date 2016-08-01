@@ -77,13 +77,12 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 
       <!-- Drawer content -->
       <app-drawer>
-        <app-toolbar>Menu</app-toolbar>
+        <app-toolbar>SemCache</app-toolbar>
         <iron-selector selected="{{page}}" attr-for-selected="name" class="drawer-list" role="navigation">
-          <a name="view1" >View One</a>
-          <a name="view2" >View Two</a>
-          <a name="view3" >View Three</a>
-          <a name="new-view" >New View</a>
-          <a name="cache1" >Display Cache Entries</a>
+          <a name="view1" >My Cache</a>
+          <a name="view2" >Matt's Cache</a>
+          <a name="view3" >Cache Money</a>
+          <a name="settings" >Settings</a>
         </iron-selector>
       </app-drawer>
 
@@ -93,7 +92,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
         <app-header condenses reveals effects="waterfall">
           <app-toolbar>
             <paper-icon-button icon="menu" drawer-toggle></paper-icon-button>
-            <div title>My App</div>
+            <div title>SemCache</div>
           </app-toolbar>
         </app-header>
 
@@ -101,8 +100,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
           <my-view1 name="view1"></my-view1>
           <my-view2 name="view2"></my-view2>
           <my-view3 name="view3"></my-view3>
-          <my-new-view name="new-view"></my-new-view>
-          <display-cache-entries name="cache1"></display-cache-entries>
+          <settings-view name="settings"></settings-view>
         </iron-pages>
 
       </app-header-layout>

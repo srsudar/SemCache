@@ -14231,11 +14231,13 @@ Polymer({
         },
       },
 
-      openUrl: function(url) {
-        console.log('TAPPED OPEN, url: ', url);
-        console.log('access path: ', this.accessPath);
-        var extBridge = require('extBridge');
+      getAppController: function() {
         var appController = require('appController');
+        return appController;
+      },
+
+      openUrl: function(url) {
+        var appController = this.getAppController();
         appController.saveMhtmlAndOpen(
             this.captureUrl,
             this.captureDate,
