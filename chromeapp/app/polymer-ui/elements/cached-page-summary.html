@@ -106,7 +106,12 @@ Example:
         console.log('TAPPED OPEN, url: ', url);
         console.log('access path: ', this.accessPath);
         var extBridge = require('extBridge');
-        extBridge.sendMessageToOpenUrl(this.accessPath);
+        var appController = require('appController');
+        appController.saveMhtmlAndOpen(
+            this.captureUrl,
+            this.captureDate,
+            this.accessPath
+        );
       },
 
 

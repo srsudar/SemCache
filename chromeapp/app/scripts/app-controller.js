@@ -131,7 +131,7 @@ exports.saveMhtmlAndOpen = function(captureUrl, captureDate, mhtmlUrl) {
       })
       .then((entry) => {
         var fileUrl = fileSystem.constructFileSchemeUrl(
-          exports.getAbsPathToBaseDir,
+          exports.getAbsPathToBaseDir(),
           entry.fullPath
         );
         extBridge.sendMessageToOpenUrl(fileUrl);

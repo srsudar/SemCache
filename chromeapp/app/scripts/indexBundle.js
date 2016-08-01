@@ -2029,6 +2029,7 @@ exports.addPageToCache = function(captureUrl, captureDate, mhtmlBlob) {
     // Get the directory to write into
     // Create the file entry
     // Perform the write
+    var heldEntry = null;
     fileSystem.getDirectoryForCacheEntries()
     .then(cacheDir => {
       var fileName = exports.createFileNameForPage(captureUrl, captureDate);
@@ -2039,10 +2040,11 @@ exports.addPageToCache = function(captureUrl, captureDate, mhtmlBlob) {
       return fsUtil.getFile(cacheDir, createOptions, fileName);
     })
     .then(fileEntry => {
+      heldEntry = fileEntry;
       return fsUtil.writeToFile(fileEntry, mhtmlBlob);
     })
     .then(() => {
-      resolve();
+      resolve(heldEntry);
     })
     .catch(err => {
       reject(err);
@@ -4100,6 +4102,9 @@ exports.getCachedFileNameFromPath = function(path) {
  */
 
 var chromeUdp = require('./dnssd/chromeUdp');
+var datastore = require('./persistence/datastore');
+var extBridge = require('./extension-bridge/messaging');
+var fileSystem = require('./persistence/file-system');
 
 var LISTENING_HTTP_INTERFACE = null;
 
@@ -4108,6 +4113,8 @@ var LISTENING_HTTP_INTERFACE = null;
  * port. This will be amended and should be dynamically allocated.
  */
 var HTTP_PORT = 9876;
+
+var ABS_PATH_TO_BASE_DIR = null;
 
 /**
  * Get the interface on which the app is listening for incoming http
@@ -4129,11 +4136,32 @@ exports.getListeningHttpInterface = function() {
 };
 
 /**
+ * Set the absolute path to the base directory where SemCache is mounted on
+ * the file system.
+ *
+ * This is necessary because, unbelievably, Chrome Apps don't provide a way to
+ * access the absolute path of a file. This means that in the prototype users
+ * will have to manually type the full path to the directory they choose.
+ * Unfortunate.
+ *
+ * @param {string} absPath the absolute path to the base directory of the file
+ * system where SemCache is mounted
+ */
+exports.setAbsPathToBaseDir = function(absPath) {
+  ABS_PATH_TO_BASE_DIR = absPath;
+};
+
+/**
  * Start the app.
  *
  * @return {Promise} Promise that resolves when the app is started
  */
-exports.start = function() {
+exports.start = function(absPath) {
+  if (!absPath) {
+    console.warn('not starting, must start with absolute path to dir');
+    return;
+  }
+  exports.setAbsPathToBaseDir(absPath);
   return new Promise(function(resolve) {
     chromeUdp.getNetworkInterfaces()
       .then(interfaces => {
@@ -4156,7 +4184,60 @@ exports.start = function() {
   });
 };
 
-},{"./dnssd/chromeUdp":"chromeUdp"}],"binaryUtils":[function(require,module,exports){
+/**
+ * A thin wrapper around fetch to allow mocking during tests. Expose parameters
+ * are needed.
+ */
+exports.fetch = function(url) {
+  return fetch(url);
+};
+
+/**
+ * Return the absolute path to the base directory where SemCache is mounted on
+ * the file system.
+ *
+ * This is necessary because, unbelievably, Chrome Apps don't provide a way to
+ * access the absolute path of a file. This means that in the prototype users
+ * will have to manually type the full path to the directory they choose.
+ * Unfortunate.
+ *
+ * @return {string} absolute path to the base directory, without a trailing
+ * slash
+ */
+exports.getAbsPathToBaseDir = function() {
+  return ABS_PATH_TO_BASE_DIR;
+};
+
+/**
+ * Save the MHTML file at mhtmlUrl into the local cache and open the URL.
+ *
+ * @param {captureUrl} captureUrl
+ * @param {captureDate} captureDate
+ * @param {string} mhtmlUrl the url of the mhtml file to save and open
+ *
+ * @return {Promise} a Promise that resolves after open has been called.
+ */
+exports.saveMhtmlAndOpen = function(captureUrl, captureDate, mhtmlUrl) {
+  return new Promise(function(resolve) {
+    exports.fetch(mhtmlUrl)
+      .then(response => {
+        return response.blob();
+      })
+      .then(mhtmlBlob => {
+        return datastore.addPageToCache(captureUrl, captureDate, mhtmlBlob);
+      })
+      .then((entry) => {
+        var fileUrl = fileSystem.constructFileSchemeUrl(
+          exports.getAbsPathToBaseDir(),
+          entry.fullPath
+        );
+        extBridge.sendMessageToOpenUrl(fileUrl);
+        resolve();
+      });
+  });
+};
+
+},{"./dnssd/chromeUdp":"chromeUdp","./extension-bridge/messaging":"extBridge","./persistence/datastore":11,"./persistence/file-system":"fileSystem"}],"binaryUtils":[function(require,module,exports){
 /*jshint esnext:true*/
 /*
  * https://github.com/justindarc/dns-sd.js
@@ -5840,6 +5921,30 @@ exports.KEY_BASE_DIR = 'baseDir';
  * the storage directory. Begins with './'.
  */
 exports.PATH_CACHE_DIR = 'cacheEntries';
+
+/**
+ * Construct the file scheme URL where the file can be access.
+ *
+ * @param {string} absPathToBaseDir the absolute path on the local file system
+ * to the base directory of SemCache. e.g. /path/from/root/to/semcachedir.
+ * @param {string} fileEntryPath the path as returned by fullPath on a
+ * FileEntry object. It must live in the SemCache directory and should begin
+ * with semcachedir
+ *
+ * @return {string} an absolute file scheme where the file can be accessed
+ */
+exports.constructFileSchemeUrl = function(absPathToBaseDir, fileEntryPath) {
+  // fileEntry.fullPath treats the root of the file system as the parent
+  // directory of the base directory. Therefore if we've selected 'semcachedir'
+  // as the root of our file system, fullPath will always begin with
+  // '/semcachedir/'. We still start by stripping this.
+  var parts = fileEntryPath.split('/');
+  // The first will be an empty string for the leading /. We'll start at index
+  // 2 to skip this and skip the leading directory.
+  var sanitizedEntryPath = parts.slice(2).join('/');
+  // only file:/, not file://, as join adds one
+  return ['file:/', absPathToBaseDir, sanitizedEntryPath].join('/');
+};
 
 /**
  * Get the directory where cache entries are stored.
