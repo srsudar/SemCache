@@ -17,14 +17,17 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
     <script src="../../../../web-component-tester/browser.js"></script>
 
     <!-- Step 1: import the element to test -->
-    <link rel="import" href="../../../app/polymer-ui/elements/cached-paged-summary.html">
+    <link rel="import" href="../../../app/polymer-ui/elements/cached-page-summary.html">
   </head>
   <body>
 
     <!-- You can use the document as a place to set up your fixtures. -->
-    <test-fixture id="cached-page-summary-fixture">
-      <template>
-        <cached-page-summary capture-url="[[captureUrl]]">
+    <test-fixture id="my-fixture">
+      <template is="dom-template">
+        <cached-page-summary
+          capture-url="{{captureUrl}}"
+          capture-date="{{captureDate}}"
+          access-path="{{accessPath}}">
           <h2>seed-element</h2>
         </cached-page-summary>
       </template>
@@ -42,42 +45,30 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
         };
 
         setup(function() {
-          myEl = fixture('cached-page-summary-fixture', {captureUrl: 'test'});
+          myEl = fixture('my-fixture', boundData);
         });
 
         test('heading is captureUrl', function() {
-          assert.equal(myEl.captureUrl, boundData.accessPath);
-          assert.equal(paperCard, boundData.captureUrl);
+          var heading = myEl.$.title;
+          assert.equal(heading.innerText, boundData.captureUrl);
         });
 
-
-        test('defines the "author" property', function() {
-          console.log('PAPER-CARD', myEl.$$('paper-card'));
-          var paperCard = myEl.$$('paper-card');
-          assert.equal(false, paperCard);
-          assert.equal(myEl.author.name, 'Dimitri Glazkov');
-          assert.equal(myEl.author.image, 'http://addyosmani.com/blog/wp-content/uploads/2013/04/unicorn.jpg');
+        test('date is captureDate', function() {
+          var dateDiv = myEl.$.date;
+          assert.equal(dateDiv.innerText, boundData.captureDate);
         });
 
-        test('says hello', function() {
-          assert.equal(myEl.sayHello(), 'seed-element says, Hello World!');
-
-          var greetings = myEl.sayHello('greetings Earthlings');
-          assert.equal(greetings, 'seed-element says, greetings Earthlings');
-        });
-
-        test('fires lasers', function(done) {
-          myEl.addEventListener('seed-element-lasers', function(event) {
-            assert.equal(event.detail.sound, 'Pew pew!');
-            done();
-          });
-          myEl.fireLasers();
-        });
-
-        test('distributed children', function() {
-          var els = myEl.getContentChildren();
-          assert.equal(els.length, 1, 'one distributed node');
-          assert.equal(els[0], myEl.querySelector('h2'), 'content distributed correctly');
+        test('open button calls saveMhtmlAndOpen', function() {
+          var appControllerSpy = {
+            saveMhtmlAndOpen: sinon.spy()
+          };
+          myEl.getAppController = sinon.stub().returns(appControllerSpy);
+          myEl.$.open.click();
+          var args = appControllerSpy.saveMhtmlAndOpen.args[0];
+          assert.equal(appControllerSpy.saveMhtmlAndOpen.calledOnce, true);
+          assert.equal(args[0], boundData.captureUrl);
+          assert.equal(args[1], boundData.captureDate);
+          assert.equal(args[2], boundData.accessPath);
         });
 
       });

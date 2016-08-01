@@ -53,10 +53,10 @@ Example:
     </style>
 
     <div class="card">
-      <h1>{{captureUrl}}</h1>
-      <div class="card-content">{{captureDate}}</div>
+      <h1 id="title">{{captureUrl}}</h1>
+      <div id="date" class="card-content">{{captureDate}}</div>
       <div class="card-actions">
-        <paper-button on-tap="openUrl">Open</paper-button>
+        <paper-button id="open" on-tap="openUrl">Open</paper-button>
       </div>
     </div>
   </template>
@@ -102,11 +102,13 @@ Example:
         },
       },
 
-      openUrl: function(url) {
-        console.log('TAPPED OPEN, url: ', url);
-        console.log('access path: ', this.accessPath);
-        var extBridge = require('extBridge');
+      getAppController: function() {
         var appController = require('appController');
+        return appController;
+      },
+
+      openUrl: function(url) {
+        var appController = this.getAppController();
         appController.saveMhtmlAndOpen(
             this.captureUrl,
             this.captureDate,
