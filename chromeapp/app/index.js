@@ -15339,81 +15339,14 @@ if (!window.Promise) {
 
   });
 Polymer({
-    is: 'gh-issues',
+    is: 'cache-page-list',
+
     properties: {
-      owner: {
-        value: 'polymer',
-        notify: true
-      },
-      repo: {
-        value: 'polymer',
-        notify: true
-      },
-      state: {
-        value: 'open',
-        notify: true
-      },
-      page: {
-        value: 1,
-        notify: true
-      },
       url: {
-        computed: 'computeUrl(owner, repo)'
-      },
-      options: {
-        computed: 'computeOptions(state, page)'
+        value: "http://jsonplaceholder.typicode.com/posts/" 
       }
-    },
-    computeUrl: function(owner, repo) {
-      return ['https://api.github.com/repos', owner, repo, 'issues'].join('/');
-    },
-    computeOptions: function(state, page) {
-      return {state: state, page: page};
     }
   });
-(function() {
-    'use strict';
-
-    Polymer({
-      is: 'cache-page-list',
-
-      properties: {
-        foo: {
-          type: String,
-          value: 'cache-page-list',
-          notify: true
-        },
-        owner: {
-          value: 'polymer',
-          notify: true
-        },
-        repo: {
-          value: 'polymer',
-          notify: true
-        },
-        state: {
-          value: 'open',
-          notify: true
-        },
-        page: {
-          value: 1,
-          notify: true
-        },
-        url: {
-          value: "http://jsonplaceholder.typicode.com/posts/" 
-        },
-        options: {
-          computed: 'computeOptions(state, page)'
-        }
-      },
-      computeUrl: function(owner, repo) {
-        return ['https://api.github.com/repos', owner, repo, 'issues'].join('/');
-      },
-      computeOptions: function(state, page) {
-        return {state: state, page: page};
-      }
-    });
-  })();
 Polymer({
 
       is: 'my-view2'
