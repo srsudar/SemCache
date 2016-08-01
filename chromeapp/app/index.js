@@ -15342,9 +15342,7 @@ Polymer({
     is: 'cache-page-list',
 
     properties: {
-      url: {
-        value: "http://jsonplaceholder.typicode.com/posts/" 
-      }
+      url: String
     }
   });
 Polymer({
