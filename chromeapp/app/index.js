@@ -10362,7 +10362,7 @@ Polymer.AppLayout = Polymer.AppLayout || {};
       var startsAt = parseFloat(effectsConfig.startsAt || 0);
       var endsAt = parseFloat(effectsConfig.endsAt || 1);
       var deltaS = endsAt - startsAt;
-      var noop = () => {};
+      var noop = function() {};
       // fast path if possible
       var runFn = (startsAt === 0 && endsAt === 1) ? effectDef.run :
         function(progress, y) {

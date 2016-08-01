@@ -296,7 +296,8 @@ test('addPageToCache resolves if all others succeed', function(t) {
 
 
   datastore.addPageToCache(captureUrl, captureDate, blob)
-  .then(() => {
+  .then(returnedFile => {
+    t.deepEqual(returnedFile, fileEntryStub);
     t.deepEqual(createFileNameSpy.args[0], [captureUrl, captureDate]);
     t.deepEqual(getFileSpy.args[0],
       [

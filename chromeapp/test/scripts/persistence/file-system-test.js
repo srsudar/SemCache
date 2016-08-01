@@ -247,3 +247,15 @@ test('getDirectoryForCacheEntries resolves with entry', function(t) {
       resetFileSystem();
     });
 });
+
+test('constructFileSchemeUrl creates correct scheme', function(t) {
+  var absPath = '/absolute/path/to/semcachedir';
+  var entryPath = '/semcachedir/cachedPages/my_fancy_page.mhtml';
+  var expected =
+    'file:///absolute/path/to/semcachedir/cachedPages/my_fancy_page.mhtml';
+
+  var fileSystem = require('../../../app/scripts/persistence/file-system');
+  var actual = fileSystem.constructFileSchemeUrl(absPath, entryPath);
+  t.equal(actual, expected);
+  t.end();
+});

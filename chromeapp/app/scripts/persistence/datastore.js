@@ -61,6 +61,7 @@ exports.addPageToCache = function(captureUrl, captureDate, mhtmlBlob) {
     // Get the directory to write into
     // Create the file entry
     // Perform the write
+    var heldEntry = null;
     fileSystem.getDirectoryForCacheEntries()
     .then(cacheDir => {
       var fileName = exports.createFileNameForPage(captureUrl, captureDate);
@@ -71,10 +72,11 @@ exports.addPageToCache = function(captureUrl, captureDate, mhtmlBlob) {
       return fsUtil.getFile(cacheDir, createOptions, fileName);
     })
     .then(fileEntry => {
+      heldEntry = fileEntry;
       return fsUtil.writeToFile(fileEntry, mhtmlBlob);
     })
     .then(() => {
-      resolve();
+      resolve(heldEntry);
     })
     .catch(err => {
       reject(err);

@@ -16,6 +16,30 @@ exports.KEY_BASE_DIR = 'baseDir';
 exports.PATH_CACHE_DIR = 'cacheEntries';
 
 /**
+ * Construct the file scheme URL where the file can be access.
+ *
+ * @param {string} absPathToBaseDir the absolute path on the local file system
+ * to the base directory of SemCache. e.g. /path/from/root/to/semcachedir.
+ * @param {string} fileEntryPath the path as returned by fullPath on a
+ * FileEntry object. It must live in the SemCache directory and should begin
+ * with semcachedir
+ *
+ * @return {string} an absolute file scheme where the file can be accessed
+ */
+exports.constructFileSchemeUrl = function(absPathToBaseDir, fileEntryPath) {
+  // fileEntry.fullPath treats the root of the file system as the parent
+  // directory of the base directory. Therefore if we've selected 'semcachedir'
+  // as the root of our file system, fullPath will always begin with
+  // '/semcachedir/'. We still start by stripping this.
+  var parts = fileEntryPath.split('/');
+  // The first will be an empty string for the leading /. We'll start at index
+  // 2 to skip this and skip the leading directory.
+  var sanitizedEntryPath = parts.slice(2).join('/');
+  // only file:/, not file://, as join adds one
+  return ['file:/', absPathToBaseDir, sanitizedEntryPath].join('/');
+};
+
+/**
  * Get the directory where cache entries are stored.
  *
  * @return {Promise} Promise that resolves with a DirectoryEntry that is the
