@@ -2997,7 +2997,8 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
       }
     </style>
 
-    <cached-page-summary capture-url="the url" capture-date="the date" access-path="the path"></cached-page-summary>
+    <cached-page-summary capture-url="the url" capture-date="the date" access-path="the path">
+    </cached-page-summary>
 
     <div class="card">
       <div class="circle">1</div>
@@ -3008,6 +3009,48 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 
   </template>
 
+  </dom-module>
+<!--
+@license
+Copyright (c) 2015 The Polymer Project Authors. All rights reserved.
+This code may only be used under the BSD style license found at http://polymer.github.io/LICENSE.txt
+The complete set of authors may be found at http://polymer.github.io/AUTHORS.txt
+The complete set of contributors may be found at http://polymer.github.io/CONTRIBUTORS.txt
+Code distributed by Google as part of the polymer project is also
+subject to an additional IP rights grant found at http://polymer.github.io/PATENTS.txt
+--><dom-module id="cache-page-list" assetpath="elements/">
+  <template>
+    <style>
+      :host {
+        display: block;
+      }
+    </style>
+    <iron-ajax auto="" url="http://jsonplaceholder.typicode.com/posts/" lastresponse="{{data}}" handleas="json">
+    </iron-ajax>
+
+    <template is="dom-repeat" items="{{data}}">
+        <div><span>{{item.id}}</span></div>
+    </template>
+
+    <!-- <iron-ajax auto url="http://jsonplaceholder.typicode.com/posts/" handle-as="json" last-response="{{response}}"> -->
+    <!-- </iron-ajax> -->
+
+    <!-- <h1>above dom-repate cached-page-summary</h1> -->
+
+    <!-- <h3>response: {{response}}</h3> -->
+
+    <!-- <template is="dom-repeat" items="{{response}}"> -->
+    <!-- <div>{{item.userId}}</div> -->
+    <!-- <div>{{item.title}}</div> -->
+    <!-- <div>{{item.body}}</div> -->
+      <!-- <cached-page-summary capture-url="{{item.title}}" -->
+      <!--                      capture-date="{{item.created_at}}" -->
+      <!--                      access-path="{{item.html_url}}"> -->
+      <!-- </cached-page-summary> -->
+    <!-- </template> -->
+
+    <h1>below dom-repate cached-page-summary</h1>
+  </template>
   </dom-module>
 <!--
 @license
@@ -3052,9 +3095,12 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
       }
     </style>
 
+    <cache-page-list>
+    </cache-page-list>
+
     <div class="card">
       <div class="circle">2</div>
-      <h1>View Two</h1>
+      <h1>View Two SHOULD BE BELOW cache-page-list</h1>
       <p>Ea duis bonorum nec, falli paulo aliquid ei eum.</p>
       <p>Id nam odio natum malorum, tibique copiosae expetenda mel ea.Detracto suavitate repudiandae no eum. Id adhuc minim soluta nam.Id nam odio natum malorum, tibique copiosae expetenda mel ea.</p>
     </div>

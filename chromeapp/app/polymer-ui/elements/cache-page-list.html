@@ -9,6 +9,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 -->
 
 <link rel="import" href="../../../bower_components/polymer/polymer.html">
+<link rel="import" href="cached-page-summary.html">
 
 <dom-module id="cache-page-list">
   <template>
@@ -17,7 +18,35 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
         display: block;
       }
     </style>
-    <div>Hello from <span>{{foo}}</span></div>
+    <iron-ajax
+            auto
+            url="http://jsonplaceholder.typicode.com/posts/"
+            lastResponse="{{data}}"
+            handleAs="json">
+    </iron-ajax>
+
+    <template is="dom-repeat" items="{{data}}">
+        <div><span>{{item.id}}</span></div>
+    </template>
+
+    <!-- <iron-ajax auto url="http://jsonplaceholder.typicode.com/posts/" handle-as="json" last-response="{{response}}"> -->
+    <!-- </iron-ajax> -->
+
+    <!-- <h1>above dom-repate cached-page-summary</h1> -->
+
+    <!-- <h3>response: {{response}}</h3> -->
+
+    <!-- <template is="dom-repeat" items="{{response}}"> -->
+    <!-- <div>{{item.userId}}</div> -->
+    <!-- <div>{{item.title}}</div> -->
+    <!-- <div>{{item.body}}</div> -->
+      <!-- <cached-page-summary capture-url="{{item.title}}" -->
+      <!--                      capture-date="{{item.created_at}}" -->
+      <!--                      access-path="{{item.html_url}}"> -->
+      <!-- </cached-page-summary> -->
+    <!-- </template> -->
+
+    <h1>below dom-repate cached-page-summary</h1>
   </template>
   <script>
   (function() {

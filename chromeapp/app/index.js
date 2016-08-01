@@ -14294,6 +14294,21 @@ Polymer({
       is: 'my-view1'
 
     });
+(function() {
+    'use strict';
+
+    Polymer({
+      is: 'cache-page-list',
+
+      properties: {
+        foo: {
+          type: String,
+          value: 'cache-page-list',
+          notify: true
+        }
+      }
+    });
+  })();
 Polymer({
 
       is: 'my-view2'
