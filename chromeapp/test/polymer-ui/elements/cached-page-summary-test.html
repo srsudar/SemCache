@@ -24,7 +24,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
     <!-- You can use the document as a place to set up your fixtures. -->
     <test-fixture id="cached-page-summary-fixture">
       <template>
-        <cached-page-summary>
+        <cached-page-summary capture-url="[[captureUrl]]">
           <h2>seed-element</h2>
         </cached-page-summary>
       </template>
@@ -46,8 +46,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
         });
 
         test('heading is captureUrl', function() {
-          var paperCard = myEl.$$('#txt-url');
-          assert.equal(myEl.captureurl, boundData.accessPath);
+          assert.equal(myEl.captureUrl, boundData.accessPath);
           assert.equal(paperCard, boundData.captureUrl);
         });
 

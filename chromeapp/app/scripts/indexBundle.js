@@ -1668,6 +1668,16 @@ exports.addOnMessageExternalListener = function(fn) {
   chrome.runtime.onMessageExternal.addListener(fn);
 };
 
+/**
+ * Send a message using the chrome.runtime.sendMessage API.
+ *
+ * @param {string} id
+ * @param {any} message must be JSON-serializable
+ */
+exports.sendMessage = function(id, message) {
+  chrome.runtime.sendMessage(id, message);
+};
+
 },{}],8:[function(require,module,exports){
 /* globals $ */
 'use strict';
@@ -1697,16 +1707,6 @@ function clearContainer() {
 }
 
 function initUi() {
-  $('.button-collapse').sideNav();
-
-
-  var $settingsContainer = $('#settings-container');
-  var $settingsMenuItem = $('#settings');
-
-  $settingsMenuItem.on('click', function() {
-    clearContainer();
-    $settingsContainer.show();
-  });
 
 }
 
@@ -5745,6 +5745,15 @@ var base64 = require('base-64');
 exports.EXTENSION_ID = 'malgfdapbefeeidjfndgioclhfpfglhe';
 
 /**
+ * Send a message to the extension.
+ *
+ * @param {any} message
+ */
+exports.sendMessageToExtension = function(message) {
+  chromeWrapper.sendMessage(exports.EXTENSION_ID, message);
+};
+
+/**
  * Function to handle messages coming from the SemCache extension.
  *
  * @param {object} message message sent by the extension. Expected to have the
@@ -5797,6 +5806,21 @@ exports.getBlobFromDataUrl = function(dataUrl) {
 
 exports.attachListeners = function() {
   chromeWrapper.addOnMessageExternalListener(exports.handleExternalMessage);
+};
+
+/**
+ * Send a message to the Extension instructing it to open the URL.
+ *
+ * @param {string} url
+ */
+exports.sendMessageToOpenUrl = function(url) {
+  var message = {
+    type: 'open',
+    params: {
+      url: url
+    }
+  };
+  exports.sendMessageToExtension(message);
 };
 
 },{"../persistence/datastore":11,"./chromeRuntimeWrapper":7,"base-64":14}],"fileSystem":[function(require,module,exports){

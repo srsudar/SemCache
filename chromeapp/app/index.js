@@ -15339,10 +15339,68 @@ if (!window.Promise) {
 
   });
 Polymer({
+      is: 'paper-fab',
+
+      behaviors: [
+        Polymer.PaperButtonBehavior
+      ],
+
+      properties: {
+        /**
+         * The URL of an image for the icon. If the src property is specified,
+         * the icon property should not be.
+         */
+        src: {
+          type: String,
+          value: ''
+        },
+
+        /**
+         * Specifies the icon name or index in the set of icons available in
+         * the icon's icon set. If the icon property is specified,
+         * the src property should not be.
+         */
+        icon: {
+          type: String,
+          value: ''
+        },
+
+        /**
+         * Set this to true to style this is a "mini" FAB.
+         */
+        mini: {
+          type: Boolean,
+          value: false,
+          reflectToAttribute: true
+        },
+
+        /**
+         * The label displayed in the badge. The label is centered, and ideally
+         * should have very few characters.
+         */
+        label: {
+          type: String,
+          observer: '_labelChanged'
+        }
+      },
+
+      _labelChanged: function() {
+        this.setAttribute('aria-label', this.label);
+      },
+
+      _computeIsIconFab: function(icon, src) {
+        return (icon.length > 0) || (src.length > 0);
+      }
+    });
+Polymer({
     is: 'cache-page-list',
 
     properties: {
       url: String
+    },
+    refresh: function() {
+      this.$.ajax.generateRequest();
+      console.log('CLICKED FAB');
     }
   });
 Polymer({
@@ -17004,3 +17062,29274 @@ Polymer({
       }
 
     });
+/*eslint-disable no-unused-vars*/
+/*!
+ * jQuery JavaScript Library v3.1.0
+ * https://jquery.com/
+ *
+ * Includes Sizzle.js
+ * https://sizzlejs.com/
+ *
+ * Copyright jQuery Foundation and other contributors
+ * Released under the MIT license
+ * https://jquery.org/license
+ *
+ * Date: 2016-07-07T21:44Z
+ */
+( function( global, factory ) {
+
+	"use strict";
+
+	if ( typeof module === "object" && typeof module.exports === "object" ) {
+
+		// For CommonJS and CommonJS-like environments where a proper `window`
+		// is present, execute the factory and get jQuery.
+		// For environments that do not have a `window` with a `document`
+		// (such as Node.js), expose a factory as module.exports.
+		// This accentuates the need for the creation of a real `window`.
+		// e.g. var jQuery = require("jquery")(window);
+		// See ticket #14549 for more info.
+		module.exports = global.document ?
+			factory( global, true ) :
+			function( w ) {
+				if ( !w.document ) {
+					throw new Error( "jQuery requires a window with a document" );
+				}
+				return factory( w );
+			};
+	} else {
+		factory( global );
+	}
+
+// Pass this if window is not defined yet
+} )( typeof window !== "undefined" ? window : this, function( window, noGlobal ) {
+
+// Edge <= 12 - 13+, Firefox <=18 - 45+, IE 10 - 11, Safari 5.1 - 9+, iOS 6 - 9.1
+// throw exceptions when non-strict code (e.g., ASP.NET 4.5) accesses strict mode
+// arguments.callee.caller (trac-13335). But as of jQuery 3.0 (2016), strict mode should be common
+// enough that all such attempts are guarded in a try block.
+"use strict";
+
+var arr = [];
+
+var document = window.document;
+
+var getProto = Object.getPrototypeOf;
+
+var slice = arr.slice;
+
+var concat = arr.concat;
+
+var push = arr.push;
+
+var indexOf = arr.indexOf;
+
+var class2type = {};
+
+var toString = class2type.toString;
+
+var hasOwn = class2type.hasOwnProperty;
+
+var fnToString = hasOwn.toString;
+
+var ObjectFunctionString = fnToString.call( Object );
+
+var support = {};
+
+
+
+	function DOMEval( code, doc ) {
+		doc = doc || document;
+
+		var script = doc.createElement( "script" );
+
+		script.text = code;
+		doc.head.appendChild( script ).parentNode.removeChild( script );
+	}
+/* global Symbol */
+// Defining this global in .eslintrc would create a danger of using the global
+// unguarded in another place, it seems safer to define global only for this module
+
+
+
+var
+	version = "3.1.0",
+
+	// Define a local copy of jQuery
+	jQuery = function( selector, context ) {
+
+		// The jQuery object is actually just the init constructor 'enhanced'
+		// Need init if jQuery is called (just allow error to be thrown if not included)
+		return new jQuery.fn.init( selector, context );
+	},
+
+	// Support: Android <=4.0 only
+	// Make sure we trim BOM and NBSP
+	rtrim = /^[\s\uFEFF\xA0]+|[\s\uFEFF\xA0]+$/g,
+
+	// Matches dashed string for camelizing
+	rmsPrefix = /^-ms-/,
+	rdashAlpha = /-([a-z])/g,
+
+	// Used by jQuery.camelCase as callback to replace()
+	fcamelCase = function( all, letter ) {
+		return letter.toUpperCase();
+	};
+
+jQuery.fn = jQuery.prototype = {
+
+	// The current version of jQuery being used
+	jquery: version,
+
+	constructor: jQuery,
+
+	// The default length of a jQuery object is 0
+	length: 0,
+
+	toArray: function() {
+		return slice.call( this );
+	},
+
+	// Get the Nth element in the matched element set OR
+	// Get the whole matched element set as a clean array
+	get: function( num ) {
+		return num != null ?
+
+			// Return just the one element from the set
+			( num < 0 ? this[ num + this.length ] : this[ num ] ) :
+
+			// Return all the elements in a clean array
+			slice.call( this );
+	},
+
+	// Take an array of elements and push it onto the stack
+	// (returning the new matched element set)
+	pushStack: function( elems ) {
+
+		// Build a new jQuery matched element set
+		var ret = jQuery.merge( this.constructor(), elems );
+
+		// Add the old object onto the stack (as a reference)
+		ret.prevObject = this;
+
+		// Return the newly-formed element set
+		return ret;
+	},
+
+	// Execute a callback for every element in the matched set.
+	each: function( callback ) {
+		return jQuery.each( this, callback );
+	},
+
+	map: function( callback ) {
+		return this.pushStack( jQuery.map( this, function( elem, i ) {
+			return callback.call( elem, i, elem );
+		} ) );
+	},
+
+	slice: function() {
+		return this.pushStack( slice.apply( this, arguments ) );
+	},
+
+	first: function() {
+		return this.eq( 0 );
+	},
+
+	last: function() {
+		return this.eq( -1 );
+	},
+
+	eq: function( i ) {
+		var len = this.length,
+			j = +i + ( i < 0 ? len : 0 );
+		return this.pushStack( j >= 0 && j < len ? [ this[ j ] ] : [] );
+	},
+
+	end: function() {
+		return this.prevObject || this.constructor();
+	},
+
+	// For internal use only.
+	// Behaves like an Array's method, not like a jQuery method.
+	push: push,
+	sort: arr.sort,
+	splice: arr.splice
+};
+
+jQuery.extend = jQuery.fn.extend = function() {
+	var options, name, src, copy, copyIsArray, clone,
+		target = arguments[ 0 ] || {},
+		i = 1,
+		length = arguments.length,
+		deep = false;
+
+	// Handle a deep copy situation
+	if ( typeof target === "boolean" ) {
+		deep = target;
+
+		// Skip the boolean and the target
+		target = arguments[ i ] || {};
+		i++;
+	}
+
+	// Handle case when target is a string or something (possible in deep copy)
+	if ( typeof target !== "object" && !jQuery.isFunction( target ) ) {
+		target = {};
+	}
+
+	// Extend jQuery itself if only one argument is passed
+	if ( i === length ) {
+		target = this;
+		i--;
+	}
+
+	for ( ; i < length; i++ ) {
+
+		// Only deal with non-null/undefined values
+		if ( ( options = arguments[ i ] ) != null ) {
+
+			// Extend the base object
+			for ( name in options ) {
+				src = target[ name ];
+				copy = options[ name ];
+
+				// Prevent never-ending loop
+				if ( target === copy ) {
+					continue;
+				}
+
+				// Recurse if we're merging plain objects or arrays
+				if ( deep && copy && ( jQuery.isPlainObject( copy ) ||
+					( copyIsArray = jQuery.isArray( copy ) ) ) ) {
+
+					if ( copyIsArray ) {
+						copyIsArray = false;
+						clone = src && jQuery.isArray( src ) ? src : [];
+
+					} else {
+						clone = src && jQuery.isPlainObject( src ) ? src : {};
+					}
+
+					// Never move original objects, clone them
+					target[ name ] = jQuery.extend( deep, clone, copy );
+
+				// Don't bring in undefined values
+				} else if ( copy !== undefined ) {
+					target[ name ] = copy;
+				}
+			}
+		}
+	}
+
+	// Return the modified object
+	return target;
+};
+
+jQuery.extend( {
+
+	// Unique for each copy of jQuery on the page
+	expando: "jQuery" + ( version + Math.random() ).replace( /\D/g, "" ),
+
+	// Assume jQuery is ready without the ready module
+	isReady: true,
+
+	error: function( msg ) {
+		throw new Error( msg );
+	},
+
+	noop: function() {},
+
+	isFunction: function( obj ) {
+		return jQuery.type( obj ) === "function";
+	},
+
+	isArray: Array.isArray,
+
+	isWindow: function( obj ) {
+		return obj != null && obj === obj.window;
+	},
+
+	isNumeric: function( obj ) {
+
+		// As of jQuery 3.0, isNumeric is limited to
+		// strings and numbers (primitives or objects)
+		// that can be coerced to finite numbers (gh-2662)
+		var type = jQuery.type( obj );
+		return ( type === "number" || type === "string" ) &&
+
+			// parseFloat NaNs numeric-cast false positives ("")
+			// ...but misinterprets leading-number strings, particularly hex literals ("0x...")
+			// subtraction forces infinities to NaN
+			!isNaN( obj - parseFloat( obj ) );
+	},
+
+	isPlainObject: function( obj ) {
+		var proto, Ctor;
+
+		// Detect obvious negatives
+		// Use toString instead of jQuery.type to catch host objects
+		if ( !obj || toString.call( obj ) !== "[object Object]" ) {
+			return false;
+		}
+
+		proto = getProto( obj );
+
+		// Objects with no prototype (e.g., `Object.create( null )`) are plain
+		if ( !proto ) {
+			return true;
+		}
+
+		// Objects with prototype are plain iff they were constructed by a global Object function
+		Ctor = hasOwn.call( proto, "constructor" ) && proto.constructor;
+		return typeof Ctor === "function" && fnToString.call( Ctor ) === ObjectFunctionString;
+	},
+
+	isEmptyObject: function( obj ) {
+
+		/* eslint-disable no-unused-vars */
+		// See https://github.com/eslint/eslint/issues/6125
+		var name;
+
+		for ( name in obj ) {
+			return false;
+		}
+		return true;
+	},
+
+	type: function( obj ) {
+		if ( obj == null ) {
+			return obj + "";
+		}
+
+		// Support: Android <=2.3 only (functionish RegExp)
+		return typeof obj === "object" || typeof obj === "function" ?
+			class2type[ toString.call( obj ) ] || "object" :
+			typeof obj;
+	},
+
+	// Evaluates a script in a global context
+	globalEval: function( code ) {
+		DOMEval( code );
+	},
+
+	// Convert dashed to camelCase; used by the css and data modules
+	// Support: IE <=9 - 11, Edge 12 - 13
+	// Microsoft forgot to hump their vendor prefix (#9572)
+	camelCase: function( string ) {
+		return string.replace( rmsPrefix, "ms-" ).replace( rdashAlpha, fcamelCase );
+	},
+
+	nodeName: function( elem, name ) {
+		return elem.nodeName && elem.nodeName.toLowerCase() === name.toLowerCase();
+	},
+
+	each: function( obj, callback ) {
+		var length, i = 0;
+
+		if ( isArrayLike( obj ) ) {
+			length = obj.length;
+			for ( ; i < length; i++ ) {
+				if ( callback.call( obj[ i ], i, obj[ i ] ) === false ) {
+					break;
+				}
+			}
+		} else {
+			for ( i in obj ) {
+				if ( callback.call( obj[ i ], i, obj[ i ] ) === false ) {
+					break;
+				}
+			}
+		}
+
+		return obj;
+	},
+
+	// Support: Android <=4.0 only
+	trim: function( text ) {
+		return text == null ?
+			"" :
+			( text + "" ).replace( rtrim, "" );
+	},
+
+	// results is for internal usage only
+	makeArray: function( arr, results ) {
+		var ret = results || [];
+
+		if ( arr != null ) {
+			if ( isArrayLike( Object( arr ) ) ) {
+				jQuery.merge( ret,
+					typeof arr === "string" ?
+					[ arr ] : arr
+				);
+			} else {
+				push.call( ret, arr );
+			}
+		}
+
+		return ret;
+	},
+
+	inArray: function( elem, arr, i ) {
+		return arr == null ? -1 : indexOf.call( arr, elem, i );
+	},
+
+	// Support: Android <=4.0 only, PhantomJS 1 only
+	// push.apply(_, arraylike) throws on ancient WebKit
+	merge: function( first, second ) {
+		var len = +second.length,
+			j = 0,
+			i = first.length;
+
+		for ( ; j < len; j++ ) {
+			first[ i++ ] = second[ j ];
+		}
+
+		first.length = i;
+
+		return first;
+	},
+
+	grep: function( elems, callback, invert ) {
+		var callbackInverse,
+			matches = [],
+			i = 0,
+			length = elems.length,
+			callbackExpect = !invert;
+
+		// Go through the array, only saving the items
+		// that pass the validator function
+		for ( ; i < length; i++ ) {
+			callbackInverse = !callback( elems[ i ], i );
+			if ( callbackInverse !== callbackExpect ) {
+				matches.push( elems[ i ] );
+			}
+		}
+
+		return matches;
+	},
+
+	// arg is for internal usage only
+	map: function( elems, callback, arg ) {
+		var length, value,
+			i = 0,
+			ret = [];
+
+		// Go through the array, translating each of the items to their new values
+		if ( isArrayLike( elems ) ) {
+			length = elems.length;
+			for ( ; i < length; i++ ) {
+				value = callback( elems[ i ], i, arg );
+
+				if ( value != null ) {
+					ret.push( value );
+				}
+			}
+
+		// Go through every key on the object,
+		} else {
+			for ( i in elems ) {
+				value = callback( elems[ i ], i, arg );
+
+				if ( value != null ) {
+					ret.push( value );
+				}
+			}
+		}
+
+		// Flatten any nested arrays
+		return concat.apply( [], ret );
+	},
+
+	// A global GUID counter for objects
+	guid: 1,
+
+	// Bind a function to a context, optionally partially applying any
+	// arguments.
+	proxy: function( fn, context ) {
+		var tmp, args, proxy;
+
+		if ( typeof context === "string" ) {
+			tmp = fn[ context ];
+			context = fn;
+			fn = tmp;
+		}
+
+		// Quick check to determine if target is callable, in the spec
+		// this throws a TypeError, but we will just return undefined.
+		if ( !jQuery.isFunction( fn ) ) {
+			return undefined;
+		}
+
+		// Simulated bind
+		args = slice.call( arguments, 2 );
+		proxy = function() {
+			return fn.apply( context || this, args.concat( slice.call( arguments ) ) );
+		};
+
+		// Set the guid of unique handler to the same of original handler, so it can be removed
+		proxy.guid = fn.guid = fn.guid || jQuery.guid++;
+
+		return proxy;
+	},
+
+	now: Date.now,
+
+	// jQuery.support is not used in Core but other projects attach their
+	// properties to it so it needs to exist.
+	support: support
+} );
+
+if ( typeof Symbol === "function" ) {
+	jQuery.fn[ Symbol.iterator ] = arr[ Symbol.iterator ];
+}
+
+// Populate the class2type map
+jQuery.each( "Boolean Number String Function Array Date RegExp Object Error Symbol".split( " " ),
+function( i, name ) {
+	class2type[ "[object " + name + "]" ] = name.toLowerCase();
+} );
+
+function isArrayLike( obj ) {
+
+	// Support: real iOS 8.2 only (not reproducible in simulator)
+	// `in` check used to prevent JIT error (gh-2145)
+	// hasOwn isn't used here due to false negatives
+	// regarding Nodelist length in IE
+	var length = !!obj && "length" in obj && obj.length,
+		type = jQuery.type( obj );
+
+	if ( type === "function" || jQuery.isWindow( obj ) ) {
+		return false;
+	}
+
+	return type === "array" || length === 0 ||
+		typeof length === "number" && length > 0 && ( length - 1 ) in obj;
+}
+var Sizzle =
+/*!
+ * Sizzle CSS Selector Engine v2.3.0
+ * https://sizzlejs.com/
+ *
+ * Copyright jQuery Foundation and other contributors
+ * Released under the MIT license
+ * http://jquery.org/license
+ *
+ * Date: 2016-01-04
+ */
+(function( window ) {
+
+var i,
+	support,
+	Expr,
+	getText,
+	isXML,
+	tokenize,
+	compile,
+	select,
+	outermostContext,
+	sortInput,
+	hasDuplicate,
+
+	// Local document vars
+	setDocument,
+	document,
+	docElem,
+	documentIsHTML,
+	rbuggyQSA,
+	rbuggyMatches,
+	matches,
+	contains,
+
+	// Instance-specific data
+	expando = "sizzle" + 1 * new Date(),
+	preferredDoc = window.document,
+	dirruns = 0,
+	done = 0,
+	classCache = createCache(),
+	tokenCache = createCache(),
+	compilerCache = createCache(),
+	sortOrder = function( a, b ) {
+		if ( a === b ) {
+			hasDuplicate = true;
+		}
+		return 0;
+	},
+
+	// Instance methods
+	hasOwn = ({}).hasOwnProperty,
+	arr = [],
+	pop = arr.pop,
+	push_native = arr.push,
+	push = arr.push,
+	slice = arr.slice,
+	// Use a stripped-down indexOf as it's faster than native
+	// https://jsperf.com/thor-indexof-vs-for/5
+	indexOf = function( list, elem ) {
+		var i = 0,
+			len = list.length;
+		for ( ; i < len; i++ ) {
+			if ( list[i] === elem ) {
+				return i;
+			}
+		}
+		return -1;
+	},
+
+	booleans = "checked|selected|async|autofocus|autoplay|controls|defer|disabled|hidden|ismap|loop|multiple|open|readonly|required|scoped",
+
+	// Regular expressions
+
+	// http://www.w3.org/TR/css3-selectors/#whitespace
+	whitespace = "[\\x20\\t\\r\\n\\f]",
+
+	// http://www.w3.org/TR/CSS21/syndata.html#value-def-identifier
+	identifier = "(?:\\\\.|[\\w-]|[^\0-\\xa0])+",
+
+	// Attribute selectors: http://www.w3.org/TR/selectors/#attribute-selectors
+	attributes = "\\[" + whitespace + "*(" + identifier + ")(?:" + whitespace +
+		// Operator (capture 2)
+		"*([*^$|!~]?=)" + whitespace +
+		// "Attribute values must be CSS identifiers [capture 5] or strings [capture 3 or capture 4]"
+		"*(?:'((?:\\\\.|[^\\\\'])*)'|\"((?:\\\\.|[^\\\\\"])*)\"|(" + identifier + "))|)" + whitespace +
+		"*\\]",
+
+	pseudos = ":(" + identifier + ")(?:\\((" +
+		// To reduce the number of selectors needing tokenize in the preFilter, prefer arguments:
+		// 1. quoted (capture 3; capture 4 or capture 5)
+		"('((?:\\\\.|[^\\\\'])*)'|\"((?:\\\\.|[^\\\\\"])*)\")|" +
+		// 2. simple (capture 6)
+		"((?:\\\\.|[^\\\\()[\\]]|" + attributes + ")*)|" +
+		// 3. anything else (capture 2)
+		".*" +
+		")\\)|)",
+
+	// Leading and non-escaped trailing whitespace, capturing some non-whitespace characters preceding the latter
+	rwhitespace = new RegExp( whitespace + "+", "g" ),
+	rtrim = new RegExp( "^" + whitespace + "+|((?:^|[^\\\\])(?:\\\\.)*)" + whitespace + "+$", "g" ),
+
+	rcomma = new RegExp( "^" + whitespace + "*," + whitespace + "*" ),
+	rcombinators = new RegExp( "^" + whitespace + "*([>+~]|" + whitespace + ")" + whitespace + "*" ),
+
+	rattributeQuotes = new RegExp( "=" + whitespace + "*([^\\]'\"]*?)" + whitespace + "*\\]", "g" ),
+
+	rpseudo = new RegExp( pseudos ),
+	ridentifier = new RegExp( "^" + identifier + "$" ),
+
+	matchExpr = {
+		"ID": new RegExp( "^#(" + identifier + ")" ),
+		"CLASS": new RegExp( "^\\.(" + identifier + ")" ),
+		"TAG": new RegExp( "^(" + identifier + "|[*])" ),
+		"ATTR": new RegExp( "^" + attributes ),
+		"PSEUDO": new RegExp( "^" + pseudos ),
+		"CHILD": new RegExp( "^:(only|first|last|nth|nth-last)-(child|of-type)(?:\\(" + whitespace +
+			"*(even|odd|(([+-]|)(\\d*)n|)" + whitespace + "*(?:([+-]|)" + whitespace +
+			"*(\\d+)|))" + whitespace + "*\\)|)", "i" ),
+		"bool": new RegExp( "^(?:" + booleans + ")$", "i" ),
+		// For use in libraries implementing .is()
+		// We use this for POS matching in `select`
+		"needsContext": new RegExp( "^" + whitespace + "*[>+~]|:(even|odd|eq|gt|lt|nth|first|last)(?:\\(" +
+			whitespace + "*((?:-\\d)?\\d*)" + whitespace + "*\\)|)(?=[^-]|$)", "i" )
+	},
+
+	rinputs = /^(?:input|select|textarea|button)$/i,
+	rheader = /^h\d$/i,
+
+	rnative = /^[^{]+\{\s*\[native \w/,
+
+	// Easily-parseable/retrievable ID or TAG or CLASS selectors
+	rquickExpr = /^(?:#([\w-]+)|(\w+)|\.([\w-]+))$/,
+
+	rsibling = /[+~]/,
+
+	// CSS escapes
+	// http://www.w3.org/TR/CSS21/syndata.html#escaped-characters
+	runescape = new RegExp( "\\\\([\\da-f]{1,6}" + whitespace + "?|(" + whitespace + ")|.)", "ig" ),
+	funescape = function( _, escaped, escapedWhitespace ) {
+		var high = "0x" + escaped - 0x10000;
+		// NaN means non-codepoint
+		// Support: Firefox<24
+		// Workaround erroneous numeric interpretation of +"0x"
+		return high !== high || escapedWhitespace ?
+			escaped :
+			high < 0 ?
+				// BMP codepoint
+				String.fromCharCode( high + 0x10000 ) :
+				// Supplemental Plane codepoint (surrogate pair)
+				String.fromCharCode( high >> 10 | 0xD800, high & 0x3FF | 0xDC00 );
+	},
+
+	// CSS string/identifier serialization
+	// https://drafts.csswg.org/cssom/#common-serializing-idioms
+	rcssescape = /([\0-\x1f\x7f]|^-?\d)|^-$|[^\x80-\uFFFF\w-]/g,
+	fcssescape = function( ch, asCodePoint ) {
+		if ( asCodePoint ) {
+
+			// U+0000 NULL becomes U+FFFD REPLACEMENT CHARACTER
+			if ( ch === "\0" ) {
+				return "\uFFFD";
+			}
+
+			// Control characters and (dependent upon position) numbers get escaped as code points
+			return ch.slice( 0, -1 ) + "\\" + ch.charCodeAt( ch.length - 1 ).toString( 16 ) + " ";
+		}
+
+		// Other potentially-special ASCII characters get backslash-escaped
+		return "\\" + ch;
+	},
+
+	// Used for iframes
+	// See setDocument()
+	// Removing the function wrapper causes a "Permission Denied"
+	// error in IE
+	unloadHandler = function() {
+		setDocument();
+	},
+
+	disabledAncestor = addCombinator(
+		function( elem ) {
+			return elem.disabled === true;
+		},
+		{ dir: "parentNode", next: "legend" }
+	);
+
+// Optimize for push.apply( _, NodeList )
+try {
+	push.apply(
+		(arr = slice.call( preferredDoc.childNodes )),
+		preferredDoc.childNodes
+	);
+	// Support: Android<4.0
+	// Detect silently failing push.apply
+	arr[ preferredDoc.childNodes.length ].nodeType;
+} catch ( e ) {
+	push = { apply: arr.length ?
+
+		// Leverage slice if possible
+		function( target, els ) {
+			push_native.apply( target, slice.call(els) );
+		} :
+
+		// Support: IE<9
+		// Otherwise append directly
+		function( target, els ) {
+			var j = target.length,
+				i = 0;
+			// Can't trust NodeList.length
+			while ( (target[j++] = els[i++]) ) {}
+			target.length = j - 1;
+		}
+	};
+}
+
+function Sizzle( selector, context, results, seed ) {
+	var m, i, elem, nid, match, groups, newSelector,
+		newContext = context && context.ownerDocument,
+
+		// nodeType defaults to 9, since context defaults to document
+		nodeType = context ? context.nodeType : 9;
+
+	results = results || [];
+
+	// Return early from calls with invalid selector or context
+	if ( typeof selector !== "string" || !selector ||
+		nodeType !== 1 && nodeType !== 9 && nodeType !== 11 ) {
+
+		return results;
+	}
+
+	// Try to shortcut find operations (as opposed to filters) in HTML documents
+	if ( !seed ) {
+
+		if ( ( context ? context.ownerDocument || context : preferredDoc ) !== document ) {
+			setDocument( context );
+		}
+		context = context || document;
+
+		if ( documentIsHTML ) {
+
+			// If the selector is sufficiently simple, try using a "get*By*" DOM method
+			// (excepting DocumentFragment context, where the methods don't exist)
+			if ( nodeType !== 11 && (match = rquickExpr.exec( selector )) ) {
+
+				// ID selector
+				if ( (m = match[1]) ) {
+
+					// Document context
+					if ( nodeType === 9 ) {
+						if ( (elem = context.getElementById( m )) ) {
+
+							// Support: IE, Opera, Webkit
+							// TODO: identify versions
+							// getElementById can match elements by name instead of ID
+							if ( elem.id === m ) {
+								results.push( elem );
+								return results;
+							}
+						} else {
+							return results;
+						}
+
+					// Element context
+					} else {
+
+						// Support: IE, Opera, Webkit
+						// TODO: identify versions
+						// getElementById can match elements by name instead of ID
+						if ( newContext && (elem = newContext.getElementById( m )) &&
+							contains( context, elem ) &&
+							elem.id === m ) {
+
+							results.push( elem );
+							return results;
+						}
+					}
+
+				// Type selector
+				} else if ( match[2] ) {
+					push.apply( results, context.getElementsByTagName( selector ) );
+					return results;
+
+				// Class selector
+				} else if ( (m = match[3]) && support.getElementsByClassName &&
+					context.getElementsByClassName ) {
+
+					push.apply( results, context.getElementsByClassName( m ) );
+					return results;
+				}
+			}
+
+			// Take advantage of querySelectorAll
+			if ( support.qsa &&
+				!compilerCache[ selector + " " ] &&
+				(!rbuggyQSA || !rbuggyQSA.test( selector )) ) {
+
+				if ( nodeType !== 1 ) {
+					newContext = context;
+					newSelector = selector;
+
+				// qSA looks outside Element context, which is not what we want
+				// Thanks to Andrew Dupont for this workaround technique
+				// Support: IE <=8
+				// Exclude object elements
+				} else if ( context.nodeName.toLowerCase() !== "object" ) {
+
+					// Capture the context ID, setting it first if necessary
+					if ( (nid = context.getAttribute( "id" )) ) {
+						nid = nid.replace( rcssescape, fcssescape );
+					} else {
+						context.setAttribute( "id", (nid = expando) );
+					}
+
+					// Prefix every selector in the list
+					groups = tokenize( selector );
+					i = groups.length;
+					while ( i-- ) {
+						groups[i] = "#" + nid + " " + toSelector( groups[i] );
+					}
+					newSelector = groups.join( "," );
+
+					// Expand context for sibling selectors
+					newContext = rsibling.test( selector ) && testContext( context.parentNode ) ||
+						context;
+				}
+
+				if ( newSelector ) {
+					try {
+						push.apply( results,
+							newContext.querySelectorAll( newSelector )
+						);
+						return results;
+					} catch ( qsaError ) {
+					} finally {
+						if ( nid === expando ) {
+							context.removeAttribute( "id" );
+						}
+					}
+				}
+			}
+		}
+	}
+
+	// All others
+	return select( selector.replace( rtrim, "$1" ), context, results, seed );
+}
+
+/**
+ * Create key-value caches of limited size
+ * @returns {function(string, object)} Returns the Object data after storing it on itself with
+ *	property name the (space-suffixed) string and (if the cache is larger than Expr.cacheLength)
+ *	deleting the oldest entry
+ */
+function createCache() {
+	var keys = [];
+
+	function cache( key, value ) {
+		// Use (key + " ") to avoid collision with native prototype properties (see Issue #157)
+		if ( keys.push( key + " " ) > Expr.cacheLength ) {
+			// Only keep the most recent entries
+			delete cache[ keys.shift() ];
+		}
+		return (cache[ key + " " ] = value);
+	}
+	return cache;
+}
+
+/**
+ * Mark a function for special use by Sizzle
+ * @param {Function} fn The function to mark
+ */
+function markFunction( fn ) {
+	fn[ expando ] = true;
+	return fn;
+}
+
+/**
+ * Support testing using an element
+ * @param {Function} fn Passed the created element and returns a boolean result
+ */
+function assert( fn ) {
+	var el = document.createElement("fieldset");
+
+	try {
+		return !!fn( el );
+	} catch (e) {
+		return false;
+	} finally {
+		// Remove from its parent by default
+		if ( el.parentNode ) {
+			el.parentNode.removeChild( el );
+		}
+		// release memory in IE
+		el = null;
+	}
+}
+
+/**
+ * Adds the same handler for all of the specified attrs
+ * @param {String} attrs Pipe-separated list of attributes
+ * @param {Function} handler The method that will be applied
+ */
+function addHandle( attrs, handler ) {
+	var arr = attrs.split("|"),
+		i = arr.length;
+
+	while ( i-- ) {
+		Expr.attrHandle[ arr[i] ] = handler;
+	}
+}
+
+/**
+ * Checks document order of two siblings
+ * @param {Element} a
+ * @param {Element} b
+ * @returns {Number} Returns less than 0 if a precedes b, greater than 0 if a follows b
+ */
+function siblingCheck( a, b ) {
+	var cur = b && a,
+		diff = cur && a.nodeType === 1 && b.nodeType === 1 &&
+			a.sourceIndex - b.sourceIndex;
+
+	// Use IE sourceIndex if available on both nodes
+	if ( diff ) {
+		return diff;
+	}
+
+	// Check if b follows a
+	if ( cur ) {
+		while ( (cur = cur.nextSibling) ) {
+			if ( cur === b ) {
+				return -1;
+			}
+		}
+	}
+
+	return a ? 1 : -1;
+}
+
+/**
+ * Returns a function to use in pseudos for input types
+ * @param {String} type
+ */
+function createInputPseudo( type ) {
+	return function( elem ) {
+		var name = elem.nodeName.toLowerCase();
+		return name === "input" && elem.type === type;
+	};
+}
+
+/**
+ * Returns a function to use in pseudos for buttons
+ * @param {String} type
+ */
+function createButtonPseudo( type ) {
+	return function( elem ) {
+		var name = elem.nodeName.toLowerCase();
+		return (name === "input" || name === "button") && elem.type === type;
+	};
+}
+
+/**
+ * Returns a function to use in pseudos for :enabled/:disabled
+ * @param {Boolean} disabled true for :disabled; false for :enabled
+ */
+function createDisabledPseudo( disabled ) {
+	// Known :disabled false positives:
+	// IE: *[disabled]:not(button, input, select, textarea, optgroup, option, menuitem, fieldset)
+	// not IE: fieldset[disabled] > legend:nth-of-type(n+2) :can-disable
+	return function( elem ) {
+
+		// Check form elements and option elements for explicit disabling
+		return "label" in elem && elem.disabled === disabled ||
+			"form" in elem && elem.disabled === disabled ||
+
+			// Check non-disabled form elements for fieldset[disabled] ancestors
+			"form" in elem && elem.disabled === false && (
+				// Support: IE6-11+
+				// Ancestry is covered for us
+				elem.isDisabled === disabled ||
+
+				// Otherwise, assume any non-<option> under fieldset[disabled] is disabled
+				/* jshint -W018 */
+				elem.isDisabled !== !disabled &&
+					("label" in elem || !disabledAncestor( elem )) !== disabled
+			);
+	};
+}
+
+/**
+ * Returns a function to use in pseudos for positionals
+ * @param {Function} fn
+ */
+function createPositionalPseudo( fn ) {
+	return markFunction(function( argument ) {
+		argument = +argument;
+		return markFunction(function( seed, matches ) {
+			var j,
+				matchIndexes = fn( [], seed.length, argument ),
+				i = matchIndexes.length;
+
+			// Match elements found at the specified indexes
+			while ( i-- ) {
+				if ( seed[ (j = matchIndexes[i]) ] ) {
+					seed[j] = !(matches[j] = seed[j]);
+				}
+			}
+		});
+	});
+}
+
+/**
+ * Checks a node for validity as a Sizzle context
+ * @param {Element|Object=} context
+ * @returns {Element|Object|Boolean} The input node if acceptable, otherwise a falsy value
+ */
+function testContext( context ) {
+	return context && typeof context.getElementsByTagName !== "undefined" && context;
+}
+
+// Expose support vars for convenience
+support = Sizzle.support = {};
+
+/**
+ * Detects XML nodes
+ * @param {Element|Object} elem An element or a document
+ * @returns {Boolean} True iff elem is a non-HTML XML node
+ */
+isXML = Sizzle.isXML = function( elem ) {
+	// documentElement is verified for cases where it doesn't yet exist
+	// (such as loading iframes in IE - #4833)
+	var documentElement = elem && (elem.ownerDocument || elem).documentElement;
+	return documentElement ? documentElement.nodeName !== "HTML" : false;
+};
+
+/**
+ * Sets document-related variables once based on the current document
+ * @param {Element|Object} [doc] An element or document object to use to set the document
+ * @returns {Object} Returns the current document
+ */
+setDocument = Sizzle.setDocument = function( node ) {
+	var hasCompare, subWindow,
+		doc = node ? node.ownerDocument || node : preferredDoc;
+
+	// Return early if doc is invalid or already selected
+	if ( doc === document || doc.nodeType !== 9 || !doc.documentElement ) {
+		return document;
+	}
+
+	// Update global variables
+	document = doc;
+	docElem = document.documentElement;
+	documentIsHTML = !isXML( document );
+
+	// Support: IE 9-11, Edge
+	// Accessing iframe documents after unload throws "permission denied" errors (jQuery #13936)
+	if ( preferredDoc !== document &&
+		(subWindow = document.defaultView) && subWindow.top !== subWindow ) {
+
+		// Support: IE 11, Edge
+		if ( subWindow.addEventListener ) {
+			subWindow.addEventListener( "unload", unloadHandler, false );
+
+		// Support: IE 9 - 10 only
+		} else if ( subWindow.attachEvent ) {
+			subWindow.attachEvent( "onunload", unloadHandler );
+		}
+	}
+
+	/* Attributes
+	---------------------------------------------------------------------- */
+
+	// Support: IE<8
+	// Verify that getAttribute really returns attributes and not properties
+	// (excepting IE8 booleans)
+	support.attributes = assert(function( el ) {
+		el.className = "i";
+		return !el.getAttribute("className");
+	});
+
+	/* getElement(s)By*
+	---------------------------------------------------------------------- */
+
+	// Check if getElementsByTagName("*") returns only elements
+	support.getElementsByTagName = assert(function( el ) {
+		el.appendChild( document.createComment("") );
+		return !el.getElementsByTagName("*").length;
+	});
+
+	// Support: IE<9
+	support.getElementsByClassName = rnative.test( document.getElementsByClassName );
+
+	// Support: IE<10
+	// Check if getElementById returns elements by name
+	// The broken getElementById methods don't pick up programmatically-set names,
+	// so use a roundabout getElementsByName test
+	support.getById = assert(function( el ) {
+		docElem.appendChild( el ).id = expando;
+		return !document.getElementsByName || !document.getElementsByName( expando ).length;
+	});
+
+	// ID find and filter
+	if ( support.getById ) {
+		Expr.find["ID"] = function( id, context ) {
+			if ( typeof context.getElementById !== "undefined" && documentIsHTML ) {
+				var m = context.getElementById( id );
+				return m ? [ m ] : [];
+			}
+		};
+		Expr.filter["ID"] = function( id ) {
+			var attrId = id.replace( runescape, funescape );
+			return function( elem ) {
+				return elem.getAttribute("id") === attrId;
+			};
+		};
+	} else {
+		// Support: IE6/7
+		// getElementById is not reliable as a find shortcut
+		delete Expr.find["ID"];
+
+		Expr.filter["ID"] =  function( id ) {
+			var attrId = id.replace( runescape, funescape );
+			return function( elem ) {
+				var node = typeof elem.getAttributeNode !== "undefined" &&
+					elem.getAttributeNode("id");
+				return node && node.value === attrId;
+			};
+		};
+	}
+
+	// Tag
+	Expr.find["TAG"] = support.getElementsByTagName ?
+		function( tag, context ) {
+			if ( typeof context.getElementsByTagName !== "undefined" ) {
+				return context.getElementsByTagName( tag );
+
+			// DocumentFragment nodes don't have gEBTN
+			} else if ( support.qsa ) {
+				return context.querySelectorAll( tag );
+			}
+		} :
+
+		function( tag, context ) {
+			var elem,
+				tmp = [],
+				i = 0,
+				// By happy coincidence, a (broken) gEBTN appears on DocumentFragment nodes too
+				results = context.getElementsByTagName( tag );
+
+			// Filter out possible comments
+			if ( tag === "*" ) {
+				while ( (elem = results[i++]) ) {
+					if ( elem.nodeType === 1 ) {
+						tmp.push( elem );
+					}
+				}
+
+				return tmp;
+			}
+			return results;
+		};
+
+	// Class
+	Expr.find["CLASS"] = support.getElementsByClassName && function( className, context ) {
+		if ( typeof context.getElementsByClassName !== "undefined" && documentIsHTML ) {
+			return context.getElementsByClassName( className );
+		}
+	};
+
+	/* QSA/matchesSelector
+	---------------------------------------------------------------------- */
+
+	// QSA and matchesSelector support
+
+	// matchesSelector(:active) reports false when true (IE9/Opera 11.5)
+	rbuggyMatches = [];
+
+	// qSa(:focus) reports false when true (Chrome 21)
+	// We allow this because of a bug in IE8/9 that throws an error
+	// whenever `document.activeElement` is accessed on an iframe
+	// So, we allow :focus to pass through QSA all the time to avoid the IE error
+	// See https://bugs.jquery.com/ticket/13378
+	rbuggyQSA = [];
+
+	if ( (support.qsa = rnative.test( document.querySelectorAll )) ) {
+		// Build QSA regex
+		// Regex strategy adopted from Diego Perini
+		assert(function( el ) {
+			// Select is set to empty string on purpose
+			// This is to test IE's treatment of not explicitly
+			// setting a boolean content attribute,
+			// since its presence should be enough
+			// https://bugs.jquery.com/ticket/12359
+			docElem.appendChild( el ).innerHTML = "<a id='" + expando + "'></a>" +
+				"<select id='" + expando + "-\r\\' msallowcapture=''>" +
+				"<option selected=''></option></select>";
+
+			// Support: IE8, Opera 11-12.16
+			// Nothing should be selected when empty strings follow ^= or $= or *=
+			// The test attribute must be unknown in Opera but "safe" for WinRT
+			// https://msdn.microsoft.com/en-us/library/ie/hh465388.aspx#attribute_section
+			if ( el.querySelectorAll("[msallowcapture^='']").length ) {
+				rbuggyQSA.push( "[*^$]=" + whitespace + "*(?:''|\"\")" );
+			}
+
+			// Support: IE8
+			// Boolean attributes and "value" are not treated correctly
+			if ( !el.querySelectorAll("[selected]").length ) {
+				rbuggyQSA.push( "\\[" + whitespace + "*(?:value|" + booleans + ")" );
+			}
+
+			// Support: Chrome<29, Android<4.4, Safari<7.0+, iOS<7.0+, PhantomJS<1.9.8+
+			if ( !el.querySelectorAll( "[id~=" + expando + "-]" ).length ) {
+				rbuggyQSA.push("~=");
+			}
+
+			// Webkit/Opera - :checked should return selected option elements
+			// http://www.w3.org/TR/2011/REC-css3-selectors-20110929/#checked
+			// IE8 throws error here and will not see later tests
+			if ( !el.querySelectorAll(":checked").length ) {
+				rbuggyQSA.push(":checked");
+			}
+
+			// Support: Safari 8+, iOS 8+
+			// https://bugs.webkit.org/show_bug.cgi?id=136851
+			// In-page `selector#id sibling-combinator selector` fails
+			if ( !el.querySelectorAll( "a#" + expando + "+*" ).length ) {
+				rbuggyQSA.push(".#.+[+~]");
+			}
+		});
+
+		assert(function( el ) {
+			el.innerHTML = "<a href='' disabled='disabled'></a>" +
+				"<select disabled='disabled'><option/></select>";
+
+			// Support: Windows 8 Native Apps
+			// The type and name attributes are restricted during .innerHTML assignment
+			var input = document.createElement("input");
+			input.setAttribute( "type", "hidden" );
+			el.appendChild( input ).setAttribute( "name", "D" );
+
+			// Support: IE8
+			// Enforce case-sensitivity of name attribute
+			if ( el.querySelectorAll("[name=d]").length ) {
+				rbuggyQSA.push( "name" + whitespace + "*[*^$|!~]?=" );
+			}
+
+			// FF 3.5 - :enabled/:disabled and hidden elements (hidden elements are still enabled)
+			// IE8 throws error here and will not see later tests
+			if ( el.querySelectorAll(":enabled").length !== 2 ) {
+				rbuggyQSA.push( ":enabled", ":disabled" );
+			}
+
+			// Support: IE9-11+
+			// IE's :disabled selector does not pick up the children of disabled fieldsets
+			docElem.appendChild( el ).disabled = true;
+			if ( el.querySelectorAll(":disabled").length !== 2 ) {
+				rbuggyQSA.push( ":enabled", ":disabled" );
+			}
+
+			// Opera 10-11 does not throw on post-comma invalid pseudos
+			el.querySelectorAll("*,:x");
+			rbuggyQSA.push(",.*:");
+		});
+	}
+
+	if ( (support.matchesSelector = rnative.test( (matches = docElem.matches ||
+		docElem.webkitMatchesSelector ||
+		docElem.mozMatchesSelector ||
+		docElem.oMatchesSelector ||
+		docElem.msMatchesSelector) )) ) {
+
+		assert(function( el ) {
+			// Check to see if it's possible to do matchesSelector
+			// on a disconnected node (IE 9)
+			support.disconnectedMatch = matches.call( el, "*" );
+
+			// This should fail with an exception
+			// Gecko does not error, returns false instead
+			matches.call( el, "[s!='']:x" );
+			rbuggyMatches.push( "!=", pseudos );
+		});
+	}
+
+	rbuggyQSA = rbuggyQSA.length && new RegExp( rbuggyQSA.join("|") );
+	rbuggyMatches = rbuggyMatches.length && new RegExp( rbuggyMatches.join("|") );
+
+	/* Contains
+	---------------------------------------------------------------------- */
+	hasCompare = rnative.test( docElem.compareDocumentPosition );
+
+	// Element contains another
+	// Purposefully self-exclusive
+	// As in, an element does not contain itself
+	contains = hasCompare || rnative.test( docElem.contains ) ?
+		function( a, b ) {
+			var adown = a.nodeType === 9 ? a.documentElement : a,
+				bup = b && b.parentNode;
+			return a === bup || !!( bup && bup.nodeType === 1 && (
+				adown.contains ?
+					adown.contains( bup ) :
+					a.compareDocumentPosition && a.compareDocumentPosition( bup ) & 16
+			));
+		} :
+		function( a, b ) {
+			if ( b ) {
+				while ( (b = b.parentNode) ) {
+					if ( b === a ) {
+						return true;
+					}
+				}
+			}
+			return false;
+		};
+
+	/* Sorting
+	---------------------------------------------------------------------- */
+
+	// Document order sorting
+	sortOrder = hasCompare ?
+	function( a, b ) {
+
+		// Flag for duplicate removal
+		if ( a === b ) {
+			hasDuplicate = true;
+			return 0;
+		}
+
+		// Sort on method existence if only one input has compareDocumentPosition
+		var compare = !a.compareDocumentPosition - !b.compareDocumentPosition;
+		if ( compare ) {
+			return compare;
+		}
+
+		// Calculate position if both inputs belong to the same document
+		compare = ( a.ownerDocument || a ) === ( b.ownerDocument || b ) ?
+			a.compareDocumentPosition( b ) :
+
+			// Otherwise we know they are disconnected
+			1;
+
+		// Disconnected nodes
+		if ( compare & 1 ||
+			(!support.sortDetached && b.compareDocumentPosition( a ) === compare) ) {
+
+			// Choose the first element that is related to our preferred document
+			if ( a === document || a.ownerDocument === preferredDoc && contains(preferredDoc, a) ) {
+				return -1;
+			}
+			if ( b === document || b.ownerDocument === preferredDoc && contains(preferredDoc, b) ) {
+				return 1;
+			}
+
+			// Maintain original order
+			return sortInput ?
+				( indexOf( sortInput, a ) - indexOf( sortInput, b ) ) :
+				0;
+		}
+
+		return compare & 4 ? -1 : 1;
+	} :
+	function( a, b ) {
+		// Exit early if the nodes are identical
+		if ( a === b ) {
+			hasDuplicate = true;
+			return 0;
+		}
+
+		var cur,
+			i = 0,
+			aup = a.parentNode,
+			bup = b.parentNode,
+			ap = [ a ],
+			bp = [ b ];
+
+		// Parentless nodes are either documents or disconnected
+		if ( !aup || !bup ) {
+			return a === document ? -1 :
+				b === document ? 1 :
+				aup ? -1 :
+				bup ? 1 :
+				sortInput ?
+				( indexOf( sortInput, a ) - indexOf( sortInput, b ) ) :
+				0;
+
+		// If the nodes are siblings, we can do a quick check
+		} else if ( aup === bup ) {
+			return siblingCheck( a, b );
+		}
+
+		// Otherwise we need full lists of their ancestors for comparison
+		cur = a;
+		while ( (cur = cur.parentNode) ) {
+			ap.unshift( cur );
+		}
+		cur = b;
+		while ( (cur = cur.parentNode) ) {
+			bp.unshift( cur );
+		}
+
+		// Walk down the tree looking for a discrepancy
+		while ( ap[i] === bp[i] ) {
+			i++;
+		}
+
+		return i ?
+			// Do a sibling check if the nodes have a common ancestor
+			siblingCheck( ap[i], bp[i] ) :
+
+			// Otherwise nodes in our document sort first
+			ap[i] === preferredDoc ? -1 :
+			bp[i] === preferredDoc ? 1 :
+			0;
+	};
+
+	return document;
+};
+
+Sizzle.matches = function( expr, elements ) {
+	return Sizzle( expr, null, null, elements );
+};
+
+Sizzle.matchesSelector = function( elem, expr ) {
+	// Set document vars if needed
+	if ( ( elem.ownerDocument || elem ) !== document ) {
+		setDocument( elem );
+	}
+
+	// Make sure that attribute selectors are quoted
+	expr = expr.replace( rattributeQuotes, "='$1']" );
+
+	if ( support.matchesSelector && documentIsHTML &&
+		!compilerCache[ expr + " " ] &&
+		( !rbuggyMatches || !rbuggyMatches.test( expr ) ) &&
+		( !rbuggyQSA     || !rbuggyQSA.test( expr ) ) ) {
+
+		try {
+			var ret = matches.call( elem, expr );
+
+			// IE 9's matchesSelector returns false on disconnected nodes
+			if ( ret || support.disconnectedMatch ||
+					// As well, disconnected nodes are said to be in a document
+					// fragment in IE 9
+					elem.document && elem.document.nodeType !== 11 ) {
+				return ret;
+			}
+		} catch (e) {}
+	}
+
+	return Sizzle( expr, document, null, [ elem ] ).length > 0;
+};
+
+Sizzle.contains = function( context, elem ) {
+	// Set document vars if needed
+	if ( ( context.ownerDocument || context ) !== document ) {
+		setDocument( context );
+	}
+	return contains( context, elem );
+};
+
+Sizzle.attr = function( elem, name ) {
+	// Set document vars if needed
+	if ( ( elem.ownerDocument || elem ) !== document ) {
+		setDocument( elem );
+	}
+
+	var fn = Expr.attrHandle[ name.toLowerCase() ],
+		// Don't get fooled by Object.prototype properties (jQuery #13807)
+		val = fn && hasOwn.call( Expr.attrHandle, name.toLowerCase() ) ?
+			fn( elem, name, !documentIsHTML ) :
+			undefined;
+
+	return val !== undefined ?
+		val :
+		support.attributes || !documentIsHTML ?
+			elem.getAttribute( name ) :
+			(val = elem.getAttributeNode(name)) && val.specified ?
+				val.value :
+				null;
+};
+
+Sizzle.escape = function( sel ) {
+	return (sel + "").replace( rcssescape, fcssescape );
+};
+
+Sizzle.error = function( msg ) {
+	throw new Error( "Syntax error, unrecognized expression: " + msg );
+};
+
+/**
+ * Document sorting and removing duplicates
+ * @param {ArrayLike} results
+ */
+Sizzle.uniqueSort = function( results ) {
+	var elem,
+		duplicates = [],
+		j = 0,
+		i = 0;
+
+	// Unless we *know* we can detect duplicates, assume their presence
+	hasDuplicate = !support.detectDuplicates;
+	sortInput = !support.sortStable && results.slice( 0 );
+	results.sort( sortOrder );
+
+	if ( hasDuplicate ) {
+		while ( (elem = results[i++]) ) {
+			if ( elem === results[ i ] ) {
+				j = duplicates.push( i );
+			}
+		}
+		while ( j-- ) {
+			results.splice( duplicates[ j ], 1 );
+		}
+	}
+
+	// Clear input after sorting to release objects
+	// See https://github.com/jquery/sizzle/pull/225
+	sortInput = null;
+
+	return results;
+};
+
+/**
+ * Utility function for retrieving the text value of an array of DOM nodes
+ * @param {Array|Element} elem
+ */
+getText = Sizzle.getText = function( elem ) {
+	var node,
+		ret = "",
+		i = 0,
+		nodeType = elem.nodeType;
+
+	if ( !nodeType ) {
+		// If no nodeType, this is expected to be an array
+		while ( (node = elem[i++]) ) {
+			// Do not traverse comment nodes
+			ret += getText( node );
+		}
+	} else if ( nodeType === 1 || nodeType === 9 || nodeType === 11 ) {
+		// Use textContent for elements
+		// innerText usage removed for consistency of new lines (jQuery #11153)
+		if ( typeof elem.textContent === "string" ) {
+			return elem.textContent;
+		} else {
+			// Traverse its children
+			for ( elem = elem.firstChild; elem; elem = elem.nextSibling ) {
+				ret += getText( elem );
+			}
+		}
+	} else if ( nodeType === 3 || nodeType === 4 ) {
+		return elem.nodeValue;
+	}
+	// Do not include comment or processing instruction nodes
+
+	return ret;
+};
+
+Expr = Sizzle.selectors = {
+
+	// Can be adjusted by the user
+	cacheLength: 50,
+
+	createPseudo: markFunction,
+
+	match: matchExpr,
+
+	attrHandle: {},
+
+	find: {},
+
+	relative: {
+		">": { dir: "parentNode", first: true },
+		" ": { dir: "parentNode" },
+		"+": { dir: "previousSibling", first: true },
+		"~": { dir: "previousSibling" }
+	},
+
+	preFilter: {
+		"ATTR": function( match ) {
+			match[1] = match[1].replace( runescape, funescape );
+
+			// Move the given value to match[3] whether quoted or unquoted
+			match[3] = ( match[3] || match[4] || match[5] || "" ).replace( runescape, funescape );
+
+			if ( match[2] === "~=" ) {
+				match[3] = " " + match[3] + " ";
+			}
+
+			return match.slice( 0, 4 );
+		},
+
+		"CHILD": function( match ) {
+			/* matches from matchExpr["CHILD"]
+				1 type (only|nth|...)
+				2 what (child|of-type)
+				3 argument (even|odd|\d*|\d*n([+-]\d+)?|...)
+				4 xn-component of xn+y argument ([+-]?\d*n|)
+				5 sign of xn-component
+				6 x of xn-component
+				7 sign of y-component
+				8 y of y-component
+			*/
+			match[1] = match[1].toLowerCase();
+
+			if ( match[1].slice( 0, 3 ) === "nth" ) {
+				// nth-* requires argument
+				if ( !match[3] ) {
+					Sizzle.error( match[0] );
+				}
+
+				// numeric x and y parameters for Expr.filter.CHILD
+				// remember that false/true cast respectively to 0/1
+				match[4] = +( match[4] ? match[5] + (match[6] || 1) : 2 * ( match[3] === "even" || match[3] === "odd" ) );
+				match[5] = +( ( match[7] + match[8] ) || match[3] === "odd" );
+
+			// other types prohibit arguments
+			} else if ( match[3] ) {
+				Sizzle.error( match[0] );
+			}
+
+			return match;
+		},
+
+		"PSEUDO": function( match ) {
+			var excess,
+				unquoted = !match[6] && match[2];
+
+			if ( matchExpr["CHILD"].test( match[0] ) ) {
+				return null;
+			}
+
+			// Accept quoted arguments as-is
+			if ( match[3] ) {
+				match[2] = match[4] || match[5] || "";
+
+			// Strip excess characters from unquoted arguments
+			} else if ( unquoted && rpseudo.test( unquoted ) &&
+				// Get excess from tokenize (recursively)
+				(excess = tokenize( unquoted, true )) &&
+				// advance to the next closing parenthesis
+				(excess = unquoted.indexOf( ")", unquoted.length - excess ) - unquoted.length) ) {
+
+				// excess is a negative index
+				match[0] = match[0].slice( 0, excess );
+				match[2] = unquoted.slice( 0, excess );
+			}
+
+			// Return only captures needed by the pseudo filter method (type and argument)
+			return match.slice( 0, 3 );
+		}
+	},
+
+	filter: {
+
+		"TAG": function( nodeNameSelector ) {
+			var nodeName = nodeNameSelector.replace( runescape, funescape ).toLowerCase();
+			return nodeNameSelector === "*" ?
+				function() { return true; } :
+				function( elem ) {
+					return elem.nodeName && elem.nodeName.toLowerCase() === nodeName;
+				};
+		},
+
+		"CLASS": function( className ) {
+			var pattern = classCache[ className + " " ];
+
+			return pattern ||
+				(pattern = new RegExp( "(^|" + whitespace + ")" + className + "(" + whitespace + "|$)" )) &&
+				classCache( className, function( elem ) {
+					return pattern.test( typeof elem.className === "string" && elem.className || typeof elem.getAttribute !== "undefined" && elem.getAttribute("class") || "" );
+				});
+		},
+
+		"ATTR": function( name, operator, check ) {
+			return function( elem ) {
+				var result = Sizzle.attr( elem, name );
+
+				if ( result == null ) {
+					return operator === "!=";
+				}
+				if ( !operator ) {
+					return true;
+				}
+
+				result += "";
+
+				return operator === "=" ? result === check :
+					operator === "!=" ? result !== check :
+					operator === "^=" ? check && result.indexOf( check ) === 0 :
+					operator === "*=" ? check && result.indexOf( check ) > -1 :
+					operator === "$=" ? check && result.slice( -check.length ) === check :
+					operator === "~=" ? ( " " + result.replace( rwhitespace, " " ) + " " ).indexOf( check ) > -1 :
+					operator === "|=" ? result === check || result.slice( 0, check.length + 1 ) === check + "-" :
+					false;
+			};
+		},
+
+		"CHILD": function( type, what, argument, first, last ) {
+			var simple = type.slice( 0, 3 ) !== "nth",
+				forward = type.slice( -4 ) !== "last",
+				ofType = what === "of-type";
+
+			return first === 1 && last === 0 ?
+
+				// Shortcut for :nth-*(n)
+				function( elem ) {
+					return !!elem.parentNode;
+				} :
+
+				function( elem, context, xml ) {
+					var cache, uniqueCache, outerCache, node, nodeIndex, start,
+						dir = simple !== forward ? "nextSibling" : "previousSibling",
+						parent = elem.parentNode,
+						name = ofType && elem.nodeName.toLowerCase(),
+						useCache = !xml && !ofType,
+						diff = false;
+
+					if ( parent ) {
+
+						// :(first|last|only)-(child|of-type)
+						if ( simple ) {
+							while ( dir ) {
+								node = elem;
+								while ( (node = node[ dir ]) ) {
+									if ( ofType ?
+										node.nodeName.toLowerCase() === name :
+										node.nodeType === 1 ) {
+
+										return false;
+									}
+								}
+								// Reverse direction for :only-* (if we haven't yet done so)
+								start = dir = type === "only" && !start && "nextSibling";
+							}
+							return true;
+						}
+
+						start = [ forward ? parent.firstChild : parent.lastChild ];
+
+						// non-xml :nth-child(...) stores cache data on `parent`
+						if ( forward && useCache ) {
+
+							// Seek `elem` from a previously-cached index
+
+							// ...in a gzip-friendly way
+							node = parent;
+							outerCache = node[ expando ] || (node[ expando ] = {});
+
+							// Support: IE <9 only
+							// Defend against cloned attroperties (jQuery gh-1709)
+							uniqueCache = outerCache[ node.uniqueID ] ||
+								(outerCache[ node.uniqueID ] = {});
+
+							cache = uniqueCache[ type ] || [];
+							nodeIndex = cache[ 0 ] === dirruns && cache[ 1 ];
+							diff = nodeIndex && cache[ 2 ];
+							node = nodeIndex && parent.childNodes[ nodeIndex ];
+
+							while ( (node = ++nodeIndex && node && node[ dir ] ||
+
+								// Fallback to seeking `elem` from the start
+								(diff = nodeIndex = 0) || start.pop()) ) {
+
+								// When found, cache indexes on `parent` and break
+								if ( node.nodeType === 1 && ++diff && node === elem ) {
+									uniqueCache[ type ] = [ dirruns, nodeIndex, diff ];
+									break;
+								}
+							}
+
+						} else {
+							// Use previously-cached element index if available
+							if ( useCache ) {
+								// ...in a gzip-friendly way
+								node = elem;
+								outerCache = node[ expando ] || (node[ expando ] = {});
+
+								// Support: IE <9 only
+								// Defend against cloned attroperties (jQuery gh-1709)
+								uniqueCache = outerCache[ node.uniqueID ] ||
+									(outerCache[ node.uniqueID ] = {});
+
+								cache = uniqueCache[ type ] || [];
+								nodeIndex = cache[ 0 ] === dirruns && cache[ 1 ];
+								diff = nodeIndex;
+							}
+
+							// xml :nth-child(...)
+							// or :nth-last-child(...) or :nth(-last)?-of-type(...)
+							if ( diff === false ) {
+								// Use the same loop as above to seek `elem` from the start
+								while ( (node = ++nodeIndex && node && node[ dir ] ||
+									(diff = nodeIndex = 0) || start.pop()) ) {
+
+									if ( ( ofType ?
+										node.nodeName.toLowerCase() === name :
+										node.nodeType === 1 ) &&
+										++diff ) {
+
+										// Cache the index of each encountered element
+										if ( useCache ) {
+											outerCache = node[ expando ] || (node[ expando ] = {});
+
+											// Support: IE <9 only
+											// Defend against cloned attroperties (jQuery gh-1709)
+											uniqueCache = outerCache[ node.uniqueID ] ||
+												(outerCache[ node.uniqueID ] = {});
+
+											uniqueCache[ type ] = [ dirruns, diff ];
+										}
+
+										if ( node === elem ) {
+											break;
+										}
+									}
+								}
+							}
+						}
+
+						// Incorporate the offset, then check against cycle size
+						diff -= last;
+						return diff === first || ( diff % first === 0 && diff / first >= 0 );
+					}
+				};
+		},
+
+		"PSEUDO": function( pseudo, argument ) {
+			// pseudo-class names are case-insensitive
+			// http://www.w3.org/TR/selectors/#pseudo-classes
+			// Prioritize by case sensitivity in case custom pseudos are added with uppercase letters
+			// Remember that setFilters inherits from pseudos
+			var args,
+				fn = Expr.pseudos[ pseudo ] || Expr.setFilters[ pseudo.toLowerCase() ] ||
+					Sizzle.error( "unsupported pseudo: " + pseudo );
+
+			// The user may use createPseudo to indicate that
+			// arguments are needed to create the filter function
+			// just as Sizzle does
+			if ( fn[ expando ] ) {
+				return fn( argument );
+			}
+
+			// But maintain support for old signatures
+			if ( fn.length > 1 ) {
+				args = [ pseudo, pseudo, "", argument ];
+				return Expr.setFilters.hasOwnProperty( pseudo.toLowerCase() ) ?
+					markFunction(function( seed, matches ) {
+						var idx,
+							matched = fn( seed, argument ),
+							i = matched.length;
+						while ( i-- ) {
+							idx = indexOf( seed, matched[i] );
+							seed[ idx ] = !( matches[ idx ] = matched[i] );
+						}
+					}) :
+					function( elem ) {
+						return fn( elem, 0, args );
+					};
+			}
+
+			return fn;
+		}
+	},
+
+	pseudos: {
+		// Potentially complex pseudos
+		"not": markFunction(function( selector ) {
+			// Trim the selector passed to compile
+			// to avoid treating leading and trailing
+			// spaces as combinators
+			var input = [],
+				results = [],
+				matcher = compile( selector.replace( rtrim, "$1" ) );
+
+			return matcher[ expando ] ?
+				markFunction(function( seed, matches, context, xml ) {
+					var elem,
+						unmatched = matcher( seed, null, xml, [] ),
+						i = seed.length;
+
+					// Match elements unmatched by `matcher`
+					while ( i-- ) {
+						if ( (elem = unmatched[i]) ) {
+							seed[i] = !(matches[i] = elem);
+						}
+					}
+				}) :
+				function( elem, context, xml ) {
+					input[0] = elem;
+					matcher( input, null, xml, results );
+					// Don't keep the element (issue #299)
+					input[0] = null;
+					return !results.pop();
+				};
+		}),
+
+		"has": markFunction(function( selector ) {
+			return function( elem ) {
+				return Sizzle( selector, elem ).length > 0;
+			};
+		}),
+
+		"contains": markFunction(function( text ) {
+			text = text.replace( runescape, funescape );
+			return function( elem ) {
+				return ( elem.textContent || elem.innerText || getText( elem ) ).indexOf( text ) > -1;
+			};
+		}),
+
+		// "Whether an element is represented by a :lang() selector
+		// is based solely on the element's language value
+		// being equal to the identifier C,
+		// or beginning with the identifier C immediately followed by "-".
+		// The matching of C against the element's language value is performed case-insensitively.
+		// The identifier C does not have to be a valid language name."
+		// http://www.w3.org/TR/selectors/#lang-pseudo
+		"lang": markFunction( function( lang ) {
+			// lang value must be a valid identifier
+			if ( !ridentifier.test(lang || "") ) {
+				Sizzle.error( "unsupported lang: " + lang );
+			}
+			lang = lang.replace( runescape, funescape ).toLowerCase();
+			return function( elem ) {
+				var elemLang;
+				do {
+					if ( (elemLang = documentIsHTML ?
+						elem.lang :
+						elem.getAttribute("xml:lang") || elem.getAttribute("lang")) ) {
+
+						elemLang = elemLang.toLowerCase();
+						return elemLang === lang || elemLang.indexOf( lang + "-" ) === 0;
+					}
+				} while ( (elem = elem.parentNode) && elem.nodeType === 1 );
+				return false;
+			};
+		}),
+
+		// Miscellaneous
+		"target": function( elem ) {
+			var hash = window.location && window.location.hash;
+			return hash && hash.slice( 1 ) === elem.id;
+		},
+
+		"root": function( elem ) {
+			return elem === docElem;
+		},
+
+		"focus": function( elem ) {
+			return elem === document.activeElement && (!document.hasFocus || document.hasFocus()) && !!(elem.type || elem.href || ~elem.tabIndex);
+		},
+
+		// Boolean properties
+		"enabled": createDisabledPseudo( false ),
+		"disabled": createDisabledPseudo( true ),
+
+		"checked": function( elem ) {
+			// In CSS3, :checked should return both checked and selected elements
+			// http://www.w3.org/TR/2011/REC-css3-selectors-20110929/#checked
+			var nodeName = elem.nodeName.toLowerCase();
+			return (nodeName === "input" && !!elem.checked) || (nodeName === "option" && !!elem.selected);
+		},
+
+		"selected": function( elem ) {
+			// Accessing this property makes selected-by-default
+			// options in Safari work properly
+			if ( elem.parentNode ) {
+				elem.parentNode.selectedIndex;
+			}
+
+			return elem.selected === true;
+		},
+
+		// Contents
+		"empty": function( elem ) {
+			// http://www.w3.org/TR/selectors/#empty-pseudo
+			// :empty is negated by element (1) or content nodes (text: 3; cdata: 4; entity ref: 5),
+			//   but not by others (comment: 8; processing instruction: 7; etc.)
+			// nodeType < 6 works because attributes (2) do not appear as children
+			for ( elem = elem.firstChild; elem; elem = elem.nextSibling ) {
+				if ( elem.nodeType < 6 ) {
+					return false;
+				}
+			}
+			return true;
+		},
+
+		"parent": function( elem ) {
+			return !Expr.pseudos["empty"]( elem );
+		},
+
+		// Element/input types
+		"header": function( elem ) {
+			return rheader.test( elem.nodeName );
+		},
+
+		"input": function( elem ) {
+			return rinputs.test( elem.nodeName );
+		},
+
+		"button": function( elem ) {
+			var name = elem.nodeName.toLowerCase();
+			return name === "input" && elem.type === "button" || name === "button";
+		},
+
+		"text": function( elem ) {
+			var attr;
+			return elem.nodeName.toLowerCase() === "input" &&
+				elem.type === "text" &&
+
+				// Support: IE<8
+				// New HTML5 attribute values (e.g., "search") appear with elem.type === "text"
+				( (attr = elem.getAttribute("type")) == null || attr.toLowerCase() === "text" );
+		},
+
+		// Position-in-collection
+		"first": createPositionalPseudo(function() {
+			return [ 0 ];
+		}),
+
+		"last": createPositionalPseudo(function( matchIndexes, length ) {
+			return [ length - 1 ];
+		}),
+
+		"eq": createPositionalPseudo(function( matchIndexes, length, argument ) {
+			return [ argument < 0 ? argument + length : argument ];
+		}),
+
+		"even": createPositionalPseudo(function( matchIndexes, length ) {
+			var i = 0;
+			for ( ; i < length; i += 2 ) {
+				matchIndexes.push( i );
+			}
+			return matchIndexes;
+		}),
+
+		"odd": createPositionalPseudo(function( matchIndexes, length ) {
+			var i = 1;
+			for ( ; i < length; i += 2 ) {
+				matchIndexes.push( i );
+			}
+			return matchIndexes;
+		}),
+
+		"lt": createPositionalPseudo(function( matchIndexes, length, argument ) {
+			var i = argument < 0 ? argument + length : argument;
+			for ( ; --i >= 0; ) {
+				matchIndexes.push( i );
+			}
+			return matchIndexes;
+		}),
+
+		"gt": createPositionalPseudo(function( matchIndexes, length, argument ) {
+			var i = argument < 0 ? argument + length : argument;
+			for ( ; ++i < length; ) {
+				matchIndexes.push( i );
+			}
+			return matchIndexes;
+		})
+	}
+};
+
+Expr.pseudos["nth"] = Expr.pseudos["eq"];
+
+// Add button/input type pseudos
+for ( i in { radio: true, checkbox: true, file: true, password: true, image: true } ) {
+	Expr.pseudos[ i ] = createInputPseudo( i );
+}
+for ( i in { submit: true, reset: true } ) {
+	Expr.pseudos[ i ] = createButtonPseudo( i );
+}
+
+// Easy API for creating new setFilters
+function setFilters() {}
+setFilters.prototype = Expr.filters = Expr.pseudos;
+Expr.setFilters = new setFilters();
+
+tokenize = Sizzle.tokenize = function( selector, parseOnly ) {
+	var matched, match, tokens, type,
+		soFar, groups, preFilters,
+		cached = tokenCache[ selector + " " ];
+
+	if ( cached ) {
+		return parseOnly ? 0 : cached.slice( 0 );
+	}
+
+	soFar = selector;
+	groups = [];
+	preFilters = Expr.preFilter;
+
+	while ( soFar ) {
+
+		// Comma and first run
+		if ( !matched || (match = rcomma.exec( soFar )) ) {
+			if ( match ) {
+				// Don't consume trailing commas as valid
+				soFar = soFar.slice( match[0].length ) || soFar;
+			}
+			groups.push( (tokens = []) );
+		}
+
+		matched = false;
+
+		// Combinators
+		if ( (match = rcombinators.exec( soFar )) ) {
+			matched = match.shift();
+			tokens.push({
+				value: matched,
+				// Cast descendant combinators to space
+				type: match[0].replace( rtrim, " " )
+			});
+			soFar = soFar.slice( matched.length );
+		}
+
+		// Filters
+		for ( type in Expr.filter ) {
+			if ( (match = matchExpr[ type ].exec( soFar )) && (!preFilters[ type ] ||
+				(match = preFilters[ type ]( match ))) ) {
+				matched = match.shift();
+				tokens.push({
+					value: matched,
+					type: type,
+					matches: match
+				});
+				soFar = soFar.slice( matched.length );
+			}
+		}
+
+		if ( !matched ) {
+			break;
+		}
+	}
+
+	// Return the length of the invalid excess
+	// if we're just parsing
+	// Otherwise, throw an error or return tokens
+	return parseOnly ?
+		soFar.length :
+		soFar ?
+			Sizzle.error( selector ) :
+			// Cache the tokens
+			tokenCache( selector, groups ).slice( 0 );
+};
+
+function toSelector( tokens ) {
+	var i = 0,
+		len = tokens.length,
+		selector = "";
+	for ( ; i < len; i++ ) {
+		selector += tokens[i].value;
+	}
+	return selector;
+}
+
+function addCombinator( matcher, combinator, base ) {
+	var dir = combinator.dir,
+		skip = combinator.next,
+		key = skip || dir,
+		checkNonElements = base && key === "parentNode",
+		doneName = done++;
+
+	return combinator.first ?
+		// Check against closest ancestor/preceding element
+		function( elem, context, xml ) {
+			while ( (elem = elem[ dir ]) ) {
+				if ( elem.nodeType === 1 || checkNonElements ) {
+					return matcher( elem, context, xml );
+				}
+			}
+		} :
+
+		// Check against all ancestor/preceding elements
+		function( elem, context, xml ) {
+			var oldCache, uniqueCache, outerCache,
+				newCache = [ dirruns, doneName ];
+
+			// We can't set arbitrary data on XML nodes, so they don't benefit from combinator caching
+			if ( xml ) {
+				while ( (elem = elem[ dir ]) ) {
+					if ( elem.nodeType === 1 || checkNonElements ) {
+						if ( matcher( elem, context, xml ) ) {
+							return true;
+						}
+					}
+				}
+			} else {
+				while ( (elem = elem[ dir ]) ) {
+					if ( elem.nodeType === 1 || checkNonElements ) {
+						outerCache = elem[ expando ] || (elem[ expando ] = {});
+
+						// Support: IE <9 only
+						// Defend against cloned attroperties (jQuery gh-1709)
+						uniqueCache = outerCache[ elem.uniqueID ] || (outerCache[ elem.uniqueID ] = {});
+
+						if ( skip && skip === elem.nodeName.toLowerCase() ) {
+							elem = elem[ dir ] || elem;
+						} else if ( (oldCache = uniqueCache[ key ]) &&
+							oldCache[ 0 ] === dirruns && oldCache[ 1 ] === doneName ) {
+
+							// Assign to newCache so results back-propagate to previous elements
+							return (newCache[ 2 ] = oldCache[ 2 ]);
+						} else {
+							// Reuse newcache so results back-propagate to previous elements
+							uniqueCache[ key ] = newCache;
+
+							// A match means we're done; a fail means we have to keep checking
+							if ( (newCache[ 2 ] = matcher( elem, context, xml )) ) {
+								return true;
+							}
+						}
+					}
+				}
+			}
+		};
+}
+
+function elementMatcher( matchers ) {
+	return matchers.length > 1 ?
+		function( elem, context, xml ) {
+			var i = matchers.length;
+			while ( i-- ) {
+				if ( !matchers[i]( elem, context, xml ) ) {
+					return false;
+				}
+			}
+			return true;
+		} :
+		matchers[0];
+}
+
+function multipleContexts( selector, contexts, results ) {
+	var i = 0,
+		len = contexts.length;
+	for ( ; i < len; i++ ) {
+		Sizzle( selector, contexts[i], results );
+	}
+	return results;
+}
+
+function condense( unmatched, map, filter, context, xml ) {
+	var elem,
+		newUnmatched = [],
+		i = 0,
+		len = unmatched.length,
+		mapped = map != null;
+
+	for ( ; i < len; i++ ) {
+		if ( (elem = unmatched[i]) ) {
+			if ( !filter || filter( elem, context, xml ) ) {
+				newUnmatched.push( elem );
+				if ( mapped ) {
+					map.push( i );
+				}
+			}
+		}
+	}
+
+	return newUnmatched;
+}
+
+function setMatcher( preFilter, selector, matcher, postFilter, postFinder, postSelector ) {
+	if ( postFilter && !postFilter[ expando ] ) {
+		postFilter = setMatcher( postFilter );
+	}
+	if ( postFinder && !postFinder[ expando ] ) {
+		postFinder = setMatcher( postFinder, postSelector );
+	}
+	return markFunction(function( seed, results, context, xml ) {
+		var temp, i, elem,
+			preMap = [],
+			postMap = [],
+			preexisting = results.length,
+
+			// Get initial elements from seed or context
+			elems = seed || multipleContexts( selector || "*", context.nodeType ? [ context ] : context, [] ),
+
+			// Prefilter to get matcher input, preserving a map for seed-results synchronization
+			matcherIn = preFilter && ( seed || !selector ) ?
+				condense( elems, preMap, preFilter, context, xml ) :
+				elems,
+
+			matcherOut = matcher ?
+				// If we have a postFinder, or filtered seed, or non-seed postFilter or preexisting results,
+				postFinder || ( seed ? preFilter : preexisting || postFilter ) ?
+
+					// ...intermediate processing is necessary
+					[] :
+
+					// ...otherwise use results directly
+					results :
+				matcherIn;
+
+		// Find primary matches
+		if ( matcher ) {
+			matcher( matcherIn, matcherOut, context, xml );
+		}
+
+		// Apply postFilter
+		if ( postFilter ) {
+			temp = condense( matcherOut, postMap );
+			postFilter( temp, [], context, xml );
+
+			// Un-match failing elements by moving them back to matcherIn
+			i = temp.length;
+			while ( i-- ) {
+				if ( (elem = temp[i]) ) {
+					matcherOut[ postMap[i] ] = !(matcherIn[ postMap[i] ] = elem);
+				}
+			}
+		}
+
+		if ( seed ) {
+			if ( postFinder || preFilter ) {
+				if ( postFinder ) {
+					// Get the final matcherOut by condensing this intermediate into postFinder contexts
+					temp = [];
+					i = matcherOut.length;
+					while ( i-- ) {
+						if ( (elem = matcherOut[i]) ) {
+							// Restore matcherIn since elem is not yet a final match
+							temp.push( (matcherIn[i] = elem) );
+						}
+					}
+					postFinder( null, (matcherOut = []), temp, xml );
+				}
+
+				// Move matched elements from seed to results to keep them synchronized
+				i = matcherOut.length;
+				while ( i-- ) {
+					if ( (elem = matcherOut[i]) &&
+						(temp = postFinder ? indexOf( seed, elem ) : preMap[i]) > -1 ) {
+
+						seed[temp] = !(results[temp] = elem);
+					}
+				}
+			}
+
+		// Add elements to results, through postFinder if defined
+		} else {
+			matcherOut = condense(
+				matcherOut === results ?
+					matcherOut.splice( preexisting, matcherOut.length ) :
+					matcherOut
+			);
+			if ( postFinder ) {
+				postFinder( null, results, matcherOut, xml );
+			} else {
+				push.apply( results, matcherOut );
+			}
+		}
+	});
+}
+
+function matcherFromTokens( tokens ) {
+	var checkContext, matcher, j,
+		len = tokens.length,
+		leadingRelative = Expr.relative[ tokens[0].type ],
+		implicitRelative = leadingRelative || Expr.relative[" "],
+		i = leadingRelative ? 1 : 0,
+
+		// The foundational matcher ensures that elements are reachable from top-level context(s)
+		matchContext = addCombinator( function( elem ) {
+			return elem === checkContext;
+		}, implicitRelative, true ),
+		matchAnyContext = addCombinator( function( elem ) {
+			return indexOf( checkContext, elem ) > -1;
+		}, implicitRelative, true ),
+		matchers = [ function( elem, context, xml ) {
+			var ret = ( !leadingRelative && ( xml || context !== outermostContext ) ) || (
+				(checkContext = context).nodeType ?
+					matchContext( elem, context, xml ) :
+					matchAnyContext( elem, context, xml ) );
+			// Avoid hanging onto element (issue #299)
+			checkContext = null;
+			return ret;
+		} ];
+
+	for ( ; i < len; i++ ) {
+		if ( (matcher = Expr.relative[ tokens[i].type ]) ) {
+			matchers = [ addCombinator(elementMatcher( matchers ), matcher) ];
+		} else {
+			matcher = Expr.filter[ tokens[i].type ].apply( null, tokens[i].matches );
+
+			// Return special upon seeing a positional matcher
+			if ( matcher[ expando ] ) {
+				// Find the next relative operator (if any) for proper handling
+				j = ++i;
+				for ( ; j < len; j++ ) {
+					if ( Expr.relative[ tokens[j].type ] ) {
+						break;
+					}
+				}
+				return setMatcher(
+					i > 1 && elementMatcher( matchers ),
+					i > 1 && toSelector(
+						// If the preceding token was a descendant combinator, insert an implicit any-element `*`
+						tokens.slice( 0, i - 1 ).concat({ value: tokens[ i - 2 ].type === " " ? "*" : "" })
+					).replace( rtrim, "$1" ),
+					matcher,
+					i < j && matcherFromTokens( tokens.slice( i, j ) ),
+					j < len && matcherFromTokens( (tokens = tokens.slice( j )) ),
+					j < len && toSelector( tokens )
+				);
+			}
+			matchers.push( matcher );
+		}
+	}
+
+	return elementMatcher( matchers );
+}
+
+function matcherFromGroupMatchers( elementMatchers, setMatchers ) {
+	var bySet = setMatchers.length > 0,
+		byElement = elementMatchers.length > 0,
+		superMatcher = function( seed, context, xml, results, outermost ) {
+			var elem, j, matcher,
+				matchedCount = 0,
+				i = "0",
+				unmatched = seed && [],
+				setMatched = [],
+				contextBackup = outermostContext,
+				// We must always have either seed elements or outermost context
+				elems = seed || byElement && Expr.find["TAG"]( "*", outermost ),
+				// Use integer dirruns iff this is the outermost matcher
+				dirrunsUnique = (dirruns += contextBackup == null ? 1 : Math.random() || 0.1),
+				len = elems.length;
+
+			if ( outermost ) {
+				outermostContext = context === document || context || outermost;
+			}
+
+			// Add elements passing elementMatchers directly to results
+			// Support: IE<9, Safari
+			// Tolerate NodeList properties (IE: "length"; Safari: <number>) matching elements by id
+			for ( ; i !== len && (elem = elems[i]) != null; i++ ) {
+				if ( byElement && elem ) {
+					j = 0;
+					if ( !context && elem.ownerDocument !== document ) {
+						setDocument( elem );
+						xml = !documentIsHTML;
+					}
+					while ( (matcher = elementMatchers[j++]) ) {
+						if ( matcher( elem, context || document, xml) ) {
+							results.push( elem );
+							break;
+						}
+					}
+					if ( outermost ) {
+						dirruns = dirrunsUnique;
+					}
+				}
+
+				// Track unmatched elements for set filters
+				if ( bySet ) {
+					// They will have gone through all possible matchers
+					if ( (elem = !matcher && elem) ) {
+						matchedCount--;
+					}
+
+					// Lengthen the array for every element, matched or not
+					if ( seed ) {
+						unmatched.push( elem );
+					}
+				}
+			}
+
+			// `i` is now the count of elements visited above, and adding it to `matchedCount`
+			// makes the latter nonnegative.
+			matchedCount += i;
+
+			// Apply set filters to unmatched elements
+			// NOTE: This can be skipped if there are no unmatched elements (i.e., `matchedCount`
+			// equals `i`), unless we didn't visit _any_ elements in the above loop because we have
+			// no element matchers and no seed.
+			// Incrementing an initially-string "0" `i` allows `i` to remain a string only in that
+			// case, which will result in a "00" `matchedCount` that differs from `i` but is also
+			// numerically zero.
+			if ( bySet && i !== matchedCount ) {
+				j = 0;
+				while ( (matcher = setMatchers[j++]) ) {
+					matcher( unmatched, setMatched, context, xml );
+				}
+
+				if ( seed ) {
+					// Reintegrate element matches to eliminate the need for sorting
+					if ( matchedCount > 0 ) {
+						while ( i-- ) {
+							if ( !(unmatched[i] || setMatched[i]) ) {
+								setMatched[i] = pop.call( results );
+							}
+						}
+					}
+
+					// Discard index placeholder values to get only actual matches
+					setMatched = condense( setMatched );
+				}
+
+				// Add matches to results
+				push.apply( results, setMatched );
+
+				// Seedless set matches succeeding multiple successful matchers stipulate sorting
+				if ( outermost && !seed && setMatched.length > 0 &&
+					( matchedCount + setMatchers.length ) > 1 ) {
+
+					Sizzle.uniqueSort( results );
+				}
+			}
+
+			// Override manipulation of globals by nested matchers
+			if ( outermost ) {
+				dirruns = dirrunsUnique;
+				outermostContext = contextBackup;
+			}
+
+			return unmatched;
+		};
+
+	return bySet ?
+		markFunction( superMatcher ) :
+		superMatcher;
+}
+
+compile = Sizzle.compile = function( selector, match /* Internal Use Only */ ) {
+	var i,
+		setMatchers = [],
+		elementMatchers = [],
+		cached = compilerCache[ selector + " " ];
+
+	if ( !cached ) {
+		// Generate a function of recursive functions that can be used to check each element
+		if ( !match ) {
+			match = tokenize( selector );
+		}
+		i = match.length;
+		while ( i-- ) {
+			cached = matcherFromTokens( match[i] );
+			if ( cached[ expando ] ) {
+				setMatchers.push( cached );
+			} else {
+				elementMatchers.push( cached );
+			}
+		}
+
+		// Cache the compiled function
+		cached = compilerCache( selector, matcherFromGroupMatchers( elementMatchers, setMatchers ) );
+
+		// Save selector and tokenization
+		cached.selector = selector;
+	}
+	return cached;
+};
+
+/**
+ * A low-level selection function that works with Sizzle's compiled
+ *  selector functions
+ * @param {String|Function} selector A selector or a pre-compiled
+ *  selector function built with Sizzle.compile
+ * @param {Element} context
+ * @param {Array} [results]
+ * @param {Array} [seed] A set of elements to match against
+ */
+select = Sizzle.select = function( selector, context, results, seed ) {
+	var i, tokens, token, type, find,
+		compiled = typeof selector === "function" && selector,
+		match = !seed && tokenize( (selector = compiled.selector || selector) );
+
+	results = results || [];
+
+	// Try to minimize operations if there is only one selector in the list and no seed
+	// (the latter of which guarantees us context)
+	if ( match.length === 1 ) {
+
+		// Reduce context if the leading compound selector is an ID
+		tokens = match[0] = match[0].slice( 0 );
+		if ( tokens.length > 2 && (token = tokens[0]).type === "ID" &&
+				support.getById && context.nodeType === 9 && documentIsHTML &&
+				Expr.relative[ tokens[1].type ] ) {
+
+			context = ( Expr.find["ID"]( token.matches[0].replace(runescape, funescape), context ) || [] )[0];
+			if ( !context ) {
+				return results;
+
+			// Precompiled matchers will still verify ancestry, so step up a level
+			} else if ( compiled ) {
+				context = context.parentNode;
+			}
+
+			selector = selector.slice( tokens.shift().value.length );
+		}
+
+		// Fetch a seed set for right-to-left matching
+		i = matchExpr["needsContext"].test( selector ) ? 0 : tokens.length;
+		while ( i-- ) {
+			token = tokens[i];
+
+			// Abort if we hit a combinator
+			if ( Expr.relative[ (type = token.type) ] ) {
+				break;
+			}
+			if ( (find = Expr.find[ type ]) ) {
+				// Search, expanding context for leading sibling combinators
+				if ( (seed = find(
+					token.matches[0].replace( runescape, funescape ),
+					rsibling.test( tokens[0].type ) && testContext( context.parentNode ) || context
+				)) ) {
+
+					// If seed is empty or no tokens remain, we can return early
+					tokens.splice( i, 1 );
+					selector = seed.length && toSelector( tokens );
+					if ( !selector ) {
+						push.apply( results, seed );
+						return results;
+					}
+
+					break;
+				}
+			}
+		}
+	}
+
+	// Compile and execute a filtering function if one is not provided
+	// Provide `match` to avoid retokenization if we modified the selector above
+	( compiled || compile( selector, match ) )(
+		seed,
+		context,
+		!documentIsHTML,
+		results,
+		!context || rsibling.test( selector ) && testContext( context.parentNode ) || context
+	);
+	return results;
+};
+
+// One-time assignments
+
+// Sort stability
+support.sortStable = expando.split("").sort( sortOrder ).join("") === expando;
+
+// Support: Chrome 14-35+
+// Always assume duplicates if they aren't passed to the comparison function
+support.detectDuplicates = !!hasDuplicate;
+
+// Initialize against the default document
+setDocument();
+
+// Support: Webkit<537.32 - Safari 6.0.3/Chrome 25 (fixed in Chrome 27)
+// Detached nodes confoundingly follow *each other*
+support.sortDetached = assert(function( el ) {
+	// Should return 1, but returns 4 (following)
+	return el.compareDocumentPosition( document.createElement("fieldset") ) & 1;
+});
+
+// Support: IE<8
+// Prevent attribute/property "interpolation"
+// https://msdn.microsoft.com/en-us/library/ms536429%28VS.85%29.aspx
+if ( !assert(function( el ) {
+	el.innerHTML = "<a href='#'></a>";
+	return el.firstChild.getAttribute("href") === "#" ;
+}) ) {
+	addHandle( "type|href|height|width", function( elem, name, isXML ) {
+		if ( !isXML ) {
+			return elem.getAttribute( name, name.toLowerCase() === "type" ? 1 : 2 );
+		}
+	});
+}
+
+// Support: IE<9
+// Use defaultValue in place of getAttribute("value")
+if ( !support.attributes || !assert(function( el ) {
+	el.innerHTML = "<input/>";
+	el.firstChild.setAttribute( "value", "" );
+	return el.firstChild.getAttribute( "value" ) === "";
+}) ) {
+	addHandle( "value", function( elem, name, isXML ) {
+		if ( !isXML && elem.nodeName.toLowerCase() === "input" ) {
+			return elem.defaultValue;
+		}
+	});
+}
+
+// Support: IE<9
+// Use getAttributeNode to fetch booleans when getAttribute lies
+if ( !assert(function( el ) {
+	return el.getAttribute("disabled") == null;
+}) ) {
+	addHandle( booleans, function( elem, name, isXML ) {
+		var val;
+		if ( !isXML ) {
+			return elem[ name ] === true ? name.toLowerCase() :
+					(val = elem.getAttributeNode( name )) && val.specified ?
+					val.value :
+				null;
+		}
+	});
+}
+
+return Sizzle;
+
+})( window );
+
+
+
+jQuery.find = Sizzle;
+jQuery.expr = Sizzle.selectors;
+
+// Deprecated
+jQuery.expr[ ":" ] = jQuery.expr.pseudos;
+jQuery.uniqueSort = jQuery.unique = Sizzle.uniqueSort;
+jQuery.text = Sizzle.getText;
+jQuery.isXMLDoc = Sizzle.isXML;
+jQuery.contains = Sizzle.contains;
+jQuery.escapeSelector = Sizzle.escape;
+
+
+
+
+var dir = function( elem, dir, until ) {
+	var matched = [],
+		truncate = until !== undefined;
+
+	while ( ( elem = elem[ dir ] ) && elem.nodeType !== 9 ) {
+		if ( elem.nodeType === 1 ) {
+			if ( truncate && jQuery( elem ).is( until ) ) {
+				break;
+			}
+			matched.push( elem );
+		}
+	}
+	return matched;
+};
+
+
+var siblings = function( n, elem ) {
+	var matched = [];
+
+	for ( ; n; n = n.nextSibling ) {
+		if ( n.nodeType === 1 && n !== elem ) {
+			matched.push( n );
+		}
+	}
+
+	return matched;
+};
+
+
+var rneedsContext = jQuery.expr.match.needsContext;
+
+var rsingleTag = ( /^<([a-z][^\/\0>:\x20\t\r\n\f]*)[\x20\t\r\n\f]*\/?>(?:<\/\1>|)$/i );
+
+
+
+var risSimple = /^.[^:#\[\.,]*$/;
+
+// Implement the identical functionality for filter and not
+function winnow( elements, qualifier, not ) {
+	if ( jQuery.isFunction( qualifier ) ) {
+		return jQuery.grep( elements, function( elem, i ) {
+			return !!qualifier.call( elem, i, elem ) !== not;
+		} );
+
+	}
+
+	if ( qualifier.nodeType ) {
+		return jQuery.grep( elements, function( elem ) {
+			return ( elem === qualifier ) !== not;
+		} );
+
+	}
+
+	if ( typeof qualifier === "string" ) {
+		if ( risSimple.test( qualifier ) ) {
+			return jQuery.filter( qualifier, elements, not );
+		}
+
+		qualifier = jQuery.filter( qualifier, elements );
+	}
+
+	return jQuery.grep( elements, function( elem ) {
+		return ( indexOf.call( qualifier, elem ) > -1 ) !== not && elem.nodeType === 1;
+	} );
+}
+
+jQuery.filter = function( expr, elems, not ) {
+	var elem = elems[ 0 ];
+
+	if ( not ) {
+		expr = ":not(" + expr + ")";
+	}
+
+	return elems.length === 1 && elem.nodeType === 1 ?
+		jQuery.find.matchesSelector( elem, expr ) ? [ elem ] : [] :
+		jQuery.find.matches( expr, jQuery.grep( elems, function( elem ) {
+			return elem.nodeType === 1;
+		} ) );
+};
+
+jQuery.fn.extend( {
+	find: function( selector ) {
+		var i, ret,
+			len = this.length,
+			self = this;
+
+		if ( typeof selector !== "string" ) {
+			return this.pushStack( jQuery( selector ).filter( function() {
+				for ( i = 0; i < len; i++ ) {
+					if ( jQuery.contains( self[ i ], this ) ) {
+						return true;
+					}
+				}
+			} ) );
+		}
+
+		ret = this.pushStack( [] );
+
+		for ( i = 0; i < len; i++ ) {
+			jQuery.find( selector, self[ i ], ret );
+		}
+
+		return len > 1 ? jQuery.uniqueSort( ret ) : ret;
+	},
+	filter: function( selector ) {
+		return this.pushStack( winnow( this, selector || [], false ) );
+	},
+	not: function( selector ) {
+		return this.pushStack( winnow( this, selector || [], true ) );
+	},
+	is: function( selector ) {
+		return !!winnow(
+			this,
+
+			// If this is a positional/relative selector, check membership in the returned set
+			// so $("p:first").is("p:last") won't return true for a doc with two "p".
+			typeof selector === "string" && rneedsContext.test( selector ) ?
+				jQuery( selector ) :
+				selector || [],
+			false
+		).length;
+	}
+} );
+
+
+// Initialize a jQuery object
+
+
+// A central reference to the root jQuery(document)
+var rootjQuery,
+
+	// A simple way to check for HTML strings
+	// Prioritize #id over <tag> to avoid XSS via location.hash (#9521)
+	// Strict HTML recognition (#11290: must start with <)
+	// Shortcut simple #id case for speed
+	rquickExpr = /^(?:\s*(<[\w\W]+>)[^>]*|#([\w-]+))$/,
+
+	init = jQuery.fn.init = function( selector, context, root ) {
+		var match, elem;
+
+		// HANDLE: $(""), $(null), $(undefined), $(false)
+		if ( !selector ) {
+			return this;
+		}
+
+		// Method init() accepts an alternate rootjQuery
+		// so migrate can support jQuery.sub (gh-2101)
+		root = root || rootjQuery;
+
+		// Handle HTML strings
+		if ( typeof selector === "string" ) {
+			if ( selector[ 0 ] === "<" &&
+				selector[ selector.length - 1 ] === ">" &&
+				selector.length >= 3 ) {
+
+				// Assume that strings that start and end with <> are HTML and skip the regex check
+				match = [ null, selector, null ];
+
+			} else {
+				match = rquickExpr.exec( selector );
+			}
+
+			// Match html or make sure no context is specified for #id
+			if ( match && ( match[ 1 ] || !context ) ) {
+
+				// HANDLE: $(html) -> $(array)
+				if ( match[ 1 ] ) {
+					context = context instanceof jQuery ? context[ 0 ] : context;
+
+					// Option to run scripts is true for back-compat
+					// Intentionally let the error be thrown if parseHTML is not present
+					jQuery.merge( this, jQuery.parseHTML(
+						match[ 1 ],
+						context && context.nodeType ? context.ownerDocument || context : document,
+						true
+					) );
+
+					// HANDLE: $(html, props)
+					if ( rsingleTag.test( match[ 1 ] ) && jQuery.isPlainObject( context ) ) {
+						for ( match in context ) {
+
+							// Properties of context are called as methods if possible
+							if ( jQuery.isFunction( this[ match ] ) ) {
+								this[ match ]( context[ match ] );
+
+							// ...and otherwise set as attributes
+							} else {
+								this.attr( match, context[ match ] );
+							}
+						}
+					}
+
+					return this;
+
+				// HANDLE: $(#id)
+				} else {
+					elem = document.getElementById( match[ 2 ] );
+
+					if ( elem ) {
+
+						// Inject the element directly into the jQuery object
+						this[ 0 ] = elem;
+						this.length = 1;
+					}
+					return this;
+				}
+
+			// HANDLE: $(expr, $(...))
+			} else if ( !context || context.jquery ) {
+				return ( context || root ).find( selector );
+
+			// HANDLE: $(expr, context)
+			// (which is just equivalent to: $(context).find(expr)
+			} else {
+				return this.constructor( context ).find( selector );
+			}
+
+		// HANDLE: $(DOMElement)
+		} else if ( selector.nodeType ) {
+			this[ 0 ] = selector;
+			this.length = 1;
+			return this;
+
+		// HANDLE: $(function)
+		// Shortcut for document ready
+		} else if ( jQuery.isFunction( selector ) ) {
+			return root.ready !== undefined ?
+				root.ready( selector ) :
+
+				// Execute immediately if ready is not present
+				selector( jQuery );
+		}
+
+		return jQuery.makeArray( selector, this );
+	};
+
+// Give the init function the jQuery prototype for later instantiation
+init.prototype = jQuery.fn;
+
+// Initialize central reference
+rootjQuery = jQuery( document );
+
+
+var rparentsprev = /^(?:parents|prev(?:Until|All))/,
+
+	// Methods guaranteed to produce a unique set when starting from a unique set
+	guaranteedUnique = {
+		children: true,
+		contents: true,
+		next: true,
+		prev: true
+	};
+
+jQuery.fn.extend( {
+	has: function( target ) {
+		var targets = jQuery( target, this ),
+			l = targets.length;
+
+		return this.filter( function() {
+			var i = 0;
+			for ( ; i < l; i++ ) {
+				if ( jQuery.contains( this, targets[ i ] ) ) {
+					return true;
+				}
+			}
+		} );
+	},
+
+	closest: function( selectors, context ) {
+		var cur,
+			i = 0,
+			l = this.length,
+			matched = [],
+			targets = typeof selectors !== "string" && jQuery( selectors );
+
+		// Positional selectors never match, since there's no _selection_ context
+		if ( !rneedsContext.test( selectors ) ) {
+			for ( ; i < l; i++ ) {
+				for ( cur = this[ i ]; cur && cur !== context; cur = cur.parentNode ) {
+
+					// Always skip document fragments
+					if ( cur.nodeType < 11 && ( targets ?
+						targets.index( cur ) > -1 :
+
+						// Don't pass non-elements to Sizzle
+						cur.nodeType === 1 &&
+							jQuery.find.matchesSelector( cur, selectors ) ) ) {
+
+						matched.push( cur );
+						break;
+					}
+				}
+			}
+		}
+
+		return this.pushStack( matched.length > 1 ? jQuery.uniqueSort( matched ) : matched );
+	},
+
+	// Determine the position of an element within the set
+	index: function( elem ) {
+
+		// No argument, return index in parent
+		if ( !elem ) {
+			return ( this[ 0 ] && this[ 0 ].parentNode ) ? this.first().prevAll().length : -1;
+		}
+
+		// Index in selector
+		if ( typeof elem === "string" ) {
+			return indexOf.call( jQuery( elem ), this[ 0 ] );
+		}
+
+		// Locate the position of the desired element
+		return indexOf.call( this,
+
+			// If it receives a jQuery object, the first element is used
+			elem.jquery ? elem[ 0 ] : elem
+		);
+	},
+
+	add: function( selector, context ) {
+		return this.pushStack(
+			jQuery.uniqueSort(
+				jQuery.merge( this.get(), jQuery( selector, context ) )
+			)
+		);
+	},
+
+	addBack: function( selector ) {
+		return this.add( selector == null ?
+			this.prevObject : this.prevObject.filter( selector )
+		);
+	}
+} );
+
+function sibling( cur, dir ) {
+	while ( ( cur = cur[ dir ] ) && cur.nodeType !== 1 ) {}
+	return cur;
+}
+
+jQuery.each( {
+	parent: function( elem ) {
+		var parent = elem.parentNode;
+		return parent && parent.nodeType !== 11 ? parent : null;
+	},
+	parents: function( elem ) {
+		return dir( elem, "parentNode" );
+	},
+	parentsUntil: function( elem, i, until ) {
+		return dir( elem, "parentNode", until );
+	},
+	next: function( elem ) {
+		return sibling( elem, "nextSibling" );
+	},
+	prev: function( elem ) {
+		return sibling( elem, "previousSibling" );
+	},
+	nextAll: function( elem ) {
+		return dir( elem, "nextSibling" );
+	},
+	prevAll: function( elem ) {
+		return dir( elem, "previousSibling" );
+	},
+	nextUntil: function( elem, i, until ) {
+		return dir( elem, "nextSibling", until );
+	},
+	prevUntil: function( elem, i, until ) {
+		return dir( elem, "previousSibling", until );
+	},
+	siblings: function( elem ) {
+		return siblings( ( elem.parentNode || {} ).firstChild, elem );
+	},
+	children: function( elem ) {
+		return siblings( elem.firstChild );
+	},
+	contents: function( elem ) {
+		return elem.contentDocument || jQuery.merge( [], elem.childNodes );
+	}
+}, function( name, fn ) {
+	jQuery.fn[ name ] = function( until, selector ) {
+		var matched = jQuery.map( this, fn, until );
+
+		if ( name.slice( -5 ) !== "Until" ) {
+			selector = until;
+		}
+
+		if ( selector && typeof selector === "string" ) {
+			matched = jQuery.filter( selector, matched );
+		}
+
+		if ( this.length > 1 ) {
+
+			// Remove duplicates
+			if ( !guaranteedUnique[ name ] ) {
+				jQuery.uniqueSort( matched );
+			}
+
+			// Reverse order for parents* and prev-derivatives
+			if ( rparentsprev.test( name ) ) {
+				matched.reverse();
+			}
+		}
+
+		return this.pushStack( matched );
+	};
+} );
+var rnotwhite = ( /\S+/g );
+
+
+
+// Convert String-formatted options into Object-formatted ones
+function createOptions( options ) {
+	var object = {};
+	jQuery.each( options.match( rnotwhite ) || [], function( _, flag ) {
+		object[ flag ] = true;
+	} );
+	return object;
+}
+
+/*
+ * Create a callback list using the following parameters:
+ *
+ *	options: an optional list of space-separated options that will change how
+ *			the callback list behaves or a more traditional option object
+ *
+ * By default a callback list will act like an event callback list and can be
+ * "fired" multiple times.
+ *
+ * Possible options:
+ *
+ *	once:			will ensure the callback list can only be fired once (like a Deferred)
+ *
+ *	memory:			will keep track of previous values and will call any callback added
+ *					after the list has been fired right away with the latest "memorized"
+ *					values (like a Deferred)
+ *
+ *	unique:			will ensure a callback can only be added once (no duplicate in the list)
+ *
+ *	stopOnFalse:	interrupt callings when a callback returns false
+ *
+ */
+jQuery.Callbacks = function( options ) {
+
+	// Convert options from String-formatted to Object-formatted if needed
+	// (we check in cache first)
+	options = typeof options === "string" ?
+		createOptions( options ) :
+		jQuery.extend( {}, options );
+
+	var // Flag to know if list is currently firing
+		firing,
+
+		// Last fire value for non-forgettable lists
+		memory,
+
+		// Flag to know if list was already fired
+		fired,
+
+		// Flag to prevent firing
+		locked,
+
+		// Actual callback list
+		list = [],
+
+		// Queue of execution data for repeatable lists
+		queue = [],
+
+		// Index of currently firing callback (modified by add/remove as needed)
+		firingIndex = -1,
+
+		// Fire callbacks
+		fire = function() {
+
+			// Enforce single-firing
+			locked = options.once;
+
+			// Execute callbacks for all pending executions,
+			// respecting firingIndex overrides and runtime changes
+			fired = firing = true;
+			for ( ; queue.length; firingIndex = -1 ) {
+				memory = queue.shift();
+				while ( ++firingIndex < list.length ) {
+
+					// Run callback and check for early termination
+					if ( list[ firingIndex ].apply( memory[ 0 ], memory[ 1 ] ) === false &&
+						options.stopOnFalse ) {
+
+						// Jump to end and forget the data so .add doesn't re-fire
+						firingIndex = list.length;
+						memory = false;
+					}
+				}
+			}
+
+			// Forget the data if we're done with it
+			if ( !options.memory ) {
+				memory = false;
+			}
+
+			firing = false;
+
+			// Clean up if we're done firing for good
+			if ( locked ) {
+
+				// Keep an empty list if we have data for future add calls
+				if ( memory ) {
+					list = [];
+
+				// Otherwise, this object is spent
+				} else {
+					list = "";
+				}
+			}
+		},
+
+		// Actual Callbacks object
+		self = {
+
+			// Add a callback or a collection of callbacks to the list
+			add: function() {
+				if ( list ) {
+
+					// If we have memory from a past run, we should fire after adding
+					if ( memory && !firing ) {
+						firingIndex = list.length - 1;
+						queue.push( memory );
+					}
+
+					( function add( args ) {
+						jQuery.each( args, function( _, arg ) {
+							if ( jQuery.isFunction( arg ) ) {
+								if ( !options.unique || !self.has( arg ) ) {
+									list.push( arg );
+								}
+							} else if ( arg && arg.length && jQuery.type( arg ) !== "string" ) {
+
+								// Inspect recursively
+								add( arg );
+							}
+						} );
+					} )( arguments );
+
+					if ( memory && !firing ) {
+						fire();
+					}
+				}
+				return this;
+			},
+
+			// Remove a callback from the list
+			remove: function() {
+				jQuery.each( arguments, function( _, arg ) {
+					var index;
+					while ( ( index = jQuery.inArray( arg, list, index ) ) > -1 ) {
+						list.splice( index, 1 );
+
+						// Handle firing indexes
+						if ( index <= firingIndex ) {
+							firingIndex--;
+						}
+					}
+				} );
+				return this;
+			},
+
+			// Check if a given callback is in the list.
+			// If no argument is given, return whether or not list has callbacks attached.
+			has: function( fn ) {
+				return fn ?
+					jQuery.inArray( fn, list ) > -1 :
+					list.length > 0;
+			},
+
+			// Remove all callbacks from the list
+			empty: function() {
+				if ( list ) {
+					list = [];
+				}
+				return this;
+			},
+
+			// Disable .fire and .add
+			// Abort any current/pending executions
+			// Clear all callbacks and values
+			disable: function() {
+				locked = queue = [];
+				list = memory = "";
+				return this;
+			},
+			disabled: function() {
+				return !list;
+			},
+
+			// Disable .fire
+			// Also disable .add unless we have memory (since it would have no effect)
+			// Abort any pending executions
+			lock: function() {
+				locked = queue = [];
+				if ( !memory && !firing ) {
+					list = memory = "";
+				}
+				return this;
+			},
+			locked: function() {
+				return !!locked;
+			},
+
+			// Call all callbacks with the given context and arguments
+			fireWith: function( context, args ) {
+				if ( !locked ) {
+					args = args || [];
+					args = [ context, args.slice ? args.slice() : args ];
+					queue.push( args );
+					if ( !firing ) {
+						fire();
+					}
+				}
+				return this;
+			},
+
+			// Call all the callbacks with the given arguments
+			fire: function() {
+				self.fireWith( this, arguments );
+				return this;
+			},
+
+			// To know if the callbacks have already been called at least once
+			fired: function() {
+				return !!fired;
+			}
+		};
+
+	return self;
+};
+
+
+function Identity( v ) {
+	return v;
+}
+function Thrower( ex ) {
+	throw ex;
+}
+
+function adoptValue( value, resolve, reject ) {
+	var method;
+
+	try {
+
+		// Check for promise aspect first to privilege synchronous behavior
+		if ( value && jQuery.isFunction( ( method = value.promise ) ) ) {
+			method.call( value ).done( resolve ).fail( reject );
+
+		// Other thenables
+		} else if ( value && jQuery.isFunction( ( method = value.then ) ) ) {
+			method.call( value, resolve, reject );
+
+		// Other non-thenables
+		} else {
+
+			// Support: Android 4.0 only
+			// Strict mode functions invoked without .call/.apply get global-object context
+			resolve.call( undefined, value );
+		}
+
+	// For Promises/A+, convert exceptions into rejections
+	// Since jQuery.when doesn't unwrap thenables, we can skip the extra checks appearing in
+	// Deferred#then to conditionally suppress rejection.
+	} catch ( value ) {
+
+		// Support: Android 4.0 only
+		// Strict mode functions invoked without .call/.apply get global-object context
+		reject.call( undefined, value );
+	}
+}
+
+jQuery.extend( {
+
+	Deferred: function( func ) {
+		var tuples = [
+
+				// action, add listener, callbacks,
+				// ... .then handlers, argument index, [final state]
+				[ "notify", "progress", jQuery.Callbacks( "memory" ),
+					jQuery.Callbacks( "memory" ), 2 ],
+				[ "resolve", "done", jQuery.Callbacks( "once memory" ),
+					jQuery.Callbacks( "once memory" ), 0, "resolved" ],
+				[ "reject", "fail", jQuery.Callbacks( "once memory" ),
+					jQuery.Callbacks( "once memory" ), 1, "rejected" ]
+			],
+			state = "pending",
+			promise = {
+				state: function() {
+					return state;
+				},
+				always: function() {
+					deferred.done( arguments ).fail( arguments );
+					return this;
+				},
+				"catch": function( fn ) {
+					return promise.then( null, fn );
+				},
+
+				// Keep pipe for back-compat
+				pipe: function( /* fnDone, fnFail, fnProgress */ ) {
+					var fns = arguments;
+
+					return jQuery.Deferred( function( newDefer ) {
+						jQuery.each( tuples, function( i, tuple ) {
+
+							// Map tuples (progress, done, fail) to arguments (done, fail, progress)
+							var fn = jQuery.isFunction( fns[ tuple[ 4 ] ] ) && fns[ tuple[ 4 ] ];
+
+							// deferred.progress(function() { bind to newDefer or newDefer.notify })
+							// deferred.done(function() { bind to newDefer or newDefer.resolve })
+							// deferred.fail(function() { bind to newDefer or newDefer.reject })
+							deferred[ tuple[ 1 ] ]( function() {
+								var returned = fn && fn.apply( this, arguments );
+								if ( returned && jQuery.isFunction( returned.promise ) ) {
+									returned.promise()
+										.progress( newDefer.notify )
+										.done( newDefer.resolve )
+										.fail( newDefer.reject );
+								} else {
+									newDefer[ tuple[ 0 ] + "With" ](
+										this,
+										fn ? [ returned ] : arguments
+									);
+								}
+							} );
+						} );
+						fns = null;
+					} ).promise();
+				},
+				then: function( onFulfilled, onRejected, onProgress ) {
+					var maxDepth = 0;
+					function resolve( depth, deferred, handler, special ) {
+						return function() {
+							var that = this,
+								args = arguments,
+								mightThrow = function() {
+									var returned, then;
+
+									// Support: Promises/A+ section 2.3.3.3.3
+									// https://promisesaplus.com/#point-59
+									// Ignore double-resolution attempts
+									if ( depth < maxDepth ) {
+										return;
+									}
+
+									returned = handler.apply( that, args );
+
+									// Support: Promises/A+ section 2.3.1
+									// https://promisesaplus.com/#point-48
+									if ( returned === deferred.promise() ) {
+										throw new TypeError( "Thenable self-resolution" );
+									}
+
+									// Support: Promises/A+ sections 2.3.3.1, 3.5
+									// https://promisesaplus.com/#point-54
+									// https://promisesaplus.com/#point-75
+									// Retrieve `then` only once
+									then = returned &&
+
+										// Support: Promises/A+ section 2.3.4
+										// https://promisesaplus.com/#point-64
+										// Only check objects and functions for thenability
+										( typeof returned === "object" ||
+											typeof returned === "function" ) &&
+										returned.then;
+
+									// Handle a returned thenable
+									if ( jQuery.isFunction( then ) ) {
+
+										// Special processors (notify) just wait for resolution
+										if ( special ) {
+											then.call(
+												returned,
+												resolve( maxDepth, deferred, Identity, special ),
+												resolve( maxDepth, deferred, Thrower, special )
+											);
+
+										// Normal processors (resolve) also hook into progress
+										} else {
+
+											// ...and disregard older resolution values
+											maxDepth++;
+
+											then.call(
+												returned,
+												resolve( maxDepth, deferred, Identity, special ),
+												resolve( maxDepth, deferred, Thrower, special ),
+												resolve( maxDepth, deferred, Identity,
+													deferred.notifyWith )
+											);
+										}
+
+									// Handle all other returned values
+									} else {
+
+										// Only substitute handlers pass on context
+										// and multiple values (non-spec behavior)
+										if ( handler !== Identity ) {
+											that = undefined;
+											args = [ returned ];
+										}
+
+										// Process the value(s)
+										// Default process is resolve
+										( special || deferred.resolveWith )( that, args );
+									}
+								},
+
+								// Only normal processors (resolve) catch and reject exceptions
+								process = special ?
+									mightThrow :
+									function() {
+										try {
+											mightThrow();
+										} catch ( e ) {
+
+											if ( jQuery.Deferred.exceptionHook ) {
+												jQuery.Deferred.exceptionHook( e,
+													process.stackTrace );
+											}
+
+											// Support: Promises/A+ section 2.3.3.3.4.1
+											// https://promisesaplus.com/#point-61
+											// Ignore post-resolution exceptions
+											if ( depth + 1 >= maxDepth ) {
+
+												// Only substitute handlers pass on context
+												// and multiple values (non-spec behavior)
+												if ( handler !== Thrower ) {
+													that = undefined;
+													args = [ e ];
+												}
+
+												deferred.rejectWith( that, args );
+											}
+										}
+									};
+
+							// Support: Promises/A+ section 2.3.3.3.1
+							// https://promisesaplus.com/#point-57
+							// Re-resolve promises immediately to dodge false rejection from
+							// subsequent errors
+							if ( depth ) {
+								process();
+							} else {
+
+								// Call an optional hook to record the stack, in case of exception
+								// since it's otherwise lost when execution goes async
+								if ( jQuery.Deferred.getStackHook ) {
+									process.stackTrace = jQuery.Deferred.getStackHook();
+								}
+								window.setTimeout( process );
+							}
+						};
+					}
+
+					return jQuery.Deferred( function( newDefer ) {
+
+						// progress_handlers.add( ... )
+						tuples[ 0 ][ 3 ].add(
+							resolve(
+								0,
+								newDefer,
+								jQuery.isFunction( onProgress ) ?
+									onProgress :
+									Identity,
+								newDefer.notifyWith
+							)
+						);
+
+						// fulfilled_handlers.add( ... )
+						tuples[ 1 ][ 3 ].add(
+							resolve(
+								0,
+								newDefer,
+								jQuery.isFunction( onFulfilled ) ?
+									onFulfilled :
+									Identity
+							)
+						);
+
+						// rejected_handlers.add( ... )
+						tuples[ 2 ][ 3 ].add(
+							resolve(
+								0,
+								newDefer,
+								jQuery.isFunction( onRejected ) ?
+									onRejected :
+									Thrower
+							)
+						);
+					} ).promise();
+				},
+
+				// Get a promise for this deferred
+				// If obj is provided, the promise aspect is added to the object
+				promise: function( obj ) {
+					return obj != null ? jQuery.extend( obj, promise ) : promise;
+				}
+			},
+			deferred = {};
+
+		// Add list-specific methods
+		jQuery.each( tuples, function( i, tuple ) {
+			var list = tuple[ 2 ],
+				stateString = tuple[ 5 ];
+
+			// promise.progress = list.add
+			// promise.done = list.add
+			// promise.fail = list.add
+			promise[ tuple[ 1 ] ] = list.add;
+
+			// Handle state
+			if ( stateString ) {
+				list.add(
+					function() {
+
+						// state = "resolved" (i.e., fulfilled)
+						// state = "rejected"
+						state = stateString;
+					},
+
+					// rejected_callbacks.disable
+					// fulfilled_callbacks.disable
+					tuples[ 3 - i ][ 2 ].disable,
+
+					// progress_callbacks.lock
+					tuples[ 0 ][ 2 ].lock
+				);
+			}
+
+			// progress_handlers.fire
+			// fulfilled_handlers.fire
+			// rejected_handlers.fire
+			list.add( tuple[ 3 ].fire );
+
+			// deferred.notify = function() { deferred.notifyWith(...) }
+			// deferred.resolve = function() { deferred.resolveWith(...) }
+			// deferred.reject = function() { deferred.rejectWith(...) }
+			deferred[ tuple[ 0 ] ] = function() {
+				deferred[ tuple[ 0 ] + "With" ]( this === deferred ? undefined : this, arguments );
+				return this;
+			};
+
+			// deferred.notifyWith = list.fireWith
+			// deferred.resolveWith = list.fireWith
+			// deferred.rejectWith = list.fireWith
+			deferred[ tuple[ 0 ] + "With" ] = list.fireWith;
+		} );
+
+		// Make the deferred a promise
+		promise.promise( deferred );
+
+		// Call given func if any
+		if ( func ) {
+			func.call( deferred, deferred );
+		}
+
+		// All done!
+		return deferred;
+	},
+
+	// Deferred helper
+	when: function( singleValue ) {
+		var
+
+			// count of uncompleted subordinates
+			remaining = arguments.length,
+
+			// count of unprocessed arguments
+			i = remaining,
+
+			// subordinate fulfillment data
+			resolveContexts = Array( i ),
+			resolveValues = slice.call( arguments ),
+
+			// the master Deferred
+			master = jQuery.Deferred(),
+
+			// subordinate callback factory
+			updateFunc = function( i ) {
+				return function( value ) {
+					resolveContexts[ i ] = this;
+					resolveValues[ i ] = arguments.length > 1 ? slice.call( arguments ) : value;
+					if ( !( --remaining ) ) {
+						master.resolveWith( resolveContexts, resolveValues );
+					}
+				};
+			};
+
+		// Single- and empty arguments are adopted like Promise.resolve
+		if ( remaining <= 1 ) {
+			adoptValue( singleValue, master.done( updateFunc( i ) ).resolve, master.reject );
+
+			// Use .then() to unwrap secondary thenables (cf. gh-3000)
+			if ( master.state() === "pending" ||
+				jQuery.isFunction( resolveValues[ i ] && resolveValues[ i ].then ) ) {
+
+				return master.then();
+			}
+		}
+
+		// Multiple arguments are aggregated like Promise.all array elements
+		while ( i-- ) {
+			adoptValue( resolveValues[ i ], updateFunc( i ), master.reject );
+		}
+
+		return master.promise();
+	}
+} );
+
+
+// These usually indicate a programmer mistake during development,
+// warn about them ASAP rather than swallowing them by default.
+var rerrorNames = /^(Eval|Internal|Range|Reference|Syntax|Type|URI)Error$/;
+
+jQuery.Deferred.exceptionHook = function( error, stack ) {
+
+	// Support: IE 8 - 9 only
+	// Console exists when dev tools are open, which can happen at any time
+	if ( window.console && window.console.warn && error && rerrorNames.test( error.name ) ) {
+		window.console.warn( "jQuery.Deferred exception: " + error.message, error.stack, stack );
+	}
+};
+
+
+
+
+jQuery.readyException = function( error ) {
+	window.setTimeout( function() {
+		throw error;
+	} );
+};
+
+
+
+
+// The deferred used on DOM ready
+var readyList = jQuery.Deferred();
+
+jQuery.fn.ready = function( fn ) {
+
+	readyList
+		.then( fn )
+
+		// Wrap jQuery.readyException in a function so that the lookup
+		// happens at the time of error handling instead of callback
+		// registration.
+		.catch( function( error ) {
+			jQuery.readyException( error );
+		} );
+
+	return this;
+};
+
+jQuery.extend( {
+
+	// Is the DOM ready to be used? Set to true once it occurs.
+	isReady: false,
+
+	// A counter to track how many items to wait for before
+	// the ready event fires. See #6781
+	readyWait: 1,
+
+	// Hold (or release) the ready event
+	holdReady: function( hold ) {
+		if ( hold ) {
+			jQuery.readyWait++;
+		} else {
+			jQuery.ready( true );
+		}
+	},
+
+	// Handle when the DOM is ready
+	ready: function( wait ) {
+
+		// Abort if there are pending holds or we're already ready
+		if ( wait === true ? --jQuery.readyWait : jQuery.isReady ) {
+			return;
+		}
+
+		// Remember that the DOM is ready
+		jQuery.isReady = true;
+
+		// If a normal DOM Ready event fired, decrement, and wait if need be
+		if ( wait !== true && --jQuery.readyWait > 0 ) {
+			return;
+		}
+
+		// If there are functions bound, to execute
+		readyList.resolveWith( document, [ jQuery ] );
+	}
+} );
+
+jQuery.ready.then = readyList.then;
+
+// The ready event handler and self cleanup method
+function completed() {
+	document.removeEventListener( "DOMContentLoaded", completed );
+	window.removeEventListener( "load", completed );
+	jQuery.ready();
+}
+
+// Catch cases where $(document).ready() is called
+// after the browser event has already occurred.
+// Support: IE <=9 - 10 only
+// Older IE sometimes signals "interactive" too soon
+if ( document.readyState === "complete" ||
+	( document.readyState !== "loading" && !document.documentElement.doScroll ) ) {
+
+	// Handle it asynchronously to allow scripts the opportunity to delay ready
+	window.setTimeout( jQuery.ready );
+
+} else {
+
+	// Use the handy event callback
+	document.addEventListener( "DOMContentLoaded", completed );
+
+	// A fallback to window.onload, that will always work
+	window.addEventListener( "load", completed );
+}
+
+
+
+
+// Multifunctional method to get and set values of a collection
+// The value/s can optionally be executed if it's a function
+var access = function( elems, fn, key, value, chainable, emptyGet, raw ) {
+	var i = 0,
+		len = elems.length,
+		bulk = key == null;
+
+	// Sets many values
+	if ( jQuery.type( key ) === "object" ) {
+		chainable = true;
+		for ( i in key ) {
+			access( elems, fn, i, key[ i ], true, emptyGet, raw );
+		}
+
+	// Sets one value
+	} else if ( value !== undefined ) {
+		chainable = true;
+
+		if ( !jQuery.isFunction( value ) ) {
+			raw = true;
+		}
+
+		if ( bulk ) {
+
+			// Bulk operations run against the entire set
+			if ( raw ) {
+				fn.call( elems, value );
+				fn = null;
+
+			// ...except when executing function values
+			} else {
+				bulk = fn;
+				fn = function( elem, key, value ) {
+					return bulk.call( jQuery( elem ), value );
+				};
+			}
+		}
+
+		if ( fn ) {
+			for ( ; i < len; i++ ) {
+				fn(
+					elems[ i ], key, raw ?
+					value :
+					value.call( elems[ i ], i, fn( elems[ i ], key ) )
+				);
+			}
+		}
+	}
+
+	return chainable ?
+		elems :
+
+		// Gets
+		bulk ?
+			fn.call( elems ) :
+			len ? fn( elems[ 0 ], key ) : emptyGet;
+};
+var acceptData = function( owner ) {
+
+	// Accepts only:
+	//  - Node
+	//    - Node.ELEMENT_NODE
+	//    - Node.DOCUMENT_NODE
+	//  - Object
+	//    - Any
+	return owner.nodeType === 1 || owner.nodeType === 9 || !( +owner.nodeType );
+};
+
+
+
+
+function Data() {
+	this.expando = jQuery.expando + Data.uid++;
+}
+
+Data.uid = 1;
+
+Data.prototype = {
+
+	cache: function( owner ) {
+
+		// Check if the owner object already has a cache
+		var value = owner[ this.expando ];
+
+		// If not, create one
+		if ( !value ) {
+			value = {};
+
+			// We can accept data for non-element nodes in modern browsers,
+			// but we should not, see #8335.
+			// Always return an empty object.
+			if ( acceptData( owner ) ) {
+
+				// If it is a node unlikely to be stringify-ed or looped over
+				// use plain assignment
+				if ( owner.nodeType ) {
+					owner[ this.expando ] = value;
+
+				// Otherwise secure it in a non-enumerable property
+				// configurable must be true to allow the property to be
+				// deleted when data is removed
+				} else {
+					Object.defineProperty( owner, this.expando, {
+						value: value,
+						configurable: true
+					} );
+				}
+			}
+		}
+
+		return value;
+	},
+	set: function( owner, data, value ) {
+		var prop,
+			cache = this.cache( owner );
+
+		// Handle: [ owner, key, value ] args
+		// Always use camelCase key (gh-2257)
+		if ( typeof data === "string" ) {
+			cache[ jQuery.camelCase( data ) ] = value;
+
+		// Handle: [ owner, { properties } ] args
+		} else {
+
+			// Copy the properties one-by-one to the cache object
+			for ( prop in data ) {
+				cache[ jQuery.camelCase( prop ) ] = data[ prop ];
+			}
+		}
+		return cache;
+	},
+	get: function( owner, key ) {
+		return key === undefined ?
+			this.cache( owner ) :
+
+			// Always use camelCase key (gh-2257)
+			owner[ this.expando ] && owner[ this.expando ][ jQuery.camelCase( key ) ];
+	},
+	access: function( owner, key, value ) {
+
+		// In cases where either:
+		//
+		//   1. No key was specified
+		//   2. A string key was specified, but no value provided
+		//
+		// Take the "read" path and allow the get method to determine
+		// which value to return, respectively either:
+		//
+		//   1. The entire cache object
+		//   2. The data stored at the key
+		//
+		if ( key === undefined ||
+				( ( key && typeof key === "string" ) && value === undefined ) ) {
+
+			return this.get( owner, key );
+		}
+
+		// When the key is not a string, or both a key and value
+		// are specified, set or extend (existing objects) with either:
+		//
+		//   1. An object of properties
+		//   2. A key and value
+		//
+		this.set( owner, key, value );
+
+		// Since the "set" path can have two possible entry points
+		// return the expected data based on which path was taken[*]
+		return value !== undefined ? value : key;
+	},
+	remove: function( owner, key ) {
+		var i,
+			cache = owner[ this.expando ];
+
+		if ( cache === undefined ) {
+			return;
+		}
+
+		if ( key !== undefined ) {
+
+			// Support array or space separated string of keys
+			if ( jQuery.isArray( key ) ) {
+
+				// If key is an array of keys...
+				// We always set camelCase keys, so remove that.
+				key = key.map( jQuery.camelCase );
+			} else {
+				key = jQuery.camelCase( key );
+
+				// If a key with the spaces exists, use it.
+				// Otherwise, create an array by matching non-whitespace
+				key = key in cache ?
+					[ key ] :
+					( key.match( rnotwhite ) || [] );
+			}
+
+			i = key.length;
+
+			while ( i-- ) {
+				delete cache[ key[ i ] ];
+			}
+		}
+
+		// Remove the expando if there's no more data
+		if ( key === undefined || jQuery.isEmptyObject( cache ) ) {
+
+			// Support: Chrome <=35 - 45
+			// Webkit & Blink performance suffers when deleting properties
+			// from DOM nodes, so set to undefined instead
+			// https://bugs.chromium.org/p/chromium/issues/detail?id=378607 (bug restricted)
+			if ( owner.nodeType ) {
+				owner[ this.expando ] = undefined;
+			} else {
+				delete owner[ this.expando ];
+			}
+		}
+	},
+	hasData: function( owner ) {
+		var cache = owner[ this.expando ];
+		return cache !== undefined && !jQuery.isEmptyObject( cache );
+	}
+};
+var dataPriv = new Data();
+
+var dataUser = new Data();
+
+
+
+//	Implementation Summary
+//
+//	1. Enforce API surface and semantic compatibility with 1.9.x branch
+//	2. Improve the module's maintainability by reducing the storage
+//		paths to a single mechanism.
+//	3. Use the same single mechanism to support "private" and "user" data.
+//	4. _Never_ expose "private" data to user code (TODO: Drop _data, _removeData)
+//	5. Avoid exposing implementation details on user objects (eg. expando properties)
+//	6. Provide a clear path for implementation upgrade to WeakMap in 2014
+
+var rbrace = /^(?:\{[\w\W]*\}|\[[\w\W]*\])$/,
+	rmultiDash = /[A-Z]/g;
+
+function dataAttr( elem, key, data ) {
+	var name;
+
+	// If nothing was found internally, try to fetch any
+	// data from the HTML5 data-* attribute
+	if ( data === undefined && elem.nodeType === 1 ) {
+		name = "data-" + key.replace( rmultiDash, "-$&" ).toLowerCase();
+		data = elem.getAttribute( name );
+
+		if ( typeof data === "string" ) {
+			try {
+				data = data === "true" ? true :
+					data === "false" ? false :
+					data === "null" ? null :
+
+					// Only convert to a number if it doesn't change the string
+					+data + "" === data ? +data :
+					rbrace.test( data ) ? JSON.parse( data ) :
+					data;
+			} catch ( e ) {}
+
+			// Make sure we set the data so it isn't changed later
+			dataUser.set( elem, key, data );
+		} else {
+			data = undefined;
+		}
+	}
+	return data;
+}
+
+jQuery.extend( {
+	hasData: function( elem ) {
+		return dataUser.hasData( elem ) || dataPriv.hasData( elem );
+	},
+
+	data: function( elem, name, data ) {
+		return dataUser.access( elem, name, data );
+	},
+
+	removeData: function( elem, name ) {
+		dataUser.remove( elem, name );
+	},
+
+	// TODO: Now that all calls to _data and _removeData have been replaced
+	// with direct calls to dataPriv methods, these can be deprecated.
+	_data: function( elem, name, data ) {
+		return dataPriv.access( elem, name, data );
+	},
+
+	_removeData: function( elem, name ) {
+		dataPriv.remove( elem, name );
+	}
+} );
+
+jQuery.fn.extend( {
+	data: function( key, value ) {
+		var i, name, data,
+			elem = this[ 0 ],
+			attrs = elem && elem.attributes;
+
+		// Gets all values
+		if ( key === undefined ) {
+			if ( this.length ) {
+				data = dataUser.get( elem );
+
+				if ( elem.nodeType === 1 && !dataPriv.get( elem, "hasDataAttrs" ) ) {
+					i = attrs.length;
+					while ( i-- ) {
+
+						// Support: IE 11 only
+						// The attrs elements can be null (#14894)
+						if ( attrs[ i ] ) {
+							name = attrs[ i ].name;
+							if ( name.indexOf( "data-" ) === 0 ) {
+								name = jQuery.camelCase( name.slice( 5 ) );
+								dataAttr( elem, name, data[ name ] );
+							}
+						}
+					}
+					dataPriv.set( elem, "hasDataAttrs", true );
+				}
+			}
+
+			return data;
+		}
+
+		// Sets multiple values
+		if ( typeof key === "object" ) {
+			return this.each( function() {
+				dataUser.set( this, key );
+			} );
+		}
+
+		return access( this, function( value ) {
+			var data;
+
+			// The calling jQuery object (element matches) is not empty
+			// (and therefore has an element appears at this[ 0 ]) and the
+			// `value` parameter was not undefined. An empty jQuery object
+			// will result in `undefined` for elem = this[ 0 ] which will
+			// throw an exception if an attempt to read a data cache is made.
+			if ( elem && value === undefined ) {
+
+				// Attempt to get data from the cache
+				// The key will always be camelCased in Data
+				data = dataUser.get( elem, key );
+				if ( data !== undefined ) {
+					return data;
+				}
+
+				// Attempt to "discover" the data in
+				// HTML5 custom data-* attrs
+				data = dataAttr( elem, key );
+				if ( data !== undefined ) {
+					return data;
+				}
+
+				// We tried really hard, but the data doesn't exist.
+				return;
+			}
+
+			// Set the data...
+			this.each( function() {
+
+				// We always store the camelCased key
+				dataUser.set( this, key, value );
+			} );
+		}, null, value, arguments.length > 1, null, true );
+	},
+
+	removeData: function( key ) {
+		return this.each( function() {
+			dataUser.remove( this, key );
+		} );
+	}
+} );
+
+
+jQuery.extend( {
+	queue: function( elem, type, data ) {
+		var queue;
+
+		if ( elem ) {
+			type = ( type || "fx" ) + "queue";
+			queue = dataPriv.get( elem, type );
+
+			// Speed up dequeue by getting out quickly if this is just a lookup
+			if ( data ) {
+				if ( !queue || jQuery.isArray( data ) ) {
+					queue = dataPriv.access( elem, type, jQuery.makeArray( data ) );
+				} else {
+					queue.push( data );
+				}
+			}
+			return queue || [];
+		}
+	},
+
+	dequeue: function( elem, type ) {
+		type = type || "fx";
+
+		var queue = jQuery.queue( elem, type ),
+			startLength = queue.length,
+			fn = queue.shift(),
+			hooks = jQuery._queueHooks( elem, type ),
+			next = function() {
+				jQuery.dequeue( elem, type );
+			};
+
+		// If the fx queue is dequeued, always remove the progress sentinel
+		if ( fn === "inprogress" ) {
+			fn = queue.shift();
+			startLength--;
+		}
+
+		if ( fn ) {
+
+			// Add a progress sentinel to prevent the fx queue from being
+			// automatically dequeued
+			if ( type === "fx" ) {
+				queue.unshift( "inprogress" );
+			}
+
+			// Clear up the last queue stop function
+			delete hooks.stop;
+			fn.call( elem, next, hooks );
+		}
+
+		if ( !startLength && hooks ) {
+			hooks.empty.fire();
+		}
+	},
+
+	// Not public - generate a queueHooks object, or return the current one
+	_queueHooks: function( elem, type ) {
+		var key = type + "queueHooks";
+		return dataPriv.get( elem, key ) || dataPriv.access( elem, key, {
+			empty: jQuery.Callbacks( "once memory" ).add( function() {
+				dataPriv.remove( elem, [ type + "queue", key ] );
+			} )
+		} );
+	}
+} );
+
+jQuery.fn.extend( {
+	queue: function( type, data ) {
+		var setter = 2;
+
+		if ( typeof type !== "string" ) {
+			data = type;
+			type = "fx";
+			setter--;
+		}
+
+		if ( arguments.length < setter ) {
+			return jQuery.queue( this[ 0 ], type );
+		}
+
+		return data === undefined ?
+			this :
+			this.each( function() {
+				var queue = jQuery.queue( this, type, data );
+
+				// Ensure a hooks for this queue
+				jQuery._queueHooks( this, type );
+
+				if ( type === "fx" && queue[ 0 ] !== "inprogress" ) {
+					jQuery.dequeue( this, type );
+				}
+			} );
+	},
+	dequeue: function( type ) {
+		return this.each( function() {
+			jQuery.dequeue( this, type );
+		} );
+	},
+	clearQueue: function( type ) {
+		return this.queue( type || "fx", [] );
+	},
+
+	// Get a promise resolved when queues of a certain type
+	// are emptied (fx is the type by default)
+	promise: function( type, obj ) {
+		var tmp,
+			count = 1,
+			defer = jQuery.Deferred(),
+			elements = this,
+			i = this.length,
+			resolve = function() {
+				if ( !( --count ) ) {
+					defer.resolveWith( elements, [ elements ] );
+				}
+			};
+
+		if ( typeof type !== "string" ) {
+			obj = type;
+			type = undefined;
+		}
+		type = type || "fx";
+
+		while ( i-- ) {
+			tmp = dataPriv.get( elements[ i ], type + "queueHooks" );
+			if ( tmp && tmp.empty ) {
+				count++;
+				tmp.empty.add( resolve );
+			}
+		}
+		resolve();
+		return defer.promise( obj );
+	}
+} );
+var pnum = ( /[+-]?(?:\d*\.|)\d+(?:[eE][+-]?\d+|)/ ).source;
+
+var rcssNum = new RegExp( "^(?:([+-])=|)(" + pnum + ")([a-z%]*)$", "i" );
+
+
+var cssExpand = [ "Top", "Right", "Bottom", "Left" ];
+
+var isHiddenWithinTree = function( elem, el ) {
+
+		// isHiddenWithinTree might be called from jQuery#filter function;
+		// in that case, element will be second argument
+		elem = el || elem;
+
+		// Inline style trumps all
+		return elem.style.display === "none" ||
+			elem.style.display === "" &&
+
+			// Otherwise, check computed style
+			// Support: Firefox <=43 - 45
+			// Disconnected elements can have computed display: none, so first confirm that elem is
+			// in the document.
+			jQuery.contains( elem.ownerDocument, elem ) &&
+
+			jQuery.css( elem, "display" ) === "none";
+	};
+
+var swap = function( elem, options, callback, args ) {
+	var ret, name,
+		old = {};
+
+	// Remember the old values, and insert the new ones
+	for ( name in options ) {
+		old[ name ] = elem.style[ name ];
+		elem.style[ name ] = options[ name ];
+	}
+
+	ret = callback.apply( elem, args || [] );
+
+	// Revert the old values
+	for ( name in options ) {
+		elem.style[ name ] = old[ name ];
+	}
+
+	return ret;
+};
+
+
+
+
+function adjustCSS( elem, prop, valueParts, tween ) {
+	var adjusted,
+		scale = 1,
+		maxIterations = 20,
+		currentValue = tween ?
+			function() {
+				return tween.cur();
+			} :
+			function() {
+				return jQuery.css( elem, prop, "" );
+			},
+		initial = currentValue(),
+		unit = valueParts && valueParts[ 3 ] || ( jQuery.cssNumber[ prop ] ? "" : "px" ),
+
+		// Starting value computation is required for potential unit mismatches
+		initialInUnit = ( jQuery.cssNumber[ prop ] || unit !== "px" && +initial ) &&
+			rcssNum.exec( jQuery.css( elem, prop ) );
+
+	if ( initialInUnit && initialInUnit[ 3 ] !== unit ) {
+
+		// Trust units reported by jQuery.css
+		unit = unit || initialInUnit[ 3 ];
+
+		// Make sure we update the tween properties later on
+		valueParts = valueParts || [];
+
+		// Iteratively approximate from a nonzero starting point
+		initialInUnit = +initial || 1;
+
+		do {
+
+			// If previous iteration zeroed out, double until we get *something*.
+			// Use string for doubling so we don't accidentally see scale as unchanged below
+			scale = scale || ".5";
+
+			// Adjust and apply
+			initialInUnit = initialInUnit / scale;
+			jQuery.style( elem, prop, initialInUnit + unit );
+
+		// Update scale, tolerating zero or NaN from tween.cur()
+		// Break the loop if scale is unchanged or perfect, or if we've just had enough.
+		} while (
+			scale !== ( scale = currentValue() / initial ) && scale !== 1 && --maxIterations
+		);
+	}
+
+	if ( valueParts ) {
+		initialInUnit = +initialInUnit || +initial || 0;
+
+		// Apply relative offset (+=/-=) if specified
+		adjusted = valueParts[ 1 ] ?
+			initialInUnit + ( valueParts[ 1 ] + 1 ) * valueParts[ 2 ] :
+			+valueParts[ 2 ];
+		if ( tween ) {
+			tween.unit = unit;
+			tween.start = initialInUnit;
+			tween.end = adjusted;
+		}
+	}
+	return adjusted;
+}
+
+
+var defaultDisplayMap = {};
+
+function getDefaultDisplay( elem ) {
+	var temp,
+		doc = elem.ownerDocument,
+		nodeName = elem.nodeName,
+		display = defaultDisplayMap[ nodeName ];
+
+	if ( display ) {
+		return display;
+	}
+
+	temp = doc.body.appendChild( doc.createElement( nodeName ) ),
+	display = jQuery.css( temp, "display" );
+
+	temp.parentNode.removeChild( temp );
+
+	if ( display === "none" ) {
+		display = "block";
+	}
+	defaultDisplayMap[ nodeName ] = display;
+
+	return display;
+}
+
+function showHide( elements, show ) {
+	var display, elem,
+		values = [],
+		index = 0,
+		length = elements.length;
+
+	// Determine new display value for elements that need to change
+	for ( ; index < length; index++ ) {
+		elem = elements[ index ];
+		if ( !elem.style ) {
+			continue;
+		}
+
+		display = elem.style.display;
+		if ( show ) {
+
+			// Since we force visibility upon cascade-hidden elements, an immediate (and slow)
+			// check is required in this first loop unless we have a nonempty display value (either
+			// inline or about-to-be-restored)
+			if ( display === "none" ) {
+				values[ index ] = dataPriv.get( elem, "display" ) || null;
+				if ( !values[ index ] ) {
+					elem.style.display = "";
+				}
+			}
+			if ( elem.style.display === "" && isHiddenWithinTree( elem ) ) {
+				values[ index ] = getDefaultDisplay( elem );
+			}
+		} else {
+			if ( display !== "none" ) {
+				values[ index ] = "none";
+
+				// Remember what we're overwriting
+				dataPriv.set( elem, "display", display );
+			}
+		}
+	}
+
+	// Set the display of the elements in a second loop to avoid constant reflow
+	for ( index = 0; index < length; index++ ) {
+		if ( values[ index ] != null ) {
+			elements[ index ].style.display = values[ index ];
+		}
+	}
+
+	return elements;
+}
+
+jQuery.fn.extend( {
+	show: function() {
+		return showHide( this, true );
+	},
+	hide: function() {
+		return showHide( this );
+	},
+	toggle: function( state ) {
+		if ( typeof state === "boolean" ) {
+			return state ? this.show() : this.hide();
+		}
+
+		return this.each( function() {
+			if ( isHiddenWithinTree( this ) ) {
+				jQuery( this ).show();
+			} else {
+				jQuery( this ).hide();
+			}
+		} );
+	}
+} );
+var rcheckableType = ( /^(?:checkbox|radio)$/i );
+
+var rtagName = ( /<([a-z][^\/\0>\x20\t\r\n\f]+)/i );
+
+var rscriptType = ( /^$|\/(?:java|ecma)script/i );
+
+
+
+// We have to close these tags to support XHTML (#13200)
+var wrapMap = {
+
+	// Support: IE <=9 only
+	option: [ 1, "<select multiple='multiple'>", "</select>" ],
+
+	// XHTML parsers do not magically insert elements in the
+	// same way that tag soup parsers do. So we cannot shorten
+	// this by omitting <tbody> or other required elements.
+	thead: [ 1, "<table>", "</table>" ],
+	col: [ 2, "<table><colgroup>", "</colgroup></table>" ],
+	tr: [ 2, "<table><tbody>", "</tbody></table>" ],
+	td: [ 3, "<table><tbody><tr>", "</tr></tbody></table>" ],
+
+	_default: [ 0, "", "" ]
+};
+
+// Support: IE <=9 only
+wrapMap.optgroup = wrapMap.option;
+
+wrapMap.tbody = wrapMap.tfoot = wrapMap.colgroup = wrapMap.caption = wrapMap.thead;
+wrapMap.th = wrapMap.td;
+
+
+function getAll( context, tag ) {
+
+	// Support: IE <=9 - 11 only
+	// Use typeof to avoid zero-argument method invocation on host objects (#15151)
+	var ret = typeof context.getElementsByTagName !== "undefined" ?
+			context.getElementsByTagName( tag || "*" ) :
+			typeof context.querySelectorAll !== "undefined" ?
+				context.querySelectorAll( tag || "*" ) :
+			[];
+
+	return tag === undefined || tag && jQuery.nodeName( context, tag ) ?
+		jQuery.merge( [ context ], ret ) :
+		ret;
+}
+
+
+// Mark scripts as having already been evaluated
+function setGlobalEval( elems, refElements ) {
+	var i = 0,
+		l = elems.length;
+
+	for ( ; i < l; i++ ) {
+		dataPriv.set(
+			elems[ i ],
+			"globalEval",
+			!refElements || dataPriv.get( refElements[ i ], "globalEval" )
+		);
+	}
+}
+
+
+var rhtml = /<|&#?\w+;/;
+
+function buildFragment( elems, context, scripts, selection, ignored ) {
+	var elem, tmp, tag, wrap, contains, j,
+		fragment = context.createDocumentFragment(),
+		nodes = [],
+		i = 0,
+		l = elems.length;
+
+	for ( ; i < l; i++ ) {
+		elem = elems[ i ];
+
+		if ( elem || elem === 0 ) {
+
+			// Add nodes directly
+			if ( jQuery.type( elem ) === "object" ) {
+
+				// Support: Android <=4.0 only, PhantomJS 1 only
+				// push.apply(_, arraylike) throws on ancient WebKit
+				jQuery.merge( nodes, elem.nodeType ? [ elem ] : elem );
+
+			// Convert non-html into a text node
+			} else if ( !rhtml.test( elem ) ) {
+				nodes.push( context.createTextNode( elem ) );
+
+			// Convert html into DOM nodes
+			} else {
+				tmp = tmp || fragment.appendChild( context.createElement( "div" ) );
+
+				// Deserialize a standard representation
+				tag = ( rtagName.exec( elem ) || [ "", "" ] )[ 1 ].toLowerCase();
+				wrap = wrapMap[ tag ] || wrapMap._default;
+				tmp.innerHTML = wrap[ 1 ] + jQuery.htmlPrefilter( elem ) + wrap[ 2 ];
+
+				// Descend through wrappers to the right content
+				j = wrap[ 0 ];
+				while ( j-- ) {
+					tmp = tmp.lastChild;
+				}
+
+				// Support: Android <=4.0 only, PhantomJS 1 only
+				// push.apply(_, arraylike) throws on ancient WebKit
+				jQuery.merge( nodes, tmp.childNodes );
+
+				// Remember the top-level container
+				tmp = fragment.firstChild;
+
+				// Ensure the created nodes are orphaned (#12392)
+				tmp.textContent = "";
+			}
+		}
+	}
+
+	// Remove wrapper from fragment
+	fragment.textContent = "";
+
+	i = 0;
+	while ( ( elem = nodes[ i++ ] ) ) {
+
+		// Skip elements already in the context collection (trac-4087)
+		if ( selection && jQuery.inArray( elem, selection ) > -1 ) {
+			if ( ignored ) {
+				ignored.push( elem );
+			}
+			continue;
+		}
+
+		contains = jQuery.contains( elem.ownerDocument, elem );
+
+		// Append to fragment
+		tmp = getAll( fragment.appendChild( elem ), "script" );
+
+		// Preserve script evaluation history
+		if ( contains ) {
+			setGlobalEval( tmp );
+		}
+
+		// Capture executables
+		if ( scripts ) {
+			j = 0;
+			while ( ( elem = tmp[ j++ ] ) ) {
+				if ( rscriptType.test( elem.type || "" ) ) {
+					scripts.push( elem );
+				}
+			}
+		}
+	}
+
+	return fragment;
+}
+
+
+( function() {
+	var fragment = document.createDocumentFragment(),
+		div = fragment.appendChild( document.createElement( "div" ) ),
+		input = document.createElement( "input" );
+
+	// Support: Android 4.0 - 4.3 only
+	// Check state lost if the name is set (#11217)
+	// Support: Windows Web Apps (WWA)
+	// `name` and `type` must use .setAttribute for WWA (#14901)
+	input.setAttribute( "type", "radio" );
+	input.setAttribute( "checked", "checked" );
+	input.setAttribute( "name", "t" );
+
+	div.appendChild( input );
+
+	// Support: Android <=4.1 only
+	// Older WebKit doesn't clone checked state correctly in fragments
+	support.checkClone = div.cloneNode( true ).cloneNode( true ).lastChild.checked;
+
+	// Support: IE <=11 only
+	// Make sure textarea (and checkbox) defaultValue is properly cloned
+	div.innerHTML = "<textarea>x</textarea>";
+	support.noCloneChecked = !!div.cloneNode( true ).lastChild.defaultValue;
+} )();
+var documentElement = document.documentElement;
+
+
+
+var
+	rkeyEvent = /^key/,
+	rmouseEvent = /^(?:mouse|pointer|contextmenu|drag|drop)|click/,
+	rtypenamespace = /^([^.]*)(?:\.(.+)|)/;
+
+function returnTrue() {
+	return true;
+}
+
+function returnFalse() {
+	return false;
+}
+
+// Support: IE <=9 only
+// See #13393 for more info
+function safeActiveElement() {
+	try {
+		return document.activeElement;
+	} catch ( err ) { }
+}
+
+function on( elem, types, selector, data, fn, one ) {
+	var origFn, type;
+
+	// Types can be a map of types/handlers
+	if ( typeof types === "object" ) {
+
+		// ( types-Object, selector, data )
+		if ( typeof selector !== "string" ) {
+
+			// ( types-Object, data )
+			data = data || selector;
+			selector = undefined;
+		}
+		for ( type in types ) {
+			on( elem, type, selector, data, types[ type ], one );
+		}
+		return elem;
+	}
+
+	if ( data == null && fn == null ) {
+
+		// ( types, fn )
+		fn = selector;
+		data = selector = undefined;
+	} else if ( fn == null ) {
+		if ( typeof selector === "string" ) {
+
+			// ( types, selector, fn )
+			fn = data;
+			data = undefined;
+		} else {
+
+			// ( types, data, fn )
+			fn = data;
+			data = selector;
+			selector = undefined;
+		}
+	}
+	if ( fn === false ) {
+		fn = returnFalse;
+	} else if ( !fn ) {
+		return elem;
+	}
+
+	if ( one === 1 ) {
+		origFn = fn;
+		fn = function( event ) {
+
+			// Can use an empty set, since event contains the info
+			jQuery().off( event );
+			return origFn.apply( this, arguments );
+		};
+
+		// Use same guid so caller can remove using origFn
+		fn.guid = origFn.guid || ( origFn.guid = jQuery.guid++ );
+	}
+	return elem.each( function() {
+		jQuery.event.add( this, types, fn, data, selector );
+	} );
+}
+
+/*
+ * Helper functions for managing events -- not part of the public interface.
+ * Props to Dean Edwards' addEvent library for many of the ideas.
+ */
+jQuery.event = {
+
+	global: {},
+
+	add: function( elem, types, handler, data, selector ) {
+
+		var handleObjIn, eventHandle, tmp,
+			events, t, handleObj,
+			special, handlers, type, namespaces, origType,
+			elemData = dataPriv.get( elem );
+
+		// Don't attach events to noData or text/comment nodes (but allow plain objects)
+		if ( !elemData ) {
+			return;
+		}
+
+		// Caller can pass in an object of custom data in lieu of the handler
+		if ( handler.handler ) {
+			handleObjIn = handler;
+			handler = handleObjIn.handler;
+			selector = handleObjIn.selector;
+		}
+
+		// Ensure that invalid selectors throw exceptions at attach time
+		// Evaluate against documentElement in case elem is a non-element node (e.g., document)
+		if ( selector ) {
+			jQuery.find.matchesSelector( documentElement, selector );
+		}
+
+		// Make sure that the handler has a unique ID, used to find/remove it later
+		if ( !handler.guid ) {
+			handler.guid = jQuery.guid++;
+		}
+
+		// Init the element's event structure and main handler, if this is the first
+		if ( !( events = elemData.events ) ) {
+			events = elemData.events = {};
+		}
+		if ( !( eventHandle = elemData.handle ) ) {
+			eventHandle = elemData.handle = function( e ) {
+
+				// Discard the second event of a jQuery.event.trigger() and
+				// when an event is called after a page has unloaded
+				return typeof jQuery !== "undefined" && jQuery.event.triggered !== e.type ?
+					jQuery.event.dispatch.apply( elem, arguments ) : undefined;
+			};
+		}
+
+		// Handle multiple events separated by a space
+		types = ( types || "" ).match( rnotwhite ) || [ "" ];
+		t = types.length;
+		while ( t-- ) {
+			tmp = rtypenamespace.exec( types[ t ] ) || [];
+			type = origType = tmp[ 1 ];
+			namespaces = ( tmp[ 2 ] || "" ).split( "." ).sort();
+
+			// There *must* be a type, no attaching namespace-only handlers
+			if ( !type ) {
+				continue;
+			}
+
+			// If event changes its type, use the special event handlers for the changed type
+			special = jQuery.event.special[ type ] || {};
+
+			// If selector defined, determine special event api type, otherwise given type
+			type = ( selector ? special.delegateType : special.bindType ) || type;
+
+			// Update special based on newly reset type
+			special = jQuery.event.special[ type ] || {};
+
+			// handleObj is passed to all event handlers
+			handleObj = jQuery.extend( {
+				type: type,
+				origType: origType,
+				data: data,
+				handler: handler,
+				guid: handler.guid,
+				selector: selector,
+				needsContext: selector && jQuery.expr.match.needsContext.test( selector ),
+				namespace: namespaces.join( "." )
+			}, handleObjIn );
+
+			// Init the event handler queue if we're the first
+			if ( !( handlers = events[ type ] ) ) {
+				handlers = events[ type ] = [];
+				handlers.delegateCount = 0;
+
+				// Only use addEventListener if the special events handler returns false
+				if ( !special.setup ||
+					special.setup.call( elem, data, namespaces, eventHandle ) === false ) {
+
+					if ( elem.addEventListener ) {
+						elem.addEventListener( type, eventHandle );
+					}
+				}
+			}
+
+			if ( special.add ) {
+				special.add.call( elem, handleObj );
+
+				if ( !handleObj.handler.guid ) {
+					handleObj.handler.guid = handler.guid;
+				}
+			}
+
+			// Add to the element's handler list, delegates in front
+			if ( selector ) {
+				handlers.splice( handlers.delegateCount++, 0, handleObj );
+			} else {
+				handlers.push( handleObj );
+			}
+
+			// Keep track of which events have ever been used, for event optimization
+			jQuery.event.global[ type ] = true;
+		}
+
+	},
+
+	// Detach an event or set of events from an element
+	remove: function( elem, types, handler, selector, mappedTypes ) {
+
+		var j, origCount, tmp,
+			events, t, handleObj,
+			special, handlers, type, namespaces, origType,
+			elemData = dataPriv.hasData( elem ) && dataPriv.get( elem );
+
+		if ( !elemData || !( events = elemData.events ) ) {
+			return;
+		}
+
+		// Once for each type.namespace in types; type may be omitted
+		types = ( types || "" ).match( rnotwhite ) || [ "" ];
+		t = types.length;
+		while ( t-- ) {
+			tmp = rtypenamespace.exec( types[ t ] ) || [];
+			type = origType = tmp[ 1 ];
+			namespaces = ( tmp[ 2 ] || "" ).split( "." ).sort();
+
+			// Unbind all events (on this namespace, if provided) for the element
+			if ( !type ) {
+				for ( type in events ) {
+					jQuery.event.remove( elem, type + types[ t ], handler, selector, true );
+				}
+				continue;
+			}
+
+			special = jQuery.event.special[ type ] || {};
+			type = ( selector ? special.delegateType : special.bindType ) || type;
+			handlers = events[ type ] || [];
+			tmp = tmp[ 2 ] &&
+				new RegExp( "(^|\\.)" + namespaces.join( "\\.(?:.*\\.|)" ) + "(\\.|$)" );
+
+			// Remove matching events
+			origCount = j = handlers.length;
+			while ( j-- ) {
+				handleObj = handlers[ j ];
+
+				if ( ( mappedTypes || origType === handleObj.origType ) &&
+					( !handler || handler.guid === handleObj.guid ) &&
+					( !tmp || tmp.test( handleObj.namespace ) ) &&
+					( !selector || selector === handleObj.selector ||
+						selector === "**" && handleObj.selector ) ) {
+					handlers.splice( j, 1 );
+
+					if ( handleObj.selector ) {
+						handlers.delegateCount--;
+					}
+					if ( special.remove ) {
+						special.remove.call( elem, handleObj );
+					}
+				}
+			}
+
+			// Remove generic event handler if we removed something and no more handlers exist
+			// (avoids potential for endless recursion during removal of special event handlers)
+			if ( origCount && !handlers.length ) {
+				if ( !special.teardown ||
+					special.teardown.call( elem, namespaces, elemData.handle ) === false ) {
+
+					jQuery.removeEvent( elem, type, elemData.handle );
+				}
+
+				delete events[ type ];
+			}
+		}
+
+		// Remove data and the expando if it's no longer used
+		if ( jQuery.isEmptyObject( events ) ) {
+			dataPriv.remove( elem, "handle events" );
+		}
+	},
+
+	dispatch: function( nativeEvent ) {
+
+		// Make a writable jQuery.Event from the native event object
+		var event = jQuery.event.fix( nativeEvent );
+
+		var i, j, ret, matched, handleObj, handlerQueue,
+			args = new Array( arguments.length ),
+			handlers = ( dataPriv.get( this, "events" ) || {} )[ event.type ] || [],
+			special = jQuery.event.special[ event.type ] || {};
+
+		// Use the fix-ed jQuery.Event rather than the (read-only) native event
+		args[ 0 ] = event;
+
+		for ( i = 1; i < arguments.length; i++ ) {
+			args[ i ] = arguments[ i ];
+		}
+
+		event.delegateTarget = this;
+
+		// Call the preDispatch hook for the mapped type, and let it bail if desired
+		if ( special.preDispatch && special.preDispatch.call( this, event ) === false ) {
+			return;
+		}
+
+		// Determine handlers
+		handlerQueue = jQuery.event.handlers.call( this, event, handlers );
+
+		// Run delegates first; they may want to stop propagation beneath us
+		i = 0;
+		while ( ( matched = handlerQueue[ i++ ] ) && !event.isPropagationStopped() ) {
+			event.currentTarget = matched.elem;
+
+			j = 0;
+			while ( ( handleObj = matched.handlers[ j++ ] ) &&
+				!event.isImmediatePropagationStopped() ) {
+
+				// Triggered event must either 1) have no namespace, or 2) have namespace(s)
+				// a subset or equal to those in the bound event (both can have no namespace).
+				if ( !event.rnamespace || event.rnamespace.test( handleObj.namespace ) ) {
+
+					event.handleObj = handleObj;
+					event.data = handleObj.data;
+
+					ret = ( ( jQuery.event.special[ handleObj.origType ] || {} ).handle ||
+						handleObj.handler ).apply( matched.elem, args );
+
+					if ( ret !== undefined ) {
+						if ( ( event.result = ret ) === false ) {
+							event.preventDefault();
+							event.stopPropagation();
+						}
+					}
+				}
+			}
+		}
+
+		// Call the postDispatch hook for the mapped type
+		if ( special.postDispatch ) {
+			special.postDispatch.call( this, event );
+		}
+
+		return event.result;
+	},
+
+	handlers: function( event, handlers ) {
+		var i, matches, sel, handleObj,
+			handlerQueue = [],
+			delegateCount = handlers.delegateCount,
+			cur = event.target;
+
+		// Support: IE <=9
+		// Find delegate handlers
+		// Black-hole SVG <use> instance trees (#13180)
+		//
+		// Support: Firefox <=42
+		// Avoid non-left-click in FF but don't block IE radio events (#3861, gh-2343)
+		if ( delegateCount && cur.nodeType &&
+			( event.type !== "click" || isNaN( event.button ) || event.button < 1 ) ) {
+
+			for ( ; cur !== this; cur = cur.parentNode || this ) {
+
+				// Don't check non-elements (#13208)
+				// Don't process clicks on disabled elements (#6911, #8165, #11382, #11764)
+				if ( cur.nodeType === 1 && ( cur.disabled !== true || event.type !== "click" ) ) {
+					matches = [];
+					for ( i = 0; i < delegateCount; i++ ) {
+						handleObj = handlers[ i ];
+
+						// Don't conflict with Object.prototype properties (#13203)
+						sel = handleObj.selector + " ";
+
+						if ( matches[ sel ] === undefined ) {
+							matches[ sel ] = handleObj.needsContext ?
+								jQuery( sel, this ).index( cur ) > -1 :
+								jQuery.find( sel, this, null, [ cur ] ).length;
+						}
+						if ( matches[ sel ] ) {
+							matches.push( handleObj );
+						}
+					}
+					if ( matches.length ) {
+						handlerQueue.push( { elem: cur, handlers: matches } );
+					}
+				}
+			}
+		}
+
+		// Add the remaining (directly-bound) handlers
+		if ( delegateCount < handlers.length ) {
+			handlerQueue.push( { elem: this, handlers: handlers.slice( delegateCount ) } );
+		}
+
+		return handlerQueue;
+	},
+
+	addProp: function( name, hook ) {
+		Object.defineProperty( jQuery.Event.prototype, name, {
+			enumerable: true,
+			configurable: true,
+
+			get: jQuery.isFunction( hook ) ?
+				function() {
+					if ( this.originalEvent ) {
+							return hook( this.originalEvent );
+					}
+				} :
+				function() {
+					if ( this.originalEvent ) {
+							return this.originalEvent[ name ];
+					}
+				},
+
+			set: function( value ) {
+				Object.defineProperty( this, name, {
+					enumerable: true,
+					configurable: true,
+					writable: true,
+					value: value
+				} );
+			}
+		} );
+	},
+
+	fix: function( originalEvent ) {
+		return originalEvent[ jQuery.expando ] ?
+			originalEvent :
+			new jQuery.Event( originalEvent );
+	},
+
+	special: {
+		load: {
+
+			// Prevent triggered image.load events from bubbling to window.load
+			noBubble: true
+		},
+		focus: {
+
+			// Fire native event if possible so blur/focus sequence is correct
+			trigger: function() {
+				if ( this !== safeActiveElement() && this.focus ) {
+					this.focus();
+					return false;
+				}
+			},
+			delegateType: "focusin"
+		},
+		blur: {
+			trigger: function() {
+				if ( this === safeActiveElement() && this.blur ) {
+					this.blur();
+					return false;
+				}
+			},
+			delegateType: "focusout"
+		},
+		click: {
+
+			// For checkbox, fire native event so checked state will be right
+			trigger: function() {
+				if ( this.type === "checkbox" && this.click && jQuery.nodeName( this, "input" ) ) {
+					this.click();
+					return false;
+				}
+			},
+
+			// For cross-browser consistency, don't fire native .click() on links
+			_default: function( event ) {
+				return jQuery.nodeName( event.target, "a" );
+			}
+		},
+
+		beforeunload: {
+			postDispatch: function( event ) {
+
+				// Support: Firefox 20+
+				// Firefox doesn't alert if the returnValue field is not set.
+				if ( event.result !== undefined && event.originalEvent ) {
+					event.originalEvent.returnValue = event.result;
+				}
+			}
+		}
+	}
+};
+
+jQuery.removeEvent = function( elem, type, handle ) {
+
+	// This "if" is needed for plain objects
+	if ( elem.removeEventListener ) {
+		elem.removeEventListener( type, handle );
+	}
+};
+
+jQuery.Event = function( src, props ) {
+
+	// Allow instantiation without the 'new' keyword
+	if ( !( this instanceof jQuery.Event ) ) {
+		return new jQuery.Event( src, props );
+	}
+
+	// Event object
+	if ( src && src.type ) {
+		this.originalEvent = src;
+		this.type = src.type;
+
+		// Events bubbling up the document may have been marked as prevented
+		// by a handler lower down the tree; reflect the correct value.
+		this.isDefaultPrevented = src.defaultPrevented ||
+				src.defaultPrevented === undefined &&
+
+				// Support: Android <=2.3 only
+				src.returnValue === false ?
+			returnTrue :
+			returnFalse;
+
+		// Create target properties
+		// Support: Safari <=6 - 7 only
+		// Target should not be a text node (#504, #13143)
+		this.target = ( src.target && src.target.nodeType === 3 ) ?
+			src.target.parentNode :
+			src.target;
+
+		this.currentTarget = src.currentTarget;
+		this.relatedTarget = src.relatedTarget;
+
+	// Event type
+	} else {
+		this.type = src;
+	}
+
+	// Put explicitly provided properties onto the event object
+	if ( props ) {
+		jQuery.extend( this, props );
+	}
+
+	// Create a timestamp if incoming event doesn't have one
+	this.timeStamp = src && src.timeStamp || jQuery.now();
+
+	// Mark it as fixed
+	this[ jQuery.expando ] = true;
+};
+
+// jQuery.Event is based on DOM3 Events as specified by the ECMAScript Language Binding
+// https://www.w3.org/TR/2003/WD-DOM-Level-3-Events-20030331/ecma-script-binding.html
+jQuery.Event.prototype = {
+	constructor: jQuery.Event,
+	isDefaultPrevented: returnFalse,
+	isPropagationStopped: returnFalse,
+	isImmediatePropagationStopped: returnFalse,
+	isSimulated: false,
+
+	preventDefault: function() {
+		var e = this.originalEvent;
+
+		this.isDefaultPrevented = returnTrue;
+
+		if ( e && !this.isSimulated ) {
+			e.preventDefault();
+		}
+	},
+	stopPropagation: function() {
+		var e = this.originalEvent;
+
+		this.isPropagationStopped = returnTrue;
+
+		if ( e && !this.isSimulated ) {
+			e.stopPropagation();
+		}
+	},
+	stopImmediatePropagation: function() {
+		var e = this.originalEvent;
+
+		this.isImmediatePropagationStopped = returnTrue;
+
+		if ( e && !this.isSimulated ) {
+			e.stopImmediatePropagation();
+		}
+
+		this.stopPropagation();
+	}
+};
+
+// Includes all common event props including KeyEvent and MouseEvent specific props
+jQuery.each( {
+	altKey: true,
+	bubbles: true,
+	cancelable: true,
+	changedTouches: true,
+	ctrlKey: true,
+	detail: true,
+	eventPhase: true,
+	metaKey: true,
+	pageX: true,
+	pageY: true,
+	shiftKey: true,
+	view: true,
+	"char": true,
+	charCode: true,
+	key: true,
+	keyCode: true,
+	button: true,
+	buttons: true,
+	clientX: true,
+	clientY: true,
+	offsetX: true,
+	offsetY: true,
+	pointerId: true,
+	pointerType: true,
+	screenX: true,
+	screenY: true,
+	targetTouches: true,
+	toElement: true,
+	touches: true,
+
+	which: function( event ) {
+		var button = event.button;
+
+		// Add which for key events
+		if ( event.which == null && rkeyEvent.test( event.type ) ) {
+			return event.charCode != null ? event.charCode : event.keyCode;
+		}
+
+		// Add which for click: 1 === left; 2 === middle; 3 === right
+		if ( !event.which && button !== undefined && rmouseEvent.test( event.type ) ) {
+			return ( button & 1 ? 1 : ( button & 2 ? 3 : ( button & 4 ? 2 : 0 ) ) );
+		}
+
+		return event.which;
+	}
+}, jQuery.event.addProp );
+
+// Create mouseenter/leave events using mouseover/out and event-time checks
+// so that event delegation works in jQuery.
+// Do the same for pointerenter/pointerleave and pointerover/pointerout
+//
+// Support: Safari 7 only
+// Safari sends mouseenter too often; see:
+// https://bugs.chromium.org/p/chromium/issues/detail?id=470258
+// for the description of the bug (it existed in older Chrome versions as well).
+jQuery.each( {
+	mouseenter: "mouseover",
+	mouseleave: "mouseout",
+	pointerenter: "pointerover",
+	pointerleave: "pointerout"
+}, function( orig, fix ) {
+	jQuery.event.special[ orig ] = {
+		delegateType: fix,
+		bindType: fix,
+
+		handle: function( event ) {
+			var ret,
+				target = this,
+				related = event.relatedTarget,
+				handleObj = event.handleObj;
+
+			// For mouseenter/leave call the handler if related is outside the target.
+			// NB: No relatedTarget if the mouse left/entered the browser window
+			if ( !related || ( related !== target && !jQuery.contains( target, related ) ) ) {
+				event.type = handleObj.origType;
+				ret = handleObj.handler.apply( this, arguments );
+				event.type = fix;
+			}
+			return ret;
+		}
+	};
+} );
+
+jQuery.fn.extend( {
+
+	on: function( types, selector, data, fn ) {
+		return on( this, types, selector, data, fn );
+	},
+	one: function( types, selector, data, fn ) {
+		return on( this, types, selector, data, fn, 1 );
+	},
+	off: function( types, selector, fn ) {
+		var handleObj, type;
+		if ( types && types.preventDefault && types.handleObj ) {
+
+			// ( event )  dispatched jQuery.Event
+			handleObj = types.handleObj;
+			jQuery( types.delegateTarget ).off(
+				handleObj.namespace ?
+					handleObj.origType + "." + handleObj.namespace :
+					handleObj.origType,
+				handleObj.selector,
+				handleObj.handler
+			);
+			return this;
+		}
+		if ( typeof types === "object" ) {
+
+			// ( types-object [, selector] )
+			for ( type in types ) {
+				this.off( type, selector, types[ type ] );
+			}
+			return this;
+		}
+		if ( selector === false || typeof selector === "function" ) {
+
+			// ( types [, fn] )
+			fn = selector;
+			selector = undefined;
+		}
+		if ( fn === false ) {
+			fn = returnFalse;
+		}
+		return this.each( function() {
+			jQuery.event.remove( this, types, fn, selector );
+		} );
+	}
+} );
+
+
+var
+
+	/* eslint-disable max-len */
+
+	// See https://github.com/eslint/eslint/issues/3229
+	rxhtmlTag = /<(?!area|br|col|embed|hr|img|input|link|meta|param)(([a-z][^\/\0>\x20\t\r\n\f]*)[^>]*)\/>/gi,
+
+	/* eslint-enable */
+
+	// Support: IE <=10 - 11, Edge 12 - 13
+	// In IE/Edge using regex groups here causes severe slowdowns.
+	// See https://connect.microsoft.com/IE/feedback/details/1736512/
+	rnoInnerhtml = /<script|<style|<link/i,
+
+	// checked="checked" or checked
+	rchecked = /checked\s*(?:[^=]|=\s*.checked.)/i,
+	rscriptTypeMasked = /^true\/(.*)/,
+	rcleanScript = /^\s*<!(?:\[CDATA\[|--)|(?:\]\]|--)>\s*$/g;
+
+function manipulationTarget( elem, content ) {
+	if ( jQuery.nodeName( elem, "table" ) &&
+		jQuery.nodeName( content.nodeType !== 11 ? content : content.firstChild, "tr" ) ) {
+
+		return elem.getElementsByTagName( "tbody" )[ 0 ] || elem;
+	}
+
+	return elem;
+}
+
+// Replace/restore the type attribute of script elements for safe DOM manipulation
+function disableScript( elem ) {
+	elem.type = ( elem.getAttribute( "type" ) !== null ) + "/" + elem.type;
+	return elem;
+}
+function restoreScript( elem ) {
+	var match = rscriptTypeMasked.exec( elem.type );
+
+	if ( match ) {
+		elem.type = match[ 1 ];
+	} else {
+		elem.removeAttribute( "type" );
+	}
+
+	return elem;
+}
+
+function cloneCopyEvent( src, dest ) {
+	var i, l, type, pdataOld, pdataCur, udataOld, udataCur, events;
+
+	if ( dest.nodeType !== 1 ) {
+		return;
+	}
+
+	// 1. Copy private data: events, handlers, etc.
+	if ( dataPriv.hasData( src ) ) {
+		pdataOld = dataPriv.access( src );
+		pdataCur = dataPriv.set( dest, pdataOld );
+		events = pdataOld.events;
+
+		if ( events ) {
+			delete pdataCur.handle;
+			pdataCur.events = {};
+
+			for ( type in events ) {
+				for ( i = 0, l = events[ type ].length; i < l; i++ ) {
+					jQuery.event.add( dest, type, events[ type ][ i ] );
+				}
+			}
+		}
+	}
+
+	// 2. Copy user data
+	if ( dataUser.hasData( src ) ) {
+		udataOld = dataUser.access( src );
+		udataCur = jQuery.extend( {}, udataOld );
+
+		dataUser.set( dest, udataCur );
+	}
+}
+
+// Fix IE bugs, see support tests
+function fixInput( src, dest ) {
+	var nodeName = dest.nodeName.toLowerCase();
+
+	// Fails to persist the checked state of a cloned checkbox or radio button.
+	if ( nodeName === "input" && rcheckableType.test( src.type ) ) {
+		dest.checked = src.checked;
+
+	// Fails to return the selected option to the default selected state when cloning options
+	} else if ( nodeName === "input" || nodeName === "textarea" ) {
+		dest.defaultValue = src.defaultValue;
+	}
+}
+
+function domManip( collection, args, callback, ignored ) {
+
+	// Flatten any nested arrays
+	args = concat.apply( [], args );
+
+	var fragment, first, scripts, hasScripts, node, doc,
+		i = 0,
+		l = collection.length,
+		iNoClone = l - 1,
+		value = args[ 0 ],
+		isFunction = jQuery.isFunction( value );
+
+	// We can't cloneNode fragments that contain checked, in WebKit
+	if ( isFunction ||
+			( l > 1 && typeof value === "string" &&
+				!support.checkClone && rchecked.test( value ) ) ) {
+		return collection.each( function( index ) {
+			var self = collection.eq( index );
+			if ( isFunction ) {
+				args[ 0 ] = value.call( this, index, self.html() );
+			}
+			domManip( self, args, callback, ignored );
+		} );
+	}
+
+	if ( l ) {
+		fragment = buildFragment( args, collection[ 0 ].ownerDocument, false, collection, ignored );
+		first = fragment.firstChild;
+
+		if ( fragment.childNodes.length === 1 ) {
+			fragment = first;
+		}
+
+		// Require either new content or an interest in ignored elements to invoke the callback
+		if ( first || ignored ) {
+			scripts = jQuery.map( getAll( fragment, "script" ), disableScript );
+			hasScripts = scripts.length;
+
+			// Use the original fragment for the last item
+			// instead of the first because it can end up
+			// being emptied incorrectly in certain situations (#8070).
+			for ( ; i < l; i++ ) {
+				node = fragment;
+
+				if ( i !== iNoClone ) {
+					node = jQuery.clone( node, true, true );
+
+					// Keep references to cloned scripts for later restoration
+					if ( hasScripts ) {
+
+						// Support: Android <=4.0 only, PhantomJS 1 only
+						// push.apply(_, arraylike) throws on ancient WebKit
+						jQuery.merge( scripts, getAll( node, "script" ) );
+					}
+				}
+
+				callback.call( collection[ i ], node, i );
+			}
+
+			if ( hasScripts ) {
+				doc = scripts[ scripts.length - 1 ].ownerDocument;
+
+				// Reenable scripts
+				jQuery.map( scripts, restoreScript );
+
+				// Evaluate executable scripts on first document insertion
+				for ( i = 0; i < hasScripts; i++ ) {
+					node = scripts[ i ];
+					if ( rscriptType.test( node.type || "" ) &&
+						!dataPriv.access( node, "globalEval" ) &&
+						jQuery.contains( doc, node ) ) {
+
+						if ( node.src ) {
+
+							// Optional AJAX dependency, but won't run scripts if not present
+							if ( jQuery._evalUrl ) {
+								jQuery._evalUrl( node.src );
+							}
+						} else {
+							DOMEval( node.textContent.replace( rcleanScript, "" ), doc );
+						}
+					}
+				}
+			}
+		}
+	}
+
+	return collection;
+}
+
+function remove( elem, selector, keepData ) {
+	var node,
+		nodes = selector ? jQuery.filter( selector, elem ) : elem,
+		i = 0;
+
+	for ( ; ( node = nodes[ i ] ) != null; i++ ) {
+		if ( !keepData && node.nodeType === 1 ) {
+			jQuery.cleanData( getAll( node ) );
+		}
+
+		if ( node.parentNode ) {
+			if ( keepData && jQuery.contains( node.ownerDocument, node ) ) {
+				setGlobalEval( getAll( node, "script" ) );
+			}
+			node.parentNode.removeChild( node );
+		}
+	}
+
+	return elem;
+}
+
+jQuery.extend( {
+	htmlPrefilter: function( html ) {
+		return html.replace( rxhtmlTag, "<$1></$2>" );
+	},
+
+	clone: function( elem, dataAndEvents, deepDataAndEvents ) {
+		var i, l, srcElements, destElements,
+			clone = elem.cloneNode( true ),
+			inPage = jQuery.contains( elem.ownerDocument, elem );
+
+		// Fix IE cloning issues
+		if ( !support.noCloneChecked && ( elem.nodeType === 1 || elem.nodeType === 11 ) &&
+				!jQuery.isXMLDoc( elem ) ) {
+
+			// We eschew Sizzle here for performance reasons: https://jsperf.com/getall-vs-sizzle/2
+			destElements = getAll( clone );
+			srcElements = getAll( elem );
+
+			for ( i = 0, l = srcElements.length; i < l; i++ ) {
+				fixInput( srcElements[ i ], destElements[ i ] );
+			}
+		}
+
+		// Copy the events from the original to the clone
+		if ( dataAndEvents ) {
+			if ( deepDataAndEvents ) {
+				srcElements = srcElements || getAll( elem );
+				destElements = destElements || getAll( clone );
+
+				for ( i = 0, l = srcElements.length; i < l; i++ ) {
+					cloneCopyEvent( srcElements[ i ], destElements[ i ] );
+				}
+			} else {
+				cloneCopyEvent( elem, clone );
+			}
+		}
+
+		// Preserve script evaluation history
+		destElements = getAll( clone, "script" );
+		if ( destElements.length > 0 ) {
+			setGlobalEval( destElements, !inPage && getAll( elem, "script" ) );
+		}
+
+		// Return the cloned set
+		return clone;
+	},
+
+	cleanData: function( elems ) {
+		var data, elem, type,
+			special = jQuery.event.special,
+			i = 0;
+
+		for ( ; ( elem = elems[ i ] ) !== undefined; i++ ) {
+			if ( acceptData( elem ) ) {
+				if ( ( data = elem[ dataPriv.expando ] ) ) {
+					if ( data.events ) {
+						for ( type in data.events ) {
+							if ( special[ type ] ) {
+								jQuery.event.remove( elem, type );
+
+							// This is a shortcut to avoid jQuery.event.remove's overhead
+							} else {
+								jQuery.removeEvent( elem, type, data.handle );
+							}
+						}
+					}
+
+					// Support: Chrome <=35 - 45+
+					// Assign undefined instead of using delete, see Data#remove
+					elem[ dataPriv.expando ] = undefined;
+				}
+				if ( elem[ dataUser.expando ] ) {
+
+					// Support: Chrome <=35 - 45+
+					// Assign undefined instead of using delete, see Data#remove
+					elem[ dataUser.expando ] = undefined;
+				}
+			}
+		}
+	}
+} );
+
+jQuery.fn.extend( {
+	detach: function( selector ) {
+		return remove( this, selector, true );
+	},
+
+	remove: function( selector ) {
+		return remove( this, selector );
+	},
+
+	text: function( value ) {
+		return access( this, function( value ) {
+			return value === undefined ?
+				jQuery.text( this ) :
+				this.empty().each( function() {
+					if ( this.nodeType === 1 || this.nodeType === 11 || this.nodeType === 9 ) {
+						this.textContent = value;
+					}
+				} );
+		}, null, value, arguments.length );
+	},
+
+	append: function() {
+		return domManip( this, arguments, function( elem ) {
+			if ( this.nodeType === 1 || this.nodeType === 11 || this.nodeType === 9 ) {
+				var target = manipulationTarget( this, elem );
+				target.appendChild( elem );
+			}
+		} );
+	},
+
+	prepend: function() {
+		return domManip( this, arguments, function( elem ) {
+			if ( this.nodeType === 1 || this.nodeType === 11 || this.nodeType === 9 ) {
+				var target = manipulationTarget( this, elem );
+				target.insertBefore( elem, target.firstChild );
+			}
+		} );
+	},
+
+	before: function() {
+		return domManip( this, arguments, function( elem ) {
+			if ( this.parentNode ) {
+				this.parentNode.insertBefore( elem, this );
+			}
+		} );
+	},
+
+	after: function() {
+		return domManip( this, arguments, function( elem ) {
+			if ( this.parentNode ) {
+				this.parentNode.insertBefore( elem, this.nextSibling );
+			}
+		} );
+	},
+
+	empty: function() {
+		var elem,
+			i = 0;
+
+		for ( ; ( elem = this[ i ] ) != null; i++ ) {
+			if ( elem.nodeType === 1 ) {
+
+				// Prevent memory leaks
+				jQuery.cleanData( getAll( elem, false ) );
+
+				// Remove any remaining nodes
+				elem.textContent = "";
+			}
+		}
+
+		return this;
+	},
+
+	clone: function( dataAndEvents, deepDataAndEvents ) {
+		dataAndEvents = dataAndEvents == null ? false : dataAndEvents;
+		deepDataAndEvents = deepDataAndEvents == null ? dataAndEvents : deepDataAndEvents;
+
+		return this.map( function() {
+			return jQuery.clone( this, dataAndEvents, deepDataAndEvents );
+		} );
+	},
+
+	html: function( value ) {
+		return access( this, function( value ) {
+			var elem = this[ 0 ] || {},
+				i = 0,
+				l = this.length;
+
+			if ( value === undefined && elem.nodeType === 1 ) {
+				return elem.innerHTML;
+			}
+
+			// See if we can take a shortcut and just use innerHTML
+			if ( typeof value === "string" && !rnoInnerhtml.test( value ) &&
+				!wrapMap[ ( rtagName.exec( value ) || [ "", "" ] )[ 1 ].toLowerCase() ] ) {
+
+				value = jQuery.htmlPrefilter( value );
+
+				try {
+					for ( ; i < l; i++ ) {
+						elem = this[ i ] || {};
+
+						// Remove element nodes and prevent memory leaks
+						if ( elem.nodeType === 1 ) {
+							jQuery.cleanData( getAll( elem, false ) );
+							elem.innerHTML = value;
+						}
+					}
+
+					elem = 0;
+
+				// If using innerHTML throws an exception, use the fallback method
+				} catch ( e ) {}
+			}
+
+			if ( elem ) {
+				this.empty().append( value );
+			}
+		}, null, value, arguments.length );
+	},
+
+	replaceWith: function() {
+		var ignored = [];
+
+		// Make the changes, replacing each non-ignored context element with the new content
+		return domManip( this, arguments, function( elem ) {
+			var parent = this.parentNode;
+
+			if ( jQuery.inArray( this, ignored ) < 0 ) {
+				jQuery.cleanData( getAll( this ) );
+				if ( parent ) {
+					parent.replaceChild( elem, this );
+				}
+			}
+
+		// Force callback invocation
+		}, ignored );
+	}
+} );
+
+jQuery.each( {
+	appendTo: "append",
+	prependTo: "prepend",
+	insertBefore: "before",
+	insertAfter: "after",
+	replaceAll: "replaceWith"
+}, function( name, original ) {
+	jQuery.fn[ name ] = function( selector ) {
+		var elems,
+			ret = [],
+			insert = jQuery( selector ),
+			last = insert.length - 1,
+			i = 0;
+
+		for ( ; i <= last; i++ ) {
+			elems = i === last ? this : this.clone( true );
+			jQuery( insert[ i ] )[ original ]( elems );
+
+			// Support: Android <=4.0 only, PhantomJS 1 only
+			// .get() because push.apply(_, arraylike) throws on ancient WebKit
+			push.apply( ret, elems.get() );
+		}
+
+		return this.pushStack( ret );
+	};
+} );
+var rmargin = ( /^margin/ );
+
+var rnumnonpx = new RegExp( "^(" + pnum + ")(?!px)[a-z%]+$", "i" );
+
+var getStyles = function( elem ) {
+
+		// Support: IE <=11 only, Firefox <=30 (#15098, #14150)
+		// IE throws on elements created in popups
+		// FF meanwhile throws on frame elements through "defaultView.getComputedStyle"
+		var view = elem.ownerDocument.defaultView;
+
+		if ( !view || !view.opener ) {
+			view = window;
+		}
+
+		return view.getComputedStyle( elem );
+	};
+
+
+
+( function() {
+
+	// Executing both pixelPosition & boxSizingReliable tests require only one layout
+	// so they're executed at the same time to save the second computation.
+	function computeStyleTests() {
+
+		// This is a singleton, we need to execute it only once
+		if ( !div ) {
+			return;
+		}
+
+		div.style.cssText =
+			"box-sizing:border-box;" +
+			"position:relative;display:block;" +
+			"margin:auto;border:1px;padding:1px;" +
+			"top:1%;width:50%";
+		div.innerHTML = "";
+		documentElement.appendChild( container );
+
+		var divStyle = window.getComputedStyle( div );
+		pixelPositionVal = divStyle.top !== "1%";
+
+		// Support: Android 4.0 - 4.3 only, Firefox <=3 - 44
+		reliableMarginLeftVal = divStyle.marginLeft === "2px";
+		boxSizingReliableVal = divStyle.width === "4px";
+
+		// Support: Android 4.0 - 4.3 only
+		// Some styles come back with percentage values, even though they shouldn't
+		div.style.marginRight = "50%";
+		pixelMarginRightVal = divStyle.marginRight === "4px";
+
+		documentElement.removeChild( container );
+
+		// Nullify the div so it wouldn't be stored in the memory and
+		// it will also be a sign that checks already performed
+		div = null;
+	}
+
+	var pixelPositionVal, boxSizingReliableVal, pixelMarginRightVal, reliableMarginLeftVal,
+		container = document.createElement( "div" ),
+		div = document.createElement( "div" );
+
+	// Finish early in limited (non-browser) environments
+	if ( !div.style ) {
+		return;
+	}
+
+	// Support: IE <=9 - 11 only
+	// Style of cloned element affects source element cloned (#8908)
+	div.style.backgroundClip = "content-box";
+	div.cloneNode( true ).style.backgroundClip = "";
+	support.clearCloneStyle = div.style.backgroundClip === "content-box";
+
+	container.style.cssText = "border:0;width:8px;height:0;top:0;left:-9999px;" +
+		"padding:0;margin-top:1px;position:absolute";
+	container.appendChild( div );
+
+	jQuery.extend( support, {
+		pixelPosition: function() {
+			computeStyleTests();
+			return pixelPositionVal;
+		},
+		boxSizingReliable: function() {
+			computeStyleTests();
+			return boxSizingReliableVal;
+		},
+		pixelMarginRight: function() {
+			computeStyleTests();
+			return pixelMarginRightVal;
+		},
+		reliableMarginLeft: function() {
+			computeStyleTests();
+			return reliableMarginLeftVal;
+		}
+	} );
+} )();
+
+
+function curCSS( elem, name, computed ) {
+	var width, minWidth, maxWidth, ret,
+		style = elem.style;
+
+	computed = computed || getStyles( elem );
+
+	// Support: IE <=9 only
+	// getPropertyValue is only needed for .css('filter') (#12537)
+	if ( computed ) {
+		ret = computed.getPropertyValue( name ) || computed[ name ];
+
+		if ( ret === "" && !jQuery.contains( elem.ownerDocument, elem ) ) {
+			ret = jQuery.style( elem, name );
+		}
+
+		// A tribute to the "awesome hack by Dean Edwards"
+		// Android Browser returns percentage for some values,
+		// but width seems to be reliably pixels.
+		// This is against the CSSOM draft spec:
+		// https://drafts.csswg.org/cssom/#resolved-values
+		if ( !support.pixelMarginRight() && rnumnonpx.test( ret ) && rmargin.test( name ) ) {
+
+			// Remember the original values
+			width = style.width;
+			minWidth = style.minWidth;
+			maxWidth = style.maxWidth;
+
+			// Put in the new values to get a computed value out
+			style.minWidth = style.maxWidth = style.width = ret;
+			ret = computed.width;
+
+			// Revert the changed values
+			style.width = width;
+			style.minWidth = minWidth;
+			style.maxWidth = maxWidth;
+		}
+	}
+
+	return ret !== undefined ?
+
+		// Support: IE <=9 - 11 only
+		// IE returns zIndex value as an integer.
+		ret + "" :
+		ret;
+}
+
+
+function addGetHookIf( conditionFn, hookFn ) {
+
+	// Define the hook, we'll check on the first run if it's really needed.
+	return {
+		get: function() {
+			if ( conditionFn() ) {
+
+				// Hook not needed (or it's not possible to use it due
+				// to missing dependency), remove it.
+				delete this.get;
+				return;
+			}
+
+			// Hook needed; redefine it so that the support test is not executed again.
+			return ( this.get = hookFn ).apply( this, arguments );
+		}
+	};
+}
+
+
+var
+
+	// Swappable if display is none or starts with table
+	// except "table", "table-cell", or "table-caption"
+	// See here for display values: https://developer.mozilla.org/en-US/docs/CSS/display
+	rdisplayswap = /^(none|table(?!-c[ea]).+)/,
+	cssShow = { position: "absolute", visibility: "hidden", display: "block" },
+	cssNormalTransform = {
+		letterSpacing: "0",
+		fontWeight: "400"
+	},
+
+	cssPrefixes = [ "Webkit", "Moz", "ms" ],
+	emptyStyle = document.createElement( "div" ).style;
+
+// Return a css property mapped to a potentially vendor prefixed property
+function vendorPropName( name ) {
+
+	// Shortcut for names that are not vendor prefixed
+	if ( name in emptyStyle ) {
+		return name;
+	}
+
+	// Check for vendor prefixed names
+	var capName = name[ 0 ].toUpperCase() + name.slice( 1 ),
+		i = cssPrefixes.length;
+
+	while ( i-- ) {
+		name = cssPrefixes[ i ] + capName;
+		if ( name in emptyStyle ) {
+			return name;
+		}
+	}
+}
+
+function setPositiveNumber( elem, value, subtract ) {
+
+	// Any relative (+/-) values have already been
+	// normalized at this point
+	var matches = rcssNum.exec( value );
+	return matches ?
+
+		// Guard against undefined "subtract", e.g., when used as in cssHooks
+		Math.max( 0, matches[ 2 ] - ( subtract || 0 ) ) + ( matches[ 3 ] || "px" ) :
+		value;
+}
+
+function augmentWidthOrHeight( elem, name, extra, isBorderBox, styles ) {
+	var i = extra === ( isBorderBox ? "border" : "content" ) ?
+
+		// If we already have the right measurement, avoid augmentation
+		4 :
+
+		// Otherwise initialize for horizontal or vertical properties
+		name === "width" ? 1 : 0,
+
+		val = 0;
+
+	for ( ; i < 4; i += 2 ) {
+
+		// Both box models exclude margin, so add it if we want it
+		if ( extra === "margin" ) {
+			val += jQuery.css( elem, extra + cssExpand[ i ], true, styles );
+		}
+
+		if ( isBorderBox ) {
+
+			// border-box includes padding, so remove it if we want content
+			if ( extra === "content" ) {
+				val -= jQuery.css( elem, "padding" + cssExpand[ i ], true, styles );
+			}
+
+			// At this point, extra isn't border nor margin, so remove border
+			if ( extra !== "margin" ) {
+				val -= jQuery.css( elem, "border" + cssExpand[ i ] + "Width", true, styles );
+			}
+		} else {
+
+			// At this point, extra isn't content, so add padding
+			val += jQuery.css( elem, "padding" + cssExpand[ i ], true, styles );
+
+			// At this point, extra isn't content nor padding, so add border
+			if ( extra !== "padding" ) {
+				val += jQuery.css( elem, "border" + cssExpand[ i ] + "Width", true, styles );
+			}
+		}
+	}
+
+	return val;
+}
+
+function getWidthOrHeight( elem, name, extra ) {
+
+	// Start with offset property, which is equivalent to the border-box value
+	var val,
+		valueIsBorderBox = true,
+		styles = getStyles( elem ),
+		isBorderBox = jQuery.css( elem, "boxSizing", false, styles ) === "border-box";
+
+	// Support: IE <=11 only
+	// Running getBoundingClientRect on a disconnected node
+	// in IE throws an error.
+	if ( elem.getClientRects().length ) {
+		val = elem.getBoundingClientRect()[ name ];
+	}
+
+	// Some non-html elements return undefined for offsetWidth, so check for null/undefined
+	// svg - https://bugzilla.mozilla.org/show_bug.cgi?id=649285
+	// MathML - https://bugzilla.mozilla.org/show_bug.cgi?id=491668
+	if ( val <= 0 || val == null ) {
+
+		// Fall back to computed then uncomputed css if necessary
+		val = curCSS( elem, name, styles );
+		if ( val < 0 || val == null ) {
+			val = elem.style[ name ];
+		}
+
+		// Computed unit is not pixels. Stop here and return.
+		if ( rnumnonpx.test( val ) ) {
+			return val;
+		}
+
+		// Check for style in case a browser which returns unreliable values
+		// for getComputedStyle silently falls back to the reliable elem.style
+		valueIsBorderBox = isBorderBox &&
+			( support.boxSizingReliable() || val === elem.style[ name ] );
+
+		// Normalize "", auto, and prepare for extra
+		val = parseFloat( val ) || 0;
+	}
+
+	// Use the active box-sizing model to add/subtract irrelevant styles
+	return ( val +
+		augmentWidthOrHeight(
+			elem,
+			name,
+			extra || ( isBorderBox ? "border" : "content" ),
+			valueIsBorderBox,
+			styles
+		)
+	) + "px";
+}
+
+jQuery.extend( {
+
+	// Add in style property hooks for overriding the default
+	// behavior of getting and setting a style property
+	cssHooks: {
+		opacity: {
+			get: function( elem, computed ) {
+				if ( computed ) {
+
+					// We should always get a number back from opacity
+					var ret = curCSS( elem, "opacity" );
+					return ret === "" ? "1" : ret;
+				}
+			}
+		}
+	},
+
+	// Don't automatically add "px" to these possibly-unitless properties
+	cssNumber: {
+		"animationIterationCount": true,
+		"columnCount": true,
+		"fillOpacity": true,
+		"flexGrow": true,
+		"flexShrink": true,
+		"fontWeight": true,
+		"lineHeight": true,
+		"opacity": true,
+		"order": true,
+		"orphans": true,
+		"widows": true,
+		"zIndex": true,
+		"zoom": true
+	},
+
+	// Add in properties whose names you wish to fix before
+	// setting or getting the value
+	cssProps: {
+		"float": "cssFloat"
+	},
+
+	// Get and set the style property on a DOM Node
+	style: function( elem, name, value, extra ) {
+
+		// Don't set styles on text and comment nodes
+		if ( !elem || elem.nodeType === 3 || elem.nodeType === 8 || !elem.style ) {
+			return;
+		}
+
+		// Make sure that we're working with the right name
+		var ret, type, hooks,
+			origName = jQuery.camelCase( name ),
+			style = elem.style;
+
+		name = jQuery.cssProps[ origName ] ||
+			( jQuery.cssProps[ origName ] = vendorPropName( origName ) || origName );
+
+		// Gets hook for the prefixed version, then unprefixed version
+		hooks = jQuery.cssHooks[ name ] || jQuery.cssHooks[ origName ];
+
+		// Check if we're setting a value
+		if ( value !== undefined ) {
+			type = typeof value;
+
+			// Convert "+=" or "-=" to relative numbers (#7345)
+			if ( type === "string" && ( ret = rcssNum.exec( value ) ) && ret[ 1 ] ) {
+				value = adjustCSS( elem, name, ret );
+
+				// Fixes bug #9237
+				type = "number";
+			}
+
+			// Make sure that null and NaN values aren't set (#7116)
+			if ( value == null || value !== value ) {
+				return;
+			}
+
+			// If a number was passed in, add the unit (except for certain CSS properties)
+			if ( type === "number" ) {
+				value += ret && ret[ 3 ] || ( jQuery.cssNumber[ origName ] ? "" : "px" );
+			}
+
+			// background-* props affect original clone's values
+			if ( !support.clearCloneStyle && value === "" && name.indexOf( "background" ) === 0 ) {
+				style[ name ] = "inherit";
+			}
+
+			// If a hook was provided, use that value, otherwise just set the specified value
+			if ( !hooks || !( "set" in hooks ) ||
+				( value = hooks.set( elem, value, extra ) ) !== undefined ) {
+
+				style[ name ] = value;
+			}
+
+		} else {
+
+			// If a hook was provided get the non-computed value from there
+			if ( hooks && "get" in hooks &&
+				( ret = hooks.get( elem, false, extra ) ) !== undefined ) {
+
+				return ret;
+			}
+
+			// Otherwise just get the value from the style object
+			return style[ name ];
+		}
+	},
+
+	css: function( elem, name, extra, styles ) {
+		var val, num, hooks,
+			origName = jQuery.camelCase( name );
+
+		// Make sure that we're working with the right name
+		name = jQuery.cssProps[ origName ] ||
+			( jQuery.cssProps[ origName ] = vendorPropName( origName ) || origName );
+
+		// Try prefixed name followed by the unprefixed name
+		hooks = jQuery.cssHooks[ name ] || jQuery.cssHooks[ origName ];
+
+		// If a hook was provided get the computed value from there
+		if ( hooks && "get" in hooks ) {
+			val = hooks.get( elem, true, extra );
+		}
+
+		// Otherwise, if a way to get the computed value exists, use that
+		if ( val === undefined ) {
+			val = curCSS( elem, name, styles );
+		}
+
+		// Convert "normal" to computed value
+		if ( val === "normal" && name in cssNormalTransform ) {
+			val = cssNormalTransform[ name ];
+		}
+
+		// Make numeric if forced or a qualifier was provided and val looks numeric
+		if ( extra === "" || extra ) {
+			num = parseFloat( val );
+			return extra === true || isFinite( num ) ? num || 0 : val;
+		}
+		return val;
+	}
+} );
+
+jQuery.each( [ "height", "width" ], function( i, name ) {
+	jQuery.cssHooks[ name ] = {
+		get: function( elem, computed, extra ) {
+			if ( computed ) {
+
+				// Certain elements can have dimension info if we invisibly show them
+				// but it must have a current display style that would benefit
+				return rdisplayswap.test( jQuery.css( elem, "display" ) ) &&
+
+					// Support: Safari 8+
+					// Table columns in Safari have non-zero offsetWidth & zero
+					// getBoundingClientRect().width unless display is changed.
+					// Support: IE <=11 only
+					// Running getBoundingClientRect on a disconnected node
+					// in IE throws an error.
+					( !elem.getClientRects().length || !elem.getBoundingClientRect().width ) ?
+						swap( elem, cssShow, function() {
+							return getWidthOrHeight( elem, name, extra );
+						} ) :
+						getWidthOrHeight( elem, name, extra );
+			}
+		},
+
+		set: function( elem, value, extra ) {
+			var matches,
+				styles = extra && getStyles( elem ),
+				subtract = extra && augmentWidthOrHeight(
+					elem,
+					name,
+					extra,
+					jQuery.css( elem, "boxSizing", false, styles ) === "border-box",
+					styles
+				);
+
+			// Convert to pixels if value adjustment is needed
+			if ( subtract && ( matches = rcssNum.exec( value ) ) &&
+				( matches[ 3 ] || "px" ) !== "px" ) {
+
+				elem.style[ name ] = value;
+				value = jQuery.css( elem, name );
+			}
+
+			return setPositiveNumber( elem, value, subtract );
+		}
+	};
+} );
+
+jQuery.cssHooks.marginLeft = addGetHookIf( support.reliableMarginLeft,
+	function( elem, computed ) {
+		if ( computed ) {
+			return ( parseFloat( curCSS( elem, "marginLeft" ) ) ||
+				elem.getBoundingClientRect().left -
+					swap( elem, { marginLeft: 0 }, function() {
+						return elem.getBoundingClientRect().left;
+					} )
+				) + "px";
+		}
+	}
+);
+
+// These hooks are used by animate to expand properties
+jQuery.each( {
+	margin: "",
+	padding: "",
+	border: "Width"
+}, function( prefix, suffix ) {
+	jQuery.cssHooks[ prefix + suffix ] = {
+		expand: function( value ) {
+			var i = 0,
+				expanded = {},
+
+				// Assumes a single number if not a string
+				parts = typeof value === "string" ? value.split( " " ) : [ value ];
+
+			for ( ; i < 4; i++ ) {
+				expanded[ prefix + cssExpand[ i ] + suffix ] =
+					parts[ i ] || parts[ i - 2 ] || parts[ 0 ];
+			}
+
+			return expanded;
+		}
+	};
+
+	if ( !rmargin.test( prefix ) ) {
+		jQuery.cssHooks[ prefix + suffix ].set = setPositiveNumber;
+	}
+} );
+
+jQuery.fn.extend( {
+	css: function( name, value ) {
+		return access( this, function( elem, name, value ) {
+			var styles, len,
+				map = {},
+				i = 0;
+
+			if ( jQuery.isArray( name ) ) {
+				styles = getStyles( elem );
+				len = name.length;
+
+				for ( ; i < len; i++ ) {
+					map[ name[ i ] ] = jQuery.css( elem, name[ i ], false, styles );
+				}
+
+				return map;
+			}
+
+			return value !== undefined ?
+				jQuery.style( elem, name, value ) :
+				jQuery.css( elem, name );
+		}, name, value, arguments.length > 1 );
+	}
+} );
+
+
+function Tween( elem, options, prop, end, easing ) {
+	return new Tween.prototype.init( elem, options, prop, end, easing );
+}
+jQuery.Tween = Tween;
+
+Tween.prototype = {
+	constructor: Tween,
+	init: function( elem, options, prop, end, easing, unit ) {
+		this.elem = elem;
+		this.prop = prop;
+		this.easing = easing || jQuery.easing._default;
+		this.options = options;
+		this.start = this.now = this.cur();
+		this.end = end;
+		this.unit = unit || ( jQuery.cssNumber[ prop ] ? "" : "px" );
+	},
+	cur: function() {
+		var hooks = Tween.propHooks[ this.prop ];
+
+		return hooks && hooks.get ?
+			hooks.get( this ) :
+			Tween.propHooks._default.get( this );
+	},
+	run: function( percent ) {
+		var eased,
+			hooks = Tween.propHooks[ this.prop ];
+
+		if ( this.options.duration ) {
+			this.pos = eased = jQuery.easing[ this.easing ](
+				percent, this.options.duration * percent, 0, 1, this.options.duration
+			);
+		} else {
+			this.pos = eased = percent;
+		}
+		this.now = ( this.end - this.start ) * eased + this.start;
+
+		if ( this.options.step ) {
+			this.options.step.call( this.elem, this.now, this );
+		}
+
+		if ( hooks && hooks.set ) {
+			hooks.set( this );
+		} else {
+			Tween.propHooks._default.set( this );
+		}
+		return this;
+	}
+};
+
+Tween.prototype.init.prototype = Tween.prototype;
+
+Tween.propHooks = {
+	_default: {
+		get: function( tween ) {
+			var result;
+
+			// Use a property on the element directly when it is not a DOM element,
+			// or when there is no matching style property that exists.
+			if ( tween.elem.nodeType !== 1 ||
+				tween.elem[ tween.prop ] != null && tween.elem.style[ tween.prop ] == null ) {
+				return tween.elem[ tween.prop ];
+			}
+
+			// Passing an empty string as a 3rd parameter to .css will automatically
+			// attempt a parseFloat and fallback to a string if the parse fails.
+			// Simple values such as "10px" are parsed to Float;
+			// complex values such as "rotate(1rad)" are returned as-is.
+			result = jQuery.css( tween.elem, tween.prop, "" );
+
+			// Empty strings, null, undefined and "auto" are converted to 0.
+			return !result || result === "auto" ? 0 : result;
+		},
+		set: function( tween ) {
+
+			// Use step hook for back compat.
+			// Use cssHook if its there.
+			// Use .style if available and use plain properties where available.
+			if ( jQuery.fx.step[ tween.prop ] ) {
+				jQuery.fx.step[ tween.prop ]( tween );
+			} else if ( tween.elem.nodeType === 1 &&
+				( tween.elem.style[ jQuery.cssProps[ tween.prop ] ] != null ||
+					jQuery.cssHooks[ tween.prop ] ) ) {
+				jQuery.style( tween.elem, tween.prop, tween.now + tween.unit );
+			} else {
+				tween.elem[ tween.prop ] = tween.now;
+			}
+		}
+	}
+};
+
+// Support: IE <=9 only
+// Panic based approach to setting things on disconnected nodes
+Tween.propHooks.scrollTop = Tween.propHooks.scrollLeft = {
+	set: function( tween ) {
+		if ( tween.elem.nodeType && tween.elem.parentNode ) {
+			tween.elem[ tween.prop ] = tween.now;
+		}
+	}
+};
+
+jQuery.easing = {
+	linear: function( p ) {
+		return p;
+	},
+	swing: function( p ) {
+		return 0.5 - Math.cos( p * Math.PI ) / 2;
+	},
+	_default: "swing"
+};
+
+jQuery.fx = Tween.prototype.init;
+
+// Back compat <1.8 extension point
+jQuery.fx.step = {};
+
+
+
+
+var
+	fxNow, timerId,
+	rfxtypes = /^(?:toggle|show|hide)$/,
+	rrun = /queueHooks$/;
+
+function raf() {
+	if ( timerId ) {
+		window.requestAnimationFrame( raf );
+		jQuery.fx.tick();
+	}
+}
+
+// Animations created synchronously will run synchronously
+function createFxNow() {
+	window.setTimeout( function() {
+		fxNow = undefined;
+	} );
+	return ( fxNow = jQuery.now() );
+}
+
+// Generate parameters to create a standard animation
+function genFx( type, includeWidth ) {
+	var which,
+		i = 0,
+		attrs = { height: type };
+
+	// If we include width, step value is 1 to do all cssExpand values,
+	// otherwise step value is 2 to skip over Left and Right
+	includeWidth = includeWidth ? 1 : 0;
+	for ( ; i < 4; i += 2 - includeWidth ) {
+		which = cssExpand[ i ];
+		attrs[ "margin" + which ] = attrs[ "padding" + which ] = type;
+	}
+
+	if ( includeWidth ) {
+		attrs.opacity = attrs.width = type;
+	}
+
+	return attrs;
+}
+
+function createTween( value, prop, animation ) {
+	var tween,
+		collection = ( Animation.tweeners[ prop ] || [] ).concat( Animation.tweeners[ "*" ] ),
+		index = 0,
+		length = collection.length;
+	for ( ; index < length; index++ ) {
+		if ( ( tween = collection[ index ].call( animation, prop, value ) ) ) {
+
+			// We're done with this property
+			return tween;
+		}
+	}
+}
+
+function defaultPrefilter( elem, props, opts ) {
+	var prop, value, toggle, hooks, oldfire, propTween, restoreDisplay, display,
+		isBox = "width" in props || "height" in props,
+		anim = this,
+		orig = {},
+		style = elem.style,
+		hidden = elem.nodeType && isHiddenWithinTree( elem ),
+		dataShow = dataPriv.get( elem, "fxshow" );
+
+	// Queue-skipping animations hijack the fx hooks
+	if ( !opts.queue ) {
+		hooks = jQuery._queueHooks( elem, "fx" );
+		if ( hooks.unqueued == null ) {
+			hooks.unqueued = 0;
+			oldfire = hooks.empty.fire;
+			hooks.empty.fire = function() {
+				if ( !hooks.unqueued ) {
+					oldfire();
+				}
+			};
+		}
+		hooks.unqueued++;
+
+		anim.always( function() {
+
+			// Ensure the complete handler is called before this completes
+			anim.always( function() {
+				hooks.unqueued--;
+				if ( !jQuery.queue( elem, "fx" ).length ) {
+					hooks.empty.fire();
+				}
+			} );
+		} );
+	}
+
+	// Detect show/hide animations
+	for ( prop in props ) {
+		value = props[ prop ];
+		if ( rfxtypes.test( value ) ) {
+			delete props[ prop ];
+			toggle = toggle || value === "toggle";
+			if ( value === ( hidden ? "hide" : "show" ) ) {
+
+				// Pretend to be hidden if this is a "show" and
+				// there is still data from a stopped show/hide
+				if ( value === "show" && dataShow && dataShow[ prop ] !== undefined ) {
+					hidden = true;
+
+				// Ignore all other no-op show/hide data
+				} else {
+					continue;
+				}
+			}
+			orig[ prop ] = dataShow && dataShow[ prop ] || jQuery.style( elem, prop );
+		}
+	}
+
+	// Bail out if this is a no-op like .hide().hide()
+	propTween = !jQuery.isEmptyObject( props );
+	if ( !propTween && jQuery.isEmptyObject( orig ) ) {
+		return;
+	}
+
+	// Restrict "overflow" and "display" styles during box animations
+	if ( isBox && elem.nodeType === 1 ) {
+
+		// Support: IE <=9 - 11, Edge 12 - 13
+		// Record all 3 overflow attributes because IE does not infer the shorthand
+		// from identically-valued overflowX and overflowY
+		opts.overflow = [ style.overflow, style.overflowX, style.overflowY ];
+
+		// Identify a display type, preferring old show/hide data over the CSS cascade
+		restoreDisplay = dataShow && dataShow.display;
+		if ( restoreDisplay == null ) {
+			restoreDisplay = dataPriv.get( elem, "display" );
+		}
+		display = jQuery.css( elem, "display" );
+		if ( display === "none" ) {
+			if ( restoreDisplay ) {
+				display = restoreDisplay;
+			} else {
+
+				// Get nonempty value(s) by temporarily forcing visibility
+				showHide( [ elem ], true );
+				restoreDisplay = elem.style.display || restoreDisplay;
+				display = jQuery.css( elem, "display" );
+				showHide( [ elem ] );
+			}
+		}
+
+		// Animate inline elements as inline-block
+		if ( display === "inline" || display === "inline-block" && restoreDisplay != null ) {
+			if ( jQuery.css( elem, "float" ) === "none" ) {
+
+				// Restore the original display value at the end of pure show/hide animations
+				if ( !propTween ) {
+					anim.done( function() {
+						style.display = restoreDisplay;
+					} );
+					if ( restoreDisplay == null ) {
+						display = style.display;
+						restoreDisplay = display === "none" ? "" : display;
+					}
+				}
+				style.display = "inline-block";
+			}
+		}
+	}
+
+	if ( opts.overflow ) {
+		style.overflow = "hidden";
+		anim.always( function() {
+			style.overflow = opts.overflow[ 0 ];
+			style.overflowX = opts.overflow[ 1 ];
+			style.overflowY = opts.overflow[ 2 ];
+		} );
+	}
+
+	// Implement show/hide animations
+	propTween = false;
+	for ( prop in orig ) {
+
+		// General show/hide setup for this element animation
+		if ( !propTween ) {
+			if ( dataShow ) {
+				if ( "hidden" in dataShow ) {
+					hidden = dataShow.hidden;
+				}
+			} else {
+				dataShow = dataPriv.access( elem, "fxshow", { display: restoreDisplay } );
+			}
+
+			// Store hidden/visible for toggle so `.stop().toggle()` "reverses"
+			if ( toggle ) {
+				dataShow.hidden = !hidden;
+			}
+
+			// Show elements before animating them
+			if ( hidden ) {
+				showHide( [ elem ], true );
+			}
+
+			/* eslint-disable no-loop-func */
+
+			anim.done( function() {
+
+			/* eslint-enable no-loop-func */
+
+				// The final step of a "hide" animation is actually hiding the element
+				if ( !hidden ) {
+					showHide( [ elem ] );
+				}
+				dataPriv.remove( elem, "fxshow" );
+				for ( prop in orig ) {
+					jQuery.style( elem, prop, orig[ prop ] );
+				}
+			} );
+		}
+
+		// Per-property setup
+		propTween = createTween( hidden ? dataShow[ prop ] : 0, prop, anim );
+		if ( !( prop in dataShow ) ) {
+			dataShow[ prop ] = propTween.start;
+			if ( hidden ) {
+				propTween.end = propTween.start;
+				propTween.start = 0;
+			}
+		}
+	}
+}
+
+function propFilter( props, specialEasing ) {
+	var index, name, easing, value, hooks;
+
+	// camelCase, specialEasing and expand cssHook pass
+	for ( index in props ) {
+		name = jQuery.camelCase( index );
+		easing = specialEasing[ name ];
+		value = props[ index ];
+		if ( jQuery.isArray( value ) ) {
+			easing = value[ 1 ];
+			value = props[ index ] = value[ 0 ];
+		}
+
+		if ( index !== name ) {
+			props[ name ] = value;
+			delete props[ index ];
+		}
+
+		hooks = jQuery.cssHooks[ name ];
+		if ( hooks && "expand" in hooks ) {
+			value = hooks.expand( value );
+			delete props[ name ];
+
+			// Not quite $.extend, this won't overwrite existing keys.
+			// Reusing 'index' because we have the correct "name"
+			for ( index in value ) {
+				if ( !( index in props ) ) {
+					props[ index ] = value[ index ];
+					specialEasing[ index ] = easing;
+				}
+			}
+		} else {
+			specialEasing[ name ] = easing;
+		}
+	}
+}
+
+function Animation( elem, properties, options ) {
+	var result,
+		stopped,
+		index = 0,
+		length = Animation.prefilters.length,
+		deferred = jQuery.Deferred().always( function() {
+
+			// Don't match elem in the :animated selector
+			delete tick.elem;
+		} ),
+		tick = function() {
+			if ( stopped ) {
+				return false;
+			}
+			var currentTime = fxNow || createFxNow(),
+				remaining = Math.max( 0, animation.startTime + animation.duration - currentTime ),
+
+				// Support: Android 2.3 only
+				// Archaic crash bug won't allow us to use `1 - ( 0.5 || 0 )` (#12497)
+				temp = remaining / animation.duration || 0,
+				percent = 1 - temp,
+				index = 0,
+				length = animation.tweens.length;
+
+			for ( ; index < length; index++ ) {
+				animation.tweens[ index ].run( percent );
+			}
+
+			deferred.notifyWith( elem, [ animation, percent, remaining ] );
+
+			if ( percent < 1 && length ) {
+				return remaining;
+			} else {
+				deferred.resolveWith( elem, [ animation ] );
+				return false;
+			}
+		},
+		animation = deferred.promise( {
+			elem: elem,
+			props: jQuery.extend( {}, properties ),
+			opts: jQuery.extend( true, {
+				specialEasing: {},
+				easing: jQuery.easing._default
+			}, options ),
+			originalProperties: properties,
+			originalOptions: options,
+			startTime: fxNow || createFxNow(),
+			duration: options.duration,
+			tweens: [],
+			createTween: function( prop, end ) {
+				var tween = jQuery.Tween( elem, animation.opts, prop, end,
+						animation.opts.specialEasing[ prop ] || animation.opts.easing );
+				animation.tweens.push( tween );
+				return tween;
+			},
+			stop: function( gotoEnd ) {
+				var index = 0,
+
+					// If we are going to the end, we want to run all the tweens
+					// otherwise we skip this part
+					length = gotoEnd ? animation.tweens.length : 0;
+				if ( stopped ) {
+					return this;
+				}
+				stopped = true;
+				for ( ; index < length; index++ ) {
+					animation.tweens[ index ].run( 1 );
+				}
+
+				// Resolve when we played the last frame; otherwise, reject
+				if ( gotoEnd ) {
+					deferred.notifyWith( elem, [ animation, 1, 0 ] );
+					deferred.resolveWith( elem, [ animation, gotoEnd ] );
+				} else {
+					deferred.rejectWith( elem, [ animation, gotoEnd ] );
+				}
+				return this;
+			}
+		} ),
+		props = animation.props;
+
+	propFilter( props, animation.opts.specialEasing );
+
+	for ( ; index < length; index++ ) {
+		result = Animation.prefilters[ index ].call( animation, elem, props, animation.opts );
+		if ( result ) {
+			if ( jQuery.isFunction( result.stop ) ) {
+				jQuery._queueHooks( animation.elem, animation.opts.queue ).stop =
+					jQuery.proxy( result.stop, result );
+			}
+			return result;
+		}
+	}
+
+	jQuery.map( props, createTween, animation );
+
+	if ( jQuery.isFunction( animation.opts.start ) ) {
+		animation.opts.start.call( elem, animation );
+	}
+
+	jQuery.fx.timer(
+		jQuery.extend( tick, {
+			elem: elem,
+			anim: animation,
+			queue: animation.opts.queue
+		} )
+	);
+
+	// attach callbacks from options
+	return animation.progress( animation.opts.progress )
+		.done( animation.opts.done, animation.opts.complete )
+		.fail( animation.opts.fail )
+		.always( animation.opts.always );
+}
+
+jQuery.Animation = jQuery.extend( Animation, {
+
+	tweeners: {
+		"*": [ function( prop, value ) {
+			var tween = this.createTween( prop, value );
+			adjustCSS( tween.elem, prop, rcssNum.exec( value ), tween );
+			return tween;
+		} ]
+	},
+
+	tweener: function( props, callback ) {
+		if ( jQuery.isFunction( props ) ) {
+			callback = props;
+			props = [ "*" ];
+		} else {
+			props = props.match( rnotwhite );
+		}
+
+		var prop,
+			index = 0,
+			length = props.length;
+
+		for ( ; index < length; index++ ) {
+			prop = props[ index ];
+			Animation.tweeners[ prop ] = Animation.tweeners[ prop ] || [];
+			Animation.tweeners[ prop ].unshift( callback );
+		}
+	},
+
+	prefilters: [ defaultPrefilter ],
+
+	prefilter: function( callback, prepend ) {
+		if ( prepend ) {
+			Animation.prefilters.unshift( callback );
+		} else {
+			Animation.prefilters.push( callback );
+		}
+	}
+} );
+
+jQuery.speed = function( speed, easing, fn ) {
+	var opt = speed && typeof speed === "object" ? jQuery.extend( {}, speed ) : {
+		complete: fn || !fn && easing ||
+			jQuery.isFunction( speed ) && speed,
+		duration: speed,
+		easing: fn && easing || easing && !jQuery.isFunction( easing ) && easing
+	};
+
+	// Go to the end state if fx are off or if document is hidden
+	if ( jQuery.fx.off || document.hidden ) {
+		opt.duration = 0;
+
+	} else {
+		opt.duration = typeof opt.duration === "number" ?
+			opt.duration : opt.duration in jQuery.fx.speeds ?
+				jQuery.fx.speeds[ opt.duration ] : jQuery.fx.speeds._default;
+	}
+
+	// Normalize opt.queue - true/undefined/null -> "fx"
+	if ( opt.queue == null || opt.queue === true ) {
+		opt.queue = "fx";
+	}
+
+	// Queueing
+	opt.old = opt.complete;
+
+	opt.complete = function() {
+		if ( jQuery.isFunction( opt.old ) ) {
+			opt.old.call( this );
+		}
+
+		if ( opt.queue ) {
+			jQuery.dequeue( this, opt.queue );
+		}
+	};
+
+	return opt;
+};
+
+jQuery.fn.extend( {
+	fadeTo: function( speed, to, easing, callback ) {
+
+		// Show any hidden elements after setting opacity to 0
+		return this.filter( isHiddenWithinTree ).css( "opacity", 0 ).show()
+
+			// Animate to the value specified
+			.end().animate( { opacity: to }, speed, easing, callback );
+	},
+	animate: function( prop, speed, easing, callback ) {
+		var empty = jQuery.isEmptyObject( prop ),
+			optall = jQuery.speed( speed, easing, callback ),
+			doAnimation = function() {
+
+				// Operate on a copy of prop so per-property easing won't be lost
+				var anim = Animation( this, jQuery.extend( {}, prop ), optall );
+
+				// Empty animations, or finishing resolves immediately
+				if ( empty || dataPriv.get( this, "finish" ) ) {
+					anim.stop( true );
+				}
+			};
+			doAnimation.finish = doAnimation;
+
+		return empty || optall.queue === false ?
+			this.each( doAnimation ) :
+			this.queue( optall.queue, doAnimation );
+	},
+	stop: function( type, clearQueue, gotoEnd ) {
+		var stopQueue = function( hooks ) {
+			var stop = hooks.stop;
+			delete hooks.stop;
+			stop( gotoEnd );
+		};
+
+		if ( typeof type !== "string" ) {
+			gotoEnd = clearQueue;
+			clearQueue = type;
+			type = undefined;
+		}
+		if ( clearQueue && type !== false ) {
+			this.queue( type || "fx", [] );
+		}
+
+		return this.each( function() {
+			var dequeue = true,
+				index = type != null && type + "queueHooks",
+				timers = jQuery.timers,
+				data = dataPriv.get( this );
+
+			if ( index ) {
+				if ( data[ index ] && data[ index ].stop ) {
+					stopQueue( data[ index ] );
+				}
+			} else {
+				for ( index in data ) {
+					if ( data[ index ] && data[ index ].stop && rrun.test( index ) ) {
+						stopQueue( data[ index ] );
+					}
+				}
+			}
+
+			for ( index = timers.length; index--; ) {
+				if ( timers[ index ].elem === this &&
+					( type == null || timers[ index ].queue === type ) ) {
+
+					timers[ index ].anim.stop( gotoEnd );
+					dequeue = false;
+					timers.splice( index, 1 );
+				}
+			}
+
+			// Start the next in the queue if the last step wasn't forced.
+			// Timers currently will call their complete callbacks, which
+			// will dequeue but only if they were gotoEnd.
+			if ( dequeue || !gotoEnd ) {
+				jQuery.dequeue( this, type );
+			}
+		} );
+	},
+	finish: function( type ) {
+		if ( type !== false ) {
+			type = type || "fx";
+		}
+		return this.each( function() {
+			var index,
+				data = dataPriv.get( this ),
+				queue = data[ type + "queue" ],
+				hooks = data[ type + "queueHooks" ],
+				timers = jQuery.timers,
+				length = queue ? queue.length : 0;
+
+			// Enable finishing flag on private data
+			data.finish = true;
+
+			// Empty the queue first
+			jQuery.queue( this, type, [] );
+
+			if ( hooks && hooks.stop ) {
+				hooks.stop.call( this, true );
+			}
+
+			// Look for any active animations, and finish them
+			for ( index = timers.length; index--; ) {
+				if ( timers[ index ].elem === this && timers[ index ].queue === type ) {
+					timers[ index ].anim.stop( true );
+					timers.splice( index, 1 );
+				}
+			}
+
+			// Look for any animations in the old queue and finish them
+			for ( index = 0; index < length; index++ ) {
+				if ( queue[ index ] && queue[ index ].finish ) {
+					queue[ index ].finish.call( this );
+				}
+			}
+
+			// Turn off finishing flag
+			delete data.finish;
+		} );
+	}
+} );
+
+jQuery.each( [ "toggle", "show", "hide" ], function( i, name ) {
+	var cssFn = jQuery.fn[ name ];
+	jQuery.fn[ name ] = function( speed, easing, callback ) {
+		return speed == null || typeof speed === "boolean" ?
+			cssFn.apply( this, arguments ) :
+			this.animate( genFx( name, true ), speed, easing, callback );
+	};
+} );
+
+// Generate shortcuts for custom animations
+jQuery.each( {
+	slideDown: genFx( "show" ),
+	slideUp: genFx( "hide" ),
+	slideToggle: genFx( "toggle" ),
+	fadeIn: { opacity: "show" },
+	fadeOut: { opacity: "hide" },
+	fadeToggle: { opacity: "toggle" }
+}, function( name, props ) {
+	jQuery.fn[ name ] = function( speed, easing, callback ) {
+		return this.animate( props, speed, easing, callback );
+	};
+} );
+
+jQuery.timers = [];
+jQuery.fx.tick = function() {
+	var timer,
+		i = 0,
+		timers = jQuery.timers;
+
+	fxNow = jQuery.now();
+
+	for ( ; i < timers.length; i++ ) {
+		timer = timers[ i ];
+
+		// Checks the timer has not already been removed
+		if ( !timer() && timers[ i ] === timer ) {
+			timers.splice( i--, 1 );
+		}
+	}
+
+	if ( !timers.length ) {
+		jQuery.fx.stop();
+	}
+	fxNow = undefined;
+};
+
+jQuery.fx.timer = function( timer ) {
+	jQuery.timers.push( timer );
+	if ( timer() ) {
+		jQuery.fx.start();
+	} else {
+		jQuery.timers.pop();
+	}
+};
+
+jQuery.fx.interval = 13;
+jQuery.fx.start = function() {
+	if ( !timerId ) {
+		timerId = window.requestAnimationFrame ?
+			window.requestAnimationFrame( raf ) :
+			window.setInterval( jQuery.fx.tick, jQuery.fx.interval );
+	}
+};
+
+jQuery.fx.stop = function() {
+	if ( window.cancelAnimationFrame ) {
+		window.cancelAnimationFrame( timerId );
+	} else {
+		window.clearInterval( timerId );
+	}
+
+	timerId = null;
+};
+
+jQuery.fx.speeds = {
+	slow: 600,
+	fast: 200,
+
+	// Default speed
+	_default: 400
+};
+
+
+// Based off of the plugin by Clint Helfers, with permission.
+// https://web.archive.org/web/20100324014747/http://blindsignals.com/index.php/2009/07/jquery-delay/
+jQuery.fn.delay = function( time, type ) {
+	time = jQuery.fx ? jQuery.fx.speeds[ time ] || time : time;
+	type = type || "fx";
+
+	return this.queue( type, function( next, hooks ) {
+		var timeout = window.setTimeout( next, time );
+		hooks.stop = function() {
+			window.clearTimeout( timeout );
+		};
+	} );
+};
+
+
+( function() {
+	var input = document.createElement( "input" ),
+		select = document.createElement( "select" ),
+		opt = select.appendChild( document.createElement( "option" ) );
+
+	input.type = "checkbox";
+
+	// Support: Android <=4.3 only
+	// Default value for a checkbox should be "on"
+	support.checkOn = input.value !== "";
+
+	// Support: IE <=11 only
+	// Must access selectedIndex to make default options select
+	support.optSelected = opt.selected;
+
+	// Support: IE <=11 only
+	// An input loses its value after becoming a radio
+	input = document.createElement( "input" );
+	input.value = "t";
+	input.type = "radio";
+	support.radioValue = input.value === "t";
+} )();
+
+
+var boolHook,
+	attrHandle = jQuery.expr.attrHandle;
+
+jQuery.fn.extend( {
+	attr: function( name, value ) {
+		return access( this, jQuery.attr, name, value, arguments.length > 1 );
+	},
+
+	removeAttr: function( name ) {
+		return this.each( function() {
+			jQuery.removeAttr( this, name );
+		} );
+	}
+} );
+
+jQuery.extend( {
+	attr: function( elem, name, value ) {
+		var ret, hooks,
+			nType = elem.nodeType;
+
+		// Don't get/set attributes on text, comment and attribute nodes
+		if ( nType === 3 || nType === 8 || nType === 2 ) {
+			return;
+		}
+
+		// Fallback to prop when attributes are not supported
+		if ( typeof elem.getAttribute === "undefined" ) {
+			return jQuery.prop( elem, name, value );
+		}
+
+		// Attribute hooks are determined by the lowercase version
+		// Grab necessary hook if one is defined
+		if ( nType !== 1 || !jQuery.isXMLDoc( elem ) ) {
+			hooks = jQuery.attrHooks[ name.toLowerCase() ] ||
+				( jQuery.expr.match.bool.test( name ) ? boolHook : undefined );
+		}
+
+		if ( value !== undefined ) {
+			if ( value === null ) {
+				jQuery.removeAttr( elem, name );
+				return;
+			}
+
+			if ( hooks && "set" in hooks &&
+				( ret = hooks.set( elem, value, name ) ) !== undefined ) {
+				return ret;
+			}
+
+			elem.setAttribute( name, value + "" );
+			return value;
+		}
+
+		if ( hooks && "get" in hooks && ( ret = hooks.get( elem, name ) ) !== null ) {
+			return ret;
+		}
+
+		ret = jQuery.find.attr( elem, name );
+
+		// Non-existent attributes return null, we normalize to undefined
+		return ret == null ? undefined : ret;
+	},
+
+	attrHooks: {
+		type: {
+			set: function( elem, value ) {
+				if ( !support.radioValue && value === "radio" &&
+					jQuery.nodeName( elem, "input" ) ) {
+					var val = elem.value;
+					elem.setAttribute( "type", value );
+					if ( val ) {
+						elem.value = val;
+					}
+					return value;
+				}
+			}
+		}
+	},
+
+	removeAttr: function( elem, value ) {
+		var name,
+			i = 0,
+			attrNames = value && value.match( rnotwhite );
+
+		if ( attrNames && elem.nodeType === 1 ) {
+			while ( ( name = attrNames[ i++ ] ) ) {
+				elem.removeAttribute( name );
+			}
+		}
+	}
+} );
+
+// Hooks for boolean attributes
+boolHook = {
+	set: function( elem, value, name ) {
+		if ( value === false ) {
+
+			// Remove boolean attributes when set to false
+			jQuery.removeAttr( elem, name );
+		} else {
+			elem.setAttribute( name, name );
+		}
+		return name;
+	}
+};
+
+jQuery.each( jQuery.expr.match.bool.source.match( /\w+/g ), function( i, name ) {
+	var getter = attrHandle[ name ] || jQuery.find.attr;
+
+	attrHandle[ name ] = function( elem, name, isXML ) {
+		var ret, handle,
+			lowercaseName = name.toLowerCase();
+
+		if ( !isXML ) {
+
+			// Avoid an infinite loop by temporarily removing this function from the getter
+			handle = attrHandle[ lowercaseName ];
+			attrHandle[ lowercaseName ] = ret;
+			ret = getter( elem, name, isXML ) != null ?
+				lowercaseName :
+				null;
+			attrHandle[ lowercaseName ] = handle;
+		}
+		return ret;
+	};
+} );
+
+
+
+
+var rfocusable = /^(?:input|select|textarea|button)$/i,
+	rclickable = /^(?:a|area)$/i;
+
+jQuery.fn.extend( {
+	prop: function( name, value ) {
+		return access( this, jQuery.prop, name, value, arguments.length > 1 );
+	},
+
+	removeProp: function( name ) {
+		return this.each( function() {
+			delete this[ jQuery.propFix[ name ] || name ];
+		} );
+	}
+} );
+
+jQuery.extend( {
+	prop: function( elem, name, value ) {
+		var ret, hooks,
+			nType = elem.nodeType;
+
+		// Don't get/set properties on text, comment and attribute nodes
+		if ( nType === 3 || nType === 8 || nType === 2 ) {
+			return;
+		}
+
+		if ( nType !== 1 || !jQuery.isXMLDoc( elem ) ) {
+
+			// Fix name and attach hooks
+			name = jQuery.propFix[ name ] || name;
+			hooks = jQuery.propHooks[ name ];
+		}
+
+		if ( value !== undefined ) {
+			if ( hooks && "set" in hooks &&
+				( ret = hooks.set( elem, value, name ) ) !== undefined ) {
+				return ret;
+			}
+
+			return ( elem[ name ] = value );
+		}
+
+		if ( hooks && "get" in hooks && ( ret = hooks.get( elem, name ) ) !== null ) {
+			return ret;
+		}
+
+		return elem[ name ];
+	},
+
+	propHooks: {
+		tabIndex: {
+			get: function( elem ) {
+
+				// Support: IE <=9 - 11 only
+				// elem.tabIndex doesn't always return the
+				// correct value when it hasn't been explicitly set
+				// https://web.archive.org/web/20141116233347/http://fluidproject.org/blog/2008/01/09/getting-setting-and-removing-tabindex-values-with-javascript/
+				// Use proper attribute retrieval(#12072)
+				var tabindex = jQuery.find.attr( elem, "tabindex" );
+
+				return tabindex ?
+					parseInt( tabindex, 10 ) :
+					rfocusable.test( elem.nodeName ) ||
+						rclickable.test( elem.nodeName ) && elem.href ?
+							0 :
+							-1;
+			}
+		}
+	},
+
+	propFix: {
+		"for": "htmlFor",
+		"class": "className"
+	}
+} );
+
+// Support: IE <=11 only
+// Accessing the selectedIndex property
+// forces the browser to respect setting selected
+// on the option
+// The getter ensures a default option is selected
+// when in an optgroup
+if ( !support.optSelected ) {
+	jQuery.propHooks.selected = {
+		get: function( elem ) {
+			var parent = elem.parentNode;
+			if ( parent && parent.parentNode ) {
+				parent.parentNode.selectedIndex;
+			}
+			return null;
+		},
+		set: function( elem ) {
+			var parent = elem.parentNode;
+			if ( parent ) {
+				parent.selectedIndex;
+
+				if ( parent.parentNode ) {
+					parent.parentNode.selectedIndex;
+				}
+			}
+		}
+	};
+}
+
+jQuery.each( [
+	"tabIndex",
+	"readOnly",
+	"maxLength",
+	"cellSpacing",
+	"cellPadding",
+	"rowSpan",
+	"colSpan",
+	"useMap",
+	"frameBorder",
+	"contentEditable"
+], function() {
+	jQuery.propFix[ this.toLowerCase() ] = this;
+} );
+
+
+
+
+var rclass = /[\t\r\n\f]/g;
+
+function getClass( elem ) {
+	return elem.getAttribute && elem.getAttribute( "class" ) || "";
+}
+
+jQuery.fn.extend( {
+	addClass: function( value ) {
+		var classes, elem, cur, curValue, clazz, j, finalValue,
+			i = 0;
+
+		if ( jQuery.isFunction( value ) ) {
+			return this.each( function( j ) {
+				jQuery( this ).addClass( value.call( this, j, getClass( this ) ) );
+			} );
+		}
+
+		if ( typeof value === "string" && value ) {
+			classes = value.match( rnotwhite ) || [];
+
+			while ( ( elem = this[ i++ ] ) ) {
+				curValue = getClass( elem );
+				cur = elem.nodeType === 1 &&
+					( " " + curValue + " " ).replace( rclass, " " );
+
+				if ( cur ) {
+					j = 0;
+					while ( ( clazz = classes[ j++ ] ) ) {
+						if ( cur.indexOf( " " + clazz + " " ) < 0 ) {
+							cur += clazz + " ";
+						}
+					}
+
+					// Only assign if different to avoid unneeded rendering.
+					finalValue = jQuery.trim( cur );
+					if ( curValue !== finalValue ) {
+						elem.setAttribute( "class", finalValue );
+					}
+				}
+			}
+		}
+
+		return this;
+	},
+
+	removeClass: function( value ) {
+		var classes, elem, cur, curValue, clazz, j, finalValue,
+			i = 0;
+
+		if ( jQuery.isFunction( value ) ) {
+			return this.each( function( j ) {
+				jQuery( this ).removeClass( value.call( this, j, getClass( this ) ) );
+			} );
+		}
+
+		if ( !arguments.length ) {
+			return this.attr( "class", "" );
+		}
+
+		if ( typeof value === "string" && value ) {
+			classes = value.match( rnotwhite ) || [];
+
+			while ( ( elem = this[ i++ ] ) ) {
+				curValue = getClass( elem );
+
+				// This expression is here for better compressibility (see addClass)
+				cur = elem.nodeType === 1 &&
+					( " " + curValue + " " ).replace( rclass, " " );
+
+				if ( cur ) {
+					j = 0;
+					while ( ( clazz = classes[ j++ ] ) ) {
+
+						// Remove *all* instances
+						while ( cur.indexOf( " " + clazz + " " ) > -1 ) {
+							cur = cur.replace( " " + clazz + " ", " " );
+						}
+					}
+
+					// Only assign if different to avoid unneeded rendering.
+					finalValue = jQuery.trim( cur );
+					if ( curValue !== finalValue ) {
+						elem.setAttribute( "class", finalValue );
+					}
+				}
+			}
+		}
+
+		return this;
+	},
+
+	toggleClass: function( value, stateVal ) {
+		var type = typeof value;
+
+		if ( typeof stateVal === "boolean" && type === "string" ) {
+			return stateVal ? this.addClass( value ) : this.removeClass( value );
+		}
+
+		if ( jQuery.isFunction( value ) ) {
+			return this.each( function( i ) {
+				jQuery( this ).toggleClass(
+					value.call( this, i, getClass( this ), stateVal ),
+					stateVal
+				);
+			} );
+		}
+
+		return this.each( function() {
+			var className, i, self, classNames;
+
+			if ( type === "string" ) {
+
+				// Toggle individual class names
+				i = 0;
+				self = jQuery( this );
+				classNames = value.match( rnotwhite ) || [];
+
+				while ( ( className = classNames[ i++ ] ) ) {
+
+					// Check each className given, space separated list
+					if ( self.hasClass( className ) ) {
+						self.removeClass( className );
+					} else {
+						self.addClass( className );
+					}
+				}
+
+			// Toggle whole class name
+			} else if ( value === undefined || type === "boolean" ) {
+				className = getClass( this );
+				if ( className ) {
+
+					// Store className if set
+					dataPriv.set( this, "__className__", className );
+				}
+
+				// If the element has a class name or if we're passed `false`,
+				// then remove the whole classname (if there was one, the above saved it).
+				// Otherwise bring back whatever was previously saved (if anything),
+				// falling back to the empty string if nothing was stored.
+				if ( this.setAttribute ) {
+					this.setAttribute( "class",
+						className || value === false ?
+						"" :
+						dataPriv.get( this, "__className__" ) || ""
+					);
+				}
+			}
+		} );
+	},
+
+	hasClass: function( selector ) {
+		var className, elem,
+			i = 0;
+
+		className = " " + selector + " ";
+		while ( ( elem = this[ i++ ] ) ) {
+			if ( elem.nodeType === 1 &&
+				( " " + getClass( elem ) + " " ).replace( rclass, " " )
+					.indexOf( className ) > -1
+			) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+} );
+
+
+
+
+var rreturn = /\r/g,
+	rspaces = /[\x20\t\r\n\f]+/g;
+
+jQuery.fn.extend( {
+	val: function( value ) {
+		var hooks, ret, isFunction,
+			elem = this[ 0 ];
+
+		if ( !arguments.length ) {
+			if ( elem ) {
+				hooks = jQuery.valHooks[ elem.type ] ||
+					jQuery.valHooks[ elem.nodeName.toLowerCase() ];
+
+				if ( hooks &&
+					"get" in hooks &&
+					( ret = hooks.get( elem, "value" ) ) !== undefined
+				) {
+					return ret;
+				}
+
+				ret = elem.value;
+
+				return typeof ret === "string" ?
+
+					// Handle most common string cases
+					ret.replace( rreturn, "" ) :
+
+					// Handle cases where value is null/undef or number
+					ret == null ? "" : ret;
+			}
+
+			return;
+		}
+
+		isFunction = jQuery.isFunction( value );
+
+		return this.each( function( i ) {
+			var val;
+
+			if ( this.nodeType !== 1 ) {
+				return;
+			}
+
+			if ( isFunction ) {
+				val = value.call( this, i, jQuery( this ).val() );
+			} else {
+				val = value;
+			}
+
+			// Treat null/undefined as ""; convert numbers to string
+			if ( val == null ) {
+				val = "";
+
+			} else if ( typeof val === "number" ) {
+				val += "";
+
+			} else if ( jQuery.isArray( val ) ) {
+				val = jQuery.map( val, function( value ) {
+					return value == null ? "" : value + "";
+				} );
+			}
+
+			hooks = jQuery.valHooks[ this.type ] || jQuery.valHooks[ this.nodeName.toLowerCase() ];
+
+			// If set returns undefined, fall back to normal setting
+			if ( !hooks || !( "set" in hooks ) || hooks.set( this, val, "value" ) === undefined ) {
+				this.value = val;
+			}
+		} );
+	}
+} );
+
+jQuery.extend( {
+	valHooks: {
+		option: {
+			get: function( elem ) {
+
+				var val = jQuery.find.attr( elem, "value" );
+				return val != null ?
+					val :
+
+					// Support: IE <=10 - 11 only
+					// option.text throws exceptions (#14686, #14858)
+					// Strip and collapse whitespace
+					// https://html.spec.whatwg.org/#strip-and-collapse-whitespace
+					jQuery.trim( jQuery.text( elem ) ).replace( rspaces, " " );
+			}
+		},
+		select: {
+			get: function( elem ) {
+				var value, option,
+					options = elem.options,
+					index = elem.selectedIndex,
+					one = elem.type === "select-one",
+					values = one ? null : [],
+					max = one ? index + 1 : options.length,
+					i = index < 0 ?
+						max :
+						one ? index : 0;
+
+				// Loop through all the selected options
+				for ( ; i < max; i++ ) {
+					option = options[ i ];
+
+					// Support: IE <=9 only
+					// IE8-9 doesn't update selected after form reset (#2551)
+					if ( ( option.selected || i === index ) &&
+
+							// Don't return options that are disabled or in a disabled optgroup
+							!option.disabled &&
+							( !option.parentNode.disabled ||
+								!jQuery.nodeName( option.parentNode, "optgroup" ) ) ) {
+
+						// Get the specific value for the option
+						value = jQuery( option ).val();
+
+						// We don't need an array for one selects
+						if ( one ) {
+							return value;
+						}
+
+						// Multi-Selects return an array
+						values.push( value );
+					}
+				}
+
+				return values;
+			},
+
+			set: function( elem, value ) {
+				var optionSet, option,
+					options = elem.options,
+					values = jQuery.makeArray( value ),
+					i = options.length;
+
+				while ( i-- ) {
+					option = options[ i ];
+
+					/* eslint-disable no-cond-assign */
+
+					if ( option.selected =
+						jQuery.inArray( jQuery.valHooks.option.get( option ), values ) > -1
+					) {
+						optionSet = true;
+					}
+
+					/* eslint-enable no-cond-assign */
+				}
+
+				// Force browsers to behave consistently when non-matching value is set
+				if ( !optionSet ) {
+					elem.selectedIndex = -1;
+				}
+				return values;
+			}
+		}
+	}
+} );
+
+// Radios and checkboxes getter/setter
+jQuery.each( [ "radio", "checkbox" ], function() {
+	jQuery.valHooks[ this ] = {
+		set: function( elem, value ) {
+			if ( jQuery.isArray( value ) ) {
+				return ( elem.checked = jQuery.inArray( jQuery( elem ).val(), value ) > -1 );
+			}
+		}
+	};
+	if ( !support.checkOn ) {
+		jQuery.valHooks[ this ].get = function( elem ) {
+			return elem.getAttribute( "value" ) === null ? "on" : elem.value;
+		};
+	}
+} );
+
+
+
+
+// Return jQuery for attributes-only inclusion
+
+
+var rfocusMorph = /^(?:focusinfocus|focusoutblur)$/;
+
+jQuery.extend( jQuery.event, {
+
+	trigger: function( event, data, elem, onlyHandlers ) {
+
+		var i, cur, tmp, bubbleType, ontype, handle, special,
+			eventPath = [ elem || document ],
+			type = hasOwn.call( event, "type" ) ? event.type : event,
+			namespaces = hasOwn.call( event, "namespace" ) ? event.namespace.split( "." ) : [];
+
+		cur = tmp = elem = elem || document;
+
+		// Don't do events on text and comment nodes
+		if ( elem.nodeType === 3 || elem.nodeType === 8 ) {
+			return;
+		}
+
+		// focus/blur morphs to focusin/out; ensure we're not firing them right now
+		if ( rfocusMorph.test( type + jQuery.event.triggered ) ) {
+			return;
+		}
+
+		if ( type.indexOf( "." ) > -1 ) {
+
+			// Namespaced trigger; create a regexp to match event type in handle()
+			namespaces = type.split( "." );
+			type = namespaces.shift();
+			namespaces.sort();
+		}
+		ontype = type.indexOf( ":" ) < 0 && "on" + type;
+
+		// Caller can pass in a jQuery.Event object, Object, or just an event type string
+		event = event[ jQuery.expando ] ?
+			event :
+			new jQuery.Event( type, typeof event === "object" && event );
+
+		// Trigger bitmask: & 1 for native handlers; & 2 for jQuery (always true)
+		event.isTrigger = onlyHandlers ? 2 : 3;
+		event.namespace = namespaces.join( "." );
+		event.rnamespace = event.namespace ?
+			new RegExp( "(^|\\.)" + namespaces.join( "\\.(?:.*\\.|)" ) + "(\\.|$)" ) :
+			null;
+
+		// Clean up the event in case it is being reused
+		event.result = undefined;
+		if ( !event.target ) {
+			event.target = elem;
+		}
+
+		// Clone any incoming data and prepend the event, creating the handler arg list
+		data = data == null ?
+			[ event ] :
+			jQuery.makeArray( data, [ event ] );
+
+		// Allow special events to draw outside the lines
+		special = jQuery.event.special[ type ] || {};
+		if ( !onlyHandlers && special.trigger && special.trigger.apply( elem, data ) === false ) {
+			return;
+		}
+
+		// Determine event propagation path in advance, per W3C events spec (#9951)
+		// Bubble up to document, then to window; watch for a global ownerDocument var (#9724)
+		if ( !onlyHandlers && !special.noBubble && !jQuery.isWindow( elem ) ) {
+
+			bubbleType = special.delegateType || type;
+			if ( !rfocusMorph.test( bubbleType + type ) ) {
+				cur = cur.parentNode;
+			}
+			for ( ; cur; cur = cur.parentNode ) {
+				eventPath.push( cur );
+				tmp = cur;
+			}
+
+			// Only add window if we got to document (e.g., not plain obj or detached DOM)
+			if ( tmp === ( elem.ownerDocument || document ) ) {
+				eventPath.push( tmp.defaultView || tmp.parentWindow || window );
+			}
+		}
+
+		// Fire handlers on the event path
+		i = 0;
+		while ( ( cur = eventPath[ i++ ] ) && !event.isPropagationStopped() ) {
+
+			event.type = i > 1 ?
+				bubbleType :
+				special.bindType || type;
+
+			// jQuery handler
+			handle = ( dataPriv.get( cur, "events" ) || {} )[ event.type ] &&
+				dataPriv.get( cur, "handle" );
+			if ( handle ) {
+				handle.apply( cur, data );
+			}
+
+			// Native handler
+			handle = ontype && cur[ ontype ];
+			if ( handle && handle.apply && acceptData( cur ) ) {
+				event.result = handle.apply( cur, data );
+				if ( event.result === false ) {
+					event.preventDefault();
+				}
+			}
+		}
+		event.type = type;
+
+		// If nobody prevented the default action, do it now
+		if ( !onlyHandlers && !event.isDefaultPrevented() ) {
+
+			if ( ( !special._default ||
+				special._default.apply( eventPath.pop(), data ) === false ) &&
+				acceptData( elem ) ) {
+
+				// Call a native DOM method on the target with the same name as the event.
+				// Don't do default actions on window, that's where global variables be (#6170)
+				if ( ontype && jQuery.isFunction( elem[ type ] ) && !jQuery.isWindow( elem ) ) {
+
+					// Don't re-trigger an onFOO event when we call its FOO() method
+					tmp = elem[ ontype ];
+
+					if ( tmp ) {
+						elem[ ontype ] = null;
+					}
+
+					// Prevent re-triggering of the same event, since we already bubbled it above
+					jQuery.event.triggered = type;
+					elem[ type ]();
+					jQuery.event.triggered = undefined;
+
+					if ( tmp ) {
+						elem[ ontype ] = tmp;
+					}
+				}
+			}
+		}
+
+		return event.result;
+	},
+
+	// Piggyback on a donor event to simulate a different one
+	// Used only for `focus(in | out)` events
+	simulate: function( type, elem, event ) {
+		var e = jQuery.extend(
+			new jQuery.Event(),
+			event,
+			{
+				type: type,
+				isSimulated: true
+			}
+		);
+
+		jQuery.event.trigger( e, null, elem );
+	}
+
+} );
+
+jQuery.fn.extend( {
+
+	trigger: function( type, data ) {
+		return this.each( function() {
+			jQuery.event.trigger( type, data, this );
+		} );
+	},
+	triggerHandler: function( type, data ) {
+		var elem = this[ 0 ];
+		if ( elem ) {
+			return jQuery.event.trigger( type, data, elem, true );
+		}
+	}
+} );
+
+
+jQuery.each( ( "blur focus focusin focusout resize scroll click dblclick " +
+	"mousedown mouseup mousemove mouseover mouseout mouseenter mouseleave " +
+	"change select submit keydown keypress keyup contextmenu" ).split( " " ),
+	function( i, name ) {
+
+	// Handle event binding
+	jQuery.fn[ name ] = function( data, fn ) {
+		return arguments.length > 0 ?
+			this.on( name, null, data, fn ) :
+			this.trigger( name );
+	};
+} );
+
+jQuery.fn.extend( {
+	hover: function( fnOver, fnOut ) {
+		return this.mouseenter( fnOver ).mouseleave( fnOut || fnOver );
+	}
+} );
+
+
+
+
+support.focusin = "onfocusin" in window;
+
+
+// Support: Firefox <=44
+// Firefox doesn't have focus(in | out) events
+// Related ticket - https://bugzilla.mozilla.org/show_bug.cgi?id=687787
+//
+// Support: Chrome <=48 - 49, Safari <=9.0 - 9.1
+// focus(in | out) events fire after focus & blur events,
+// which is spec violation - http://www.w3.org/TR/DOM-Level-3-Events/#events-focusevent-event-order
+// Related ticket - https://bugs.chromium.org/p/chromium/issues/detail?id=449857
+if ( !support.focusin ) {
+	jQuery.each( { focus: "focusin", blur: "focusout" }, function( orig, fix ) {
+
+		// Attach a single capturing handler on the document while someone wants focusin/focusout
+		var handler = function( event ) {
+			jQuery.event.simulate( fix, event.target, jQuery.event.fix( event ) );
+		};
+
+		jQuery.event.special[ fix ] = {
+			setup: function() {
+				var doc = this.ownerDocument || this,
+					attaches = dataPriv.access( doc, fix );
+
+				if ( !attaches ) {
+					doc.addEventListener( orig, handler, true );
+				}
+				dataPriv.access( doc, fix, ( attaches || 0 ) + 1 );
+			},
+			teardown: function() {
+				var doc = this.ownerDocument || this,
+					attaches = dataPriv.access( doc, fix ) - 1;
+
+				if ( !attaches ) {
+					doc.removeEventListener( orig, handler, true );
+					dataPriv.remove( doc, fix );
+
+				} else {
+					dataPriv.access( doc, fix, attaches );
+				}
+			}
+		};
+	} );
+}
+var location = window.location;
+
+var nonce = jQuery.now();
+
+var rquery = ( /\?/ );
+
+
+
+// Cross-browser xml parsing
+jQuery.parseXML = function( data ) {
+	var xml;
+	if ( !data || typeof data !== "string" ) {
+		return null;
+	}
+
+	// Support: IE 9 - 11 only
+	// IE throws on parseFromString with invalid input.
+	try {
+		xml = ( new window.DOMParser() ).parseFromString( data, "text/xml" );
+	} catch ( e ) {
+		xml = undefined;
+	}
+
+	if ( !xml || xml.getElementsByTagName( "parsererror" ).length ) {
+		jQuery.error( "Invalid XML: " + data );
+	}
+	return xml;
+};
+
+
+var
+	rbracket = /\[\]$/,
+	rCRLF = /\r?\n/g,
+	rsubmitterTypes = /^(?:submit|button|image|reset|file)$/i,
+	rsubmittable = /^(?:input|select|textarea|keygen)/i;
+
+function buildParams( prefix, obj, traditional, add ) {
+	var name;
+
+	if ( jQuery.isArray( obj ) ) {
+
+		// Serialize array item.
+		jQuery.each( obj, function( i, v ) {
+			if ( traditional || rbracket.test( prefix ) ) {
+
+				// Treat each array item as a scalar.
+				add( prefix, v );
+
+			} else {
+
+				// Item is non-scalar (array or object), encode its numeric index.
+				buildParams(
+					prefix + "[" + ( typeof v === "object" && v != null ? i : "" ) + "]",
+					v,
+					traditional,
+					add
+				);
+			}
+		} );
+
+	} else if ( !traditional && jQuery.type( obj ) === "object" ) {
+
+		// Serialize object item.
+		for ( name in obj ) {
+			buildParams( prefix + "[" + name + "]", obj[ name ], traditional, add );
+		}
+
+	} else {
+
+		// Serialize scalar item.
+		add( prefix, obj );
+	}
+}
+
+// Serialize an array of form elements or a set of
+// key/values into a query string
+jQuery.param = function( a, traditional ) {
+	var prefix,
+		s = [],
+		add = function( key, valueOrFunction ) {
+
+			// If value is a function, invoke it and use its return value
+			var value = jQuery.isFunction( valueOrFunction ) ?
+				valueOrFunction() :
+				valueOrFunction;
+
+			s[ s.length ] = encodeURIComponent( key ) + "=" +
+				encodeURIComponent( value == null ? "" : value );
+		};
+
+	// If an array was passed in, assume that it is an array of form elements.
+	if ( jQuery.isArray( a ) || ( a.jquery && !jQuery.isPlainObject( a ) ) ) {
+
+		// Serialize the form elements
+		jQuery.each( a, function() {
+			add( this.name, this.value );
+		} );
+
+	} else {
+
+		// If traditional, encode the "old" way (the way 1.3.2 or older
+		// did it), otherwise encode params recursively.
+		for ( prefix in a ) {
+			buildParams( prefix, a[ prefix ], traditional, add );
+		}
+	}
+
+	// Return the resulting serialization
+	return s.join( "&" );
+};
+
+jQuery.fn.extend( {
+	serialize: function() {
+		return jQuery.param( this.serializeArray() );
+	},
+	serializeArray: function() {
+		return this.map( function() {
+
+			// Can add propHook for "elements" to filter or add form elements
+			var elements = jQuery.prop( this, "elements" );
+			return elements ? jQuery.makeArray( elements ) : this;
+		} )
+		.filter( function() {
+			var type = this.type;
+
+			// Use .is( ":disabled" ) so that fieldset[disabled] works
+			return this.name && !jQuery( this ).is( ":disabled" ) &&
+				rsubmittable.test( this.nodeName ) && !rsubmitterTypes.test( type ) &&
+				( this.checked || !rcheckableType.test( type ) );
+		} )
+		.map( function( i, elem ) {
+			var val = jQuery( this ).val();
+
+			return val == null ?
+				null :
+				jQuery.isArray( val ) ?
+					jQuery.map( val, function( val ) {
+						return { name: elem.name, value: val.replace( rCRLF, "\r\n" ) };
+					} ) :
+					{ name: elem.name, value: val.replace( rCRLF, "\r\n" ) };
+		} ).get();
+	}
+} );
+
+
+var
+	r20 = /%20/g,
+	rhash = /#.*$/,
+	rts = /([?&])_=[^&]*/,
+	rheaders = /^(.*?):[ \t]*([^\r\n]*)$/mg,
+
+	// #7653, #8125, #8152: local protocol detection
+	rlocalProtocol = /^(?:about|app|app-storage|.+-extension|file|res|widget):$/,
+	rnoContent = /^(?:GET|HEAD)$/,
+	rprotocol = /^\/\//,
+
+	/* Prefilters
+	 * 1) They are useful to introduce custom dataTypes (see ajax/jsonp.js for an example)
+	 * 2) These are called:
+	 *    - BEFORE asking for a transport
+	 *    - AFTER param serialization (s.data is a string if s.processData is true)
+	 * 3) key is the dataType
+	 * 4) the catchall symbol "*" can be used
+	 * 5) execution will start with transport dataType and THEN continue down to "*" if needed
+	 */
+	prefilters = {},
+
+	/* Transports bindings
+	 * 1) key is the dataType
+	 * 2) the catchall symbol "*" can be used
+	 * 3) selection will start with transport dataType and THEN go to "*" if needed
+	 */
+	transports = {},
+
+	// Avoid comment-prolog char sequence (#10098); must appease lint and evade compression
+	allTypes = "*/".concat( "*" ),
+
+	// Anchor tag for parsing the document origin
+	originAnchor = document.createElement( "a" );
+	originAnchor.href = location.href;
+
+// Base "constructor" for jQuery.ajaxPrefilter and jQuery.ajaxTransport
+function addToPrefiltersOrTransports( structure ) {
+
+	// dataTypeExpression is optional and defaults to "*"
+	return function( dataTypeExpression, func ) {
+
+		if ( typeof dataTypeExpression !== "string" ) {
+			func = dataTypeExpression;
+			dataTypeExpression = "*";
+		}
+
+		var dataType,
+			i = 0,
+			dataTypes = dataTypeExpression.toLowerCase().match( rnotwhite ) || [];
+
+		if ( jQuery.isFunction( func ) ) {
+
+			// For each dataType in the dataTypeExpression
+			while ( ( dataType = dataTypes[ i++ ] ) ) {
+
+				// Prepend if requested
+				if ( dataType[ 0 ] === "+" ) {
+					dataType = dataType.slice( 1 ) || "*";
+					( structure[ dataType ] = structure[ dataType ] || [] ).unshift( func );
+
+				// Otherwise append
+				} else {
+					( structure[ dataType ] = structure[ dataType ] || [] ).push( func );
+				}
+			}
+		}
+	};
+}
+
+// Base inspection function for prefilters and transports
+function inspectPrefiltersOrTransports( structure, options, originalOptions, jqXHR ) {
+
+	var inspected = {},
+		seekingTransport = ( structure === transports );
+
+	function inspect( dataType ) {
+		var selected;
+		inspected[ dataType ] = true;
+		jQuery.each( structure[ dataType ] || [], function( _, prefilterOrFactory ) {
+			var dataTypeOrTransport = prefilterOrFactory( options, originalOptions, jqXHR );
+			if ( typeof dataTypeOrTransport === "string" &&
+				!seekingTransport && !inspected[ dataTypeOrTransport ] ) {
+
+				options.dataTypes.unshift( dataTypeOrTransport );
+				inspect( dataTypeOrTransport );
+				return false;
+			} else if ( seekingTransport ) {
+				return !( selected = dataTypeOrTransport );
+			}
+		} );
+		return selected;
+	}
+
+	return inspect( options.dataTypes[ 0 ] ) || !inspected[ "*" ] && inspect( "*" );
+}
+
+// A special extend for ajax options
+// that takes "flat" options (not to be deep extended)
+// Fixes #9887
+function ajaxExtend( target, src ) {
+	var key, deep,
+		flatOptions = jQuery.ajaxSettings.flatOptions || {};
+
+	for ( key in src ) {
+		if ( src[ key ] !== undefined ) {
+			( flatOptions[ key ] ? target : ( deep || ( deep = {} ) ) )[ key ] = src[ key ];
+		}
+	}
+	if ( deep ) {
+		jQuery.extend( true, target, deep );
+	}
+
+	return target;
+}
+
+/* Handles responses to an ajax request:
+ * - finds the right dataType (mediates between content-type and expected dataType)
+ * - returns the corresponding response
+ */
+function ajaxHandleResponses( s, jqXHR, responses ) {
+
+	var ct, type, finalDataType, firstDataType,
+		contents = s.contents,
+		dataTypes = s.dataTypes;
+
+	// Remove auto dataType and get content-type in the process
+	while ( dataTypes[ 0 ] === "*" ) {
+		dataTypes.shift();
+		if ( ct === undefined ) {
+			ct = s.mimeType || jqXHR.getResponseHeader( "Content-Type" );
+		}
+	}
+
+	// Check if we're dealing with a known content-type
+	if ( ct ) {
+		for ( type in contents ) {
+			if ( contents[ type ] && contents[ type ].test( ct ) ) {
+				dataTypes.unshift( type );
+				break;
+			}
+		}
+	}
+
+	// Check to see if we have a response for the expected dataType
+	if ( dataTypes[ 0 ] in responses ) {
+		finalDataType = dataTypes[ 0 ];
+	} else {
+
+		// Try convertible dataTypes
+		for ( type in responses ) {
+			if ( !dataTypes[ 0 ] || s.converters[ type + " " + dataTypes[ 0 ] ] ) {
+				finalDataType = type;
+				break;
+			}
+			if ( !firstDataType ) {
+				firstDataType = type;
+			}
+		}
+
+		// Or just use first one
+		finalDataType = finalDataType || firstDataType;
+	}
+
+	// If we found a dataType
+	// We add the dataType to the list if needed
+	// and return the corresponding response
+	if ( finalDataType ) {
+		if ( finalDataType !== dataTypes[ 0 ] ) {
+			dataTypes.unshift( finalDataType );
+		}
+		return responses[ finalDataType ];
+	}
+}
+
+/* Chain conversions given the request and the original response
+ * Also sets the responseXXX fields on the jqXHR instance
+ */
+function ajaxConvert( s, response, jqXHR, isSuccess ) {
+	var conv2, current, conv, tmp, prev,
+		converters = {},
+
+		// Work with a copy of dataTypes in case we need to modify it for conversion
+		dataTypes = s.dataTypes.slice();
+
+	// Create converters map with lowercased keys
+	if ( dataTypes[ 1 ] ) {
+		for ( conv in s.converters ) {
+			converters[ conv.toLowerCase() ] = s.converters[ conv ];
+		}
+	}
+
+	current = dataTypes.shift();
+
+	// Convert to each sequential dataType
+	while ( current ) {
+
+		if ( s.responseFields[ current ] ) {
+			jqXHR[ s.responseFields[ current ] ] = response;
+		}
+
+		// Apply the dataFilter if provided
+		if ( !prev && isSuccess && s.dataFilter ) {
+			response = s.dataFilter( response, s.dataType );
+		}
+
+		prev = current;
+		current = dataTypes.shift();
+
+		if ( current ) {
+
+			// There's only work to do if current dataType is non-auto
+			if ( current === "*" ) {
+
+				current = prev;
+
+			// Convert response if prev dataType is non-auto and differs from current
+			} else if ( prev !== "*" && prev !== current ) {
+
+				// Seek a direct converter
+				conv = converters[ prev + " " + current ] || converters[ "* " + current ];
+
+				// If none found, seek a pair
+				if ( !conv ) {
+					for ( conv2 in converters ) {
+
+						// If conv2 outputs current
+						tmp = conv2.split( " " );
+						if ( tmp[ 1 ] === current ) {
+
+							// If prev can be converted to accepted input
+							conv = converters[ prev + " " + tmp[ 0 ] ] ||
+								converters[ "* " + tmp[ 0 ] ];
+							if ( conv ) {
+
+								// Condense equivalence converters
+								if ( conv === true ) {
+									conv = converters[ conv2 ];
+
+								// Otherwise, insert the intermediate dataType
+								} else if ( converters[ conv2 ] !== true ) {
+									current = tmp[ 0 ];
+									dataTypes.unshift( tmp[ 1 ] );
+								}
+								break;
+							}
+						}
+					}
+				}
+
+				// Apply converter (if not an equivalence)
+				if ( conv !== true ) {
+
+					// Unless errors are allowed to bubble, catch and return them
+					if ( conv && s.throws ) {
+						response = conv( response );
+					} else {
+						try {
+							response = conv( response );
+						} catch ( e ) {
+							return {
+								state: "parsererror",
+								error: conv ? e : "No conversion from " + prev + " to " + current
+							};
+						}
+					}
+				}
+			}
+		}
+	}
+
+	return { state: "success", data: response };
+}
+
+jQuery.extend( {
+
+	// Counter for holding the number of active queries
+	active: 0,
+
+	// Last-Modified header cache for next request
+	lastModified: {},
+	etag: {},
+
+	ajaxSettings: {
+		url: location.href,
+		type: "GET",
+		isLocal: rlocalProtocol.test( location.protocol ),
+		global: true,
+		processData: true,
+		async: true,
+		contentType: "application/x-www-form-urlencoded; charset=UTF-8",
+
+		/*
+		timeout: 0,
+		data: null,
+		dataType: null,
+		username: null,
+		password: null,
+		cache: null,
+		throws: false,
+		traditional: false,
+		headers: {},
+		*/
+
+		accepts: {
+			"*": allTypes,
+			text: "text/plain",
+			html: "text/html",
+			xml: "application/xml, text/xml",
+			json: "application/json, text/javascript"
+		},
+
+		contents: {
+			xml: /\bxml\b/,
+			html: /\bhtml/,
+			json: /\bjson\b/
+		},
+
+		responseFields: {
+			xml: "responseXML",
+			text: "responseText",
+			json: "responseJSON"
+		},
+
+		// Data converters
+		// Keys separate source (or catchall "*") and destination types with a single space
+		converters: {
+
+			// Convert anything to text
+			"* text": String,
+
+			// Text to html (true = no transformation)
+			"text html": true,
+
+			// Evaluate text as a json expression
+			"text json": JSON.parse,
+
+			// Parse text as xml
+			"text xml": jQuery.parseXML
+		},
+
+		// For options that shouldn't be deep extended:
+		// you can add your own custom options here if
+		// and when you create one that shouldn't be
+		// deep extended (see ajaxExtend)
+		flatOptions: {
+			url: true,
+			context: true
+		}
+	},
+
+	// Creates a full fledged settings object into target
+	// with both ajaxSettings and settings fields.
+	// If target is omitted, writes into ajaxSettings.
+	ajaxSetup: function( target, settings ) {
+		return settings ?
+
+			// Building a settings object
+			ajaxExtend( ajaxExtend( target, jQuery.ajaxSettings ), settings ) :
+
+			// Extending ajaxSettings
+			ajaxExtend( jQuery.ajaxSettings, target );
+	},
+
+	ajaxPrefilter: addToPrefiltersOrTransports( prefilters ),
+	ajaxTransport: addToPrefiltersOrTransports( transports ),
+
+	// Main method
+	ajax: function( url, options ) {
+
+		// If url is an object, simulate pre-1.5 signature
+		if ( typeof url === "object" ) {
+			options = url;
+			url = undefined;
+		}
+
+		// Force options to be an object
+		options = options || {};
+
+		var transport,
+
+			// URL without anti-cache param
+			cacheURL,
+
+			// Response headers
+			responseHeadersString,
+			responseHeaders,
+
+			// timeout handle
+			timeoutTimer,
+
+			// Url cleanup var
+			urlAnchor,
+
+			// Request state (becomes false upon send and true upon completion)
+			completed,
+
+			// To know if global events are to be dispatched
+			fireGlobals,
+
+			// Loop variable
+			i,
+
+			// uncached part of the url
+			uncached,
+
+			// Create the final options object
+			s = jQuery.ajaxSetup( {}, options ),
+
+			// Callbacks context
+			callbackContext = s.context || s,
+
+			// Context for global events is callbackContext if it is a DOM node or jQuery collection
+			globalEventContext = s.context &&
+				( callbackContext.nodeType || callbackContext.jquery ) ?
+					jQuery( callbackContext ) :
+					jQuery.event,
+
+			// Deferreds
+			deferred = jQuery.Deferred(),
+			completeDeferred = jQuery.Callbacks( "once memory" ),
+
+			// Status-dependent callbacks
+			statusCode = s.statusCode || {},
+
+			// Headers (they are sent all at once)
+			requestHeaders = {},
+			requestHeadersNames = {},
+
+			// Default abort message
+			strAbort = "canceled",
+
+			// Fake xhr
+			jqXHR = {
+				readyState: 0,
+
+				// Builds headers hashtable if needed
+				getResponseHeader: function( key ) {
+					var match;
+					if ( completed ) {
+						if ( !responseHeaders ) {
+							responseHeaders = {};
+							while ( ( match = rheaders.exec( responseHeadersString ) ) ) {
+								responseHeaders[ match[ 1 ].toLowerCase() ] = match[ 2 ];
+							}
+						}
+						match = responseHeaders[ key.toLowerCase() ];
+					}
+					return match == null ? null : match;
+				},
+
+				// Raw string
+				getAllResponseHeaders: function() {
+					return completed ? responseHeadersString : null;
+				},
+
+				// Caches the header
+				setRequestHeader: function( name, value ) {
+					if ( completed == null ) {
+						name = requestHeadersNames[ name.toLowerCase() ] =
+							requestHeadersNames[ name.toLowerCase() ] || name;
+						requestHeaders[ name ] = value;
+					}
+					return this;
+				},
+
+				// Overrides response content-type header
+				overrideMimeType: function( type ) {
+					if ( completed == null ) {
+						s.mimeType = type;
+					}
+					return this;
+				},
+
+				// Status-dependent callbacks
+				statusCode: function( map ) {
+					var code;
+					if ( map ) {
+						if ( completed ) {
+
+							// Execute the appropriate callbacks
+							jqXHR.always( map[ jqXHR.status ] );
+						} else {
+
+							// Lazy-add the new callbacks in a way that preserves old ones
+							for ( code in map ) {
+								statusCode[ code ] = [ statusCode[ code ], map[ code ] ];
+							}
+						}
+					}
+					return this;
+				},
+
+				// Cancel the request
+				abort: function( statusText ) {
+					var finalText = statusText || strAbort;
+					if ( transport ) {
+						transport.abort( finalText );
+					}
+					done( 0, finalText );
+					return this;
+				}
+			};
+
+		// Attach deferreds
+		deferred.promise( jqXHR );
+
+		// Add protocol if not provided (prefilters might expect it)
+		// Handle falsy url in the settings object (#10093: consistency with old signature)
+		// We also use the url parameter if available
+		s.url = ( ( url || s.url || location.href ) + "" )
+			.replace( rprotocol, location.protocol + "//" );
+
+		// Alias method option to type as per ticket #12004
+		s.type = options.method || options.type || s.method || s.type;
+
+		// Extract dataTypes list
+		s.dataTypes = ( s.dataType || "*" ).toLowerCase().match( rnotwhite ) || [ "" ];
+
+		// A cross-domain request is in order when the origin doesn't match the current origin.
+		if ( s.crossDomain == null ) {
+			urlAnchor = document.createElement( "a" );
+
+			// Support: IE <=8 - 11, Edge 12 - 13
+			// IE throws exception on accessing the href property if url is malformed,
+			// e.g. http://example.com:80x/
+			try {
+				urlAnchor.href = s.url;
+
+				// Support: IE <=8 - 11 only
+				// Anchor's host property isn't correctly set when s.url is relative
+				urlAnchor.href = urlAnchor.href;
+				s.crossDomain = originAnchor.protocol + "//" + originAnchor.host !==
+					urlAnchor.protocol + "//" + urlAnchor.host;
+			} catch ( e ) {
+
+				// If there is an error parsing the URL, assume it is crossDomain,
+				// it can be rejected by the transport if it is invalid
+				s.crossDomain = true;
+			}
+		}
+
+		// Convert data if not already a string
+		if ( s.data && s.processData && typeof s.data !== "string" ) {
+			s.data = jQuery.param( s.data, s.traditional );
+		}
+
+		// Apply prefilters
+		inspectPrefiltersOrTransports( prefilters, s, options, jqXHR );
+
+		// If request was aborted inside a prefilter, stop there
+		if ( completed ) {
+			return jqXHR;
+		}
+
+		// We can fire global events as of now if asked to
+		// Don't fire events if jQuery.event is undefined in an AMD-usage scenario (#15118)
+		fireGlobals = jQuery.event && s.global;
+
+		// Watch for a new set of requests
+		if ( fireGlobals && jQuery.active++ === 0 ) {
+			jQuery.event.trigger( "ajaxStart" );
+		}
+
+		// Uppercase the type
+		s.type = s.type.toUpperCase();
+
+		// Determine if request has content
+		s.hasContent = !rnoContent.test( s.type );
+
+		// Save the URL in case we're toying with the If-Modified-Since
+		// and/or If-None-Match header later on
+		// Remove hash to simplify url manipulation
+		cacheURL = s.url.replace( rhash, "" );
+
+		// More options handling for requests with no content
+		if ( !s.hasContent ) {
+
+			// Remember the hash so we can put it back
+			uncached = s.url.slice( cacheURL.length );
+
+			// If data is available, append data to url
+			if ( s.data ) {
+				cacheURL += ( rquery.test( cacheURL ) ? "&" : "?" ) + s.data;
+
+				// #9682: remove data so that it's not used in an eventual retry
+				delete s.data;
+			}
+
+			// Add anti-cache in uncached url if needed
+			if ( s.cache === false ) {
+				cacheURL = cacheURL.replace( rts, "" );
+				uncached = ( rquery.test( cacheURL ) ? "&" : "?" ) + "_=" + ( nonce++ ) + uncached;
+			}
+
+			// Put hash and anti-cache on the URL that will be requested (gh-1732)
+			s.url = cacheURL + uncached;
+
+		// Change '%20' to '+' if this is encoded form body content (gh-2658)
+		} else if ( s.data && s.processData &&
+			( s.contentType || "" ).indexOf( "application/x-www-form-urlencoded" ) === 0 ) {
+			s.data = s.data.replace( r20, "+" );
+		}
+
+		// Set the If-Modified-Since and/or If-None-Match header, if in ifModified mode.
+		if ( s.ifModified ) {
+			if ( jQuery.lastModified[ cacheURL ] ) {
+				jqXHR.setRequestHeader( "If-Modified-Since", jQuery.lastModified[ cacheURL ] );
+			}
+			if ( jQuery.etag[ cacheURL ] ) {
+				jqXHR.setRequestHeader( "If-None-Match", jQuery.etag[ cacheURL ] );
+			}
+		}
+
+		// Set the correct header, if data is being sent
+		if ( s.data && s.hasContent && s.contentType !== false || options.contentType ) {
+			jqXHR.setRequestHeader( "Content-Type", s.contentType );
+		}
+
+		// Set the Accepts header for the server, depending on the dataType
+		jqXHR.setRequestHeader(
+			"Accept",
+			s.dataTypes[ 0 ] && s.accepts[ s.dataTypes[ 0 ] ] ?
+				s.accepts[ s.dataTypes[ 0 ] ] +
+					( s.dataTypes[ 0 ] !== "*" ? ", " + allTypes + "; q=0.01" : "" ) :
+				s.accepts[ "*" ]
+		);
+
+		// Check for headers option
+		for ( i in s.headers ) {
+			jqXHR.setRequestHeader( i, s.headers[ i ] );
+		}
+
+		// Allow custom headers/mimetypes and early abort
+		if ( s.beforeSend &&
+			( s.beforeSend.call( callbackContext, jqXHR, s ) === false || completed ) ) {
+
+			// Abort if not done already and return
+			return jqXHR.abort();
+		}
+
+		// Aborting is no longer a cancellation
+		strAbort = "abort";
+
+		// Install callbacks on deferreds
+		completeDeferred.add( s.complete );
+		jqXHR.done( s.success );
+		jqXHR.fail( s.error );
+
+		// Get transport
+		transport = inspectPrefiltersOrTransports( transports, s, options, jqXHR );
+
+		// If no transport, we auto-abort
+		if ( !transport ) {
+			done( -1, "No Transport" );
+		} else {
+			jqXHR.readyState = 1;
+
+			// Send global event
+			if ( fireGlobals ) {
+				globalEventContext.trigger( "ajaxSend", [ jqXHR, s ] );
+			}
+
+			// If request was aborted inside ajaxSend, stop there
+			if ( completed ) {
+				return jqXHR;
+			}
+
+			// Timeout
+			if ( s.async && s.timeout > 0 ) {
+				timeoutTimer = window.setTimeout( function() {
+					jqXHR.abort( "timeout" );
+				}, s.timeout );
+			}
+
+			try {
+				completed = false;
+				transport.send( requestHeaders, done );
+			} catch ( e ) {
+
+				// Rethrow post-completion exceptions
+				if ( completed ) {
+					throw e;
+				}
+
+				// Propagate others as results
+				done( -1, e );
+			}
+		}
+
+		// Callback for when everything is done
+		function done( status, nativeStatusText, responses, headers ) {
+			var isSuccess, success, error, response, modified,
+				statusText = nativeStatusText;
+
+			// Ignore repeat invocations
+			if ( completed ) {
+				return;
+			}
+
+			completed = true;
+
+			// Clear timeout if it exists
+			if ( timeoutTimer ) {
+				window.clearTimeout( timeoutTimer );
+			}
+
+			// Dereference transport for early garbage collection
+			// (no matter how long the jqXHR object will be used)
+			transport = undefined;
+
+			// Cache response headers
+			responseHeadersString = headers || "";
+
+			// Set readyState
+			jqXHR.readyState = status > 0 ? 4 : 0;
+
+			// Determine if successful
+			isSuccess = status >= 200 && status < 300 || status === 304;
+
+			// Get response data
+			if ( responses ) {
+				response = ajaxHandleResponses( s, jqXHR, responses );
+			}
+
+			// Convert no matter what (that way responseXXX fields are always set)
+			response = ajaxConvert( s, response, jqXHR, isSuccess );
+
+			// If successful, handle type chaining
+			if ( isSuccess ) {
+
+				// Set the If-Modified-Since and/or If-None-Match header, if in ifModified mode.
+				if ( s.ifModified ) {
+					modified = jqXHR.getResponseHeader( "Last-Modified" );
+					if ( modified ) {
+						jQuery.lastModified[ cacheURL ] = modified;
+					}
+					modified = jqXHR.getResponseHeader( "etag" );
+					if ( modified ) {
+						jQuery.etag[ cacheURL ] = modified;
+					}
+				}
+
+				// if no content
+				if ( status === 204 || s.type === "HEAD" ) {
+					statusText = "nocontent";
+
+				// if not modified
+				} else if ( status === 304 ) {
+					statusText = "notmodified";
+
+				// If we have data, let's convert it
+				} else {
+					statusText = response.state;
+					success = response.data;
+					error = response.error;
+					isSuccess = !error;
+				}
+			} else {
+
+				// Extract error from statusText and normalize for non-aborts
+				error = statusText;
+				if ( status || !statusText ) {
+					statusText = "error";
+					if ( status < 0 ) {
+						status = 0;
+					}
+				}
+			}
+
+			// Set data for the fake xhr object
+			jqXHR.status = status;
+			jqXHR.statusText = ( nativeStatusText || statusText ) + "";
+
+			// Success/Error
+			if ( isSuccess ) {
+				deferred.resolveWith( callbackContext, [ success, statusText, jqXHR ] );
+			} else {
+				deferred.rejectWith( callbackContext, [ jqXHR, statusText, error ] );
+			}
+
+			// Status-dependent callbacks
+			jqXHR.statusCode( statusCode );
+			statusCode = undefined;
+
+			if ( fireGlobals ) {
+				globalEventContext.trigger( isSuccess ? "ajaxSuccess" : "ajaxError",
+					[ jqXHR, s, isSuccess ? success : error ] );
+			}
+
+			// Complete
+			completeDeferred.fireWith( callbackContext, [ jqXHR, statusText ] );
+
+			if ( fireGlobals ) {
+				globalEventContext.trigger( "ajaxComplete", [ jqXHR, s ] );
+
+				// Handle the global AJAX counter
+				if ( !( --jQuery.active ) ) {
+					jQuery.event.trigger( "ajaxStop" );
+				}
+			}
+		}
+
+		return jqXHR;
+	},
+
+	getJSON: function( url, data, callback ) {
+		return jQuery.get( url, data, callback, "json" );
+	},
+
+	getScript: function( url, callback ) {
+		return jQuery.get( url, undefined, callback, "script" );
+	}
+} );
+
+jQuery.each( [ "get", "post" ], function( i, method ) {
+	jQuery[ method ] = function( url, data, callback, type ) {
+
+		// Shift arguments if data argument was omitted
+		if ( jQuery.isFunction( data ) ) {
+			type = type || callback;
+			callback = data;
+			data = undefined;
+		}
+
+		// The url can be an options object (which then must have .url)
+		return jQuery.ajax( jQuery.extend( {
+			url: url,
+			type: method,
+			dataType: type,
+			data: data,
+			success: callback
+		}, jQuery.isPlainObject( url ) && url ) );
+	};
+} );
+
+
+jQuery._evalUrl = function( url ) {
+	return jQuery.ajax( {
+		url: url,
+
+		// Make this explicit, since user can override this through ajaxSetup (#11264)
+		type: "GET",
+		dataType: "script",
+		cache: true,
+		async: false,
+		global: false,
+		"throws": true
+	} );
+};
+
+
+jQuery.fn.extend( {
+	wrapAll: function( html ) {
+		var wrap;
+
+		if ( this[ 0 ] ) {
+			if ( jQuery.isFunction( html ) ) {
+				html = html.call( this[ 0 ] );
+			}
+
+			// The elements to wrap the target around
+			wrap = jQuery( html, this[ 0 ].ownerDocument ).eq( 0 ).clone( true );
+
+			if ( this[ 0 ].parentNode ) {
+				wrap.insertBefore( this[ 0 ] );
+			}
+
+			wrap.map( function() {
+				var elem = this;
+
+				while ( elem.firstElementChild ) {
+					elem = elem.firstElementChild;
+				}
+
+				return elem;
+			} ).append( this );
+		}
+
+		return this;
+	},
+
+	wrapInner: function( html ) {
+		if ( jQuery.isFunction( html ) ) {
+			return this.each( function( i ) {
+				jQuery( this ).wrapInner( html.call( this, i ) );
+			} );
+		}
+
+		return this.each( function() {
+			var self = jQuery( this ),
+				contents = self.contents();
+
+			if ( contents.length ) {
+				contents.wrapAll( html );
+
+			} else {
+				self.append( html );
+			}
+		} );
+	},
+
+	wrap: function( html ) {
+		var isFunction = jQuery.isFunction( html );
+
+		return this.each( function( i ) {
+			jQuery( this ).wrapAll( isFunction ? html.call( this, i ) : html );
+		} );
+	},
+
+	unwrap: function( selector ) {
+		this.parent( selector ).not( "body" ).each( function() {
+			jQuery( this ).replaceWith( this.childNodes );
+		} );
+		return this;
+	}
+} );
+
+
+jQuery.expr.pseudos.hidden = function( elem ) {
+	return !jQuery.expr.pseudos.visible( elem );
+};
+jQuery.expr.pseudos.visible = function( elem ) {
+	return !!( elem.offsetWidth || elem.offsetHeight || elem.getClientRects().length );
+};
+
+
+
+
+jQuery.ajaxSettings.xhr = function() {
+	try {
+		return new window.XMLHttpRequest();
+	} catch ( e ) {}
+};
+
+var xhrSuccessStatus = {
+
+		// File protocol always yields status code 0, assume 200
+		0: 200,
+
+		// Support: IE <=9 only
+		// #1450: sometimes IE returns 1223 when it should be 204
+		1223: 204
+	},
+	xhrSupported = jQuery.ajaxSettings.xhr();
+
+support.cors = !!xhrSupported && ( "withCredentials" in xhrSupported );
+support.ajax = xhrSupported = !!xhrSupported;
+
+jQuery.ajaxTransport( function( options ) {
+	var callback, errorCallback;
+
+	// Cross domain only allowed if supported through XMLHttpRequest
+	if ( support.cors || xhrSupported && !options.crossDomain ) {
+		return {
+			send: function( headers, complete ) {
+				var i,
+					xhr = options.xhr();
+
+				xhr.open(
+					options.type,
+					options.url,
+					options.async,
+					options.username,
+					options.password
+				);
+
+				// Apply custom fields if provided
+				if ( options.xhrFields ) {
+					for ( i in options.xhrFields ) {
+						xhr[ i ] = options.xhrFields[ i ];
+					}
+				}
+
+				// Override mime type if needed
+				if ( options.mimeType && xhr.overrideMimeType ) {
+					xhr.overrideMimeType( options.mimeType );
+				}
+
+				// X-Requested-With header
+				// For cross-domain requests, seeing as conditions for a preflight are
+				// akin to a jigsaw puzzle, we simply never set it to be sure.
+				// (it can always be set on a per-request basis or even using ajaxSetup)
+				// For same-domain requests, won't change header if already provided.
+				if ( !options.crossDomain && !headers[ "X-Requested-With" ] ) {
+					headers[ "X-Requested-With" ] = "XMLHttpRequest";
+				}
+
+				// Set headers
+				for ( i in headers ) {
+					xhr.setRequestHeader( i, headers[ i ] );
+				}
+
+				// Callback
+				callback = function( type ) {
+					return function() {
+						if ( callback ) {
+							callback = errorCallback = xhr.onload =
+								xhr.onerror = xhr.onabort = xhr.onreadystatechange = null;
+
+							if ( type === "abort" ) {
+								xhr.abort();
+							} else if ( type === "error" ) {
+
+								// Support: IE <=9 only
+								// On a manual native abort, IE9 throws
+								// errors on any property access that is not readyState
+								if ( typeof xhr.status !== "number" ) {
+									complete( 0, "error" );
+								} else {
+									complete(
+
+										// File: protocol always yields status 0; see #8605, #14207
+										xhr.status,
+										xhr.statusText
+									);
+								}
+							} else {
+								complete(
+									xhrSuccessStatus[ xhr.status ] || xhr.status,
+									xhr.statusText,
+
+									// Support: IE <=9 only
+									// IE9 has no XHR2 but throws on binary (trac-11426)
+									// For XHR2 non-text, let the caller handle it (gh-2498)
+									( xhr.responseType || "text" ) !== "text"  ||
+									typeof xhr.responseText !== "string" ?
+										{ binary: xhr.response } :
+										{ text: xhr.responseText },
+									xhr.getAllResponseHeaders()
+								);
+							}
+						}
+					};
+				};
+
+				// Listen to events
+				xhr.onload = callback();
+				errorCallback = xhr.onerror = callback( "error" );
+
+				// Support: IE 9 only
+				// Use onreadystatechange to replace onabort
+				// to handle uncaught aborts
+				if ( xhr.onabort !== undefined ) {
+					xhr.onabort = errorCallback;
+				} else {
+					xhr.onreadystatechange = function() {
+
+						// Check readyState before timeout as it changes
+						if ( xhr.readyState === 4 ) {
+
+							// Allow onerror to be called first,
+							// but that will not handle a native abort
+							// Also, save errorCallback to a variable
+							// as xhr.onerror cannot be accessed
+							window.setTimeout( function() {
+								if ( callback ) {
+									errorCallback();
+								}
+							} );
+						}
+					};
+				}
+
+				// Create the abort callback
+				callback = callback( "abort" );
+
+				try {
+
+					// Do send the request (this may raise an exception)
+					xhr.send( options.hasContent && options.data || null );
+				} catch ( e ) {
+
+					// #14683: Only rethrow if this hasn't been notified as an error yet
+					if ( callback ) {
+						throw e;
+					}
+				}
+			},
+
+			abort: function() {
+				if ( callback ) {
+					callback();
+				}
+			}
+		};
+	}
+} );
+
+
+
+
+// Prevent auto-execution of scripts when no explicit dataType was provided (See gh-2432)
+jQuery.ajaxPrefilter( function( s ) {
+	if ( s.crossDomain ) {
+		s.contents.script = false;
+	}
+} );
+
+// Install script dataType
+jQuery.ajaxSetup( {
+	accepts: {
+		script: "text/javascript, application/javascript, " +
+			"application/ecmascript, application/x-ecmascript"
+	},
+	contents: {
+		script: /\b(?:java|ecma)script\b/
+	},
+	converters: {
+		"text script": function( text ) {
+			jQuery.globalEval( text );
+			return text;
+		}
+	}
+} );
+
+// Handle cache's special case and crossDomain
+jQuery.ajaxPrefilter( "script", function( s ) {
+	if ( s.cache === undefined ) {
+		s.cache = false;
+	}
+	if ( s.crossDomain ) {
+		s.type = "GET";
+	}
+} );
+
+// Bind script tag hack transport
+jQuery.ajaxTransport( "script", function( s ) {
+
+	// This transport only deals with cross domain requests
+	if ( s.crossDomain ) {
+		var script, callback;
+		return {
+			send: function( _, complete ) {
+				script = jQuery( "<script>" ).prop( {
+					charset: s.scriptCharset,
+					src: s.url
+				} ).on(
+					"load error",
+					callback = function( evt ) {
+						script.remove();
+						callback = null;
+						if ( evt ) {
+							complete( evt.type === "error" ? 404 : 200, evt.type );
+						}
+					}
+				);
+
+				// Use native DOM manipulation to avoid our domManip AJAX trickery
+				document.head.appendChild( script[ 0 ] );
+			},
+			abort: function() {
+				if ( callback ) {
+					callback();
+				}
+			}
+		};
+	}
+} );
+
+
+
+
+var oldCallbacks = [],
+	rjsonp = /(=)\?(?=&|$)|\?\?/;
+
+// Default jsonp settings
+jQuery.ajaxSetup( {
+	jsonp: "callback",
+	jsonpCallback: function() {
+		var callback = oldCallbacks.pop() || ( jQuery.expando + "_" + ( nonce++ ) );
+		this[ callback ] = true;
+		return callback;
+	}
+} );
+
+// Detect, normalize options and install callbacks for jsonp requests
+jQuery.ajaxPrefilter( "json jsonp", function( s, originalSettings, jqXHR ) {
+
+	var callbackName, overwritten, responseContainer,
+		jsonProp = s.jsonp !== false && ( rjsonp.test( s.url ) ?
+			"url" :
+			typeof s.data === "string" &&
+				( s.contentType || "" )
+					.indexOf( "application/x-www-form-urlencoded" ) === 0 &&
+				rjsonp.test( s.data ) && "data"
+		);
+
+	// Handle iff the expected data type is "jsonp" or we have a parameter to set
+	if ( jsonProp || s.dataTypes[ 0 ] === "jsonp" ) {
+
+		// Get callback name, remembering preexisting value associated with it
+		callbackName = s.jsonpCallback = jQuery.isFunction( s.jsonpCallback ) ?
+			s.jsonpCallback() :
+			s.jsonpCallback;
+
+		// Insert callback into url or form data
+		if ( jsonProp ) {
+			s[ jsonProp ] = s[ jsonProp ].replace( rjsonp, "$1" + callbackName );
+		} else if ( s.jsonp !== false ) {
+			s.url += ( rquery.test( s.url ) ? "&" : "?" ) + s.jsonp + "=" + callbackName;
+		}
+
+		// Use data converter to retrieve json after script execution
+		s.converters[ "script json" ] = function() {
+			if ( !responseContainer ) {
+				jQuery.error( callbackName + " was not called" );
+			}
+			return responseContainer[ 0 ];
+		};
+
+		// Force json dataType
+		s.dataTypes[ 0 ] = "json";
+
+		// Install callback
+		overwritten = window[ callbackName ];
+		window[ callbackName ] = function() {
+			responseContainer = arguments;
+		};
+
+		// Clean-up function (fires after converters)
+		jqXHR.always( function() {
+
+			// If previous value didn't exist - remove it
+			if ( overwritten === undefined ) {
+				jQuery( window ).removeProp( callbackName );
+
+			// Otherwise restore preexisting value
+			} else {
+				window[ callbackName ] = overwritten;
+			}
+
+			// Save back as free
+			if ( s[ callbackName ] ) {
+
+				// Make sure that re-using the options doesn't screw things around
+				s.jsonpCallback = originalSettings.jsonpCallback;
+
+				// Save the callback name for future use
+				oldCallbacks.push( callbackName );
+			}
+
+			// Call if it was a function and we have a response
+			if ( responseContainer && jQuery.isFunction( overwritten ) ) {
+				overwritten( responseContainer[ 0 ] );
+			}
+
+			responseContainer = overwritten = undefined;
+		} );
+
+		// Delegate to script
+		return "script";
+	}
+} );
+
+
+
+
+// Support: Safari 8 only
+// In Safari 8 documents created via document.implementation.createHTMLDocument
+// collapse sibling forms: the second one becomes a child of the first one.
+// Because of that, this security measure has to be disabled in Safari 8.
+// https://bugs.webkit.org/show_bug.cgi?id=137337
+support.createHTMLDocument = ( function() {
+	var body = document.implementation.createHTMLDocument( "" ).body;
+	body.innerHTML = "<form></form><form></form>";
+	return body.childNodes.length === 2;
+} )();
+
+
+// Argument "data" should be string of html
+// context (optional): If specified, the fragment will be created in this context,
+// defaults to document
+// keepScripts (optional): If true, will include scripts passed in the html string
+jQuery.parseHTML = function( data, context, keepScripts ) {
+	if ( typeof data !== "string" ) {
+		return [];
+	}
+	if ( typeof context === "boolean" ) {
+		keepScripts = context;
+		context = false;
+	}
+
+	var base, parsed, scripts;
+
+	if ( !context ) {
+
+		// Stop scripts or inline event handlers from being executed immediately
+		// by using document.implementation
+		if ( support.createHTMLDocument ) {
+			context = document.implementation.createHTMLDocument( "" );
+
+			// Set the base href for the created document
+			// so any parsed elements with URLs
+			// are based on the document's URL (gh-2965)
+			base = context.createElement( "base" );
+			base.href = document.location.href;
+			context.head.appendChild( base );
+		} else {
+			context = document;
+		}
+	}
+
+	parsed = rsingleTag.exec( data );
+	scripts = !keepScripts && [];
+
+	// Single tag
+	if ( parsed ) {
+		return [ context.createElement( parsed[ 1 ] ) ];
+	}
+
+	parsed = buildFragment( [ data ], context, scripts );
+
+	if ( scripts && scripts.length ) {
+		jQuery( scripts ).remove();
+	}
+
+	return jQuery.merge( [], parsed.childNodes );
+};
+
+
+/**
+ * Load a url into a page
+ */
+jQuery.fn.load = function( url, params, callback ) {
+	var selector, type, response,
+		self = this,
+		off = url.indexOf( " " );
+
+	if ( off > -1 ) {
+		selector = jQuery.trim( url.slice( off ) );
+		url = url.slice( 0, off );
+	}
+
+	// If it's a function
+	if ( jQuery.isFunction( params ) ) {
+
+		// We assume that it's the callback
+		callback = params;
+		params = undefined;
+
+	// Otherwise, build a param string
+	} else if ( params && typeof params === "object" ) {
+		type = "POST";
+	}
+
+	// If we have elements to modify, make the request
+	if ( self.length > 0 ) {
+		jQuery.ajax( {
+			url: url,
+
+			// If "type" variable is undefined, then "GET" method will be used.
+			// Make value of this field explicit since
+			// user can override it through ajaxSetup method
+			type: type || "GET",
+			dataType: "html",
+			data: params
+		} ).done( function( responseText ) {
+
+			// Save response for use in complete callback
+			response = arguments;
+
+			self.html( selector ?
+
+				// If a selector was specified, locate the right elements in a dummy div
+				// Exclude scripts to avoid IE 'Permission Denied' errors
+				jQuery( "<div>" ).append( jQuery.parseHTML( responseText ) ).find( selector ) :
+
+				// Otherwise use the full result
+				responseText );
+
+		// If the request succeeds, this function gets "data", "status", "jqXHR"
+		// but they are ignored because response was set above.
+		// If it fails, this function gets "jqXHR", "status", "error"
+		} ).always( callback && function( jqXHR, status ) {
+			self.each( function() {
+				callback.apply( this, response || [ jqXHR.responseText, status, jqXHR ] );
+			} );
+		} );
+	}
+
+	return this;
+};
+
+
+
+
+// Attach a bunch of functions for handling common AJAX events
+jQuery.each( [
+	"ajaxStart",
+	"ajaxStop",
+	"ajaxComplete",
+	"ajaxError",
+	"ajaxSuccess",
+	"ajaxSend"
+], function( i, type ) {
+	jQuery.fn[ type ] = function( fn ) {
+		return this.on( type, fn );
+	};
+} );
+
+
+
+
+jQuery.expr.pseudos.animated = function( elem ) {
+	return jQuery.grep( jQuery.timers, function( fn ) {
+		return elem === fn.elem;
+	} ).length;
+};
+
+
+
+
+/**
+ * Gets a window from an element
+ */
+function getWindow( elem ) {
+	return jQuery.isWindow( elem ) ? elem : elem.nodeType === 9 && elem.defaultView;
+}
+
+jQuery.offset = {
+	setOffset: function( elem, options, i ) {
+		var curPosition, curLeft, curCSSTop, curTop, curOffset, curCSSLeft, calculatePosition,
+			position = jQuery.css( elem, "position" ),
+			curElem = jQuery( elem ),
+			props = {};
+
+		// Set position first, in-case top/left are set even on static elem
+		if ( position === "static" ) {
+			elem.style.position = "relative";
+		}
+
+		curOffset = curElem.offset();
+		curCSSTop = jQuery.css( elem, "top" );
+		curCSSLeft = jQuery.css( elem, "left" );
+		calculatePosition = ( position === "absolute" || position === "fixed" ) &&
+			( curCSSTop + curCSSLeft ).indexOf( "auto" ) > -1;
+
+		// Need to be able to calculate position if either
+		// top or left is auto and position is either absolute or fixed
+		if ( calculatePosition ) {
+			curPosition = curElem.position();
+			curTop = curPosition.top;
+			curLeft = curPosition.left;
+
+		} else {
+			curTop = parseFloat( curCSSTop ) || 0;
+			curLeft = parseFloat( curCSSLeft ) || 0;
+		}
+
+		if ( jQuery.isFunction( options ) ) {
+
+			// Use jQuery.extend here to allow modification of coordinates argument (gh-1848)
+			options = options.call( elem, i, jQuery.extend( {}, curOffset ) );
+		}
+
+		if ( options.top != null ) {
+			props.top = ( options.top - curOffset.top ) + curTop;
+		}
+		if ( options.left != null ) {
+			props.left = ( options.left - curOffset.left ) + curLeft;
+		}
+
+		if ( "using" in options ) {
+			options.using.call( elem, props );
+
+		} else {
+			curElem.css( props );
+		}
+	}
+};
+
+jQuery.fn.extend( {
+	offset: function( options ) {
+
+		// Preserve chaining for setter
+		if ( arguments.length ) {
+			return options === undefined ?
+				this :
+				this.each( function( i ) {
+					jQuery.offset.setOffset( this, options, i );
+				} );
+		}
+
+		var docElem, win, rect, doc,
+			elem = this[ 0 ];
+
+		if ( !elem ) {
+			return;
+		}
+
+		// Support: IE <=11 only
+		// Running getBoundingClientRect on a
+		// disconnected node in IE throws an error
+		if ( !elem.getClientRects().length ) {
+			return { top: 0, left: 0 };
+		}
+
+		rect = elem.getBoundingClientRect();
+
+		// Make sure element is not hidden (display: none)
+		if ( rect.width || rect.height ) {
+			doc = elem.ownerDocument;
+			win = getWindow( doc );
+			docElem = doc.documentElement;
+
+			return {
+				top: rect.top + win.pageYOffset - docElem.clientTop,
+				left: rect.left + win.pageXOffset - docElem.clientLeft
+			};
+		}
+
+		// Return zeros for disconnected and hidden elements (gh-2310)
+		return rect;
+	},
+
+	position: function() {
+		if ( !this[ 0 ] ) {
+			return;
+		}
+
+		var offsetParent, offset,
+			elem = this[ 0 ],
+			parentOffset = { top: 0, left: 0 };
+
+		// Fixed elements are offset from window (parentOffset = {top:0, left: 0},
+		// because it is its only offset parent
+		if ( jQuery.css( elem, "position" ) === "fixed" ) {
+
+			// Assume getBoundingClientRect is there when computed position is fixed
+			offset = elem.getBoundingClientRect();
+
+		} else {
+
+			// Get *real* offsetParent
+			offsetParent = this.offsetParent();
+
+			// Get correct offsets
+			offset = this.offset();
+			if ( !jQuery.nodeName( offsetParent[ 0 ], "html" ) ) {
+				parentOffset = offsetParent.offset();
+			}
+
+			// Add offsetParent borders
+			parentOffset = {
+				top: parentOffset.top + jQuery.css( offsetParent[ 0 ], "borderTopWidth", true ),
+				left: parentOffset.left + jQuery.css( offsetParent[ 0 ], "borderLeftWidth", true )
+			};
+		}
+
+		// Subtract parent offsets and element margins
+		return {
+			top: offset.top - parentOffset.top - jQuery.css( elem, "marginTop", true ),
+			left: offset.left - parentOffset.left - jQuery.css( elem, "marginLeft", true )
+		};
+	},
+
+	// This method will return documentElement in the following cases:
+	// 1) For the element inside the iframe without offsetParent, this method will return
+	//    documentElement of the parent window
+	// 2) For the hidden or detached element
+	// 3) For body or html element, i.e. in case of the html node - it will return itself
+	//
+	// but those exceptions were never presented as a real life use-cases
+	// and might be considered as more preferable results.
+	//
+	// This logic, however, is not guaranteed and can change at any point in the future
+	offsetParent: function() {
+		return this.map( function() {
+			var offsetParent = this.offsetParent;
+
+			while ( offsetParent && jQuery.css( offsetParent, "position" ) === "static" ) {
+				offsetParent = offsetParent.offsetParent;
+			}
+
+			return offsetParent || documentElement;
+		} );
+	}
+} );
+
+// Create scrollLeft and scrollTop methods
+jQuery.each( { scrollLeft: "pageXOffset", scrollTop: "pageYOffset" }, function( method, prop ) {
+	var top = "pageYOffset" === prop;
+
+	jQuery.fn[ method ] = function( val ) {
+		return access( this, function( elem, method, val ) {
+			var win = getWindow( elem );
+
+			if ( val === undefined ) {
+				return win ? win[ prop ] : elem[ method ];
+			}
+
+			if ( win ) {
+				win.scrollTo(
+					!top ? val : win.pageXOffset,
+					top ? val : win.pageYOffset
+				);
+
+			} else {
+				elem[ method ] = val;
+			}
+		}, method, val, arguments.length );
+	};
+} );
+
+// Support: Safari <=7 - 9.1, Chrome <=37 - 49
+// Add the top/left cssHooks using jQuery.fn.position
+// Webkit bug: https://bugs.webkit.org/show_bug.cgi?id=29084
+// Blink bug: https://bugs.chromium.org/p/chromium/issues/detail?id=589347
+// getComputedStyle returns percent when specified for top/left/bottom/right;
+// rather than make the css module depend on the offset module, just check for it here
+jQuery.each( [ "top", "left" ], function( i, prop ) {
+	jQuery.cssHooks[ prop ] = addGetHookIf( support.pixelPosition,
+		function( elem, computed ) {
+			if ( computed ) {
+				computed = curCSS( elem, prop );
+
+				// If curCSS returns percentage, fallback to offset
+				return rnumnonpx.test( computed ) ?
+					jQuery( elem ).position()[ prop ] + "px" :
+					computed;
+			}
+		}
+	);
+} );
+
+
+// Create innerHeight, innerWidth, height, width, outerHeight and outerWidth methods
+jQuery.each( { Height: "height", Width: "width" }, function( name, type ) {
+	jQuery.each( { padding: "inner" + name, content: type, "": "outer" + name },
+		function( defaultExtra, funcName ) {
+
+		// Margin is only for outerHeight, outerWidth
+		jQuery.fn[ funcName ] = function( margin, value ) {
+			var chainable = arguments.length && ( defaultExtra || typeof margin !== "boolean" ),
+				extra = defaultExtra || ( margin === true || value === true ? "margin" : "border" );
+
+			return access( this, function( elem, type, value ) {
+				var doc;
+
+				if ( jQuery.isWindow( elem ) ) {
+
+					// $( window ).outerWidth/Height return w/h including scrollbars (gh-1729)
+					return funcName.indexOf( "outer" ) === 0 ?
+						elem[ "inner" + name ] :
+						elem.document.documentElement[ "client" + name ];
+				}
+
+				// Get document width or height
+				if ( elem.nodeType === 9 ) {
+					doc = elem.documentElement;
+
+					// Either scroll[Width/Height] or offset[Width/Height] or client[Width/Height],
+					// whichever is greatest
+					return Math.max(
+						elem.body[ "scroll" + name ], doc[ "scroll" + name ],
+						elem.body[ "offset" + name ], doc[ "offset" + name ],
+						doc[ "client" + name ]
+					);
+				}
+
+				return value === undefined ?
+
+					// Get width or height on the element, requesting but not forcing parseFloat
+					jQuery.css( elem, type, extra ) :
+
+					// Set width or height on the element
+					jQuery.style( elem, type, value, extra );
+			}, type, chainable ? margin : undefined, chainable );
+		};
+	} );
+} );
+
+
+jQuery.fn.extend( {
+
+	bind: function( types, data, fn ) {
+		return this.on( types, null, data, fn );
+	},
+	unbind: function( types, fn ) {
+		return this.off( types, null, fn );
+	},
+
+	delegate: function( selector, types, data, fn ) {
+		return this.on( types, selector, data, fn );
+	},
+	undelegate: function( selector, types, fn ) {
+
+		// ( namespace ) or ( selector, types [, fn] )
+		return arguments.length === 1 ?
+			this.off( selector, "**" ) :
+			this.off( types, selector || "**", fn );
+	}
+} );
+
+jQuery.parseJSON = JSON.parse;
+
+
+
+
+// Register as a named AMD module, since jQuery can be concatenated with other
+// files that may use define, but not via a proper concatenation script that
+// understands anonymous AMD modules. A named AMD is safest and most robust
+// way to register. Lowercase jquery is used because AMD module names are
+// derived from file names, and jQuery is normally delivered in a lowercase
+// file name. Do this after creating the global so that if an AMD module wants
+// to call noConflict to hide this version of jQuery, it will work.
+
+// Note that for maximum portability, libraries that are not jQuery should
+// declare themselves as anonymous modules, and avoid setting a global if an
+// AMD loader is present. jQuery is a special case. For more information, see
+// https://github.com/jrburke/requirejs/wiki/Updating-existing-libraries#wiki-anon
+
+if ( typeof define === "function" && define.amd ) {
+	define( "jquery", [], function() {
+		return jQuery;
+	} );
+}
+
+
+
+
+
+var
+
+	// Map over jQuery in case of overwrite
+	_jQuery = window.jQuery,
+
+	// Map over the $ in case of overwrite
+	_$ = window.$;
+
+jQuery.noConflict = function( deep ) {
+	if ( window.$ === jQuery ) {
+		window.$ = _$;
+	}
+
+	if ( deep && window.jQuery === jQuery ) {
+		window.jQuery = _jQuery;
+	}
+
+	return jQuery;
+};
+
+// Expose jQuery and $ identifiers, even in AMD
+// (#7102#comment:10, https://github.com/jquery/jquery/pull/557)
+// and CommonJS for browser emulators (#13566)
+if ( !noGlobal ) {
+	window.jQuery = window.$ = jQuery;
+}
+
+
+return jQuery;
+} );
+/*
+ * This monolithic JS file is taken from github.com/matt-cook/kiosk and is
+ * reproduced using the following license:
+ *
+ * The MIT License (MIT)
+ *
+  * Copyright (c) 2014 ZEBRADOG
+  *
+  * Permission is hereby granted, free of charge, to any person obtaining a
+  * copy of this software and associated documentation files (the "Software"),
+  * to deal in the Software without restriction, including without limitation
+  * the rights to use, copy, modify, merge, publish, distribute, sublicense,
+  * and/or sell copies of the Software, and to permit persons to whom the
+  * Software is furnished to do so, subject to the following conditions:
+  *
+  * The above copyright notice and this permission notice shall be included in
+  * all copies or substantial portions of the Software.
+  *
+  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+  * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+  * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+  * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+  * DEALINGS IN THE SOFTWARE.
+ */
+
+
+
+//     Underscore.js 1.6.0
+//     http://underscorejs.org
+//     (c) 2009-2014 Jeremy Ashkenas, DocumentCloud and Investigative Reporters & Editors
+//     Underscore may be freely distributed under the MIT license.
+
+(function() {
+
+  // Baseline setup
+  // --------------
+
+  // Establish the root object, `window` in the browser, or `exports` on the server.
+  var root = this;
+
+  // Save the previous value of the `_` variable.
+  var previousUnderscore = root._;
+
+  // Establish the object that gets returned to break out of a loop iteration.
+  var breaker = {};
+
+  // Save bytes in the minified (but not gzipped) version:
+  var ArrayProto = Array.prototype, ObjProto = Object.prototype, FuncProto = Function.prototype;
+
+  // Create quick reference variables for speed access to core prototypes.
+  var
+    push             = ArrayProto.push,
+    slice            = ArrayProto.slice,
+    concat           = ArrayProto.concat,
+    toString         = ObjProto.toString,
+    hasOwnProperty   = ObjProto.hasOwnProperty;
+
+  // All **ECMAScript 5** native function implementations that we hope to use
+  // are declared here.
+  var
+    nativeForEach      = ArrayProto.forEach,
+    nativeMap          = ArrayProto.map,
+    nativeReduce       = ArrayProto.reduce,
+    nativeReduceRight  = ArrayProto.reduceRight,
+    nativeFilter       = ArrayProto.filter,
+    nativeEvery        = ArrayProto.every,
+    nativeSome         = ArrayProto.some,
+    nativeIndexOf      = ArrayProto.indexOf,
+    nativeLastIndexOf  = ArrayProto.lastIndexOf,
+    nativeIsArray      = Array.isArray,
+    nativeKeys         = Object.keys,
+    nativeBind         = FuncProto.bind;
+
+  // Create a safe reference to the Underscore object for use below.
+  var _ = function(obj) {
+    if (obj instanceof _) return obj;
+    if (!(this instanceof _)) return new _(obj);
+    this._wrapped = obj;
+  };
+
+  // Export the Underscore object for **Node.js**, with
+  // backwards-compatibility for the old `require()` API. If we're in
+  // the browser, add `_` as a global object via a string identifier,
+  // for Closure Compiler "advanced" mode.
+  if (typeof exports !== 'undefined') {
+    if (typeof module !== 'undefined' && module.exports) {
+      exports = module.exports = _;
+    }
+    exports._ = _;
+  } else {
+    root._ = _;
+  }
+
+  // Current version.
+  _.VERSION = '1.6.0';
+
+  // Collection Functions
+  // --------------------
+
+  // The cornerstone, an `each` implementation, aka `forEach`.
+  // Handles objects with the built-in `forEach`, arrays, and raw objects.
+  // Delegates to **ECMAScript 5**'s native `forEach` if available.
+  var each = _.each = _.forEach = function(obj, iterator, context) {
+    if (obj == null) return obj;
+    if (nativeForEach && obj.forEach === nativeForEach) {
+      obj.forEach(iterator, context);
+    } else if (obj.length === +obj.length) {
+      for (var i = 0, length = obj.length; i < length; i++) {
+        if (iterator.call(context, obj[i], i, obj) === breaker) return;
+      }
+    } else {
+      var keys = _.keys(obj);
+      for (var i = 0, length = keys.length; i < length; i++) {
+        if (iterator.call(context, obj[keys[i]], keys[i], obj) === breaker) return;
+      }
+    }
+    return obj;
+  };
+
+  // Return the results of applying the iterator to each element.
+  // Delegates to **ECMAScript 5**'s native `map` if available.
+  _.map = _.collect = function(obj, iterator, context) {
+    var results = [];
+    if (obj == null) return results;
+    if (nativeMap && obj.map === nativeMap) return obj.map(iterator, context);
+    each(obj, function(value, index, list) {
+      results.push(iterator.call(context, value, index, list));
+    });
+    return results;
+  };
+
+  var reduceError = 'Reduce of empty array with no initial value';
+
+  // **Reduce** builds up a single result from a list of values, aka `inject`,
+  // or `foldl`. Delegates to **ECMAScript 5**'s native `reduce` if available.
+  _.reduce = _.foldl = _.inject = function(obj, iterator, memo, context) {
+    var initial = arguments.length > 2;
+    if (obj == null) obj = [];
+    if (nativeReduce && obj.reduce === nativeReduce) {
+      if (context) iterator = _.bind(iterator, context);
+      return initial ? obj.reduce(iterator, memo) : obj.reduce(iterator);
+    }
+    each(obj, function(value, index, list) {
+      if (!initial) {
+        memo = value;
+        initial = true;
+      } else {
+        memo = iterator.call(context, memo, value, index, list);
+      }
+    });
+    if (!initial) throw new TypeError(reduceError);
+    return memo;
+  };
+
+  // The right-associative version of reduce, also known as `foldr`.
+  // Delegates to **ECMAScript 5**'s native `reduceRight` if available.
+  _.reduceRight = _.foldr = function(obj, iterator, memo, context) {
+    var initial = arguments.length > 2;
+    if (obj == null) obj = [];
+    if (nativeReduceRight && obj.reduceRight === nativeReduceRight) {
+      if (context) iterator = _.bind(iterator, context);
+      return initial ? obj.reduceRight(iterator, memo) : obj.reduceRight(iterator);
+    }
+    var length = obj.length;
+    if (length !== +length) {
+      var keys = _.keys(obj);
+      length = keys.length;
+    }
+    each(obj, function(value, index, list) {
+      index = keys ? keys[--length] : --length;
+      if (!initial) {
+        memo = obj[index];
+        initial = true;
+      } else {
+        memo = iterator.call(context, memo, obj[index], index, list);
+      }
+    });
+    if (!initial) throw new TypeError(reduceError);
+    return memo;
+  };
+
+  // Return the first value which passes a truth test. Aliased as `detect`.
+  _.find = _.detect = function(obj, predicate, context) {
+    var result;
+    any(obj, function(value, index, list) {
+      if (predicate.call(context, value, index, list)) {
+        result = value;
+        return true;
+      }
+    });
+    return result;
+  };
+
+  // Return all the elements that pass a truth test.
+  // Delegates to **ECMAScript 5**'s native `filter` if available.
+  // Aliased as `select`.
+  _.filter = _.select = function(obj, predicate, context) {
+    var results = [];
+    if (obj == null) return results;
+    if (nativeFilter && obj.filter === nativeFilter) return obj.filter(predicate, context);
+    each(obj, function(value, index, list) {
+      if (predicate.call(context, value, index, list)) results.push(value);
+    });
+    return results;
+  };
+
+  // Return all the elements for which a truth test fails.
+  _.reject = function(obj, predicate, context) {
+    return _.filter(obj, function(value, index, list) {
+      return !predicate.call(context, value, index, list);
+    }, context);
+  };
+
+  // Determine whether all of the elements match a truth test.
+  // Delegates to **ECMAScript 5**'s native `every` if available.
+  // Aliased as `all`.
+  _.every = _.all = function(obj, predicate, context) {
+    predicate || (predicate = _.identity);
+    var result = true;
+    if (obj == null) return result;
+    if (nativeEvery && obj.every === nativeEvery) return obj.every(predicate, context);
+    each(obj, function(value, index, list) {
+      if (!(result = result && predicate.call(context, value, index, list))) return breaker;
+    });
+    return !!result;
+  };
+
+  // Determine if at least one element in the object matches a truth test.
+  // Delegates to **ECMAScript 5**'s native `some` if available.
+  // Aliased as `any`.
+  var any = _.some = _.any = function(obj, predicate, context) {
+    predicate || (predicate = _.identity);
+    var result = false;
+    if (obj == null) return result;
+    if (nativeSome && obj.some === nativeSome) return obj.some(predicate, context);
+    each(obj, function(value, index, list) {
+      if (result || (result = predicate.call(context, value, index, list))) return breaker;
+    });
+    return !!result;
+  };
+
+  // Determine if the array or object contains a given value (using `===`).
+  // Aliased as `include`.
+  _.contains = _.include = function(obj, target) {
+    if (obj == null) return false;
+    if (nativeIndexOf && obj.indexOf === nativeIndexOf) return obj.indexOf(target) != -1;
+    return any(obj, function(value) {
+      return value === target;
+    });
+  };
+
+  // Invoke a method (with arguments) on every item in a collection.
+  _.invoke = function(obj, method) {
+    var args = slice.call(arguments, 2);
+    var isFunc = _.isFunction(method);
+    return _.map(obj, function(value) {
+      return (isFunc ? method : value[method]).apply(value, args);
+    });
+  };
+
+  // Convenience version of a common use case of `map`: fetching a property.
+  _.pluck = function(obj, key) {
+    return _.map(obj, _.property(key));
+  };
+
+  // Convenience version of a common use case of `filter`: selecting only objects
+  // containing specific `key:value` pairs.
+  _.where = function(obj, attrs) {
+    return _.filter(obj, _.matches(attrs));
+  };
+
+  // Convenience version of a common use case of `find`: getting the first object
+  // containing specific `key:value` pairs.
+  _.findWhere = function(obj, attrs) {
+    return _.find(obj, _.matches(attrs));
+  };
+
+  // Return the maximum element or (element-based computation).
+  // Can't optimize arrays of integers longer than 65,535 elements.
+  // See [WebKit Bug 80797](https://bugs.webkit.org/show_bug.cgi?id=80797)
+  _.max = function(obj, iterator, context) {
+    if (!iterator && _.isArray(obj) && obj[0] === +obj[0] && obj.length < 65535) {
+      return Math.max.apply(Math, obj);
+    }
+    var result = -Infinity, lastComputed = -Infinity;
+    each(obj, function(value, index, list) {
+      var computed = iterator ? iterator.call(context, value, index, list) : value;
+      if (computed > lastComputed) {
+        result = value;
+        lastComputed = computed;
+      }
+    });
+    return result;
+  };
+
+  // Return the minimum element (or element-based computation).
+  _.min = function(obj, iterator, context) {
+    if (!iterator && _.isArray(obj) && obj[0] === +obj[0] && obj.length < 65535) {
+      return Math.min.apply(Math, obj);
+    }
+    var result = Infinity, lastComputed = Infinity;
+    each(obj, function(value, index, list) {
+      var computed = iterator ? iterator.call(context, value, index, list) : value;
+      if (computed < lastComputed) {
+        result = value;
+        lastComputed = computed;
+      }
+    });
+    return result;
+  };
+
+  // Shuffle an array, using the modern version of the
+  // [Fisher-Yates shuffle](http://en.wikipedia.org/wiki/Fisher–Yates_shuffle).
+  _.shuffle = function(obj) {
+    var rand;
+    var index = 0;
+    var shuffled = [];
+    each(obj, function(value) {
+      rand = _.random(index++);
+      shuffled[index - 1] = shuffled[rand];
+      shuffled[rand] = value;
+    });
+    return shuffled;
+  };
+
+  // Sample **n** random values from a collection.
+  // If **n** is not specified, returns a single random element.
+  // The internal `guard` argument allows it to work with `map`.
+  _.sample = function(obj, n, guard) {
+    if (n == null || guard) {
+      if (obj.length !== +obj.length) obj = _.values(obj);
+      return obj[_.random(obj.length - 1)];
+    }
+    return _.shuffle(obj).slice(0, Math.max(0, n));
+  };
+
+  // An internal function to generate lookup iterators.
+  var lookupIterator = function(value) {
+    if (value == null) return _.identity;
+    if (_.isFunction(value)) return value;
+    return _.property(value);
+  };
+
+  // Sort the object's values by a criterion produced by an iterator.
+  _.sortBy = function(obj, iterator, context) {
+    iterator = lookupIterator(iterator);
+    return _.pluck(_.map(obj, function(value, index, list) {
+      return {
+        value: value,
+        index: index,
+        criteria: iterator.call(context, value, index, list)
+      };
+    }).sort(function(left, right) {
+      var a = left.criteria;
+      var b = right.criteria;
+      if (a !== b) {
+        if (a > b || a === void 0) return 1;
+        if (a < b || b === void 0) return -1;
+      }
+      return left.index - right.index;
+    }), 'value');
+  };
+
+  // An internal function used for aggregate "group by" operations.
+  var group = function(behavior) {
+    return function(obj, iterator, context) {
+      var result = {};
+      iterator = lookupIterator(iterator);
+      each(obj, function(value, index) {
+        var key = iterator.call(context, value, index, obj);
+        behavior(result, key, value);
+      });
+      return result;
+    };
+  };
+
+  // Groups the object's values by a criterion. Pass either a string attribute
+  // to group by, or a function that returns the criterion.
+  _.groupBy = group(function(result, key, value) {
+    _.has(result, key) ? result[key].push(value) : result[key] = [value];
+  });
+
+  // Indexes the object's values by a criterion, similar to `groupBy`, but for
+  // when you know that your index values will be unique.
+  _.indexBy = group(function(result, key, value) {
+    result[key] = value;
+  });
+
+  // Counts instances of an object that group by a certain criterion. Pass
+  // either a string attribute to count by, or a function that returns the
+  // criterion.
+  _.countBy = group(function(result, key) {
+    _.has(result, key) ? result[key]++ : result[key] = 1;
+  });
+
+  // Use a comparator function to figure out the smallest index at which
+  // an object should be inserted so as to maintain order. Uses binary search.
+  _.sortedIndex = function(array, obj, iterator, context) {
+    iterator = lookupIterator(iterator);
+    var value = iterator.call(context, obj);
+    var low = 0, high = array.length;
+    while (low < high) {
+      var mid = (low + high) >>> 1;
+      iterator.call(context, array[mid]) < value ? low = mid + 1 : high = mid;
+    }
+    return low;
+  };
+
+  // Safely create a real, live array from anything iterable.
+  _.toArray = function(obj) {
+    if (!obj) return [];
+    if (_.isArray(obj)) return slice.call(obj);
+    if (obj.length === +obj.length) return _.map(obj, _.identity);
+    return _.values(obj);
+  };
+
+  // Return the number of elements in an object.
+  _.size = function(obj) {
+    if (obj == null) return 0;
+    return (obj.length === +obj.length) ? obj.length : _.keys(obj).length;
+  };
+
+  // Array Functions
+  // ---------------
+
+  // Get the first element of an array. Passing **n** will return the first N
+  // values in the array. Aliased as `head` and `take`. The **guard** check
+  // allows it to work with `_.map`.
+  _.first = _.head = _.take = function(array, n, guard) {
+    if (array == null) return void 0;
+    if ((n == null) || guard) return array[0];
+    if (n < 0) return [];
+    return slice.call(array, 0, n);
+  };
+
+  // Returns everything but the last entry of the array. Especially useful on
+  // the arguments object. Passing **n** will return all the values in
+  // the array, excluding the last N. The **guard** check allows it to work with
+  // `_.map`.
+  _.initial = function(array, n, guard) {
+    return slice.call(array, 0, array.length - ((n == null) || guard ? 1 : n));
+  };
+
+  // Get the last element of an array. Passing **n** will return the last N
+  // values in the array. The **guard** check allows it to work with `_.map`.
+  _.last = function(array, n, guard) {
+    if (array == null) return void 0;
+    if ((n == null) || guard) return array[array.length - 1];
+    return slice.call(array, Math.max(array.length - n, 0));
+  };
+
+  // Returns everything but the first entry of the array. Aliased as `tail` and `drop`.
+  // Especially useful on the arguments object. Passing an **n** will return
+  // the rest N values in the array. The **guard**
+  // check allows it to work with `_.map`.
+  _.rest = _.tail = _.drop = function(array, n, guard) {
+    return slice.call(array, (n == null) || guard ? 1 : n);
+  };
+
+  // Trim out all falsy values from an array.
+  _.compact = function(array) {
+    return _.filter(array, _.identity);
+  };
+
+  // Internal implementation of a recursive `flatten` function.
+  var flatten = function(input, shallow, output) {
+    if (shallow && _.every(input, _.isArray)) {
+      return concat.apply(output, input);
+    }
+    each(input, function(value) {
+      if (_.isArray(value) || _.isArguments(value)) {
+        shallow ? push.apply(output, value) : flatten(value, shallow, output);
+      } else {
+        output.push(value);
+      }
+    });
+    return output;
+  };
+
+  // Flatten out an array, either recursively (by default), or just one level.
+  _.flatten = function(array, shallow) {
+    return flatten(array, shallow, []);
+  };
+
+  // Return a version of the array that does not contain the specified value(s).
+  _.without = function(array) {
+    return _.difference(array, slice.call(arguments, 1));
+  };
+
+  // Split an array into two arrays: one whose elements all satisfy the given
+  // predicate, and one whose elements all do not satisfy the predicate.
+  _.partition = function(array, predicate, context) {
+    predicate = lookupIterator(predicate);
+    var pass = [], fail = [];
+    each(array, function(elem) {
+      (predicate.call(context, elem) ? pass : fail).push(elem);
+    });
+    return [pass, fail];
+  };
+
+  // Produce a duplicate-free version of the array. If the array has already
+  // been sorted, you have the option of using a faster algorithm.
+  // Aliased as `unique`.
+  _.uniq = _.unique = function(array, isSorted, iterator, context) {
+    if (_.isFunction(isSorted)) {
+      context = iterator;
+      iterator = isSorted;
+      isSorted = false;
+    }
+    var initial = iterator ? _.map(array, iterator, context) : array;
+    var results = [];
+    var seen = [];
+    each(initial, function(value, index) {
+      if (isSorted ? (!index || seen[seen.length - 1] !== value) : !_.contains(seen, value)) {
+        seen.push(value);
+        results.push(array[index]);
+      }
+    });
+    return results;
+  };
+
+  // Produce an array that contains the union: each distinct element from all of
+  // the passed-in arrays.
+  _.union = function() {
+    return _.uniq(_.flatten(arguments, true));
+  };
+
+  // Produce an array that contains every item shared between all the
+  // passed-in arrays.
+  _.intersection = function(array) {
+    var rest = slice.call(arguments, 1);
+    return _.filter(_.uniq(array), function(item) {
+      return _.every(rest, function(other) {
+        return _.contains(other, item);
+      });
+    });
+  };
+
+  // Take the difference between one array and a number of other arrays.
+  // Only the elements present in just the first array will remain.
+  _.difference = function(array) {
+    var rest = concat.apply(ArrayProto, slice.call(arguments, 1));
+    return _.filter(array, function(value){ return !_.contains(rest, value); });
+  };
+
+  // Zip together multiple lists into a single array -- elements that share
+  // an index go together.
+  _.zip = function() {
+    var length = _.max(_.pluck(arguments, 'length').concat(0));
+    var results = new Array(length);
+    for (var i = 0; i < length; i++) {
+      results[i] = _.pluck(arguments, '' + i);
+    }
+    return results;
+  };
+
+  // Converts lists into objects. Pass either a single array of `[key, value]`
+  // pairs, or two parallel arrays of the same length -- one of keys, and one of
+  // the corresponding values.
+  _.object = function(list, values) {
+    if (list == null) return {};
+    var result = {};
+    for (var i = 0, length = list.length; i < length; i++) {
+      if (values) {
+        result[list[i]] = values[i];
+      } else {
+        result[list[i][0]] = list[i][1];
+      }
+    }
+    return result;
+  };
+
+  // If the browser doesn't supply us with indexOf (I'm looking at you, **MSIE**),
+  // we need this function. Return the position of the first occurrence of an
+  // item in an array, or -1 if the item is not included in the array.
+  // Delegates to **ECMAScript 5**'s native `indexOf` if available.
+  // If the array is large and already in sort order, pass `true`
+  // for **isSorted** to use binary search.
+  _.indexOf = function(array, item, isSorted) {
+    if (array == null) return -1;
+    var i = 0, length = array.length;
+    if (isSorted) {
+      if (typeof isSorted == 'number') {
+        i = (isSorted < 0 ? Math.max(0, length + isSorted) : isSorted);
+      } else {
+        i = _.sortedIndex(array, item);
+        return array[i] === item ? i : -1;
+      }
+    }
+    if (nativeIndexOf && array.indexOf === nativeIndexOf) return array.indexOf(item, isSorted);
+    for (; i < length; i++) if (array[i] === item) return i;
+    return -1;
+  };
+
+  // Delegates to **ECMAScript 5**'s native `lastIndexOf` if available.
+  _.lastIndexOf = function(array, item, from) {
+    if (array == null) return -1;
+    var hasIndex = from != null;
+    if (nativeLastIndexOf && array.lastIndexOf === nativeLastIndexOf) {
+      return hasIndex ? array.lastIndexOf(item, from) : array.lastIndexOf(item);
+    }
+    var i = (hasIndex ? from : array.length);
+    while (i--) if (array[i] === item) return i;
+    return -1;
+  };
+
+  // Generate an integer Array containing an arithmetic progression. A port of
+  // the native Python `range()` function. See
+  // [the Python documentation](http://docs.python.org/library/functions.html#range).
+  _.range = function(start, stop, step) {
+    if (arguments.length <= 1) {
+      stop = start || 0;
+      start = 0;
+    }
+    step = arguments[2] || 1;
+
+    var length = Math.max(Math.ceil((stop - start) / step), 0);
+    var idx = 0;
+    var range = new Array(length);
+
+    while(idx < length) {
+      range[idx++] = start;
+      start += step;
+    }
+
+    return range;
+  };
+
+  // Function (ahem) Functions
+  // ------------------
+
+  // Reusable constructor function for prototype setting.
+  var ctor = function(){};
+
+  // Create a function bound to a given object (assigning `this`, and arguments,
+  // optionally). Delegates to **ECMAScript 5**'s native `Function.bind` if
+  // available.
+  _.bind = function(func, context) {
+    var args, bound;
+    if (nativeBind && func.bind === nativeBind) return nativeBind.apply(func, slice.call(arguments, 1));
+    if (!_.isFunction(func)) throw new TypeError;
+    args = slice.call(arguments, 2);
+    return bound = function() {
+      if (!(this instanceof bound)) return func.apply(context, args.concat(slice.call(arguments)));
+      ctor.prototype = func.prototype;
+      var self = new ctor;
+      ctor.prototype = null;
+      var result = func.apply(self, args.concat(slice.call(arguments)));
+      if (Object(result) === result) return result;
+      return self;
+    };
+  };
+
+  // Partially apply a function by creating a version that has had some of its
+  // arguments pre-filled, without changing its dynamic `this` context. _ acts
+  // as a placeholder, allowing any combination of arguments to be pre-filled.
+  _.partial = function(func) {
+    var boundArgs = slice.call(arguments, 1);
+    return function() {
+      var position = 0;
+      var args = boundArgs.slice();
+      for (var i = 0, length = args.length; i < length; i++) {
+        if (args[i] === _) args[i] = arguments[position++];
+      }
+      while (position < arguments.length) args.push(arguments[position++]);
+      return func.apply(this, args);
+    };
+  };
+
+  // Bind a number of an object's methods to that object. Remaining arguments
+  // are the method names to be bound. Useful for ensuring that all callbacks
+  // defined on an object belong to it.
+  _.bindAll = function(obj) {
+    var funcs = slice.call(arguments, 1);
+    if (funcs.length === 0) throw new Error('bindAll must be passed function names');
+    each(funcs, function(f) { obj[f] = _.bind(obj[f], obj); });
+    return obj;
+  };
+
+  // Memoize an expensive function by storing its results.
+  _.memoize = function(func, hasher) {
+    var memo = {};
+    hasher || (hasher = _.identity);
+    return function() {
+      var key = hasher.apply(this, arguments);
+      return _.has(memo, key) ? memo[key] : (memo[key] = func.apply(this, arguments));
+    };
+  };
+
+  // Delays a function for the given number of milliseconds, and then calls
+  // it with the arguments supplied.
+  _.delay = function(func, wait) {
+    var args = slice.call(arguments, 2);
+    return setTimeout(function(){ return func.apply(null, args); }, wait);
+  };
+
+  // Defers a function, scheduling it to run after the current call stack has
+  // cleared.
+  _.defer = function(func) {
+    return _.delay.apply(_, [func, 1].concat(slice.call(arguments, 1)));
+  };
+
+  // Returns a function, that, when invoked, will only be triggered at most once
+  // during a given window of time. Normally, the throttled function will run
+  // as much as it can, without ever going more than once per `wait` duration;
+  // but if you'd like to disable the execution on the leading edge, pass
+  // `{leading: false}`. To disable execution on the trailing edge, ditto.
+  _.throttle = function(func, wait, options) {
+    var context, args, result;
+    var timeout = null;
+    var previous = 0;
+    options || (options = {});
+    var later = function() {
+      previous = options.leading === false ? 0 : _.now();
+      timeout = null;
+      result = func.apply(context, args);
+      context = args = null;
+    };
+    return function() {
+      var now = _.now();
+      if (!previous && options.leading === false) previous = now;
+      var remaining = wait - (now - previous);
+      context = this;
+      args = arguments;
+      if (remaining <= 0) {
+        clearTimeout(timeout);
+        timeout = null;
+        previous = now;
+        result = func.apply(context, args);
+        context = args = null;
+      } else if (!timeout && options.trailing !== false) {
+        timeout = setTimeout(later, remaining);
+      }
+      return result;
+    };
+  };
+
+  // Returns a function, that, as long as it continues to be invoked, will not
+  // be triggered. The function will be called after it stops being called for
+  // N milliseconds. If `immediate` is passed, trigger the function on the
+  // leading edge, instead of the trailing.
+  _.debounce = function(func, wait, immediate) {
+    var timeout, args, context, timestamp, result;
+
+    var later = function() {
+      var last = _.now() - timestamp;
+      if (last < wait) {
+        timeout = setTimeout(later, wait - last);
+      } else {
+        timeout = null;
+        if (!immediate) {
+          result = func.apply(context, args);
+          context = args = null;
+        }
+      }
+    };
+
+    return function() {
+      context = this;
+      args = arguments;
+      timestamp = _.now();
+      var callNow = immediate && !timeout;
+      if (!timeout) {
+        timeout = setTimeout(later, wait);
+      }
+      if (callNow) {
+        result = func.apply(context, args);
+        context = args = null;
+      }
+
+      return result;
+    };
+  };
+
+  // Returns a function that will be executed at most one time, no matter how
+  // often you call it. Useful for lazy initialization.
+  _.once = function(func) {
+    var ran = false, memo;
+    return function() {
+      if (ran) return memo;
+      ran = true;
+      memo = func.apply(this, arguments);
+      func = null;
+      return memo;
+    };
+  };
+
+  // Returns the first function passed as an argument to the second,
+  // allowing you to adjust arguments, run code before and after, and
+  // conditionally execute the original function.
+  _.wrap = function(func, wrapper) {
+    return _.partial(wrapper, func);
+  };
+
+  // Returns a function that is the composition of a list of functions, each
+  // consuming the return value of the function that follows.
+  _.compose = function() {
+    var funcs = arguments;
+    return function() {
+      var args = arguments;
+      for (var i = funcs.length - 1; i >= 0; i--) {
+        args = [funcs[i].apply(this, args)];
+      }
+      return args[0];
+    };
+  };
+
+  // Returns a function that will only be executed after being called N times.
+  _.after = function(times, func) {
+    return function() {
+      if (--times < 1) {
+        return func.apply(this, arguments);
+      }
+    };
+  };
+
+  // Object Functions
+  // ----------------
+
+  // Retrieve the names of an object's properties.
+  // Delegates to **ECMAScript 5**'s native `Object.keys`
+  _.keys = function(obj) {
+    if (!_.isObject(obj)) return [];
+    if (nativeKeys) return nativeKeys(obj);
+    var keys = [];
+    for (var key in obj) if (_.has(obj, key)) keys.push(key);
+    return keys;
+  };
+
+  // Retrieve the values of an object's properties.
+  _.values = function(obj) {
+    var keys = _.keys(obj);
+    var length = keys.length;
+    var values = new Array(length);
+    for (var i = 0; i < length; i++) {
+      values[i] = obj[keys[i]];
+    }
+    return values;
+  };
+
+  // Convert an object into a list of `[key, value]` pairs.
+  _.pairs = function(obj) {
+    var keys = _.keys(obj);
+    var length = keys.length;
+    var pairs = new Array(length);
+    for (var i = 0; i < length; i++) {
+      pairs[i] = [keys[i], obj[keys[i]]];
+    }
+    return pairs;
+  };
+
+  // Invert the keys and values of an object. The values must be serializable.
+  _.invert = function(obj) {
+    var result = {};
+    var keys = _.keys(obj);
+    for (var i = 0, length = keys.length; i < length; i++) {
+      result[obj[keys[i]]] = keys[i];
+    }
+    return result;
+  };
+
+  // Return a sorted list of the function names available on the object.
+  // Aliased as `methods`
+  _.functions = _.methods = function(obj) {
+    var names = [];
+    for (var key in obj) {
+      if (_.isFunction(obj[key])) names.push(key);
+    }
+    return names.sort();
+  };
+
+  // Extend a given object with all the properties in passed-in object(s).
+  _.extend = function(obj) {
+    each(slice.call(arguments, 1), function(source) {
+      if (source) {
+        for (var prop in source) {
+          obj[prop] = source[prop];
+        }
+      }
+    });
+    return obj;
+  };
+
+  // Return a copy of the object only containing the whitelisted properties.
+  _.pick = function(obj) {
+    var copy = {};
+    var keys = concat.apply(ArrayProto, slice.call(arguments, 1));
+    each(keys, function(key) {
+      if (key in obj) copy[key] = obj[key];
+    });
+    return copy;
+  };
+
+   // Return a copy of the object without the blacklisted properties.
+  _.omit = function(obj) {
+    var copy = {};
+    var keys = concat.apply(ArrayProto, slice.call(arguments, 1));
+    for (var key in obj) {
+      if (!_.contains(keys, key)) copy[key] = obj[key];
+    }
+    return copy;
+  };
+
+  // Fill in a given object with default properties.
+  _.defaults = function(obj) {
+    each(slice.call(arguments, 1), function(source) {
+      if (source) {
+        for (var prop in source) {
+          if (obj[prop] === void 0) obj[prop] = source[prop];
+        }
+      }
+    });
+    return obj;
+  };
+
+  // Create a (shallow-cloned) duplicate of an object.
+  _.clone = function(obj) {
+    if (!_.isObject(obj)) return obj;
+    return _.isArray(obj) ? obj.slice() : _.extend({}, obj);
+  };
+
+  // Invokes interceptor with the obj, and then returns obj.
+  // The primary purpose of this method is to "tap into" a method chain, in
+  // order to perform operations on intermediate results within the chain.
+  _.tap = function(obj, interceptor) {
+    interceptor(obj);
+    return obj;
+  };
+
+  // Internal recursive comparison function for `isEqual`.
+  var eq = function(a, b, aStack, bStack) {
+    // Identical objects are equal. `0 === -0`, but they aren't identical.
+    // See the [Harmony `egal` proposal](http://wiki.ecmascript.org/doku.php?id=harmony:egal).
+    if (a === b) return a !== 0 || 1 / a == 1 / b;
+    // A strict comparison is necessary because `null == undefined`.
+    if (a == null || b == null) return a === b;
+    // Unwrap any wrapped objects.
+    if (a instanceof _) a = a._wrapped;
+    if (b instanceof _) b = b._wrapped;
+    // Compare `[[Class]]` names.
+    var className = toString.call(a);
+    if (className != toString.call(b)) return false;
+    switch (className) {
+      // Strings, numbers, dates, and booleans are compared by value.
+      case '[object String]':
+        // Primitives and their corresponding object wrappers are equivalent; thus, `"5"` is
+        // equivalent to `new String("5")`.
+        return a == String(b);
+      case '[object Number]':
+        // `NaN`s are equivalent, but non-reflexive. An `egal` comparison is performed for
+        // other numeric values.
+        return a != +a ? b != +b : (a == 0 ? 1 / a == 1 / b : a == +b);
+      case '[object Date]':
+      case '[object Boolean]':
+        // Coerce dates and booleans to numeric primitive values. Dates are compared by their
+        // millisecond representations. Note that invalid dates with millisecond representations
+        // of `NaN` are not equivalent.
+        return +a == +b;
+      // RegExps are compared by their source patterns and flags.
+      case '[object RegExp]':
+        return a.source == b.source &&
+               a.global == b.global &&
+               a.multiline == b.multiline &&
+               a.ignoreCase == b.ignoreCase;
+    }
+    if (typeof a != 'object' || typeof b != 'object') return false;
+    // Assume equality for cyclic structures. The algorithm for detecting cyclic
+    // structures is adapted from ES 5.1 section 15.12.3, abstract operation `JO`.
+    var length = aStack.length;
+    while (length--) {
+      // Linear search. Performance is inversely proportional to the number of
+      // unique nested structures.
+      if (aStack[length] == a) return bStack[length] == b;
+    }
+    // Objects with different constructors are not equivalent, but `Object`s
+    // from different frames are.
+    var aCtor = a.constructor, bCtor = b.constructor;
+    if (aCtor !== bCtor && !(_.isFunction(aCtor) && (aCtor instanceof aCtor) &&
+                             _.isFunction(bCtor) && (bCtor instanceof bCtor))
+                        && ('constructor' in a && 'constructor' in b)) {
+      return false;
+    }
+    // Add the first object to the stack of traversed objects.
+    aStack.push(a);
+    bStack.push(b);
+    var size = 0, result = true;
+    // Recursively compare objects and arrays.
+    if (className == '[object Array]') {
+      // Compare array lengths to determine if a deep comparison is necessary.
+      size = a.length;
+      result = size == b.length;
+      if (result) {
+        // Deep compare the contents, ignoring non-numeric properties.
+        while (size--) {
+          if (!(result = eq(a[size], b[size], aStack, bStack))) break;
+        }
+      }
+    } else {
+      // Deep compare objects.
+      for (var key in a) {
+        if (_.has(a, key)) {
+          // Count the expected number of properties.
+          size++;
+          // Deep compare each member.
+          if (!(result = _.has(b, key) && eq(a[key], b[key], aStack, bStack))) break;
+        }
+      }
+      // Ensure that both objects contain the same number of properties.
+      if (result) {
+        for (key in b) {
+          if (_.has(b, key) && !(size--)) break;
+        }
+        result = !size;
+      }
+    }
+    // Remove the first object from the stack of traversed objects.
+    aStack.pop();
+    bStack.pop();
+    return result;
+  };
+
+  // Perform a deep comparison to check if two objects are equal.
+  _.isEqual = function(a, b) {
+    return eq(a, b, [], []);
+  };
+
+  // Is a given array, string, or object empty?
+  // An "empty" object has no enumerable own-properties.
+  _.isEmpty = function(obj) {
+    if (obj == null) return true;
+    if (_.isArray(obj) || _.isString(obj)) return obj.length === 0;
+    for (var key in obj) if (_.has(obj, key)) return false;
+    return true;
+  };
+
+  // Is a given value a DOM element?
+  _.isElement = function(obj) {
+    return !!(obj && obj.nodeType === 1);
+  };
+
+  // Is a given value an array?
+  // Delegates to ECMA5's native Array.isArray
+  _.isArray = nativeIsArray || function(obj) {
+    return toString.call(obj) == '[object Array]';
+  };
+
+  // Is a given variable an object?
+  _.isObject = function(obj) {
+    return obj === Object(obj);
+  };
+
+  // Add some isType methods: isArguments, isFunction, isString, isNumber, isDate, isRegExp.
+  each(['Arguments', 'Function', 'String', 'Number', 'Date', 'RegExp'], function(name) {
+    _['is' + name] = function(obj) {
+      return toString.call(obj) == '[object ' + name + ']';
+    };
+  });
+
+  // Define a fallback version of the method in browsers (ahem, IE), where
+  // there isn't any inspectable "Arguments" type.
+  if (!_.isArguments(arguments)) {
+    _.isArguments = function(obj) {
+      return !!(obj && _.has(obj, 'callee'));
+    };
+  }
+
+  // Optimize `isFunction` if appropriate.
+  if (typeof (/./) !== 'function') {
+    _.isFunction = function(obj) {
+      return typeof obj === 'function';
+    };
+  }
+
+  // Is a given object a finite number?
+  _.isFinite = function(obj) {
+    return isFinite(obj) && !isNaN(parseFloat(obj));
+  };
+
+  // Is the given value `NaN`? (NaN is the only number which does not equal itself).
+  _.isNaN = function(obj) {
+    return _.isNumber(obj) && obj != +obj;
+  };
+
+  // Is a given value a boolean?
+  _.isBoolean = function(obj) {
+    return obj === true || obj === false || toString.call(obj) == '[object Boolean]';
+  };
+
+  // Is a given value equal to null?
+  _.isNull = function(obj) {
+    return obj === null;
+  };
+
+  // Is a given variable undefined?
+  _.isUndefined = function(obj) {
+    return obj === void 0;
+  };
+
+  // Shortcut function for checking if an object has a given property directly
+  // on itself (in other words, not on a prototype).
+  _.has = function(obj, key) {
+    return hasOwnProperty.call(obj, key);
+  };
+
+  // Utility Functions
+  // -----------------
+
+  // Run Underscore.js in *noConflict* mode, returning the `_` variable to its
+  // previous owner. Returns a reference to the Underscore object.
+  _.noConflict = function() {
+    root._ = previousUnderscore;
+    return this;
+  };
+
+  // Keep the identity function around for default iterators.
+  _.identity = function(value) {
+    return value;
+  };
+
+  _.constant = function(value) {
+    return function () {
+      return value;
+    };
+  };
+
+  _.property = function(key) {
+    return function(obj) {
+      return obj[key];
+    };
+  };
+
+  // Returns a predicate for checking whether an object has a given set of `key:value` pairs.
+  _.matches = function(attrs) {
+    return function(obj) {
+      if (obj === attrs) return true; //avoid comparing an object to itself.
+      for (var key in attrs) {
+        if (attrs[key] !== obj[key])
+          return false;
+      }
+      return true;
+    }
+  };
+
+  // Run a function **n** times.
+  _.times = function(n, iterator, context) {
+    var accum = Array(Math.max(0, n));
+    for (var i = 0; i < n; i++) accum[i] = iterator.call(context, i);
+    return accum;
+  };
+
+  // Return a random integer between min and max (inclusive).
+  _.random = function(min, max) {
+    if (max == null) {
+      max = min;
+      min = 0;
+    }
+    return min + Math.floor(Math.random() * (max - min + 1));
+  };
+
+  // A (possibly faster) way to get the current timestamp as an integer.
+  _.now = Date.now || function() { return new Date().getTime(); };
+
+  // List of HTML entities for escaping.
+  var entityMap = {
+    escape: {
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#x27;'
+    }
+  };
+  entityMap.unescape = _.invert(entityMap.escape);
+
+  // Regexes containing the keys and values listed immediately above.
+  var entityRegexes = {
+    escape:   new RegExp('[' + _.keys(entityMap.escape).join('') + ']', 'g'),
+    unescape: new RegExp('(' + _.keys(entityMap.unescape).join('|') + ')', 'g')
+  };
+
+  // Functions for escaping and unescaping strings to/from HTML interpolation.
+  _.each(['escape', 'unescape'], function(method) {
+    _[method] = function(string) {
+      if (string == null) return '';
+      return ('' + string).replace(entityRegexes[method], function(match) {
+        return entityMap[method][match];
+      });
+    };
+  });
+
+  // If the value of the named `property` is a function then invoke it with the
+  // `object` as context; otherwise, return it.
+  _.result = function(object, property) {
+    if (object == null) return void 0;
+    var value = object[property];
+    return _.isFunction(value) ? value.call(object) : value;
+  };
+
+  // Add your own custom functions to the Underscore object.
+  _.mixin = function(obj) {
+    each(_.functions(obj), function(name) {
+      var func = _[name] = obj[name];
+      _.prototype[name] = function() {
+        var args = [this._wrapped];
+        push.apply(args, arguments);
+        return result.call(this, func.apply(_, args));
+      };
+    });
+  };
+
+  // Generate a unique integer id (unique within the entire client session).
+  // Useful for temporary DOM ids.
+  var idCounter = 0;
+  _.uniqueId = function(prefix) {
+    var id = ++idCounter + '';
+    return prefix ? prefix + id : id;
+  };
+
+  // By default, Underscore uses ERB-style template delimiters, change the
+  // following template settings to use alternative delimiters.
+  _.templateSettings = {
+    evaluate    : /<%([\s\S]+?)%>/g,
+    interpolate : /<%=([\s\S]+?)%>/g,
+    escape      : /<%-([\s\S]+?)%>/g
+  };
+
+  // When customizing `templateSettings`, if you don't want to define an
+  // interpolation, evaluation or escaping regex, we need one that is
+  // guaranteed not to match.
+  var noMatch = /(.)^/;
+
+  // Certain characters need to be escaped so that they can be put into a
+  // string literal.
+  var escapes = {
+    "'":      "'",
+    '\\':     '\\',
+    '\r':     'r',
+    '\n':     'n',
+    '\t':     't',
+    '\u2028': 'u2028',
+    '\u2029': 'u2029'
+  };
+
+  var escaper = /\\|'|\r|\n|\t|\u2028|\u2029/g;
+
+  // JavaScript micro-templating, similar to John Resig's implementation.
+  // Underscore templating handles arbitrary delimiters, preserves whitespace,
+  // and correctly escapes quotes within interpolated code.
+  _.template = function(text, data, settings) {
+    var render;
+    settings = _.defaults({}, settings, _.templateSettings);
+
+    // Combine delimiters into one regular expression via alternation.
+    var matcher = new RegExp([
+      (settings.escape || noMatch).source,
+      (settings.interpolate || noMatch).source,
+      (settings.evaluate || noMatch).source
+    ].join('|') + '|$', 'g');
+
+    // Compile the template source, escaping string literals appropriately.
+    var index = 0;
+    var source = "__p+='";
+    text.replace(matcher, function(match, escape, interpolate, evaluate, offset) {
+      source += text.slice(index, offset)
+        .replace(escaper, function(match) { return '\\' + escapes[match]; });
+
+      if (escape) {
+        source += "'+\n((__t=(" + escape + "))==null?'':_.escape(__t))+\n'";
+      }
+      if (interpolate) {
+        source += "'+\n((__t=(" + interpolate + "))==null?'':__t)+\n'";
+      }
+      if (evaluate) {
+        source += "';\n" + evaluate + "\n__p+='";
+      }
+      index = offset + match.length;
+      return match;
+    });
+    source += "';\n";
+
+    // If a variable is not specified, place data values in local scope.
+    if (!settings.variable) source = 'with(obj||{}){\n' + source + '}\n';
+
+    source = "var __t,__p='',__j=Array.prototype.join," +
+      "print=function(){__p+=__j.call(arguments,'');};\n" +
+      source + "return __p;\n";
+
+    try {
+      render = new Function(settings.variable || 'obj', '_', source);
+    } catch (e) {
+      e.source = source;
+      throw e;
+    }
+
+    if (data) return render(data, _);
+    var template = function(data) {
+      return render.call(this, data, _);
+    };
+
+    // Provide the compiled function source as a convenience for precompilation.
+    template.source = 'function(' + (settings.variable || 'obj') + '){\n' + source + '}';
+
+    return template;
+  };
+
+  // Add a "chain" function, which will delegate to the wrapper.
+  _.chain = function(obj) {
+    return _(obj).chain();
+  };
+
+  // OOP
+  // ---------------
+  // If Underscore is called as a function, it returns a wrapped object that
+  // can be used OO-style. This wrapper holds altered versions of all the
+  // underscore functions. Wrapped objects may be chained.
+
+  // Helper function to continue chaining intermediate results.
+  var result = function(obj) {
+    return this._chain ? _(obj).chain() : obj;
+  };
+
+  // Add all of the Underscore functions to the wrapper object.
+  _.mixin(_);
+
+  // Add all mutator Array functions to the wrapper.
+  each(['pop', 'push', 'reverse', 'shift', 'sort', 'splice', 'unshift'], function(name) {
+    var method = ArrayProto[name];
+    _.prototype[name] = function() {
+      var obj = this._wrapped;
+      method.apply(obj, arguments);
+      if ((name == 'shift' || name == 'splice') && obj.length === 0) delete obj[0];
+      return result.call(this, obj);
+    };
+  });
+
+  // Add all accessor Array functions to the wrapper.
+  each(['concat', 'join', 'slice'], function(name) {
+    var method = ArrayProto[name];
+    _.prototype[name] = function() {
+      return result.call(this, method.apply(this._wrapped, arguments));
+    };
+  });
+
+  _.extend(_.prototype, {
+
+    // Start chaining a wrapped Underscore object.
+    chain: function() {
+      this._chain = true;
+      return this;
+    },
+
+    // Extracts the result from a wrapped and chained object.
+    value: function() {
+      return this._wrapped;
+    }
+
+  });
+
+  // AMD registration happens at the end for compatibility with AMD loaders
+  // that may not enforce next-turn semantics on modules. Even though general
+  // practice for AMD registration is to be anonymous, underscore registers
+  // as a named module because, like jQuery, it is a base library that is
+  // popular enough to be bundled in a third party lib, but not be part of
+  // an AMD load request. Those cases could generate an error when an
+  // anonymous define() is called outside of a loader request.
+  if (typeof define === 'function' && define.amd) {
+    define('underscore', [], function() {
+      return _;
+    });
+  }
+}).call(this);
+// Copyright 2014 Joshua Bell. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// If we're in node require encoding-indexes and attach it to the global.
+/**
+ * @fileoverview Global |this| required for resolving indexes in node.
+ * @suppress {globalThis}
+ */
+if (typeof module !== "undefined" && module.exports) {
+  this["encoding-indexes"] =
+    require("./encoding-indexes.js")["encoding-indexes"];
+}
+
+(function(global) {
+  'use strict';
+
+  //
+  // Utilities
+  //
+
+  /**
+   * @param {number} a The number to test.
+   * @param {number} min The minimum value in the range, inclusive.
+   * @param {number} max The maximum value in the range, inclusive.
+   * @return {boolean} True if a >= min and a <= max.
+   */
+  function inRange(a, min, max) {
+    return min <= a && a <= max;
+  }
+
+  /**
+   * @param {number} n The numerator.
+   * @param {number} d The denominator.
+   * @return {number} The result of the integer division of n by d.
+   */
+  function div(n, d) {
+    return Math.floor(n / d);
+  }
+
+  /**
+   * @param {*} o
+   * @return {Object}
+   */
+  function ToDictionary(o) {
+    if (o === undefined) return {};
+    if (o === Object(o)) return o;
+    throw TypeError('Could not convert argument to dictionary');
+  }
+
+  /**
+   * @param {string} string Input string of UTF-16 code units.
+   * @return {!Array.<number>} Code points.
+   */
+  function stringToCodePoints(string) {
+    // http://heycam.github.io/webidl/#dfn-obtain-unicode
+
+    // 1. Let S be the DOMString value.
+    var s = String(string);
+
+    // 2. Let n be the length of S.
+    var n = s.length;
+
+    // 3. Initialize i to 0.
+    var i = 0;
+
+    // 4. Initialize U to be an empty sequence of Unicode characters.
+    var u = [];
+
+    // 5. While i < n:
+    while (i < n) {
+
+      // 1. Let c be the code unit in S at index i.
+      var c = s.charCodeAt(i);
+
+      // 2. Depending on the value of c:
+
+      // c < 0xD800 or c > 0xDFFF
+      if (c < 0xD800 || c > 0xDFFF) {
+        // Append to U the Unicode character with code point c.
+        u.push(c);
+      }
+
+      // 0xDC00 ≤ c ≤ 0xDFFF
+      else if (0xDC00 <= c && c <= 0xDFFF) {
+        // Append to U a U+FFFD REPLACEMENT CHARACTER.
+        u.push(0xFFFD);
+      }
+
+      // 0xD800 ≤ c ≤ 0xDBFF
+      else if (0xD800 <= c && c <= 0xDBFF) {
+        // 1. If i = n−1, then append to U a U+FFFD REPLACEMENT
+        // CHARACTER.
+        if (i === n - 1) {
+          u.push(0xFFFD);
+        }
+        // 2. Otherwise, i < n−1:
+        else {
+          // 1. Let d be the code unit in S at index i+1.
+          var d = string.charCodeAt(i + 1);
+
+          // 2. If 0xDC00 ≤ d ≤ 0xDFFF, then:
+          if (0xDC00 <= d && d <= 0xDFFF) {
+            // 1. Let a be c & 0x3FF.
+            var a = c & 0x3FF;
+
+            // 2. Let b be d & 0x3FF.
+            var b = d & 0x3FF;
+
+            // 3. Append to U the Unicode character with code point
+            // 2^16+2^10*a+b.
+            u.push(0x10000 + (a << 10) + b);
+
+            // 4. Set i to i+1.
+            i += 1;
+          }
+
+          // 3. Otherwise, d < 0xDC00 or d > 0xDFFF. Append to U a
+          // U+FFFD REPLACEMENT CHARACTER.
+          else  {
+            u.push(0xFFFD);
+          }
+        }
+      }
+
+      // 3. Set i to i+1.
+      i += 1;
+    }
+
+    // 6. Return U.
+    return u;
+  }
+
+  /**
+   * @param {!Array.<number>} code_points Array of code points.
+   * @return {string} string String of UTF-16 code units.
+   */
+  function codePointsToString(code_points) {
+    var s = '';
+    for (var i = 0; i < code_points.length; ++i) {
+      var cp = code_points[i];
+      if (cp <= 0xFFFF) {
+        s += String.fromCharCode(cp);
+      } else {
+        cp -= 0x10000;
+        s += String.fromCharCode((cp >> 10) + 0xD800,
+                                 (cp & 0x3FF) + 0xDC00);
+      }
+    }
+    return s;
+  }
+
+
+  //
+  // Implementation of Encoding specification
+  // http://dvcs.w3.org/hg/encoding/raw-file/tip/Overview.html
+  //
+
+  //
+  // 3. Terminology
+  //
+
+  /**
+   * End-of-stream is a special token that signifies no more tokens
+   * are in the stream.
+   * @const
+   */ var end_of_stream = -1;
+
+  /**
+   * A stream represents an ordered sequence of tokens.
+   *
+   * @constructor
+   * @param {!(Array.<number>|Uint8Array)} tokens Array of tokens that provide the
+   * stream.
+   */
+  function Stream(tokens) {
+    /** @type {!Array.<number>} */
+    this.tokens = [].slice.call(tokens);
+  }
+
+  Stream.prototype = {
+    /**
+     * @return {boolean} True if end-of-stream has been hit.
+     */
+    endOfStream: function() {
+      return !this.tokens.length;
+    },
+
+    /**
+     * When a token is read from a stream, the first token in the
+     * stream must be returned and subsequently removed, and
+     * end-of-stream must be returned otherwise.
+     *
+     * @return {number} Get the next token from the stream, or
+     * end_of_stream.
+     */
+     read: function() {
+      if (!this.tokens.length)
+        return end_of_stream;
+       return this.tokens.shift();
+     },
+
+    /**
+     * When one or more tokens are prepended to a stream, those tokens
+     * must be inserted, in given order, before the first token in the
+     * stream.
+     *
+     * @param {(number|!Array.<number>)} token The token(s) to prepend to the stream.
+     */
+    prepend: function(token) {
+      if (Array.isArray(token)) {
+        var tokens = /**@type {!Array.<number>}*/(token);
+        while (tokens.length)
+          this.tokens.unshift(tokens.pop());
+      } else {
+        this.tokens.unshift(token);
+      }
+    },
+
+    /**
+     * When one or more tokens are pushed to a stream, those tokens
+     * must be inserted, in given order, after the last token in the
+     * stream.
+     *
+     * @param {(number|!Array.<number>)} token The tokens(s) to prepend to the stream.
+     */
+    push: function(token) {
+      if (Array.isArray(token)) {
+        var tokens = /**@type {!Array.<number>}*/(token);
+        while (tokens.length)
+          this.tokens.push(tokens.shift());
+      } else {
+        this.tokens.push(token);
+      }
+    }
+  };
+
+  //
+  // 4. Encodings
+  //
+
+  // 4.1 Encoders and decoders
+
+  /** @const */
+  var finished = -1;
+
+  /**
+   * @param {boolean} fatal If true, decoding errors raise an exception.
+   * @param {number=} opt_code_point Override the standard fallback code point.
+   * @return {number} The code point to insert on a decoding error.
+   */
+  function decoderError(fatal, opt_code_point) {
+    if (fatal)
+      throw TypeError('Decoder error');
+    return opt_code_point || 0xFFFD;
+  }
+
+  /**
+   * @param {number} code_point The code point that could not be encoded.
+   * @return {number} Always throws, no value is actually returned.
+   */
+  function encoderError(code_point) {
+    throw TypeError('The code point ' + code_point + ' could not be encoded.');
+  }
+
+  /** @interface */
+  function Decoder() {}
+  Decoder.prototype = {
+    /**
+     * @param {Stream} stream The stream of bytes being decoded.
+     * @param {number} bite The next byte read from the stream.
+     * @return {?(number|!Array.<number>)} The next code point(s)
+     *     decoded, or null if not enough data exists in the input
+     *     stream to decode a complete code point, or |finished|.
+     */
+    handler: function(stream, bite) {}
+  };
+
+  /** @interface */
+  function Encoder() {}
+  Encoder.prototype = {
+    /**
+     * @param {Stream} stream The stream of code points being encoded.
+     * @param {number} code_point Next code point read from the stream.
+     * @return {(number|!Array.<number>)} Byte(s) to emit, or |finished|.
+     */
+    handler: function(stream, code_point) {}
+  };
+
+  // 4.2 Names and labels
+
+  // TODO: Define @typedef for Encoding: {name:string,labels:Array.<string>}
+  // https://github.com/google/closure-compiler/issues/247
+
+  /**
+   * @param {string} label The encoding label.
+   * @return {?{name:string,labels:Array.<string>}}
+   */
+  function getEncoding(label) {
+    // 1. Remove any leading and trailing ASCII whitespace from label.
+    label = String(label).trim().toLowerCase();
+
+    // 2. If label is an ASCII case-insensitive match for any of the
+    // labels listed in the table below, return the corresponding
+    // encoding, and failure otherwise.
+    if (Object.prototype.hasOwnProperty.call(label_to_encoding, label)) {
+      return label_to_encoding[label];
+    }
+    return null;
+  }
+
+  /**
+   * Encodings table: http://encoding.spec.whatwg.org/encodings.json
+   * @const
+   * @type {!Array.<{
+   *          heading: string,
+   *          encodings: Array.<{name:string,labels:Array.<string>}>
+   *        }>}
+   */
+  var encodings = [
+    {
+      "encodings": [
+        {
+          "labels": [
+            "unicode-1-1-utf-8",
+            "utf-8",
+            "utf8"
+          ],
+          "name": "utf-8"
+        }
+      ],
+      "heading": "The Encoding"
+    },
+    {
+      "encodings": [
+        {
+          "labels": [
+            "866",
+            "cp866",
+            "csibm866",
+            "ibm866"
+          ],
+          "name": "ibm866"
+        },
+        {
+          "labels": [
+            "csisolatin2",
+            "iso-8859-2",
+            "iso-ir-101",
+            "iso8859-2",
+            "iso88592",
+            "iso_8859-2",
+            "iso_8859-2:1987",
+            "l2",
+            "latin2"
+          ],
+          "name": "iso-8859-2"
+        },
+        {
+          "labels": [
+            "csisolatin3",
+            "iso-8859-3",
+            "iso-ir-109",
+            "iso8859-3",
+            "iso88593",
+            "iso_8859-3",
+            "iso_8859-3:1988",
+            "l3",
+            "latin3"
+          ],
+          "name": "iso-8859-3"
+        },
+        {
+          "labels": [
+            "csisolatin4",
+            "iso-8859-4",
+            "iso-ir-110",
+            "iso8859-4",
+            "iso88594",
+            "iso_8859-4",
+            "iso_8859-4:1988",
+            "l4",
+            "latin4"
+          ],
+          "name": "iso-8859-4"
+        },
+        {
+          "labels": [
+            "csisolatincyrillic",
+            "cyrillic",
+            "iso-8859-5",
+            "iso-ir-144",
+            "iso8859-5",
+            "iso88595",
+            "iso_8859-5",
+            "iso_8859-5:1988"
+          ],
+          "name": "iso-8859-5"
+        },
+        {
+          "labels": [
+            "arabic",
+            "asmo-708",
+            "csiso88596e",
+            "csiso88596i",
+            "csisolatinarabic",
+            "ecma-114",
+            "iso-8859-6",
+            "iso-8859-6-e",
+            "iso-8859-6-i",
+            "iso-ir-127",
+            "iso8859-6",
+            "iso88596",
+            "iso_8859-6",
+            "iso_8859-6:1987"
+          ],
+          "name": "iso-8859-6"
+        },
+        {
+          "labels": [
+            "csisolatingreek",
+            "ecma-118",
+            "elot_928",
+            "greek",
+            "greek8",
+            "iso-8859-7",
+            "iso-ir-126",
+            "iso8859-7",
+            "iso88597",
+            "iso_8859-7",
+            "iso_8859-7:1987",
+            "sun_eu_greek"
+          ],
+          "name": "iso-8859-7"
+        },
+        {
+          "labels": [
+            "csiso88598e",
+            "csisolatinhebrew",
+            "hebrew",
+            "iso-8859-8",
+            "iso-8859-8-e",
+            "iso-ir-138",
+            "iso8859-8",
+            "iso88598",
+            "iso_8859-8",
+            "iso_8859-8:1988",
+            "visual"
+          ],
+          "name": "iso-8859-8"
+        },
+        {
+          "labels": [
+            "csiso88598i",
+            "iso-8859-8-i",
+            "logical"
+          ],
+          "name": "iso-8859-8-i"
+        },
+        {
+          "labels": [
+            "csisolatin6",
+            "iso-8859-10",
+            "iso-ir-157",
+            "iso8859-10",
+            "iso885910",
+            "l6",
+            "latin6"
+          ],
+          "name": "iso-8859-10"
+        },
+        {
+          "labels": [
+            "iso-8859-13",
+            "iso8859-13",
+            "iso885913"
+          ],
+          "name": "iso-8859-13"
+        },
+        {
+          "labels": [
+            "iso-8859-14",
+            "iso8859-14",
+            "iso885914"
+          ],
+          "name": "iso-8859-14"
+        },
+        {
+          "labels": [
+            "csisolatin9",
+            "iso-8859-15",
+            "iso8859-15",
+            "iso885915",
+            "iso_8859-15",
+            "l9"
+          ],
+          "name": "iso-8859-15"
+        },
+        {
+          "labels": [
+            "iso-8859-16"
+          ],
+          "name": "iso-8859-16"
+        },
+        {
+          "labels": [
+            "cskoi8r",
+            "koi",
+            "koi8",
+            "koi8-r",
+            "koi8_r"
+          ],
+          "name": "koi8-r"
+        },
+        {
+          "labels": [
+            "koi8-u"
+          ],
+          "name": "koi8-u"
+        },
+        {
+          "labels": [
+            "csmacintosh",
+            "mac",
+            "macintosh",
+            "x-mac-roman"
+          ],
+          "name": "macintosh"
+        },
+        {
+          "labels": [
+            "dos-874",
+            "iso-8859-11",
+            "iso8859-11",
+            "iso885911",
+            "tis-620",
+            "windows-874"
+          ],
+          "name": "windows-874"
+        },
+        {
+          "labels": [
+            "cp1250",
+            "windows-1250",
+            "x-cp1250"
+          ],
+          "name": "windows-1250"
+        },
+        {
+          "labels": [
+            "cp1251",
+            "windows-1251",
+            "x-cp1251"
+          ],
+          "name": "windows-1251"
+        },
+        {
+          "labels": [
+            "ansi_x3.4-1968",
+            "ascii",
+            "cp1252",
+            "cp819",
+            "csisolatin1",
+            "ibm819",
+            "iso-8859-1",
+            "iso-ir-100",
+            "iso8859-1",
+            "iso88591",
+            "iso_8859-1",
+            "iso_8859-1:1987",
+            "l1",
+            "latin1",
+            "us-ascii",
+            "windows-1252",
+            "x-cp1252"
+          ],
+          "name": "windows-1252"
+        },
+        {
+          "labels": [
+            "cp1253",
+            "windows-1253",
+            "x-cp1253"
+          ],
+          "name": "windows-1253"
+        },
+        {
+          "labels": [
+            "cp1254",
+            "csisolatin5",
+            "iso-8859-9",
+            "iso-ir-148",
+            "iso8859-9",
+            "iso88599",
+            "iso_8859-9",
+            "iso_8859-9:1989",
+            "l5",
+            "latin5",
+            "windows-1254",
+            "x-cp1254"
+          ],
+          "name": "windows-1254"
+        },
+        {
+          "labels": [
+            "cp1255",
+            "windows-1255",
+            "x-cp1255"
+          ],
+          "name": "windows-1255"
+        },
+        {
+          "labels": [
+            "cp1256",
+            "windows-1256",
+            "x-cp1256"
+          ],
+          "name": "windows-1256"
+        },
+        {
+          "labels": [
+            "cp1257",
+            "windows-1257",
+            "x-cp1257"
+          ],
+          "name": "windows-1257"
+        },
+        {
+          "labels": [
+            "cp1258",
+            "windows-1258",
+            "x-cp1258"
+          ],
+          "name": "windows-1258"
+        },
+        {
+          "labels": [
+            "x-mac-cyrillic",
+            "x-mac-ukrainian"
+          ],
+          "name": "x-mac-cyrillic"
+        }
+      ],
+      "heading": "Legacy single-byte encodings"
+    },
+    {
+      "encodings": [
+        {
+          "labels": [
+            "chinese",
+            "csgb2312",
+            "csiso58gb231280",
+            "gb2312",
+            "gb_2312",
+            "gb_2312-80",
+            "gbk",
+            "iso-ir-58",
+            "x-gbk"
+          ],
+          "name": "gbk"
+        },
+        {
+          "labels": [
+            "gb18030"
+          ],
+          "name": "gb18030"
+        }
+      ],
+      "heading": "Legacy multi-byte Chinese (simplified) encodings"
+    },
+    {
+      "encodings": [
+        {
+          "labels": [
+            "big5",
+            "big5-hkscs",
+            "cn-big5",
+            "csbig5",
+            "x-x-big5"
+          ],
+          "name": "big5"
+        }
+      ],
+      "heading": "Legacy multi-byte Chinese (traditional) encodings"
+    },
+    {
+      "encodings": [
+        {
+          "labels": [
+            "cseucpkdfmtjapanese",
+            "euc-jp",
+            "x-euc-jp"
+          ],
+          "name": "euc-jp"
+        },
+        {
+          "labels": [
+            "csiso2022jp",
+            "iso-2022-jp"
+          ],
+          "name": "iso-2022-jp"
+        },
+        {
+          "labels": [
+            "csshiftjis",
+            "ms_kanji",
+            "shift-jis",
+            "shift_jis",
+            "sjis",
+            "windows-31j",
+            "x-sjis"
+          ],
+          "name": "shift_jis"
+        }
+      ],
+      "heading": "Legacy multi-byte Japanese encodings"
+    },
+    {
+      "encodings": [
+        {
+          "labels": [
+            "cseuckr",
+            "csksc56011987",
+            "euc-kr",
+            "iso-ir-149",
+            "korean",
+            "ks_c_5601-1987",
+            "ks_c_5601-1989",
+            "ksc5601",
+            "ksc_5601",
+            "windows-949"
+          ],
+          "name": "euc-kr"
+        }
+      ],
+      "heading": "Legacy multi-byte Korean encodings"
+    },
+    {
+      "encodings": [
+        {
+          "labels": [
+            "csiso2022kr",
+            "hz-gb-2312",
+            "iso-2022-cn",
+            "iso-2022-cn-ext",
+            "iso-2022-kr"
+          ],
+          "name": "replacement"
+        },
+        {
+          "labels": [
+            "utf-16be"
+          ],
+          "name": "utf-16be"
+        },
+        {
+          "labels": [
+            "utf-16",
+            "utf-16le"
+          ],
+          "name": "utf-16le"
+        },
+        {
+          "labels": [
+            "x-user-defined"
+          ],
+          "name": "x-user-defined"
+        }
+      ],
+      "heading": "Legacy miscellaneous encodings"
+    }
+  ];
+
+  // Label to encoding registry.
+  /** @type {Object.<string,{name:string,labels:Array.<string>}>} */
+  var label_to_encoding = {};
+  encodings.forEach(function(category) {
+    category.encodings.forEach(function(encoding) {
+      encoding.labels.forEach(function(label) {
+        label_to_encoding[label] = encoding;
+      });
+    });
+  });
+
+  // Registry of of encoder/decoder factories, by encoding name.
+  /** @type {Object.<string, function({fatal:boolean}): Encoder>} */
+  var encoders = {};
+  /** @type {Object.<string, function({fatal:boolean}): Decoder>} */
+  var decoders = {};
+
+  //
+  // 5. Indexes
+  //
+
+  /**
+   * @param {number} pointer The |pointer| to search for.
+   * @param {(!Array.<?number>|undefined)} index The |index| to search within.
+   * @return {?number} The code point corresponding to |pointer| in |index|,
+   *     or null if |code point| is not in |index|.
+   */
+  function indexCodePointFor(pointer, index) {
+    if (!index) return null;
+    return index[pointer] || null;
+  }
+
+  /**
+   * @param {number} code_point The |code point| to search for.
+   * @param {!Array.<?number>} index The |index| to search within.
+   * @return {?number} The first pointer corresponding to |code point| in
+   *     |index|, or null if |code point| is not in |index|.
+   */
+  function indexPointerFor(code_point, index) {
+    var pointer = index.indexOf(code_point);
+    return pointer === -1 ? null : pointer;
+  }
+
+  /**
+   * @param {string} name Name of the index.
+   * @return {(!Array.<number>|!Array.<Array.<number>>)}
+   *  */
+  function index(name) {
+    if (!('encoding-indexes' in global)) {
+      throw Error("Indexes missing." +
+                  " Did you forget to include encoding-indexes.js?");
+    }
+    return global['encoding-indexes'][name];
+  }
+
+  /**
+   * @param {number} pointer The |pointer| to search for in the gb18030 index.
+   * @return {?number} The code point corresponding to |pointer| in |index|,
+   *     or null if |code point| is not in the gb18030 index.
+   */
+  function indexGB18030RangesCodePointFor(pointer) {
+    // 1. If pointer is greater than 39419 and less than 189000, or
+    // pointer is greater than 1237575, return null.
+    if ((pointer > 39419 && pointer < 189000) || (pointer > 1237575))
+      return null;
+
+    // 2. Let offset be the last pointer in index gb18030 ranges that
+    // is equal to or less than pointer and let code point offset be
+    // its corresponding code point.
+    var offset = 0;
+    var code_point_offset = 0;
+    var idx = index('gb18030');
+    var i;
+    for (i = 0; i < idx.length; ++i) {
+      /** @type {!Array.<number>} */
+      var entry = idx[i];
+      if (entry[0] <= pointer) {
+        offset = entry[0];
+        code_point_offset = entry[1];
+      } else {
+        break;
+      }
+    }
+
+    // 3. Return a code point whose value is code point offset +
+    // pointer − offset.
+    return code_point_offset + pointer - offset;
+  }
+
+  /**
+   * @param {number} code_point The |code point| to locate in the gb18030 index.
+   * @return {number} The first pointer corresponding to |code point| in the
+   *     gb18030 index.
+   */
+  function indexGB18030RangesPointerFor(code_point) {
+    // 1. Let offset be the last code point in index gb18030 ranges
+    // that is equal to or less than code point and let pointer offset
+    // be its corresponding pointer.
+    var offset = 0;
+    var pointer_offset = 0;
+    var idx = index('gb18030');
+    var i;
+    for (i = 0; i < idx.length; ++i) {
+      /** @type {!Array.<number>} */
+      var entry = idx[i];
+      if (entry[1] <= code_point) {
+        offset = entry[1];
+        pointer_offset = entry[0];
+      } else {
+        break;
+      }
+    }
+
+    // 2. Return a pointer whose value is pointer offset + code point
+    // − offset.
+    return pointer_offset + code_point - offset;
+  }
+
+  /**
+   * @param {number} code_point The |code_point| to search for in the shift_jis index.
+   * @return {?number} The code point corresponding to |pointer| in |index|,
+   *     or null if |code point| is not in the shift_jis index.
+   */
+  function indexShiftJISPointerFor(code_point) {
+    // 1. Let index be index jis0208 excluding all pointers in the
+    // range 8272 to 8835.
+    var pointer = indexPointerFor(code_point, index('jis0208'));
+    if (pointer === null || inRange(pointer, 8272, 8835))
+      return null;
+
+    // 2. Return the index pointer for code point in index.
+    return pointer;
+  }
+
+  //
+  // 7. API
+  //
+
+  /** @const */ var DEFAULT_ENCODING = 'utf-8';
+
+  // 7.1 Interface TextDecoder
+
+  /**
+   * @constructor
+   * @param {string=} encoding The label of the encoding;
+   *     defaults to 'utf-8'.
+   * @param {Object=} options
+   */
+  function TextDecoder(encoding, options) {
+    if (!(this instanceof TextDecoder)) {
+      return new TextDecoder(encoding, options);
+    }
+    encoding = encoding !== undefined ? String(encoding) : DEFAULT_ENCODING;
+    options = ToDictionary(options);
+    /** @private */
+    this._encoding = getEncoding(encoding);
+    if (this._encoding === null || this._encoding.name === 'replacement')
+      throw RangeError('Unknown encoding: ' + encoding);
+
+    if (!decoders[this._encoding.name]) {
+      throw Error('Decoder not present.' +
+                  ' Did you forget to include encoding-indexes.js?');
+    }
+
+    /** @private @type {boolean} */
+    this._streaming = false;
+    /** @private @type {boolean} */
+    this._BOMseen = false;
+    /** @private @type {?Decoder} */
+    this._decoder = null;
+    /** @private @type {boolean} */
+    this._fatal = Boolean(options['fatal']);
+    /** @private @type {boolean} */
+    this._ignoreBOM = Boolean(options['ignoreBOM']);
+
+    if (Object.defineProperty) {
+      Object.defineProperty(this, 'encoding', {value: this._encoding.name});
+      Object.defineProperty(this, 'fatal', {value: this._fatal});
+      Object.defineProperty(this, 'ignoreBOM', {value: this._ignoreBOM});
+    } else {
+      this.encoding = this._encoding.name;
+      this.fatal = this._fatal;
+      this.ignoreBOM = this._ignoreBOM;
+    }
+
+    return this;
+  }
+
+  TextDecoder.prototype = {
+    /**
+     * @param {ArrayBufferView=} input The buffer of bytes to decode.
+     * @param {Object=} options
+     * @return {string} The decoded string.
+     */
+    decode: function decode(input, options) {
+      var bytes;
+      if (typeof input === 'object' && input instanceof ArrayBuffer) {
+        bytes = new Uint8Array(input);
+      } else if (typeof input === 'object' && 'buffer' in input &&
+                 input.buffer instanceof ArrayBuffer) {
+        bytes = new Uint8Array(input.buffer,
+                               input.byteOffset,
+                               input.byteLength);
+      } else {
+        bytes = new Uint8Array(0);
+      }
+
+      options = ToDictionary(options);
+
+      if (!this._streaming) {
+        this._decoder = decoders[this._encoding.name]({fatal: this._fatal});
+        this._BOMseen = false;
+      }
+      this._streaming = Boolean(options['stream']);
+
+      var input_stream = new Stream(bytes);
+
+      var code_points = [];
+
+      /** @type {?(number|!Array.<number>)} */
+      var result;
+
+      while (!input_stream.endOfStream()) {
+        result = this._decoder.handler(input_stream, input_stream.read());
+        if (result === finished)
+          break;
+        if (result === null)
+          continue;
+        if (Array.isArray(result))
+          code_points.push.apply(code_points, /**@type {!Array.<number>}*/(result));
+        else
+          code_points.push(result);
+      }
+      if (!this._streaming) {
+        do {
+          result = this._decoder.handler(input_stream, input_stream.read());
+          if (result === finished)
+            break;
+          if (result === null)
+            continue;
+          if (Array.isArray(result))
+            code_points.push.apply(code_points, /**@type {!Array.<number>}*/(result));
+          else
+            code_points.push(result);
+        } while (!input_stream.endOfStream());
+        this._decoder = null;
+      }
+
+      if (code_points.length) {
+        // If encoding is one of utf-8, utf-16be, and utf-16le, and
+        // ignore BOM flag and BOM seen flag are unset, run these
+        // subsubsteps:
+        if (['utf-8', 'utf-16le', 'utf-16be'].indexOf(this.encoding) !== -1 &&
+            !this._ignoreBOM && !this._BOMseen) {
+          // If token is U+FEFF, set BOM seen flag.
+          if (code_points[0] === 0xFEFF) {
+            this._BOMseen = true;
+            code_points.shift();
+          } else {
+            // Otherwise, if token is not end-of-stream, set BOM seen
+            // flag and append token to output.
+            this._BOMseen = true;
+          }
+        }
+      }
+
+      return codePointsToString(code_points);
+    }
+  };
+
+  // 7.2 Interface TextEncoder
+
+  /**
+   * @constructor
+   * @param {string=} encoding The label of the encoding;
+   *     defaults to 'utf-8'.
+   * @param {Object=} options
+   */
+  function TextEncoder(encoding, options) {
+    if (!(this instanceof TextEncoder))
+      return new TextEncoder(encoding, options);
+    encoding = encoding !== undefined ? String(encoding) : DEFAULT_ENCODING;
+    options = ToDictionary(options);
+    /** @private */
+    this._encoding = getEncoding(encoding);
+    if (this._encoding === null || this._encoding.name === 'replacement')
+      throw RangeError('Unknown encoding: ' + encoding);
+
+    var allowLegacyEncoding =
+          Boolean(options['NONSTANDARD_allowLegacyEncoding']);
+    var isLegacyEncoding = (this._encoding.name !== 'utf-8' &&
+                            this._encoding.name !== 'utf-16le' &&
+                            this._encoding.name !== 'utf-16be');
+    if (this._encoding === null || (isLegacyEncoding && !allowLegacyEncoding))
+      throw RangeError('Unknown encoding: ' + encoding);
+
+    if (!encoders[this._encoding.name]) {
+      throw Error('Encoder not present.' +
+                  ' Did you forget to include encoding-indexes.js?');
+    }
+
+    /** @private @type {boolean} */
+    this._streaming = false;
+    /** @private @type {?Encoder} */
+    this._encoder = null;
+    /** @private @type {{fatal: boolean}} */
+    this._options = {fatal: Boolean(options['fatal'])};
+
+    if (Object.defineProperty)
+      Object.defineProperty(this, 'encoding', {value: this._encoding.name});
+    else
+      this.encoding = this._encoding.name;
+
+    return this;
+  }
+
+  TextEncoder.prototype = {
+    /**
+     * @param {string=} opt_string The string to encode.
+     * @param {Object=} options
+     * @return {Uint8Array} Encoded bytes, as a Uint8Array.
+     */
+    encode: function encode(opt_string, options) {
+      opt_string = opt_string ? String(opt_string) : '';
+      options = ToDictionary(options);
+
+      // NOTE: This option is nonstandard. None of the encodings
+      // permitted for encoding (i.e. UTF-8, UTF-16) are stateful,
+      // so streaming is not necessary.
+      if (!this._streaming)
+        this._encoder = encoders[this._encoding.name](this._options);
+      this._streaming = Boolean(options['stream']);
+
+      var bytes = [];
+      var input_stream = new Stream(stringToCodePoints(opt_string));
+      /** @type {?(number|!Array.<number>)} */
+      var result;
+      while (!input_stream.endOfStream()) {
+        result = this._encoder.handler(input_stream, input_stream.read());
+        if (result === finished)
+          break;
+        if (Array.isArray(result))
+          bytes.push.apply(bytes, /**@type {!Array.<number>}*/(result));
+        else
+          bytes.push(result);
+      }
+      if (!this._streaming) {
+        while (true) {
+          result = this._encoder.handler(input_stream, input_stream.read());
+          if (result === finished)
+            break;
+          if (Array.isArray(result))
+            bytes.push.apply(bytes, /**@type {!Array.<number>}*/(result));
+          else
+            bytes.push(result);
+        }
+        this._encoder = null;
+      }
+      return new Uint8Array(bytes);
+    }
+  };
+
+
+  //
+  // 8. The encoding
+  //
+
+  // 8.1 utf-8
+
+  /**
+   * @constructor
+   * @implements {Decoder}
+   * @param {{fatal: boolean}} options
+   */
+  function UTF8Decoder(options) {
+    var fatal = options.fatal;
+
+    // utf-8's decoder's has an associated utf-8 code point, utf-8
+    // bytes seen, and utf-8 bytes needed (all initially 0), a utf-8
+    // lower boundary (initially 0x80), and a utf-8 upper boundary
+    // (initially 0xBF).
+    var /** @type {number} */ utf8_code_point = 0,
+        /** @type {number} */ utf8_bytes_seen = 0,
+        /** @type {number} */ utf8_bytes_needed = 0,
+        /** @type {number} */ utf8_lower_boundary = 0x80,
+        /** @type {number} */ utf8_upper_boundary = 0xBF;
+
+    /**
+     * @param {Stream} stream The stream of bytes being decoded.
+     * @param {number} bite The next byte read from the stream.
+     * @return {?(number|!Array.<number>)} The next code point(s)
+     *     decoded, or null if not enough data exists in the input
+     *     stream to decode a complete code point.
+     */
+    this.handler = function(stream, bite) {
+      // 1. If byte is end-of-stream and utf-8 bytes needed is not 0,
+      // set utf-8 bytes needed to 0 and return error.
+      if (bite === end_of_stream && utf8_bytes_needed !== 0) {
+        utf8_bytes_needed = 0;
+        return decoderError(fatal);
+      }
+
+      // 2. If byte is end-of-stream, return finished.
+      if (bite === end_of_stream)
+        return finished;
+
+      // 3. If utf-8 bytes needed is 0, based on byte:
+      if (utf8_bytes_needed === 0) {
+
+        // 0x00 to 0x7F
+        if (inRange(bite, 0x00, 0x7F)) {
+          // Return a code point whose value is byte.
+          return bite;
+        }
+
+        // 0xC2 to 0xDF
+        if (inRange(bite, 0xC2, 0xDF)) {
+          // Set utf-8 bytes needed to 1 and utf-8 code point to byte
+          // − 0xC0.
+          utf8_bytes_needed = 1;
+          utf8_code_point = bite - 0xC0;
+        }
+
+        // 0xE0 to 0xEF
+        else if (inRange(bite, 0xE0, 0xEF)) {
+          // 1. If byte is 0xE0, set utf-8 lower boundary to 0xA0.
+          if (bite === 0xE0)
+            utf8_lower_boundary = 0xA0;
+          // 2. If byte is 0xED, set utf-8 upper boundary to 0x9F.
+          if (bite === 0xED)
+            utf8_upper_boundary = 0x9F;
+          // 3. Set utf-8 bytes needed to 2 and utf-8 code point to
+          // byte − 0xE0.
+          utf8_bytes_needed = 2;
+          utf8_code_point = bite - 0xE0;
+        }
+
+        // 0xF0 to 0xF4
+        else if (inRange(bite, 0xF0, 0xF4)) {
+          // 1. If byte is 0xF0, set utf-8 lower boundary to 0x90.
+          if (bite === 0xF0)
+            utf8_lower_boundary = 0x90;
+          // 2. If byte is 0xF4, set utf-8 upper boundary to 0x8F.
+          if (bite === 0xF4)
+            utf8_upper_boundary = 0x8F;
+          // 3. Set utf-8 bytes needed to 3 and utf-8 code point to
+          // byte − 0xF0.
+          utf8_bytes_needed = 3;
+          utf8_code_point = bite - 0xF0;
+        }
+
+        // Otherwise
+        else {
+          // Return error.
+          return decoderError(fatal);
+        }
+
+        // Then (byte is in the range 0xC2 to 0xF4) set utf-8 code
+        // point to utf-8 code point << (6 × utf-8 bytes needed) and
+        // return continue.
+        utf8_code_point = utf8_code_point << (6 * utf8_bytes_needed);
+        return null;
+      }
+
+      // 4. If byte is not in the range utf-8 lower boundary to utf-8
+      // upper boundary, run these substeps:
+      if (!inRange(bite, utf8_lower_boundary, utf8_upper_boundary)) {
+
+        // 1. Set utf-8 code point, utf-8 bytes needed, and utf-8
+        // bytes seen to 0, set utf-8 lower boundary to 0x80, and set
+        // utf-8 upper boundary to 0xBF.
+        utf8_code_point = utf8_bytes_needed = utf8_bytes_seen = 0;
+        utf8_lower_boundary = 0x80;
+        utf8_upper_boundary = 0xBF;
+
+        // 2. Prepend byte to stream.
+        stream.prepend(bite);
+
+        // 3. Return error.
+        return decoderError(fatal);
+      }
+
+      // 5. Set utf-8 lower boundary to 0x80 and utf-8 upper boundary
+      // to 0xBF.
+      utf8_lower_boundary = 0x80;
+      utf8_upper_boundary = 0xBF;
+
+      // 6. Increase utf-8 bytes seen by one and set utf-8 code point
+      // to utf-8 code point + (byte − 0x80) << (6 × (utf-8 bytes
+      // needed − utf-8 bytes seen)).
+      utf8_bytes_seen += 1;
+      utf8_code_point += (bite - 0x80) << (6 * (utf8_bytes_needed - utf8_bytes_seen));
+
+      // 7. If utf-8 bytes seen is not equal to utf-8 bytes needed,
+      // continue.
+      if (utf8_bytes_seen !== utf8_bytes_needed)
+        return null;
+
+      // 8. Let code point be utf-8 code point.
+      var code_point = utf8_code_point;
+
+      // 9. Set utf-8 code point, utf-8 bytes needed, and utf-8 bytes
+      // seen to 0.
+      utf8_code_point = utf8_bytes_needed = utf8_bytes_seen = 0;
+
+      // 10. Return a code point whose value is code point.
+      return code_point;
+    };
+  }
+
+  /**
+   * @constructor
+   * @implements {Encoder}
+   * @param {{fatal: boolean}} options
+   */
+  function UTF8Encoder(options) {
+    var fatal = options.fatal;
+    /**
+     * @param {Stream} stream Input stream.
+     * @param {number} code_point Next code point read from the stream.
+     * @return {(number|!Array.<number>)} Byte(s) to emit.
+     */
+    this.handler = function(stream, code_point) {
+      // 1. If code point is end-of-stream, return finished.
+      if (code_point === end_of_stream)
+        return finished;
+
+      // 2. If code point is in the range U+0000 to U+007F, return a
+      // byte whose value is code point.
+      if (inRange(code_point, 0x0000, 0x007f))
+        return code_point;
+
+      // 3. Set count and offset based on the range code point is in:
+      var count, offset;
+      // U+0080 to U+07FF:    1 and 0xC0
+      if (inRange(code_point, 0x0080, 0x07FF)) {
+        count = 1;
+        offset = 0xC0;
+      }
+      // U+0800 to U+FFFF:    2 and 0xE0
+      else if (inRange(code_point, 0x0800, 0xFFFF)) {
+        count = 2;
+        offset = 0xE0;
+      }
+      // U+10000 to U+10FFFF: 3 and 0xF0
+      else if (inRange(code_point, 0x10000, 0x10FFFF)) {
+        count = 3;
+        offset = 0xF0;
+      }
+
+      // 4.Let bytes be a byte sequence whose first byte is (code
+      // point >> (6 × count)) + offset.
+      var bytes = [(code_point >> (6 * count)) + offset];
+
+      // 5. Run these substeps while count is greater than 0:
+      while (count > 0) {
+
+        // 1. Set temp to code point >> (6 × (count − 1)).
+        var temp = code_point >> (6 * (count - 1));
+
+        // 2. Append to bytes 0x80 | (temp & 0x3F).
+        bytes.push(0x80 | (temp & 0x3F));
+
+        // 3. Decrease count by one.
+        count -= 1;
+      }
+
+      // 6. Return bytes bytes, in order.
+      return bytes;
+    };
+  }
+
+  /** @param {{fatal: boolean}} options */
+  encoders['utf-8'] = function(options) {
+    return new UTF8Encoder(options);
+  };
+  /** @param {{fatal: boolean}} options */
+  decoders['utf-8'] = function(options) {
+    return new UTF8Decoder(options);
+  };
+
+  //
+  // 9. Legacy single-byte encodings
+  //
+
+  // 9.1 single-byte decoder
+  /**
+   * @constructor
+   * @implements {Decoder}
+   * @param {!Array.<number>} index The encoding index.
+   * @param {{fatal: boolean}} options
+   */
+  function SingleByteDecoder(index, options) {
+    var fatal = options.fatal;
+    /**
+     * @param {Stream} stream The stream of bytes being decoded.
+     * @param {number} bite The next byte read from the stream.
+     * @return {?(number|!Array.<number>)} The next code point(s)
+     *     decoded, or null if not enough data exists in the input
+     *     stream to decode a complete code point.
+     */
+    this.handler = function(stream, bite) {
+      // 1. If byte is end-of-stream, return finished.
+      if (bite === end_of_stream)
+        return finished;
+
+      // 2. If byte is in the range 0x00 to 0x7F, return a code point
+      // whose value is byte.
+      if (inRange(bite, 0x00, 0x7F))
+        return bite;
+
+      // 3. Let code point be the index code point for byte − 0x80 in
+      // index single-byte.
+      var code_point = index[bite - 0x80];
+
+      // 4. If code point is null, return error.
+      if (code_point === null)
+        return decoderError(fatal);
+
+      // 5. Return a code point whose value is code point.
+      return code_point;
+    };
+  }
+
+  // 9.2 single-byte encoder
+  /**
+   * @constructor
+   * @implements {Encoder}
+   * @param {!Array.<?number>} index The encoding index.
+   * @param {{fatal: boolean}} options
+   */
+  function SingleByteEncoder(index, options) {
+    var fatal = options.fatal;
+    /**
+     * @param {Stream} stream Input stream.
+     * @param {number} code_point Next code point read from the stream.
+     * @return {(number|!Array.<number>)} Byte(s) to emit.
+     */
+    this.handler = function(stream, code_point) {
+      // 1. If code point is end-of-stream, return finished.
+      if (code_point === end_of_stream)
+        return finished;
+
+      // 2. If code point is in the range U+0000 to U+007F, return a
+      // byte whose value is code point.
+      if (inRange(code_point, 0x0000, 0x007F))
+        return code_point;
+
+      // 3. Let pointer be the index pointer for code point in index
+      // single-byte.
+      var pointer = indexPointerFor(code_point, index);
+
+      // 4. If pointer is null, return error with code point.
+      if (pointer === null)
+        encoderError(code_point);
+
+      // 5. Return a byte whose value is pointer + 0x80.
+      return pointer + 0x80;
+    };
+  }
+
+  (function() {
+    if (!('encoding-indexes' in global))
+      return;
+    encodings.forEach(function(category) {
+      if (category.heading !== 'Legacy single-byte encodings')
+        return;
+      category.encodings.forEach(function(encoding) {
+        var name = encoding.name;
+        var idx = index(name);
+        /** @param {{fatal: boolean}} options */
+        decoders[name] = function(options) {
+          return new SingleByteDecoder(idx, options);
+        };
+        /** @param {{fatal: boolean}} options */
+        encoders[name] = function(options) {
+          return new SingleByteEncoder(idx, options);
+        };
+      });
+    });
+  }());
+
+  //
+  // 10. Legacy multi-byte Chinese (simplified) encodings
+  //
+
+  // 10.1 gbk
+
+  // 10.1.1 gbk decoder
+  // gbk's decoder is gb18030's decoder.
+  /** @param {{fatal: boolean}} options */
+  decoders['gbk'] = function(options) {
+    return new GB18030Decoder(options);
+  };
+
+  // 10.1.2 gbk encoder
+  // gbk's encoder is gb18030's encoder with its gbk flag set.
+  /** @param {{fatal: boolean}} options */
+  encoders['gbk'] = function(options) {
+    return new GB18030Encoder(options, true);
+  };
+
+  // 10.2 gb18030
+
+  // 10.2.1 gb18030 decoder
+  /**
+   * @constructor
+   * @implements {Decoder}
+   * @param {{fatal: boolean}} options
+   */
+  function GB18030Decoder(options) {
+    var fatal = options.fatal;
+    // gb18030's decoder has an associated gb18030 first, gb18030
+    // second, and gb18030 third (all initially 0x00).
+    var /** @type {number} */ gb18030_first = 0x00,
+        /** @type {number} */ gb18030_second = 0x00,
+        /** @type {number} */ gb18030_third = 0x00;
+    /**
+     * @param {Stream} stream The stream of bytes being decoded.
+     * @param {number} bite The next byte read from the stream.
+     * @return {?(number|!Array.<number>)} The next code point(s)
+     *     decoded, or null if not enough data exists in the input
+     *     stream to decode a complete code point.
+     */
+    this.handler = function(stream, bite) {
+      // 1. If byte is end-of-stream and gb18030 first, gb18030
+      // second, and gb18030 third are 0x00, return finished.
+      if (bite === end_of_stream && gb18030_first === 0x00 &&
+          gb18030_second === 0x00 && gb18030_third === 0x00) {
+        return finished;
+      }
+      // 2. If byte is end-of-stream, and gb18030 first, gb18030
+      // second, or gb18030 third is not 0x00, set gb18030 first,
+      // gb18030 second, and gb18030 third to 0x00, and return error.
+      if (bite === end_of_stream &&
+          (gb18030_first !== 0x00 || gb18030_second !== 0x00 || gb18030_third !== 0x00)) {
+        gb18030_first = 0x00;
+        gb18030_second = 0x00;
+        gb18030_third = 0x00;
+        decoderError(fatal);
+      }
+      var code_point;
+      // 3. If gb18030 third is not 0x00, run these substeps:
+      if (gb18030_third !== 0x00) {
+        // 1. Let code point be null.
+        code_point = null;
+        // 2. If byte is in the range 0x30 to 0x39, set code point to
+        // the index gb18030 ranges code point for (((gb18030 first −
+        // 0x81) × 10 + gb18030 second − 0x30) × 126 + gb18030 third −
+        // 0x81) × 10 + byte − 0x30.
+        if (inRange(bite, 0x30, 0x39)) {
+          code_point = indexGB18030RangesCodePointFor(
+              (((gb18030_first - 0x81) * 10 + (gb18030_second - 0x30)) * 126 +
+               (gb18030_third - 0x81)) * 10 + bite - 0x30);
+        }
+
+        // 3. Let buffer be a byte sequence consisting of gb18030
+        // second, gb18030 third, and byte, in order.
+        var buffer = [gb18030_second, gb18030_third, bite];
+
+        // 4. Set gb18030 first, gb18030 second, and gb18030 third to
+        // 0x00.
+        gb18030_first = 0x00;
+        gb18030_second = 0x00;
+        gb18030_third = 0x00;
+
+        // 5. If code point is null, prepend buffer to stream and
+        // return error.
+        if (code_point === null) {
+          stream.prepend(buffer);
+          return decoderError(fatal);
+        }
+
+        // 6. Return a code point whose value is code point.
+        return code_point;
+      }
+
+      // 4. If gb18030 second is not 0x00, run these substeps:
+      if (gb18030_second !== 0x00) {
+
+        // 1. If byte is in the range 0x81 to 0xFE, set gb18030 third
+        // to byte and return continue.
+        if (inRange(bite, 0x81, 0xFE)) {
+          gb18030_third = bite;
+          return null;
+        }
+
+        // 2. Prepend gb18030 second followed by byte to stream, set
+        // gb18030 first and gb18030 second to 0x00, and return error.
+        stream.prepend([gb18030_second, bite]);
+        gb18030_first = 0x00;
+        gb18030_second = 0x00;
+        return decoderError(fatal);
+      }
+
+      // 5. If gb18030 first is not 0x00, run these substeps:
+      if (gb18030_first !== 0x00) {
+
+        // 1. If byte is in the range 0x30 to 0x39, set gb18030 second
+        // to byte and return continue.
+        if (inRange(bite, 0x30, 0x39)) {
+          gb18030_second = bite;
+          return null;
+        }
+
+        // 2. Let lead be gb18030 first, let pointer be null, and set
+        // gb18030 first to 0x00.
+        var lead = gb18030_first;
+        var pointer = null;
+        gb18030_first = 0x00;
+
+        // 3. Let offset be 0x40 if byte is less than 0x7F and 0x41
+        // otherwise.
+        var offset = bite < 0x7F ? 0x40 : 0x41;
+
+        // 4. If byte is in the range 0x40 to 0x7E or 0x80 to 0xFE,
+        // set pointer to (lead − 0x81) × 190 + (byte − offset).
+        if (inRange(bite, 0x40, 0x7E) || inRange(bite, 0x80, 0xFE))
+          pointer = (lead - 0x81) * 190 + (bite - offset);
+
+        // 5. Let code point be null if pointer is null and the index
+        // code point for pointer in index gb18030 otherwise.
+        code_point = pointer === null ? null :
+            indexCodePointFor(pointer, index('gb18030'));
+
+        // 6. If pointer is null, prepend byte to stream.
+        if (pointer === null)
+          stream.prepend(bite);
+
+        // 7. If code point is null, return error.
+        if (code_point === null)
+          return decoderError(fatal);
+
+        // 8. Return a code point whose value is code point.
+        return code_point;
+      }
+
+      // 6. If byte is in the range 0x00 to 0x7F, return a code point
+      // whose value is byte.
+      if (inRange(bite, 0x00, 0x7F))
+        return bite;
+
+      // 7. If byte is 0x80, return code point U+20AC.
+      if (bite === 0x80)
+        return 0x20AC;
+
+      // 8. If byte is in the range 0x81 to 0xFE, set gb18030 first to
+      // byte and return continue.
+      if (inRange(bite, 0x81, 0xFE)) {
+        gb18030_first = bite;
+        return null;
+      }
+
+      // 9. Return error.
+      return decoderError(fatal);
+    };
+  }
+
+  // 10.2.2 gb18030 encoder
+  /**
+   * @constructor
+   * @implements {Encoder}
+   * @param {{fatal: boolean}} options
+   * @param {boolean=} gbk_flag
+   */
+  function GB18030Encoder(options, gbk_flag) {
+    var fatal = options.fatal;
+    // gb18030's decoder has an associated gbk flag (initially unset).
+    /**
+     * @param {Stream} stream Input stream.
+     * @param {number} code_point Next code point read from the stream.
+     * @return {(number|!Array.<number>)} Byte(s) to emit.
+     */
+    this.handler = function(stream, code_point) {
+      // 1. If code point is end-of-stream, return finished.
+      if (code_point === end_of_stream)
+        return finished;
+
+      // 2. If code point is in the range U+0000 to U+007F, return a
+      // byte whose value is code point.
+      if (inRange(code_point, 0x0000, 0x007F)) {
+        return code_point;
+      }
+
+      // 3. If the gbk flag is set and code point is U+20AC, return
+      // byte 0x80.
+      if (gbk_flag && code_point === 0x20AC)
+        return 0x80;
+
+      // 4. Let pointer be the index pointer for code point in index
+      // gb18030.
+      var pointer = indexPointerFor(code_point, index('gb18030'));
+
+      // 5. If pointer is not null, run these substeps:
+      if (pointer !== null) {
+
+        // 1. Let lead be pointer / 190 + 0x81.
+        var lead = div(pointer, 190) + 0x81;
+
+        // 2. Let trail be pointer % 190.
+        var trail = pointer % 190;
+
+        // 3. Let offset be 0x40 if trail is less than 0x3F and 0x41 otherwise.
+        var offset = trail < 0x3F ? 0x40 : 0x41;
+
+        // 4. Return two bytes whose values are lead and trail + offset.
+        return [lead, trail + offset];
+      }
+
+      // 6. If gbk flag is set, return error with code point.
+      if (gbk_flag)
+        return encoderError(code_point);
+
+      // 7. Set pointer to the index gb18030 ranges pointer for code
+      // point.
+      pointer = indexGB18030RangesPointerFor(code_point);
+
+      // 8. Let byte1 be pointer / 10 / 126 / 10.
+      var byte1 = div(div(div(pointer, 10), 126), 10);
+
+      // 9. Set pointer to pointer − byte1 × 10 × 126 × 10.
+      pointer = pointer - byte1 * 10 * 126 * 10;
+
+      // 10. Let byte2 be pointer / 10 / 126.
+      var byte2 = div(div(pointer, 10), 126);
+
+      // 11. Set pointer to pointer − byte2 × 10 × 126.
+      pointer = pointer - byte2 * 10 * 126;
+
+      // 12. Let byte3 be pointer / 10.
+      var byte3 = div(pointer, 10);
+
+      // 13. Let byte4 be pointer − byte3 × 10.
+      var byte4 = pointer - byte3 * 10;
+
+      // 14. Return four bytes whose values are byte1 + 0x81, byte2 +
+      // 0x30, byte3 + 0x81, byte4 + 0x30.
+      return [byte1 + 0x81,
+              byte2 + 0x30,
+              byte3 + 0x81,
+              byte4 + 0x30];
+    };
+  }
+
+  /** @param {{fatal: boolean}} options */
+  encoders['gb18030'] = function(options) {
+    return new GB18030Encoder(options);
+  };
+  /** @param {{fatal: boolean}} options */
+  decoders['gb18030'] = function(options) {
+    return new GB18030Decoder(options);
+  };
+
+
+  //
+  // 11. Legacy multi-byte Chinese (traditional) encodings
+  //
+
+  // 11.1 big5
+
+  /**
+   * @constructor
+   * @implements {Decoder}
+   * @param {{fatal: boolean}} options
+   */
+  function Big5Decoder(options) {
+    var fatal = options.fatal;
+    // big5's decoder has an associated big5 lead (initially 0x00).
+    var /** @type {number} */ big5_lead = 0x00;
+
+    /**
+     * @param {Stream} stream The stream of bytes being decoded.
+     * @param {number} bite The next byte read from the stream.
+     * @return {?(number|!Array.<number>)} The next code point(s)
+     *     decoded, or null if not enough data exists in the input
+     *     stream to decode a complete code point.
+     */
+    this.handler = function(stream, bite) {
+      // 1. If byte is end-of-stream and big5 lead is not 0x00, set
+      // big5 lead to 0x00 and return error.
+      if (bite === end_of_stream && big5_lead !== 0x00) {
+        big5_lead = 0x00;
+        return decoderError(fatal);
+      }
+
+      // 2. If byte is end-of-stream and big5 lead is 0x00, return
+      // finished.
+      if (bite === end_of_stream && big5_lead === 0x00)
+        return finished;
+
+      // 3. If big5 lead is not 0x00, let lead be big5 lead, let
+      // pointer be null, set big5 lead to 0x00, and then run these
+      // substeps:
+      if (big5_lead !== 0x00) {
+        var lead = big5_lead;
+        var pointer = null;
+        big5_lead = 0x00;
+
+        // 1. Let offset be 0x40 if byte is less than 0x7F and 0x62
+        // otherwise.
+        var offset = bite < 0x7F ? 0x40 : 0x62;
+
+        // 2. If byte is in the range 0x40 to 0x7E or 0xA1 to 0xFE,
+        // set pointer to (lead − 0x81) × 157 + (byte − offset).
+        if (inRange(bite, 0x40, 0x7E) || inRange(bite, 0xA1, 0xFE))
+          pointer = (lead - 0x81) * 157 + (bite - offset);
+
+        // 3. If there is a row in the table below whose first column
+        // is pointer, return the two code points listed in its second
+        // column
+        // Pointer | Code points
+        // --------+--------------
+        // 1133    | U+00CA U+0304
+        // 1135    | U+00CA U+030C
+        // 1164    | U+00EA U+0304
+        // 1166    | U+00EA U+030C
+        switch (pointer) {
+          case 1133: return [0x00CA, 0x0304];
+          case 1135: return [0x00CA, 0x030C];
+          case 1164: return [0x00EA, 0x0304];
+          case 1166: return [0x00EA, 0x030C];
+        }
+
+        // 4. Let code point be null if pointer is null and the index
+        // code point for pointer in index big5 otherwise.
+        var code_point = (pointer === null) ? null :
+            indexCodePointFor(pointer, index('big5'));
+
+        // 5. If pointer is null and byte is in the range 0x00 to
+        // 0x7F, prepend byte to stream.
+        if (pointer === null)
+          stream.prepend(bite);
+
+        // 6. If code point is null, return error.
+        if (code_point === null)
+          return decoderError(fatal);
+
+        // 7. Return a code point whose value is code point.
+        return code_point;
+      }
+
+      // 4. If byte is in the range 0x00 to 0x7F, return a code point
+      // whose value is byte.
+      if (inRange(bite, 0x00, 0x7F))
+        return bite;
+
+      // 5. If byte is in the range 0x81 to 0xFE, set big5 lead to
+      // byte and return continue.
+      if (inRange(bite, 0x81, 0xFE)) {
+        big5_lead = bite;
+        return null;
+      }
+
+      // 6. Return error.
+      return decoderError(fatal);
+    };
+  }
+
+  /**
+   * @constructor
+   * @implements {Encoder}
+   * @param {{fatal: boolean}} options
+   */
+  function Big5Encoder(options) {
+    var fatal = options.fatal;
+    /**
+     * @param {Stream} stream Input stream.
+     * @param {number} code_point Next code point read from the stream.
+     * @return {(number|!Array.<number>)} Byte(s) to emit.
+     */
+    this.handler = function(stream, code_point) {
+      // 1. If code point is end-of-stream, return finished.
+      if (code_point === end_of_stream)
+        return finished;
+
+      // 2. If code point is in the range U+0000 to U+007F, return a
+      // byte whose value is code point.
+      if (inRange(code_point, 0x0000, 0x007F))
+        return code_point;
+
+      // 3. Let pointer be the index pointer for code point in index
+      // big5.
+      var pointer = indexPointerFor(code_point, index('big5'));
+
+      // 4. If pointer is null, return error with code point.
+      if (pointer === null)
+        return encoderError(code_point);
+
+      // 5. Let lead be pointer / 157 + 0x81.
+      var lead = div(pointer, 157) + 0x81;
+
+      // 6. If lead is less than 0xA1, return error with code point.
+      if (lead < 0xA1)
+        return encoderError(code_point);
+
+      // 7. Let trail be pointer % 157.
+      var trail = pointer % 157;
+
+      // 8. Let offset be 0x40 if trail is less than 0x3F and 0x62
+      // otherwise.
+      var offset = trail < 0x3F ? 0x40 : 0x62;
+
+      // Return two bytes whose values are lead and trail + offset.
+      return [lead, trail + offset];
+    };
+  }
+
+  /** @param {{fatal: boolean}} options */
+  encoders['big5'] = function(options) {
+    return new Big5Encoder(options);
+  };
+  /** @param {{fatal: boolean}} options */
+  decoders['big5'] = function(options) {
+    return new Big5Decoder(options);
+  };
+
+
+  //
+  // 12. Legacy multi-byte Japanese encodings
+  //
+
+  // 12.1 euc-jp
+
+  /**
+   * @constructor
+   * @implements {Decoder}
+   * @param {{fatal: boolean}} options
+   */
+  function EUCJPDecoder(options) {
+    var fatal = options.fatal;
+
+    // euc-jp's decoder has an associated euc-jp jis0212 flag
+    // (initially unset) and euc-jp lead (initially 0x00).
+    var /** @type {boolean} */ eucjp_jis0212_flag = false,
+        /** @type {number} */ eucjp_lead = 0x00;
+
+    /**
+     * @param {Stream} stream The stream of bytes being decoded.
+     * @param {number} bite The next byte read from the stream.
+     * @return {?(number|!Array.<number>)} The next code point(s)
+     *     decoded, or null if not enough data exists in the input
+     *     stream to decode a complete code point.
+     */
+    this.handler = function(stream, bite) {
+      // 1. If byte is end-of-stream and euc-jp lead is not 0x00, set
+      // euc-jp lead to 0x00, and return error.
+      if (bite === end_of_stream && eucjp_lead !== 0x00) {
+        eucjp_lead = 0x00;
+        return decoderError(fatal);
+      }
+
+      // 2. If byte is end-of-stream and euc-jp lead is 0x00, return
+      // finished.
+      if (bite === end_of_stream && eucjp_lead === 0x00)
+        return finished;
+
+      // 3. If euc-jp lead is 0x8E and byte is in the range 0xA1 to
+      // 0xDF, set euc-jp lead to 0x00 and return a code point whose
+      // value is 0xFF61 + byte − 0xA1.
+      if (eucjp_lead === 0x8E && inRange(bite, 0xA1, 0xDF)) {
+        eucjp_lead = 0x00;
+        return 0xFF61 + bite - 0xA1;
+      }
+
+      // 4. If euc-jp lead is 0x8F and byte is in the range 0xA1 to
+      // 0xFE, set the euc-jp jis0212 flag, set euc-jp lead to byte,
+      // and return continue.
+      if (eucjp_lead === 0x8F && inRange(bite, 0xA1, 0xFE)) {
+        eucjp_jis0212_flag = true;
+        eucjp_lead = bite;
+        return null;
+      }
+
+      // 5. If euc-jp lead is not 0x00, let lead be euc-jp lead, set
+      // euc-jp lead to 0x00, and run these substeps:
+      if (eucjp_lead !== 0x00) {
+        var lead = eucjp_lead;
+        eucjp_lead = 0x00;
+
+        // 1. Let code point be null.
+        var code_point = null;
+
+        // 2. If lead and byte are both in the range 0xA1 to 0xFE, set
+        // code point to the index code point for (lead − 0xA1) × 94 +
+        // byte − 0xA1 in index jis0208 if the euc-jp jis0212 flag is
+        // unset and in index jis0212 otherwise.
+        if (inRange(lead, 0xA1, 0xFE) && inRange(bite, 0xA1, 0xFE)) {
+          code_point = indexCodePointFor(
+            (lead - 0xA1) * 94 + (bite - 0xA1),
+            index(!eucjp_jis0212_flag ? 'jis0208' : 'jis0212'));
+        }
+
+        // 3. Unset the euc-jp jis0212 flag.
+        eucjp_jis0212_flag = false;
+
+        // 4. If byte is not in the range 0xA1 to 0xFE, prepend byte
+        // to stream.
+        if (!inRange(bite, 0xA1, 0xFE))
+          stream.prepend(bite);
+
+        // 5. If code point is null, return error.
+        if (code_point === null)
+          return decoderError(fatal);
+
+        // 6. Return a code point whose value is code point.
+        return code_point;
+      }
+
+      // 6. If byte is in the range 0x00 to 0x7F, return a code point
+      // whose value is byte.
+      if (inRange(bite, 0x00, 0x7F))
+        return bite;
+
+      // 7. If byte is 0x8E, 0x8F, or in the range 0xA1 to 0xFE, set
+      // euc-jp lead to byte and return continue.
+      if (bite === 0x8E || bite === 0x8F || inRange(bite, 0xA1, 0xFE)) {
+        eucjp_lead = bite;
+        return null;
+      }
+
+      // 8. Return error.
+      return decoderError(fatal);
+    };
+  }
+
+  /**
+   * @constructor
+   * @implements {Encoder}
+   * @param {{fatal: boolean}} options
+   */
+  function EUCJPEncoder(options) {
+    var fatal = options.fatal;
+    /**
+     * @param {Stream} stream Input stream.
+     * @param {number} code_point Next code point read from the stream.
+     * @return {(number|!Array.<number>)} Byte(s) to emit.
+     */
+    this.handler = function(stream, code_point) {
+      // 1. If code point is end-of-stream, return finished.
+      if (code_point === end_of_stream)
+        return finished;
+
+      // 2. If code point is in the range U+0000 to U+007F, return a
+      // byte whose value is code point.
+      if (inRange(code_point, 0x0000, 0x007F))
+        return code_point;
+
+      // 3. If code point is U+00A5, return byte 0x5C.
+      if (code_point === 0x00A5)
+        return 0x5C;
+
+      // 4. If code point is U+203E, return byte 0x7E.
+      if (code_point === 0x203E)
+        return 0x7E;
+
+      // 5. If code point is in the range U+FF61 to U+FF9F, return two
+      // bytes whose values are 0x8E and code point − 0xFF61 + 0xA1.
+      if (inRange(code_point, 0xFF61, 0xFF9F))
+        return [0x8E, code_point - 0xFF61 + 0xA1];
+
+      // 6. Let pointer be the index pointer for code point in index
+      // jis0208.
+      var pointer = indexPointerFor(code_point, index('jis0208'));
+
+      // 7. If pointer is null, return error with code point.
+      if (pointer === null)
+        return encoderError(code_point);
+
+      // 8. Let lead be pointer / 94 + 0xA1.
+      var lead = div(pointer, 94) + 0xA1;
+
+      // 9. Let trail be pointer % 94 + 0xA1.
+      var trail = pointer % 94 + 0xA1;
+
+      // 10. Return two bytes whose values are lead and trail.
+      return [lead, trail];
+    };
+  }
+
+  /** @param {{fatal: boolean}} options */
+  encoders['euc-jp'] = function(options) {
+    return new EUCJPEncoder(options);
+  };
+  /** @param {{fatal: boolean}} options */
+  decoders['euc-jp'] = function(options) {
+    return new EUCJPDecoder(options);
+  };
+
+  // 12.2 iso-2022-jp
+
+  /**
+   * @constructor
+   * @implements {Decoder}
+   * @param {{fatal: boolean}} options
+   */
+  function ISO2022JPDecoder(options) {
+    var fatal = options.fatal;
+    /** @enum */
+    var states = {
+      ASCII: 0,
+      Roman: 1,
+      Katakana: 2,
+      LeadByte: 3,
+      TrailByte: 4,
+      EscapeStart: 5,
+      Escape: 6
+    };
+    // iso-2022-jp's decoder has an associated iso-2022-jp decoder
+    // state (initially ASCII), iso-2022-jp decoder output state
+    // (initially ASCII), iso-2022-jp lead (initially 0x00), and
+    // iso-2022-jp output flag (initially unset).
+    var /** @type {number} */ iso2022jp_decoder_state = states.ASCII,
+        /** @type {number} */ iso2022jp_decoder_output_state = states.ASCII,
+        /** @type {number} */ iso2022jp_lead = 0x00,
+        /** @type {boolean} */ iso2022jp_output_flag = false;
+    /**
+     * @param {Stream} stream The stream of bytes being decoded.
+     * @param {number} bite The next byte read from the stream.
+     * @return {?(number|!Array.<number>)} The next code point(s)
+     *     decoded, or null if not enough data exists in the input
+     *     stream to decode a complete code point.
+     */
+    this.handler = function(stream, bite) {
+      // switching on iso-2022-jp decoder state:
+      switch (iso2022jp_decoder_state) {
+      default:
+      case states.ASCII:
+        // ASCII
+        // Based on byte:
+
+        // 0x1B
+        if (bite === 0x1B) {
+          // Set iso-2022-jp decoder state to escape start and return
+          // continue.
+          iso2022jp_decoder_state = states.EscapeStart;
+          return null;
+        }
+
+        // 0x00 to 0x7F, excluding 0x0E, 0x0F, and 0x1B
+        if (inRange(bite, 0x00, 0x7F) && bite !== 0x0E
+            && bite !== 0x0F && bite !== 0x1B) {
+          // Unset the iso-2022-jp output flag and return a code point
+          // whose value is byte.
+          iso2022jp_output_flag = false;
+          return bite;
+        }
+
+        // end-of-stream
+        if (bite === end_of_stream) {
+          // Return finished.
+          return finished;
+        }
+
+        // Otherwise
+        // Unset the iso-2022-jp output flag and return error.
+        iso2022jp_output_flag = false;
+        return decoderError(fatal);
+
+      case states.Roman:
+        // Roman
+        // Based on byte:
+
+        // 0x1B
+        if (bite === 0x1B) {
+          // Set iso-2022-jp decoder state to escape start and return
+          // continue.
+          iso2022jp_decoder_state = states.EscapeStart;
+          return null;
+        }
+
+        // 0x5C
+        if (bite === 0x5C) {
+          // Unset the iso-2022-jp output flag and return code point
+          // U+00A5.
+          iso2022jp_output_flag = false;
+          return 0x00A5;
+        }
+
+        // 0x7E
+        if (bite === 0x7E) {
+          // Unset the iso-2022-jp output flag and return code point
+          // U+203E.
+          iso2022jp_output_flag = false;
+          return 0x203E;
+        }
+
+        // 0x00 to 0x7F, excluding 0x0E, 0x0F, 0x1B, 0x5C, and 0x7E
+        if (inRange(bite, 0x00, 0x7F) && bite !== 0x0E && bite !== 0x0F
+            && bite !== 0x1B && bite !== 0x5C && bite !== 0x7E) {
+          // Unset the iso-2022-jp output flag and return a code point
+          // whose value is byte.
+          iso2022jp_output_flag = false;
+          return bite;
+        }
+
+        // end-of-stream
+        if (bite === end_of_stream) {
+          // Return finished.
+          return finished;
+        }
+
+        // Otherwise
+        // Unset the iso-2022-jp output flag and return error.
+        iso2022jp_output_flag = false;
+        return decoderError(fatal);
+
+      case states.Katakana:
+        // Katakana
+        // Based on byte:
+
+        // 0x1B
+        if (bite === 0x1B) {
+          // Set iso-2022-jp decoder state to escape start and return
+          // continue.
+          iso2022jp_decoder_state = states.EscapeStart;
+          return null;
+        }
+
+        // 0x21 to 0x5F
+        if (inRange(bite, 0x21, 0x5F)) {
+          // Unset the iso-2022-jp output flag and return a code point
+          // whose value is 0xFF61 + byte − 0x21.
+          iso2022jp_output_flag = false;
+          return 0xFF61 + bite - 0x21;
+        }
+
+        // end-of-stream
+        if (bite === end_of_stream) {
+          // Return finished.
+          return finished;
+        }
+
+        // Otherwise
+        // Unset the iso-2022-jp output flag and return error.
+        iso2022jp_output_flag = false;
+        return decoderError(fatal);
+
+      case states.LeadByte:
+        // Lead byte
+        // Based on byte:
+
+        // 0x1B
+        if (bite === 0x1B) {
+          // Set iso-2022-jp decoder state to escape start and return
+          // continue.
+          iso2022jp_decoder_state = states.EscapeStart;
+          return null;
+        }
+
+        // 0x21 to 0x7E
+        if (inRange(bite, 0x21, 0x7E)) {
+          // Unset the iso-2022-jp output flag, set iso-2022-jp lead
+          // to byte, iso-2022-jp decoder state to trail byte, and
+          // return continue.
+          iso2022jp_output_flag = false;
+          iso2022jp_lead = bite;
+          iso2022jp_decoder_state = states.TrailByte;
+          return null;
+        }
+
+        // end-of-stream
+        if (bite === end_of_stream) {
+          // Return finished.
+          return finished;
+        }
+
+        // Otherwise
+        // Unset the iso-2022-jp output flag and return error.
+        iso2022jp_output_flag = false;
+        return decoderError(fatal);
+
+      case states.TrailByte:
+        // Trail byte
+        // Based on byte:
+
+        // 0x1B
+        if (bite === 0x1B) {
+          // Set iso-2022-jp decoder state to escape start and return
+          // continue.
+          iso2022jp_decoder_state = states.EscapeStart;
+          return decoderError(fatal);
+        }
+
+        // 0x21 to 0x7E
+        if (inRange(bite, 0x21, 0x7E)) {
+          // 1. Set the iso-2022-jp decoder state to lead byte.
+          iso2022jp_decoder_state = states.LeadByte;
+
+          // 2. Let pointer be (iso-2022-jp lead − 0x21) × 94 + byte − 0x21.
+          var pointer = (iso2022jp_lead - 0x21) * 94 + bite - 0x21;
+
+          // 3. Let code point be the index code point for pointer in index jis0208.
+          var code_point = indexCodePointFor(pointer, index('jis0208'));
+
+          // 4. If code point is null, return error.
+          if (code_point === null)
+            return decoderError(fatal);
+
+          // 5. Return a code point whose value is code point.
+          return code_point;
+        }
+
+        // end-of-stream
+        if (bite === end_of_stream) {
+          // Set the iso-2022-jp decoder state to lead byte, prepend
+          // byte to stream, and return error.
+          iso2022jp_decoder_state = states.LeadByte;
+          stream.prepend(bite);
+          return decoderError(fatal);
+        }
+
+        // Otherwise
+        // Set iso-2022-jp decoder state to lead byte and return
+        // error.
+        iso2022jp_decoder_state = states.LeadByte;
+        return decoderError(fatal);
+
+      case states.EscapeStart:
+        // Escape start
+
+        // 1. If byte is either 0x24 or 0x28, set iso-2022-jp lead to
+        // byte, iso-2022-jp decoder state to escape, and return
+        // continue.
+        if (bite === 0x24 || bite === 0x28) {
+          iso2022jp_lead = bite;
+          iso2022jp_decoder_state = states.Escape;
+          return null;
+        }
+
+        // 2. Prepend byte to stream.
+        stream.prepend(bite);
+
+        // 3. Unset the iso-2022-jp output flag, set iso-2022-jp
+        // decoder state to iso-2022-jp decoder output state, and
+        // return error.
+        iso2022jp_output_flag = false;
+        iso2022jp_decoder_state = iso2022jp_decoder_output_state;
+        return decoderError(fatal);
+
+      case states.Escape:
+        // Escape
+
+        // 1. Let lead be iso-2022-jp lead and set iso-2022-jp lead to
+        // 0x00.
+        var lead = iso2022jp_lead;
+        iso2022jp_lead = 0x00;
+
+        // 2. Let state be null.
+        var state = null;
+
+        // 3. If lead is 0x28 and byte is 0x42, set state to ASCII.
+        if (lead === 0x28 && bite === 0x42)
+          state = states.ASCII;
+
+        // 4. If lead is 0x28 and byte is 0x4A, set state to Roman.
+        if (lead === 0x28 && bite === 0x4A)
+          state = states.Roman;
+
+        // 5. If lead is 0x28 and byte is 0x49, set state to Katakana.
+        if (lead === 0x28 && bite === 0x49)
+          state = states.Katakana;
+
+        // 6. If lead is 0x24 and byte is either 0x40 or 0x42, set
+        // state to lead byte.
+        if (lead === 0x24 && (bite === 0x40 || bite === 0x42))
+          state = states.LeadByte;
+
+        // 7. If state is non-null, run these substeps:
+        if (state !== null) {
+          // 1. Set iso-2022-jp decoder state and iso-2022-jp decoder
+          // output state to states.
+          iso2022jp_decoder_state = iso2022jp_decoder_state = state;
+
+          // 2. Let output flag be the iso-2022-jp output flag.
+          var output_flag = iso2022jp_output_flag;
+
+          // 3. Set the iso-2022-jp output flag.
+          iso2022jp_output_flag = true;
+
+          // 4. Return continue, if output flag is unset, and error
+          // otherwise.
+          return !output_flag ? null : decoderError(fatal);
+        }
+
+        // 8. Prepend lead and byte to stream.
+        stream.prepend([lead, bite]);
+
+        // 9. Unset the iso-2022-jp output flag, set iso-2022-jp
+        // decoder state to iso-2022-jp decoder output state and
+        // return error.
+        iso2022jp_output_flag = false;
+        iso2022jp_decoder_state = iso2022jp_decoder_output_state;
+        return decoderError(fatal);
+      }
+    };
+  }
+
+  /**
+   * @constructor
+   * @implements {Encoder}
+   * @param {{fatal: boolean}} options
+   */
+  function ISO2022JPEncoder(options) {
+    var fatal = options.fatal;
+    // iso-2022-jp's encoder has an associated iso-2022-jp encoder
+    // state which is one of ASCII, Roman, and jis0208 (initially
+    // ASCII).
+    /** @enum */
+    var states = {
+      ASCII: 0,
+      Roman: 1,
+      jis0208: 2
+    };
+    var /** @type {number} */ iso2022jp_state = states.ASCII;
+    /**
+     * @param {Stream} stream Input stream.
+     * @param {number} code_point Next code point read from the stream.
+     * @return {(number|!Array.<number>)} Byte(s) to emit.
+     */
+    this.handler = function(stream, code_point) {
+      // 1. If code point is end-of-stream and iso-2022-jp encoder
+      // state is not ASCII, prepend code point to stream, set
+      // iso-2022-jp encoder state to ASCII, and return three bytes
+      // 0x1B 0x28 0x42.
+      if (code_point === end_of_stream &&
+          iso2022jp_state !== states.ASCII) {
+        stream.prepend(code_point);
+        return [0x1B, 0x28, 0x42];
+      }
+
+      // 2. If code point is end-of-stream and iso-2022-jp encoder
+      // state is ASCII, return finished.
+      if (code_point === end_of_stream && iso2022jp_state === states.ASCII)
+        return finished;
+
+      // 3. If iso-2022-jp encoder state is ASCII and code point is in
+      // the range U+0000 to U+007F, return a byte whose value is code
+      // point.
+      if (iso2022jp_state === states.ASCII &&
+          inRange(code_point, 0x0000, 0x007F))
+        return code_point;
+
+      // 4. If iso-2022-jp encoder state is Roman and code point is in
+      // the range U+0000 to U+007F, excluding U+005C and U+007E, or
+      // is U+00A5 or U+203E, run these substeps:
+      if (iso2022jp_state === states.Roman &&
+          inRange(code_point, 0x0000, 0x007F) &&
+          code_point !== 0x005C && code_point !== 0x007E) {
+
+        // 1. If code point is in the range U+0000 to U+007F, return a
+        // byte whose value is code point.
+        if (inRange(code_point, 0x0000, 0x007F))
+          return code_point;
+
+        // 2. If code point is U+00A5, return byte 0x5C.
+        if (code_point === 0x00A5)
+          return 0x5C;
+
+        // 3. If code point is U+203E, return byte 0x7E.
+        if (code_point === 0x203E)
+          return 0x7E;
+      }
+
+      // 5. If code point is in the range U+0000 to U+007F, and
+      // iso-2022-jp encoder state is not ASCII, prepend code point to
+      // stream, set iso-2022-jp encoder state to ASCII, and return
+      // three bytes 0x1B 0x28 0x42.
+      if (inRange(code_point, 0x0000, 0x007F) &&
+          iso2022jp_state !== states.ASCII) {
+        stream.prepend(code_point);
+        iso2022jp_state = states.ASCII;
+        return [0x1B, 0x28, 0x42];
+      }
+
+      // 6. If code point is either U+00A5 or U+203E, and iso-2022-jp
+      // encoder state is not Roman, prepend code point to stream, set
+      // iso-2022-jp encoder state to Roman, and return three bytes
+      // 0x1B 0x28 0x4A.
+      if ((code_point === 0x00A5 || code_point === 0x203E) &&
+          iso2022jp_state !== states.Roman) {
+        stream.prepend(code_point);
+        iso2022jp_state = states.Roman;
+        return [0x1B, 0x28, 0x4A];
+      }
+
+      // 7. Let pointer be the index pointer for code point in index
+      // jis0208.
+      var pointer = indexPointerFor(code_point, index('jis0208'));
+
+      // 8. If pointer is null, return error with code point.
+      if (pointer === null)
+        return encoderError(code_point);
+
+      // 9. If iso-2022-jp encoder state is not jis0208, prepend code
+      // point to stream, set iso-2022-jp encoder state to jis0208,
+      // and return three bytes 0x1B 0x24 0x42.
+      if (iso2022jp_state !== states.jis0208) {
+        stream.prepend(code_point);
+        iso2022jp_state = states.jis0208;
+        return [0x1B, 0x24, 0x42];
+      }
+
+      // 10. Let lead be pointer / 94 + 0x21.
+      var lead = div(pointer, 94) + 0x21;
+
+      // 11. Let trail be pointer % 94 + 0x21.
+      var trail = pointer % 94 + 0x21;
+
+      // 12. Return two bytes whose values are lead and trail.
+      return [lead, trail];
+    };
+  }
+
+  /** @param {{fatal: boolean}} options */
+  encoders['iso-2022-jp'] = function(options) {
+    return new ISO2022JPEncoder(options);
+  };
+  /** @param {{fatal: boolean}} options */
+  decoders['iso-2022-jp'] = function(options) {
+    return new ISO2022JPDecoder(options);
+  };
+
+  // 12.3 shift_jis
+
+  /**
+   * @constructor
+   * @implements {Decoder}
+   * @param {{fatal: boolean}} options
+   */
+  function ShiftJISDecoder(options) {
+    var fatal = options.fatal;
+    // shift_jis's decoder has an associated shift_jis lead (initially
+    // 0x00).
+    var /** @type {number} */ shiftjis_lead = 0x00;
+    /**
+     * @param {Stream} stream The stream of bytes being decoded.
+     * @param {number} bite The next byte read from the stream.
+     * @return {?(number|!Array.<number>)} The next code point(s)
+     *     decoded, or null if not enough data exists in the input
+     *     stream to decode a complete code point.
+     */
+    this.handler = function(stream, bite) {
+      // 1. If byte is end-of-stream and shift_jis lead is not 0x00,
+      // set shift_jis lead to 0x00 and return error.
+      if (bite === end_of_stream && shiftjis_lead !== 0x00) {
+        shiftjis_lead = 0x00;
+        return decoderError(fatal);
+      }
+
+      // 2. If byte is end-of-stream and shift_jis lead is 0x00,
+      // return finished.
+      if (bite === end_of_stream && shiftjis_lead === 0x00)
+        return finished;
+
+      // 3. If shift_jis lead is not 0x00, let lead be shift_jis lead,
+      // let pointer be null, set shift_jis lead to 0x00, and then run
+      // these substeps:
+      if (shiftjis_lead !== 0x00) {
+        var lead = shiftjis_lead;
+        var pointer = null;
+        shiftjis_lead = 0x00;
+
+        // 1. Let offset be 0x40, if byte is less than 0x7F, and 0x41
+        // otherwise.
+        var offset = (bite < 0x7F) ? 0x40 : 0x41;
+
+        // 2. Let lead offset be 0x81, if lead is less than 0xA0, and
+        // 0xC1 otherwise.
+        var lead_offset = (lead < 0xA0) ? 0x81 : 0xC1;
+
+        // 3. If byte is in the range 0x40 to 0x7E or 0x80 to 0xFC,
+        // set pointer to (lead − lead offset) × 188 + byte − offset.
+        if (inRange(bite, 0x40, 0x7E) || inRange(bite, 0x80, 0xFC))
+          pointer = (lead - lead_offset) * 188 + bite - offset;
+
+        // 4. Let code point be null, if pointer is null, and the
+        // index code point for pointer in index jis0208 otherwise.
+        var code_point = (pointer === null) ? null :
+              indexCodePointFor(pointer, index('jis0208'));
+
+        // 5. If code point is null and pointer is in the range 8836
+        // to 10528, return a code point whose value is 0xE000 +
+        // pointer − 8836.
+        if (code_point === null && pointer !== null &&
+            inRange(pointer, 8836, 10528))
+          return 0xE000 + pointer - 8836;
+
+        // 6. If pointer is null, prepend byte to stream.
+        if (pointer === null)
+          stream.prepend(bite);
+
+        // 7. If code point is null, return error.
+        if (code_point === null)
+          return decoderError(fatal);
+
+        // 8. Return a code point whose value is code point.
+        return code_point;
+      }
+
+      // 4. If byte is in the range 0x00 to 0x80, return a code point
+      // whose value is byte.
+      if (inRange(bite, 0x00, 0x80))
+        return bite;
+
+      // 5. If byte is in the range 0xA1 to 0xDF, return a code point
+      // whose value is 0xFF61 + byte − 0xA1.
+      if (inRange(bite, 0xA1, 0xDF))
+        return 0xFF61 + bite - 0xA1;
+
+      // 6. If byte is in the range 0x81 to 0x9F or 0xE0 to 0xFC, set
+      // shift_jis lead to byte and return continue.
+      if (inRange(bite, 0x81, 0x9F) || inRange(bite, 0xE0, 0xFC)) {
+        shiftjis_lead = bite;
+        return null;
+      }
+
+      // 7. Return error.
+      return decoderError(fatal);
+    };
+  }
+
+  /**
+   * @constructor
+   * @implements {Encoder}
+   * @param {{fatal: boolean}} options
+   */
+  function ShiftJISEncoder(options) {
+    var fatal = options.fatal;
+    /**
+     * @param {Stream} stream Input stream.
+     * @param {number} code_point Next code point read from the stream.
+     * @return {(number|!Array.<number>)} Byte(s) to emit.
+     */
+    this.handler = function(stream, code_point) {
+      // 1. If code point is end-of-stream, return finished.
+      if (code_point === end_of_stream)
+        return finished;
+
+      // 2. If code point is in the range U+0000 to U+0080, return a
+      // byte whose value is code point.
+      if (inRange(code_point, 0x0000, 0x0080))
+        return code_point;
+
+      // 3. If code point is U+00A5, return byte 0x5C.
+      if (code_point === 0x00A5)
+        return 0x5C;
+
+      // 4. If code point is U+203E, return byte 0x7E.
+      if (code_point === 0x203E)
+        return 0x7E;
+
+      // 5. If code point is in the range U+FF61 to U+FF9F, return a
+      // byte whose value is code point − 0xFF61 + 0xA1.
+      if (inRange(code_point, 0xFF61, 0xFF9F))
+        return code_point - 0xFF61 + 0xA1;
+
+      // 6. Let pointer be the index shift_jis pointer for code point.
+      var pointer = indexShiftJISPointerFor(code_point);
+
+      // 7. If pointer is null, return error with code point.
+      if (pointer === null)
+        return encoderError(code_point);
+
+      // 8. Let lead be pointer / 188.
+      var lead = div(pointer, 188);
+
+      // 9. Let lead offset be 0x81, if lead is less than 0x1F, and
+      // 0xC1 otherwise.
+      var lead_offset = (lead < 0x1F) ? 0x81 : 0xC1;
+
+      // 10. Let trail be pointer % 188.
+      var trail = pointer % 188;
+
+      // 11. Let offset be 0x40, if trail is less than 0x3F, and 0x41
+      // otherwise.
+      var offset = (trail < 0x3F) ? 0x40 : 0x41;
+
+      // 12. Return two bytes whose values are lead + lead offset and
+      // trail + offset.
+      return [lead + lead_offset, trail + offset];
+    };
+  }
+
+  /** @param {{fatal: boolean}} options */
+  encoders['shift_jis'] = function(options) {
+    return new ShiftJISEncoder(options);
+  };
+  /** @param {{fatal: boolean}} options */
+  decoders['shift_jis'] = function(options) {
+    return new ShiftJISDecoder(options);
+  };
+
+  //
+  // 13. Legacy multi-byte Korean encodings
+  //
+
+  // 13.1 euc-kr
+
+  /**
+   * @constructor
+   * @implements {Decoder}
+   * @param {{fatal: boolean}} options
+   */
+  function EUCKRDecoder(options) {
+    var fatal = options.fatal;
+
+    // euc-kr's decoder has an associated euc-kr lead (initially 0x00).
+    var /** @type {number} */ euckr_lead = 0x00;
+    /**
+     * @param {Stream} stream The stream of bytes being decoded.
+     * @param {number} bite The next byte read from the stream.
+     * @return {?(number|!Array.<number>)} The next code point(s)
+     *     decoded, or null if not enough data exists in the input
+     *     stream to decode a complete code point.
+     */
+    this.handler = function(stream, bite) {
+      // 1. If byte is end-of-stream and euc-kr lead is not 0x00, set
+      // euc-kr lead to 0x00 and return error.
+      if (bite === end_of_stream && euckr_lead !== 0) {
+        euckr_lead = 0x00;
+        return decoderError(fatal);
+      }
+
+      // 2. If byte is end-of-stream and euc-kr lead is 0x00, return
+      // finished.
+      if (bite === end_of_stream && euckr_lead === 0)
+        return finished;
+
+      // 3. If euc-kr lead is not 0x00, let lead be euc-kr lead, let
+      // pointer be null, set euc-kr lead to 0x00, and then run these
+      // substeps:
+      if (euckr_lead !== 0x00) {
+        var lead = euckr_lead;
+        var pointer = null;
+        euckr_lead = 0x00;
+
+        // 1. If byte is in the range 0x41 to 0xFE, set pointer to
+        // (lead − 0x81) × 190 + (byte − 0x41).
+        if (inRange(bite, 0x41, 0xFE))
+          pointer = (lead - 0x81) * 190 + (bite - 0x41);
+
+        // 2. Let code point be null, if pointer is null, and the
+        // index code point for pointer in index euc-kr otherwise.
+        var code_point = (pointer === null) ? null : indexCodePointFor(pointer, index('euc-kr'));
+
+        // 3. If pointer is null and byte is in the range 0x00 to
+        // 0x7F, prepend byte to stream.
+        if (pointer === null && inRange(bite, 0x00, 0x7F))
+          stream.prepend(bite);
+
+        // 4. If code point is null, return error.
+        if (code_point === null)
+          return decoderError(fatal);
+
+        // 5. Return a code point whose value is code point.
+        return code_point;
+      }
+
+      // 4. If byte is in the range 0x00 to 0x7F, return a code point
+      // whose value is byte.
+      if (inRange(bite, 0x00, 0x7F))
+        return bite;
+
+      // 5. If byte is in the range 0x81 to 0xFE, set euc-kr lead to
+      // byte and return continue.
+      if (inRange(bite, 0x81, 0xFE)) {
+        euckr_lead = bite;
+        return null;
+      }
+
+      // 6. Return error.
+      return decoderError(fatal);
+    };
+  }
+
+  /**
+   * @constructor
+   * @implements {Encoder}
+   * @param {{fatal: boolean}} options
+   */
+  function EUCKREncoder(options) {
+    var fatal = options.fatal;
+    /**
+     * @param {Stream} stream Input stream.
+     * @param {number} code_point Next code point read from the stream.
+     * @return {(number|!Array.<number>)} Byte(s) to emit.
+     */
+    this.handler = function(stream, code_point) {
+      // 1. If code point is end-of-stream, return finished.
+      if (code_point === end_of_stream)
+        return finished;
+
+      // 2. If code point is in the range U+0000 to U+007F, return a
+      // byte whose value is code point.
+      if (inRange(code_point, 0x0000, 0x007F))
+        return code_point;
+
+      // 3. Let pointer be the index pointer for code point in index
+      // euc-kr.
+      var pointer = indexPointerFor(code_point, index('euc-kr'));
+
+      // 4. If pointer is null, return error with code point.
+      if (pointer === null)
+        return encoderError(code_point);
+
+      // 5. Let lead be pointer / 190 + 0x81.
+      var lead = div(pointer, 190) + 0x81;
+
+      // 6. Let trail be pointer % 190 + 0x41.
+      var trail = (pointer % 190) + 0x41;
+
+      // 7. Return two bytes whose values are lead and trail.
+      return [lead, trail];
+    };
+  }
+
+  /** @param {{fatal: boolean}} options */
+  encoders['euc-kr'] = function(options) {
+    return new EUCKREncoder(options);
+  };
+  /** @param {{fatal: boolean}} options */
+  decoders['euc-kr'] = function(options) {
+    return new EUCKRDecoder(options);
+  };
+
+
+  //
+  // 14. Legacy miscellaneous encodings
+  //
+
+  // 14.1 replacement
+
+  // Not needed - API throws RangeError
+
+  // 14.2 utf-16
+
+  /**
+   * @param {number} code_unit
+   * @param {boolean} utf16be
+   * @return {!Array.<number>} bytes
+   */
+  function convertCodeUnitToBytes(code_unit, utf16be) {
+    // 1. Let byte1 be code unit >> 8.
+    var byte1 = code_unit >> 8;
+
+    // 2. Let byte2 be code unit & 0x00FF.
+    var byte2 = code_unit & 0x00FF;
+
+    // 3. Then return the bytes in order:
+        // utf-16be flag is set: byte1, then byte2.
+    if (utf16be)
+      return [byte1, byte2];
+    // utf-16be flag is unset: byte2, then byte1.
+    return [byte2, byte1];
+  }
+
+  /**
+   * @constructor
+   * @implements {Decoder}
+   * @param {boolean} utf16_be True if big-endian, false if little-endian.
+   * @param {{fatal: boolean}} options
+   */
+  function UTF16Decoder(utf16_be, options) {
+    var fatal = options.fatal;
+    var /** @type {?number} */ utf16_lead_byte = null,
+        /** @type {?number} */ utf16_lead_surrogate = null;
+    /**
+     * @param {Stream} stream The stream of bytes being decoded.
+     * @param {number} bite The next byte read from the stream.
+     * @return {?(number|!Array.<number>)} The next code point(s)
+     *     decoded, or null if not enough data exists in the input
+     *     stream to decode a complete code point.
+     */
+    this.handler = function(stream, bite) {
+      // 1. If byte is end-of-stream and either utf-16 lead byte or
+      // utf-16 lead surrogate is not null, set utf-16 lead byte and
+      // utf-16 lead surrogate to null, and return error.
+      if (bite === end_of_stream && (utf16_lead_byte !== null ||
+                                utf16_lead_surrogate !== null)) {
+        return decoderError(fatal);
+      }
+
+      // 2. If byte is end-of-stream and utf-16 lead byte and utf-16
+      // lead surrogate are null, return finished.
+      if (bite === end_of_stream && utf16_lead_byte === null &&
+          utf16_lead_surrogate === null) {
+        return finished;
+      }
+
+      // 3. If utf-16 lead byte is null, set utf-16 lead byte to byte
+      // and return continue.
+      if (utf16_lead_byte === null) {
+        utf16_lead_byte = bite;
+        return null;
+      }
+
+      // 4. Let code unit be the result of:
+      var code_unit;
+      if (utf16_be) {
+        // utf-16be decoder flag is set
+        //   (utf-16 lead byte << 8) + byte.
+        code_unit = (utf16_lead_byte << 8) + bite;
+      } else {
+        // utf-16be decoder flag is unset
+        //   (byte << 8) + utf-16 lead byte.
+        code_unit = (bite << 8) + utf16_lead_byte;
+      }
+      // Then set utf-16 lead byte to null.
+      utf16_lead_byte = null;
+
+      // 5. If utf-16 lead surrogate is not null, let lead surrogate
+      // be utf-16 lead surrogate, set utf-16 lead surrogate to null,
+      // and then run these substeps:
+      if (utf16_lead_surrogate !== null) {
+        var lead_surrogate = utf16_lead_surrogate;
+        utf16_lead_surrogate = null;
+
+        // 1. If code unit is in the range U+DC00 to U+DFFF, return a
+        // code point whose value is 0x10000 + ((lead surrogate −
+        // 0xD800) << 10) + (code unit − 0xDC00).
+        if (inRange(code_unit, 0xDC00, 0xDFFF)) {
+          return 0x10000 + (lead_surrogate - 0xD800) * 0x400 +
+              (code_unit - 0xDC00);
+        }
+
+        // 2. Prepend the sequence resulting of converting code unit
+        // to bytes using utf-16be decoder flag to stream and return
+        // error.
+        stream.prepend(convertCodeUnitToBytes(code_unit, utf16_be));
+        return decoderError(fatal);
+      }
+
+      // 6. If code unit is in the range U+D800 to U+DBFF, set utf-16
+      // lead surrogate to code unit and return continue.
+      if (inRange(code_unit, 0xD800, 0xDBFF)) {
+        utf16_lead_surrogate = code_unit;
+        return null;
+      }
+
+      // 7. If code unit is in the range U+DC00 to U+DFFF, return
+      // error.
+      if (inRange(code_unit, 0xDC00, 0xDFFF))
+        return decoderError(fatal);
+
+      // 8. Return code point code unit.
+      return code_unit;
+    };
+  }
+
+  /**
+   * @constructor
+   * @implements {Encoder}
+   * @param {boolean} utf16_be True if big-endian, false if little-endian.
+   * @param {{fatal: boolean}} options
+   */
+  function UTF16Encoder(utf16_be, options) {
+    var fatal = options.fatal;
+    /**
+     * @param {Stream} stream Input stream.
+     * @param {number} code_point Next code point read from the stream.
+     * @return {(number|!Array.<number>)} Byte(s) to emit.
+     */
+    this.handler = function(stream, code_point) {
+      // 1. If code point is end-of-stream, return finished.
+      if (code_point === end_of_stream)
+        return finished;
+
+      // 2. If code point is in the range U+0000 to U+FFFF, return the
+      // sequence resulting of converting code point to bytes using
+      // utf-16be encoder flag.
+      if (inRange(code_point, 0x0000, 0xFFFF))
+        return convertCodeUnitToBytes(code_point, utf16_be);
+
+      // 3. Let lead be ((code point − 0x10000) >> 10) + 0xD800,
+      // converted to bytes using utf-16be encoder flag.
+      var lead = convertCodeUnitToBytes(
+        ((code_point - 0x10000) >> 10) + 0xD800, utf16_be);
+
+      // 4. Let trail be ((code point − 0x10000) & 0x3FF) + 0xDC00,
+      // converted to bytes using utf-16be encoder flag.
+      var trail = convertCodeUnitToBytes(
+        ((code_point - 0x10000) & 0x3FF) + 0xDC00, utf16_be);
+
+      // 5. Return a byte sequence of lead followed by trail.
+      return lead.concat(trail);
+    };
+  }
+
+  // 14.3 utf-16be
+  /** @param {{fatal: boolean}} options */
+  encoders['utf-16be'] = function(options) {
+    return new UTF16Encoder(true, options);
+  };
+  /** @param {{fatal: boolean}} options */
+  decoders['utf-16be'] = function(options) {
+    return new UTF16Decoder(true, options);
+  };
+
+  // 14.4 utf-16le
+  /** @param {{fatal: boolean}} options */
+  encoders['utf-16le'] = function(options) {
+    return new UTF16Encoder(false, options);
+  };
+  /** @param {{fatal: boolean}} options */
+  decoders['utf-16le'] = function(options) {
+    return new UTF16Decoder(false, options);
+  };
+
+  // 14.5 x-user-defined
+
+  /**
+   * @constructor
+   * @implements {Decoder}
+   * @param {{fatal: boolean}} options
+   */
+  function XUserDefinedDecoder(options) {
+    var fatal = options.fatal;
+    /**
+     * @param {Stream} stream The stream of bytes being decoded.
+     * @param {number} bite The next byte read from the stream.
+     * @return {?(number|!Array.<number>)} The next code point(s)
+     *     decoded, or null if not enough data exists in the input
+     *     stream to decode a complete code point.
+     */
+    this.handler = function(stream, bite) {
+      // 1. If byte is end-of-stream, return finished.
+      if (bite === end_of_stream)
+        return finished;
+
+      // 2. If byte is in the range 0x00 to 0x7F, return a code point
+      // whose value is byte.
+      if (inRange(bite, 0x00, 0x7F))
+        return bite;
+
+      // 3. Return a code point whose value is 0xF780 + byte − 0x80.
+      return 0xF780 + bite - 0x80;
+    };
+  }
+
+  /**
+   * @constructor
+   * @implements {Encoder}
+   * @param {{fatal: boolean}} options
+   */
+  function XUserDefinedEncoder(options) {
+    var fatal = options.fatal;
+    /**
+     * @param {Stream} stream Input stream.
+     * @param {number} code_point Next code point read from the stream.
+     * @return {(number|!Array.<number>)} Byte(s) to emit.
+     */
+    this.handler = function(stream, code_point) {
+      // 1.If code point is end-of-stream, return finished.
+      if (code_point === end_of_stream)
+        return finished;
+
+      // 2. If code point is in the range U+0000 to U+007F, return a
+      // byte whose value is code point.
+      if (inRange(code_point, 0x0000, 0x007F))
+        return code_point;
+
+      // 3. If code point is in the range U+F780 to U+F7FF, return a
+      // byte whose value is code point − 0xF780 + 0x80.
+      if (inRange(code_point, 0xF780, 0xF7FF))
+        return code_point - 0xF780 + 0x80;
+
+      // 4. Return error with code point.
+      return encoderError(code_point);
+    };
+  }
+
+  /** @param {{fatal: boolean}} options */
+  encoders['x-user-defined'] = function(options) {
+    return new XUserDefinedEncoder(options);
+  };
+  /** @param {{fatal: boolean}} options */
+  decoders['x-user-defined'] = function(options) {
+    return new XUserDefinedDecoder(options);
+  };
+
+  if (!('TextEncoder' in global))
+    global['TextEncoder'] = TextEncoder;
+  if (!('TextDecoder' in global))
+    global['TextDecoder'] = TextDecoder;
+}(this));
+(function() {
+
+  window.WSC = {store_id:"ofhbbkphhbklhfoeikjpcbhemlocgigb"}
+
+function getchromeversion() {
+    var version
+    var match = navigator.userAgent.match(/Chrome\/([\d]+)/)
+    if (match) {
+        var version = parseInt(match[1])
+    }
+    return version
+}
+WSC.getchromeversion = getchromeversion
+
+if (! String.prototype.endsWith) {
+    String.prototype.endsWith = function(substr) {
+        for (var i=0; i<substr.length; i++) {
+            if (this[this.length - 1 - i] !== substr[substr.length - 1 - i]) {
+                return false
+            }
+        }
+        return true
+    }
+}
+if (! String.prototype.startsWith) {
+    String.prototype.startsWith = function(substr) {
+        for (var i=0; i<substr.length; i++) {
+            if (this[i] !== substr[i]) {
+                return false
+            }
+        }
+        return true
+    }
+}
+
+// common stuff
+
+
+    function EntryCache() {
+        this.cache = {}
+    }
+    var EntryCacheprototype = {
+        clearTorrent: function() {
+            // todo
+        },
+        clearKey: function(skey) {
+            var todelete = []
+            for (var key in this.cache) {
+                if (key.startsWith(skey)) {
+                    todelete.push(key)
+                }
+            }
+            for (var i=0; i<todelete.length; i++) {
+                delete this.cache[todelete[i]]
+            }
+        },
+        clear: function() {
+            this.cache = {}
+        },
+        unset: function(k) {
+            delete this.cache[k]
+        },
+        set: function(k,v) {
+            this.cache[k] = {v: v};
+            // Copy the last-modified date for later verification.
+            if (v.lastModifiedDate) {
+                this.cache[k].lastModifiedDate = v.lastModifiedDate;
+            }
+        },
+        get: function(k) {
+            if (this.cache[k]) {
+                var v = this.cache[k].v;
+                // If the file was modified, then the file object's last-modified date
+                // will be different (greater than) the copied date. In this case the
+                // file object will have stale contents so we must invalidate the cache.
+                // This happens when reading files from Google Drive.
+                if (v.lastModifiedDate && this.cache[k].lastModifiedDate < v.lastModifiedDate) {
+                    console.log("invalidate file by lastModifiedDate");
+                    this.unset(k);
+                    return null;
+                } else {
+                    return v;
+                }
+            }
+        }
+    }
+    _.extend(EntryCache.prototype, EntryCacheprototype)
+
+    window.WSC.entryCache = new EntryCache
+    window.WSC.entryFileCache = new EntryCache
+
+WSC.recursiveGetEntry = function(filesystem, path, callback) {
+    // XXX duplication with jstorrent
+    var cacheKey = filesystem.filesystem.name +
+        filesystem.fullPath +
+        '/' + path.join('/')
+    var inCache = WSC.entryCache.get(cacheKey)
+    if (inCache) { 
+        //console.log('cache hit');
+        callback(inCache); return
+    }
+
+    var state = {e:filesystem}
+
+    function recurse(e) {
+        if (path.length == 0) {
+            if (e.name == 'TypeMismatchError') {
+                state.e.getDirectory(state.path, {create:false}, recurse, recurse)
+            } else if (e.isFile) {
+                WSC.entryCache.set(cacheKey,e)
+                callback(e)
+            } else if (e.isDirectory) {
+                //console.log(filesystem,path,cacheKey,state)
+                WSC.entryCache.set(cacheKey,e)
+                callback(e)
+            } else {
+                callback({error:'path not found'})
+            }
+        } else if (e.isDirectory) {
+            if (path.length > 1) {
+                // this is not calling error callback, simply timing out!!!
+                e.getDirectory(path.shift(), {create:false}, recurse, recurse)
+            } else {
+                state.e = e
+                state.path = _.clone(path)
+                e.getFile(path.shift(), {create:false}, recurse, recurse)
+            }
+        } else if (e.name == 'NotFoundError') {
+            callback({error:e.name, message:e.message})
+        } else {
+            callback({error:'file exists'})
+        }
+    }
+    recurse(filesystem)
+}
+
+WSC.parseHeaders = function(lines) {
+    var headers = {}
+    // TODO - multi line headers?
+    for (var i=0;i<lines.length;i++) {
+        var l = lines[i].split(':')
+        headers[l[0].toLowerCase()] = l[1].trim()
+    }
+    return headers
+}
+function ui82str(arr, startOffset) {
+    console.assert(arr)
+    if (! startOffset) { startOffset = 0 }
+    var length = arr.length - startOffset // XXX a few random exceptions here
+    var str = ""
+    for (var i=0; i<length; i++) {
+        str += String.fromCharCode(arr[i + startOffset])
+    }
+    return str
+}
+function ui82arr(arr, startOffset) {
+    if (! startOffset) { startOffset = 0 }
+    var length = arr.length - startOffset
+    var outarr = []
+    for (var i=0; i<length; i++) {
+        outarr.push(arr[i + startOffset])
+    }
+    return outarr
+}
+function str2ab(s) {
+    var arr = []
+    for (var i=0; i<s.length; i++) {
+        arr.push(s.charCodeAt(i))
+    }
+    return new Uint8Array(arr).buffer
+}
+    WSC.ui82str = ui82str
+WSC.str2ab = str2ab
+    WSC.stringToUint8Array = function(string) {
+        var encoder = new TextEncoder()
+        return encoder.encode(string)
+    };
+
+    WSC.arrayBufferToString = function(buffer) {
+        var decoder = new TextDecoder()
+        return decoder.decode(buffer)
+    };
+/*
+    var logToScreen = function(log) {
+        logger.textContent += log + "\n";
+    }
+
+*/
+
+})();
+(function() {
+var MIMETYPES = {
+  "123": "application/vnd.lotus-1-2-3", 
+  "3dml": "text/vnd.in3d.3dml", 
+  "3ds": "image/x-3ds", 
+  "3g2": "video/3gpp2", 
+  "3gp": "video/3gpp", 
+  "7z": "application/x-7z-compressed", 
+  "aab": "application/x-authorware-bin", 
+  "aac": "audio/x-aac", 
+  "aam": "application/x-authorware-map", 
+  "aas": "application/x-authorware-seg", 
+  "abw": "application/x-abiword", 
+  "ac": "application/pkix-attr-cert", 
+  "acc": "application/vnd.americandynamics.acc", 
+  "ace": "application/x-ace-compressed", 
+  "acu": "application/vnd.acucobol", 
+  "acutc": "application/vnd.acucorp", 
+  "adp": "audio/adpcm", 
+  "aep": "application/vnd.audiograph", 
+  "afm": "application/x-font-type1", 
+  "afp": "application/vnd.ibm.modcap", 
+  "ahead": "application/vnd.ahead.space", 
+  "ai": "application/postscript", 
+  "aif": "audio/x-aiff", 
+  "aifc": "audio/x-aiff", 
+  "aiff": "audio/x-aiff", 
+  "air": "application/vnd.adobe.air-application-installer-package+zip", 
+  "ait": "application/vnd.dvb.ait", 
+  "ami": "application/vnd.amiga.ami", 
+  "apk": "application/vnd.android.package-archive", 
+  "appcache": "text/cache-manifest", 
+  "application": "application/x-ms-application", 
+  "apr": "application/vnd.lotus-approach", 
+  "arc": "application/x-freearc", 
+  "asc": "application/pgp-signature", 
+  "asf": "video/x-ms-asf", 
+  "asm": "text/x-asm", 
+  "aso": "application/vnd.accpac.simply.aso", 
+  "asx": "video/x-ms-asf", 
+  "atc": "application/vnd.acucorp", 
+  "atom": "application/atom+xml", 
+  "atomcat": "application/atomcat+xml", 
+  "atomsvc": "application/atomsvc+xml", 
+  "atx": "application/vnd.antix.game-component", 
+  "au": "audio/basic", 
+  "avi": "video/x-msvideo", 
+  "aw": "application/applixware", 
+  "azf": "application/vnd.airzip.filesecure.azf", 
+  "azs": "application/vnd.airzip.filesecure.azs", 
+  "azw": "application/vnd.amazon.ebook", 
+  "bat": "application/x-msdownload", 
+  "bcpio": "application/x-bcpio", 
+  "bdf": "application/x-font-bdf", 
+  "bdm": "application/vnd.syncml.dm+wbxml", 
+  "bed": "application/vnd.realvnc.bed", 
+  "bh2": "application/vnd.fujitsu.oasysprs", 
+  "bin": "application/octet-stream", 
+  "blb": "application/x-blorb", 
+  "blorb": "application/x-blorb", 
+  "bmi": "application/vnd.bmi", 
+  "bmp": "image/bmp", 
+  "book": "application/vnd.framemaker", 
+  "box": "application/vnd.previewsystems.box", 
+  "boz": "application/x-bzip2", 
+  "bpk": "application/octet-stream", 
+  "btif": "image/prs.btif", 
+  "bz": "application/x-bzip", 
+  "bz2": "application/x-bzip2", 
+  "c": "text/x-c", 
+  "c11amc": "application/vnd.cluetrust.cartomobile-config", 
+  "c11amz": "application/vnd.cluetrust.cartomobile-config-pkg", 
+  "c4d": "application/vnd.clonk.c4group", 
+  "c4f": "application/vnd.clonk.c4group", 
+  "c4g": "application/vnd.clonk.c4group", 
+  "c4p": "application/vnd.clonk.c4group", 
+  "c4u": "application/vnd.clonk.c4group", 
+  "cab": "application/vnd.ms-cab-compressed", 
+  "caf": "audio/x-caf", 
+  "cap": "application/vnd.tcpdump.pcap", 
+  "car": "application/vnd.curl.car", 
+  "cat": "application/vnd.ms-pki.seccat", 
+  "cb7": "application/x-cbr", 
+  "cba": "application/x-cbr", 
+  "cbr": "application/x-cbr", 
+  "cbt": "application/x-cbr", 
+  "cbz": "application/x-cbr", 
+  "cc": "text/x-c", 
+  "cct": "application/x-director", 
+  "ccxml": "application/ccxml+xml", 
+  "cdbcmsg": "application/vnd.contact.cmsg", 
+  "cdf": "application/x-netcdf", 
+  "cdkey": "application/vnd.mediastation.cdkey", 
+  "cdmia": "application/cdmi-capability", 
+  "cdmic": "application/cdmi-container", 
+  "cdmid": "application/cdmi-domain", 
+  "cdmio": "application/cdmi-object", 
+  "cdmiq": "application/cdmi-queue", 
+  "cdx": "chemical/x-cdx", 
+  "cdxml": "application/vnd.chemdraw+xml", 
+  "cdy": "application/vnd.cinderella", 
+  "cer": "application/pkix-cert", 
+  "cfs": "application/x-cfs-compressed", 
+  "cgm": "image/cgm", 
+  "chat": "application/x-chat", 
+  "chm": "application/vnd.ms-htmlhelp", 
+  "chrt": "application/vnd.kde.kchart", 
+  "cif": "chemical/x-cif", 
+  "cii": "application/vnd.anser-web-certificate-issue-initiation", 
+  "cil": "application/vnd.ms-artgalry", 
+  "cla": "application/vnd.claymore", 
+  "class": "application/java-vm", 
+  "clkk": "application/vnd.crick.clicker.keyboard", 
+  "clkp": "application/vnd.crick.clicker.palette", 
+  "clkt": "application/vnd.crick.clicker.template", 
+  "clkw": "application/vnd.crick.clicker.wordbank", 
+  "clkx": "application/vnd.crick.clicker", 
+  "clp": "application/x-msclip", 
+  "cmc": "application/vnd.cosmocaller", 
+  "cmdf": "chemical/x-cmdf", 
+  "cml": "chemical/x-cml", 
+  "cmp": "application/vnd.yellowriver-custom-menu", 
+  "cmx": "image/x-cmx", 
+  "cod": "application/vnd.rim.cod", 
+  "com": "application/x-msdownload", 
+  "conf": "text/plain", 
+  "cpio": "application/x-cpio", 
+  "cpp": "text/x-c", 
+  "cpt": "application/mac-compactpro", 
+  "crd": "application/x-mscardfile", 
+  "crl": "application/pkix-crl", 
+  "crt": "application/x-x509-ca-cert", 
+  "cryptonote": "application/vnd.rig.cryptonote", 
+  "csh": "application/x-csh", 
+  "csml": "chemical/x-csml", 
+  "csp": "application/vnd.commonspace", 
+  "css": "text/css", 
+  "cst": "application/x-director", 
+  "csv": "text/csv", 
+  "cu": "application/cu-seeme", 
+  "curl": "text/vnd.curl", 
+  "cww": "application/prs.cww", 
+  "cxt": "application/x-director", 
+  "cxx": "text/x-c", 
+  "dae": "model/vnd.collada+xml", 
+  "daf": "application/vnd.mobius.daf", 
+  "dart": "application/vnd.dart", 
+  "dataless": "application/vnd.fdsn.seed", 
+  "davmount": "application/davmount+xml", 
+  "dbk": "application/docbook+xml", 
+  "dcr": "application/x-director", 
+  "dcurl": "text/vnd.curl.dcurl", 
+  "dd2": "application/vnd.oma.dd2+xml", 
+  "ddd": "application/vnd.fujixerox.ddd", 
+  "deb": "application/x-debian-package", 
+  "def": "text/plain", 
+  "deploy": "application/octet-stream", 
+  "der": "application/x-x509-ca-cert", 
+  "dfac": "application/vnd.dreamfactory", 
+  "dgc": "application/x-dgc-compressed", 
+  "dic": "text/x-c", 
+  "dir": "application/x-director", 
+  "dis": "application/vnd.mobius.dis", 
+  "dist": "application/octet-stream", 
+  "distz": "application/octet-stream", 
+  "djv": "image/vnd.djvu", 
+  "djvu": "image/vnd.djvu", 
+  "dll": "application/x-msdownload", 
+  "dmg": "application/x-apple-diskimage", 
+  "dmp": "application/vnd.tcpdump.pcap", 
+  "dms": "application/octet-stream", 
+  "dna": "application/vnd.dna", 
+  "doc": "application/msword", 
+  "docm": "application/vnd.ms-word.document.macroenabled.12", 
+  "docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document", 
+  "dot": "application/msword", 
+  "dotm": "application/vnd.ms-word.template.macroenabled.12", 
+  "dotx": "application/vnd.openxmlformats-officedocument.wordprocessingml.template", 
+  "dp": "application/vnd.osgi.dp", 
+  "dpg": "application/vnd.dpgraph", 
+  "dra": "audio/vnd.dra", 
+  "dsc": "text/prs.lines.tag", 
+  "dssc": "application/dssc+der", 
+  "dtb": "application/x-dtbook+xml", 
+  "dtd": "application/xml-dtd", 
+  "dts": "audio/vnd.dts", 
+  "dtshd": "audio/vnd.dts.hd", 
+  "dump": "application/octet-stream", 
+  "dvb": "video/vnd.dvb.file", 
+  "dvi": "application/x-dvi", 
+  "dwf": "model/vnd.dwf", 
+  "dwg": "image/vnd.dwg", 
+  "dxf": "image/vnd.dxf", 
+  "dxp": "application/vnd.spotfire.dxp", 
+  "dxr": "application/x-director", 
+  "ecelp4800": "audio/vnd.nuera.ecelp4800", 
+  "ecelp7470": "audio/vnd.nuera.ecelp7470", 
+  "ecelp9600": "audio/vnd.nuera.ecelp9600", 
+  "ecma": "application/ecmascript", 
+  "edm": "application/vnd.novadigm.edm", 
+  "edx": "application/vnd.novadigm.edx", 
+  "efif": "application/vnd.picsel", 
+  "ei6": "application/vnd.pg.osasli", 
+  "elc": "application/octet-stream", 
+  "emf": "application/x-msmetafile", 
+  "eml": "message/rfc822", 
+  "emma": "application/emma+xml", 
+  "emz": "application/x-msmetafile", 
+  "eol": "audio/vnd.digital-winds", 
+  "eot": "application/vnd.ms-fontobject", 
+  "eps": "application/postscript", 
+  "epub": "application/epub+zip", 
+  "es3": "application/vnd.eszigno3+xml", 
+  "esa": "application/vnd.osgi.subsystem", 
+  "esf": "application/vnd.epson.esf", 
+  "et3": "application/vnd.eszigno3+xml", 
+  "etx": "text/x-setext", 
+  "eva": "application/x-eva", 
+  "evy": "application/x-envoy", 
+  "exe": "application/x-msdownload", 
+  "exi": "application/exi", 
+  "ext": "application/vnd.novadigm.ext", 
+  "ez": "application/andrew-inset", 
+  "ez2": "application/vnd.ezpix-album", 
+  "ez3": "application/vnd.ezpix-package", 
+  "f": "text/x-fortran", 
+  "f4v": "video/x-f4v", 
+  "f77": "text/x-fortran", 
+  "f90": "text/x-fortran", 
+  "fbs": "image/vnd.fastbidsheet", 
+  "fcdt": "application/vnd.adobe.formscentral.fcdt", 
+  "fcs": "application/vnd.isac.fcs", 
+  "fdf": "application/vnd.fdf", 
+  "fe_launch": "application/vnd.denovo.fcselayout-link", 
+  "fg5": "application/vnd.fujitsu.oasysgp", 
+  "fgd": "application/x-director", 
+  "fh": "image/x-freehand", 
+  "fh4": "image/x-freehand", 
+  "fh5": "image/x-freehand", 
+  "fh7": "image/x-freehand", 
+  "fhc": "image/x-freehand", 
+  "fig": "application/x-xfig", 
+  "flac": "audio/x-flac", 
+  "fli": "video/x-fli", 
+  "flo": "application/vnd.micrografx.flo", 
+  "flv": "video/x-flv", 
+  "flw": "application/vnd.kde.kivio", 
+  "flx": "text/vnd.fmi.flexstor", 
+  "fly": "text/vnd.fly", 
+  "fm": "application/vnd.framemaker", 
+  "fnc": "application/vnd.frogans.fnc", 
+  "for": "text/x-fortran", 
+  "fpx": "image/vnd.fpx", 
+  "frame": "application/vnd.framemaker", 
+  "fsc": "application/vnd.fsc.weblaunch", 
+  "fst": "image/vnd.fst", 
+  "ftc": "application/vnd.fluxtime.clip", 
+  "fti": "application/vnd.anser-web-funds-transfer-initiation", 
+  "fvt": "video/vnd.fvt", 
+  "fxp": "application/vnd.adobe.fxp", 
+  "fxpl": "application/vnd.adobe.fxp", 
+  "fzs": "application/vnd.fuzzysheet", 
+  "g2w": "application/vnd.geoplan", 
+  "g3": "image/g3fax", 
+  "g3w": "application/vnd.geospace", 
+  "gac": "application/vnd.groove-account", 
+  "gam": "application/x-tads", 
+  "gbr": "application/rpki-ghostbusters", 
+  "gca": "application/x-gca-compressed", 
+  "gdl": "model/vnd.gdl", 
+  "geo": "application/vnd.dynageo", 
+  "gex": "application/vnd.geometry-explorer", 
+  "ggb": "application/vnd.geogebra.file", 
+  "ggt": "application/vnd.geogebra.tool", 
+  "ghf": "application/vnd.groove-help", 
+  "gif": "image/gif", 
+  "gim": "application/vnd.groove-identity-message", 
+  "gml": "application/gml+xml", 
+  "gmx": "application/vnd.gmx", 
+  "gnumeric": "application/x-gnumeric", 
+  "gph": "application/vnd.flographit", 
+  "gpx": "application/gpx+xml", 
+  "gqf": "application/vnd.grafeq", 
+  "gqs": "application/vnd.grafeq", 
+  "gram": "application/srgs", 
+  "gramps": "application/x-gramps-xml", 
+  "gre": "application/vnd.geometry-explorer", 
+  "grv": "application/vnd.groove-injector", 
+  "grxml": "application/srgs+xml", 
+  "gsf": "application/x-font-ghostscript", 
+  "gtar": "application/x-gtar", 
+  "gtm": "application/vnd.groove-tool-message", 
+  "gtw": "model/vnd.gtw", 
+  "gv": "text/vnd.graphviz", 
+  "gxf": "application/gxf", 
+  "gxt": "application/vnd.geonext", 
+  "h": "text/x-c", 
+  "h261": "video/h261", 
+  "h263": "video/h263", 
+  "h264": "video/h264", 
+  "hal": "application/vnd.hal+xml", 
+  "hbci": "application/vnd.hbci", 
+  "hdf": "application/x-hdf", 
+  "hh": "text/x-c", 
+  "hlp": "application/winhlp", 
+  "hpgl": "application/vnd.hp-hpgl", 
+  "hpid": "application/vnd.hp-hpid", 
+  "hps": "application/vnd.hp-hps", 
+  "hqx": "application/mac-binhex40", 
+  "htke": "application/vnd.kenameaapp", 
+  "htm": "text/html", 
+  "html": "text/html", 
+  "hvd": "application/vnd.yamaha.hv-dic", 
+  "hvp": "application/vnd.yamaha.hv-voice", 
+  "hvs": "application/vnd.yamaha.hv-script", 
+  "i2g": "application/vnd.intergeo", 
+  "icc": "application/vnd.iccprofile", 
+  "ice": "x-conference/x-cooltalk", 
+  "icm": "application/vnd.iccprofile", 
+  "ico": "image/x-icon", 
+  "ics": "text/calendar", 
+  "ief": "image/ief", 
+  "ifb": "text/calendar", 
+  "ifm": "application/vnd.shana.informed.formdata", 
+  "iges": "model/iges", 
+  "igl": "application/vnd.igloader", 
+  "igm": "application/vnd.insors.igm", 
+  "igs": "model/iges", 
+  "igx": "application/vnd.micrografx.igx", 
+  "iif": "application/vnd.shana.informed.interchange", 
+  "imp": "application/vnd.accpac.simply.imp", 
+  "ims": "application/vnd.ms-ims", 
+  "in": "text/plain", 
+  "ink": "application/inkml+xml", 
+  "inkml": "application/inkml+xml", 
+  "install": "application/x-install-instructions", 
+  "iota": "application/vnd.astraea-software.iota", 
+  "ipfix": "application/ipfix", 
+  "ipk": "application/vnd.shana.informed.package", 
+  "irm": "application/vnd.ibm.rights-management", 
+  "irp": "application/vnd.irepository.package+xml", 
+  "iso": "application/x-iso9660-image", 
+  "itp": "application/vnd.shana.informed.formtemplate", 
+  "ivp": "application/vnd.immervision-ivp", 
+  "ivu": "application/vnd.immervision-ivu", 
+  "jad": "text/vnd.sun.j2me.app-descriptor", 
+  "jam": "application/vnd.jam", 
+  "jar": "application/java-archive", 
+  "java": "text/x-java-source", 
+  "jisp": "application/vnd.jisp", 
+  "jlt": "application/vnd.hp-jlyt", 
+  "jnlp": "application/x-java-jnlp-file", 
+  "joda": "application/vnd.joost.joda-archive", 
+  "jpe": "image/jpeg", 
+  "jpeg": "image/jpeg", 
+  "jpg": "image/jpeg", 
+  "jpgm": "video/jpm", 
+  "jpgv": "video/jpeg", 
+  "jpm": "video/jpm", 
+  "js": "application/javascript", 
+  "json": "application/json", 
+  "jsonml": "application/jsonml+json", 
+  "kar": "audio/midi", 
+  "karbon": "application/vnd.kde.karbon", 
+  "kfo": "application/vnd.kde.kformula", 
+  "kia": "application/vnd.kidspiration", 
+  "kml": "application/vnd.google-earth.kml+xml", 
+  "kmz": "application/vnd.google-earth.kmz", 
+  "kne": "application/vnd.kinar", 
+  "knp": "application/vnd.kinar", 
+  "kon": "application/vnd.kde.kontour", 
+  "kpr": "application/vnd.kde.kpresenter", 
+  "kpt": "application/vnd.kde.kpresenter", 
+  "kpxx": "application/vnd.ds-keypoint", 
+  "ksp": "application/vnd.kde.kspread", 
+  "ktr": "application/vnd.kahootz", 
+  "ktx": "image/ktx", 
+  "ktz": "application/vnd.kahootz", 
+  "kwd": "application/vnd.kde.kword", 
+  "kwt": "application/vnd.kde.kword", 
+  "lasxml": "application/vnd.las.las+xml", 
+  "latex": "application/x-latex", 
+  "lbd": "application/vnd.llamagraphics.life-balance.desktop", 
+  "lbe": "application/vnd.llamagraphics.life-balance.exchange+xml", 
+  "les": "application/vnd.hhe.lesson-player", 
+  "lha": "application/x-lzh-compressed", 
+  "link66": "application/vnd.route66.link66+xml", 
+  "list": "text/plain", 
+  "list3820": "application/vnd.ibm.modcap", 
+  "listafp": "application/vnd.ibm.modcap", 
+  "lnk": "application/x-ms-shortcut", 
+  "log": "text/plain", 
+  "lostxml": "application/lost+xml", 
+  "lrf": "application/octet-stream", 
+  "lrm": "application/vnd.ms-lrm", 
+  "ltf": "application/vnd.frogans.ltf", 
+  "lvp": "audio/vnd.lucent.voice", 
+  "lwp": "application/vnd.lotus-wordpro", 
+  "lzh": "application/x-lzh-compressed", 
+  "m13": "application/x-msmediaview", 
+  "m14": "application/x-msmediaview", 
+  "m1v": "video/mpeg", 
+  "m21": "application/mp21", 
+  "m2a": "audio/mpeg", 
+  "m2v": "video/mpeg", 
+  "m3a": "audio/mpeg", 
+  "m3u": "audio/x-mpegurl", 
+  "m3u8": "application/vnd.apple.mpegurl", 
+  "m4u": "video/vnd.mpegurl", 
+  "m4v": "video/x-m4v", 
+  "ma": "application/mathematica", 
+  "mads": "application/mads+xml", 
+  "mag": "application/vnd.ecowin.chart", 
+  "maker": "application/vnd.framemaker", 
+  "man": "text/troff", 
+  "mar": "application/octet-stream", 
+  "mathml": "application/mathml+xml", 
+  "mb": "application/mathematica", 
+  "mbk": "application/vnd.mobius.mbk", 
+  "mbox": "application/mbox", 
+  "mc1": "application/vnd.medcalcdata", 
+  "mcd": "application/vnd.mcd", 
+  "mcurl": "text/vnd.curl.mcurl", 
+  "mdb": "application/x-msaccess", 
+  "mdi": "image/vnd.ms-modi", 
+  "me": "text/troff", 
+  "mesh": "model/mesh", 
+  "meta4": "application/metalink4+xml", 
+  "metalink": "application/metalink+xml", 
+  "mets": "application/mets+xml", 
+  "mfm": "application/vnd.mfmp", 
+  "mft": "application/rpki-manifest", 
+  "mgp": "application/vnd.osgeo.mapguide.package", 
+  "mgz": "application/vnd.proteus.magazine", 
+  "mid": "audio/midi", 
+  "midi": "audio/midi", 
+  "mie": "application/x-mie", 
+  "mif": "application/vnd.mif", 
+  "mime": "message/rfc822", 
+  "mj2": "video/mj2", 
+  "mjp2": "video/mj2", 
+  "mk3d": "video/x-matroska", 
+  "mka": "audio/x-matroska", 
+  "mks": "video/x-matroska", 
+  "mkv": "video/x-matroska", 
+  "mlp": "application/vnd.dolby.mlp", 
+  "mmd": "application/vnd.chipnuts.karaoke-mmd", 
+  "mmf": "application/vnd.smaf", 
+  "mmr": "image/vnd.fujixerox.edmics-mmr", 
+  "mng": "video/x-mng", 
+  "mny": "application/x-msmoney", 
+  "mobi": "application/x-mobipocket-ebook", 
+  "mods": "application/mods+xml", 
+  "mov": "video/quicktime", 
+  "movie": "video/x-sgi-movie", 
+  "mp2": "audio/mpeg", 
+  "mp21": "application/mp21", 
+  "mp2a": "audio/mpeg", 
+  "mp3": "audio/mpeg", 
+  "mp4": "video/mp4", 
+  "mp4a": "audio/mp4", 
+  "mp4s": "application/mp4", 
+  "mp4v": "video/mp4", 
+  "mpc": "application/vnd.mophun.certificate", 
+  "mpe": "video/mpeg", 
+  "mpeg": "video/mpeg", 
+  "mpg": "video/mpeg", 
+  "mpg4": "video/mp4", 
+  "mpga": "audio/mpeg", 
+  "mpkg": "application/vnd.apple.installer+xml", 
+  "mpm": "application/vnd.blueice.multipass", 
+  "mpn": "application/vnd.mophun.application", 
+  "mpp": "application/vnd.ms-project", 
+  "mpt": "application/vnd.ms-project", 
+  "mpy": "application/vnd.ibm.minipay", 
+  "mqy": "application/vnd.mobius.mqy", 
+  "mrc": "application/marc", 
+  "mrcx": "application/marcxml+xml", 
+  "ms": "text/troff", 
+  "mscml": "application/mediaservercontrol+xml", 
+  "mseed": "application/vnd.fdsn.mseed", 
+  "mseq": "application/vnd.mseq", 
+  "msf": "application/vnd.epson.msf", 
+  "msh": "model/mesh", 
+  "msi": "application/x-msdownload", 
+  "msl": "application/vnd.mobius.msl", 
+  "msty": "application/vnd.muvee.style", 
+  "mts": "model/vnd.mts", 
+  "mus": "application/vnd.musician", 
+  "musicxml": "application/vnd.recordare.musicxml+xml", 
+  "mvb": "application/x-msmediaview", 
+  "mwf": "application/vnd.mfer", 
+  "mxf": "application/mxf", 
+  "mxl": "application/vnd.recordare.musicxml", 
+  "mxml": "application/xv+xml", 
+  "mxs": "application/vnd.triscape.mxs", 
+  "mxu": "video/vnd.mpegurl", 
+  "n-gage": "application/vnd.nokia.n-gage.symbian.install", 
+  "n3": "text/n3", 
+  "nb": "application/mathematica", 
+  "nbp": "application/vnd.wolfram.player", 
+  "nc": "application/x-netcdf", 
+  "ncx": "application/x-dtbncx+xml", 
+  "nfo": "text/x-nfo", 
+  "ngdat": "application/vnd.nokia.n-gage.data", 
+  "nitf": "application/vnd.nitf", 
+  "nlu": "application/vnd.neurolanguage.nlu", 
+  "nml": "application/vnd.enliven", 
+  "nnd": "application/vnd.noblenet-directory", 
+  "nns": "application/vnd.noblenet-sealer", 
+  "nnw": "application/vnd.noblenet-web", 
+  "npx": "image/vnd.net-fpx", 
+  "nsc": "application/x-conference", 
+  "nsf": "application/vnd.lotus-notes", 
+  "ntf": "application/vnd.nitf", 
+  "nzb": "application/x-nzb", 
+  "oa2": "application/vnd.fujitsu.oasys2", 
+  "oa3": "application/vnd.fujitsu.oasys3", 
+  "oas": "application/vnd.fujitsu.oasys", 
+  "obd": "application/x-msbinder", 
+  "obj": "application/x-tgif", 
+  "oda": "application/oda", 
+  "odb": "application/vnd.oasis.opendocument.database", 
+  "odc": "application/vnd.oasis.opendocument.chart", 
+  "odf": "application/vnd.oasis.opendocument.formula", 
+  "odft": "application/vnd.oasis.opendocument.formula-template", 
+  "odg": "application/vnd.oasis.opendocument.graphics", 
+  "odi": "application/vnd.oasis.opendocument.image", 
+  "odm": "application/vnd.oasis.opendocument.text-master", 
+  "odp": "application/vnd.oasis.opendocument.presentation", 
+  "ods": "application/vnd.oasis.opendocument.spreadsheet", 
+  "odt": "application/vnd.oasis.opendocument.text", 
+  "oga": "audio/ogg", 
+  "ogg": "audio/ogg", 
+  "ogv": "video/ogg", 
+  "ogx": "application/ogg", 
+  "omdoc": "application/omdoc+xml", 
+  "onepkg": "application/onenote", 
+  "onetmp": "application/onenote", 
+  "onetoc": "application/onenote", 
+  "onetoc2": "application/onenote", 
+  "opf": "application/oebps-package+xml", 
+  "opml": "text/x-opml", 
+  "oprc": "application/vnd.palm", 
+  "org": "application/vnd.lotus-organizer", 
+  "osf": "application/vnd.yamaha.openscoreformat", 
+  "osfpvg": "application/vnd.yamaha.openscoreformat.osfpvg+xml", 
+  "otc": "application/vnd.oasis.opendocument.chart-template", 
+  "otf": "application/x-font-otf", 
+  "otg": "application/vnd.oasis.opendocument.graphics-template", 
+  "oth": "application/vnd.oasis.opendocument.text-web", 
+  "oti": "application/vnd.oasis.opendocument.image-template", 
+  "otp": "application/vnd.oasis.opendocument.presentation-template", 
+  "ots": "application/vnd.oasis.opendocument.spreadsheet-template", 
+  "ott": "application/vnd.oasis.opendocument.text-template", 
+  "oxps": "application/oxps", 
+  "oxt": "application/vnd.openofficeorg.extension", 
+  "p": "text/x-pascal", 
+  "p10": "application/pkcs10", 
+  "p12": "application/x-pkcs12", 
+  "p7b": "application/x-pkcs7-certificates", 
+  "p7c": "application/pkcs7-mime", 
+  "p7m": "application/pkcs7-mime", 
+  "p7r": "application/x-pkcs7-certreqresp", 
+  "p7s": "application/pkcs7-signature", 
+  "p8": "application/pkcs8", 
+  "pas": "text/x-pascal", 
+  "paw": "application/vnd.pawaafile", 
+  "pbd": "application/vnd.powerbuilder6", 
+  "pbm": "image/x-portable-bitmap", 
+  "pcap": "application/vnd.tcpdump.pcap", 
+  "pcf": "application/x-font-pcf", 
+  "pcl": "application/vnd.hp-pcl", 
+  "pclxl": "application/vnd.hp-pclxl", 
+  "pct": "image/x-pict", 
+  "pcurl": "application/vnd.curl.pcurl", 
+  "pcx": "image/x-pcx", 
+  "pdb": "application/vnd.palm", 
+  "pdf": "application/pdf", 
+  "pfa": "application/x-font-type1", 
+  "pfb": "application/x-font-type1", 
+  "pfm": "application/x-font-type1", 
+  "pfr": "application/font-tdpfr", 
+  "pfx": "application/x-pkcs12", 
+  "pgm": "image/x-portable-graymap", 
+  "pgn": "application/x-chess-pgn", 
+  "pgp": "application/pgp-encrypted", 
+  "pic": "image/x-pict", 
+  "pkg": "application/octet-stream", 
+  "pki": "application/pkixcmp", 
+  "pkipath": "application/pkix-pkipath", 
+  "plb": "application/vnd.3gpp.pic-bw-large", 
+  "plc": "application/vnd.mobius.plc", 
+  "plf": "application/vnd.pocketlearn", 
+  "pls": "application/pls+xml", 
+  "pml": "application/vnd.ctc-posml", 
+  "png": "image/png", 
+  "pnm": "image/x-portable-anymap", 
+  "portpkg": "application/vnd.macports.portpkg", 
+  "pot": "application/vnd.ms-powerpoint", 
+  "potm": "application/vnd.ms-powerpoint.template.macroenabled.12", 
+  "potx": "application/vnd.openxmlformats-officedocument.presentationml.template", 
+  "ppam": "application/vnd.ms-powerpoint.addin.macroenabled.12", 
+  "ppd": "application/vnd.cups-ppd", 
+  "ppm": "image/x-portable-pixmap", 
+  "pps": "application/vnd.ms-powerpoint", 
+  "ppsm": "application/vnd.ms-powerpoint.slideshow.macroenabled.12", 
+  "ppsx": "application/vnd.openxmlformats-officedocument.presentationml.slideshow", 
+  "ppt": "application/vnd.ms-powerpoint", 
+  "pptm": "application/vnd.ms-powerpoint.presentation.macroenabled.12", 
+  "pptx": "application/vnd.openxmlformats-officedocument.presentationml.presentation", 
+  "pqa": "application/vnd.palm", 
+  "prc": "application/x-mobipocket-ebook", 
+  "pre": "application/vnd.lotus-freelance", 
+  "prf": "application/pics-rules", 
+  "ps": "application/postscript", 
+  "psb": "application/vnd.3gpp.pic-bw-small", 
+  "psd": "image/vnd.adobe.photoshop", 
+  "psf": "application/x-font-linux-psf", 
+  "pskcxml": "application/pskc+xml", 
+  "ptid": "application/vnd.pvi.ptid1", 
+  "pub": "application/x-mspublisher", 
+  "pvb": "application/vnd.3gpp.pic-bw-var", 
+  "pwn": "application/vnd.3m.post-it-notes", 
+  "pya": "audio/vnd.ms-playready.media.pya", 
+  "pyv": "video/vnd.ms-playready.media.pyv", 
+  "qam": "application/vnd.epson.quickanime", 
+  "qbo": "application/vnd.intu.qbo", 
+  "qfx": "application/vnd.intu.qfx", 
+  "qps": "application/vnd.publishare-delta-tree", 
+  "qt": "video/quicktime", 
+  "qwd": "application/vnd.quark.quarkxpress", 
+  "qwt": "application/vnd.quark.quarkxpress", 
+  "qxb": "application/vnd.quark.quarkxpress", 
+  "qxd": "application/vnd.quark.quarkxpress", 
+  "qxl": "application/vnd.quark.quarkxpress", 
+  "qxt": "application/vnd.quark.quarkxpress", 
+  "ra": "audio/x-pn-realaudio", 
+  "ram": "audio/x-pn-realaudio", 
+  "rar": "application/x-rar-compressed", 
+  "ras": "image/x-cmu-raster", 
+  "rcprofile": "application/vnd.ipunplugged.rcprofile", 
+  "rdf": "application/rdf+xml", 
+  "rdz": "application/vnd.data-vision.rdz", 
+  "rep": "application/vnd.businessobjects", 
+  "res": "application/x-dtbresource+xml", 
+  "rgb": "image/x-rgb", 
+  "rif": "application/reginfo+xml", 
+  "rip": "audio/vnd.rip", 
+  "ris": "application/x-research-info-systems", 
+  "rl": "application/resource-lists+xml", 
+  "rlc": "image/vnd.fujixerox.edmics-rlc", 
+  "rld": "application/resource-lists-diff+xml", 
+  "rm": "application/vnd.rn-realmedia", 
+  "rmi": "audio/midi", 
+  "rmp": "audio/x-pn-realaudio-plugin", 
+  "rms": "application/vnd.jcp.javame.midlet-rms", 
+  "rmvb": "application/vnd.rn-realmedia-vbr", 
+  "rnc": "application/relax-ng-compact-syntax", 
+  "roa": "application/rpki-roa", 
+  "roff": "text/troff", 
+  "rp9": "application/vnd.cloanto.rp9", 
+  "rpss": "application/vnd.nokia.radio-presets", 
+  "rpst": "application/vnd.nokia.radio-preset", 
+  "rq": "application/sparql-query", 
+  "rs": "application/rls-services+xml", 
+  "rsd": "application/rsd+xml", 
+  "rss": "application/rss+xml", 
+  "rtf": "application/rtf", 
+  "rtx": "text/richtext", 
+  "s": "text/x-asm", 
+  "s3m": "audio/s3m", 
+  "saf": "application/vnd.yamaha.smaf-audio", 
+  "sbml": "application/sbml+xml", 
+  "sc": "application/vnd.ibm.secure-container", 
+  "scd": "application/x-msschedule", 
+  "scm": "application/vnd.lotus-screencam", 
+  "scq": "application/scvp-cv-request", 
+  "scs": "application/scvp-cv-response", 
+  "scurl": "text/vnd.curl.scurl", 
+  "sda": "application/vnd.stardivision.draw", 
+  "sdc": "application/vnd.stardivision.calc", 
+  "sdd": "application/vnd.stardivision.impress", 
+  "sdkd": "application/vnd.solent.sdkm+xml", 
+  "sdkm": "application/vnd.solent.sdkm+xml", 
+  "sdp": "application/sdp", 
+  "sdw": "application/vnd.stardivision.writer", 
+  "see": "application/vnd.seemail", 
+  "seed": "application/vnd.fdsn.seed", 
+  "sema": "application/vnd.sema", 
+  "semd": "application/vnd.semd", 
+  "semf": "application/vnd.semf", 
+  "ser": "application/java-serialized-object", 
+  "setpay": "application/set-payment-initiation", 
+  "setreg": "application/set-registration-initiation", 
+  "sfd-hdstx": "application/vnd.hydrostatix.sof-data", 
+  "sfs": "application/vnd.spotfire.sfs", 
+  "sfv": "text/x-sfv", 
+  "sgi": "image/sgi", 
+  "sgl": "application/vnd.stardivision.writer-global", 
+  "sgm": "text/sgml", 
+  "sgml": "text/sgml", 
+  "sh": "application/x-sh", 
+  "shar": "application/x-shar", 
+  "shf": "application/shf+xml", 
+  "sid": "image/x-mrsid-image", 
+  "sig": "application/pgp-signature", 
+  "sil": "audio/silk", 
+  "silo": "model/mesh", 
+  "sis": "application/vnd.symbian.install", 
+  "sisx": "application/vnd.symbian.install", 
+  "sit": "application/x-stuffit", 
+  "sitx": "application/x-stuffitx", 
+  "skd": "application/vnd.koan", 
+  "skm": "application/vnd.koan", 
+  "skp": "application/vnd.koan", 
+  "skt": "application/vnd.koan", 
+  "sldm": "application/vnd.ms-powerpoint.slide.macroenabled.12", 
+  "sldx": "application/vnd.openxmlformats-officedocument.presentationml.slide", 
+  "slt": "application/vnd.epson.salt", 
+  "sm": "application/vnd.stepmania.stepchart", 
+  "smf": "application/vnd.stardivision.math", 
+  "smi": "application/smil+xml", 
+  "smil": "application/smil+xml", 
+  "smv": "video/x-smv", 
+  "smzip": "application/vnd.stepmania.package", 
+  "snd": "audio/basic", 
+  "snf": "application/x-font-snf", 
+  "so": "application/octet-stream", 
+  "spc": "application/x-pkcs7-certificates", 
+  "spf": "application/vnd.yamaha.smaf-phrase", 
+  "spl": "application/x-futuresplash", 
+  "spot": "text/vnd.in3d.spot", 
+  "spp": "application/scvp-vp-response", 
+  "spq": "application/scvp-vp-request", 
+  "spx": "audio/ogg", 
+  "sql": "application/x-sql", 
+  "src": "application/x-wais-source", 
+  "srt": "application/x-subrip", 
+  "sru": "application/sru+xml", 
+  "srx": "application/sparql-results+xml", 
+  "ssdl": "application/ssdl+xml", 
+  "sse": "application/vnd.kodak-descriptor", 
+  "ssf": "application/vnd.epson.ssf", 
+  "ssml": "application/ssml+xml", 
+  "st": "application/vnd.sailingtracker.track", 
+  "stc": "application/vnd.sun.xml.calc.template", 
+  "std": "application/vnd.sun.xml.draw.template", 
+  "stf": "application/vnd.wt.stf", 
+  "sti": "application/vnd.sun.xml.impress.template", 
+  "stk": "application/hyperstudio", 
+  "stl": "application/vnd.ms-pki.stl", 
+  "str": "application/vnd.pg.format", 
+  "stw": "application/vnd.sun.xml.writer.template", 
+  "sub": "text/vnd.dvb.subtitle", 
+  "sus": "application/vnd.sus-calendar", 
+  "susp": "application/vnd.sus-calendar", 
+  "sv4cpio": "application/x-sv4cpio", 
+  "sv4crc": "application/x-sv4crc", 
+  "svc": "application/vnd.dvb.service", 
+  "svd": "application/vnd.svd", 
+  "svg": "image/svg+xml", 
+  "svgz": "image/svg+xml", 
+  "swa": "application/x-director", 
+  "swf": "application/x-shockwave-flash", 
+  "swi": "application/vnd.aristanetworks.swi", 
+  "sxc": "application/vnd.sun.xml.calc", 
+  "sxd": "application/vnd.sun.xml.draw", 
+  "sxg": "application/vnd.sun.xml.writer.global", 
+  "sxi": "application/vnd.sun.xml.impress", 
+  "sxm": "application/vnd.sun.xml.math", 
+  "sxw": "application/vnd.sun.xml.writer", 
+  "t": "text/troff", 
+  "t3": "application/x-t3vm-image", 
+  "taglet": "application/vnd.mynfc", 
+  "tao": "application/vnd.tao.intent-module-archive", 
+  "tar": "application/x-tar", 
+  "tcap": "application/vnd.3gpp2.tcap", 
+  "tcl": "application/x-tcl", 
+  "teacher": "application/vnd.smart.teacher", 
+  "tei": "application/tei+xml", 
+  "teicorpus": "application/tei+xml", 
+  "tex": "application/x-tex", 
+  "texi": "application/x-texinfo", 
+  "texinfo": "application/x-texinfo", 
+  "text": "text/plain", 
+  "tfi": "application/thraud+xml", 
+  "tfm": "application/x-tex-tfm", 
+  "tga": "image/x-tga", 
+  "thmx": "application/vnd.ms-officetheme", 
+  "tif": "image/tiff", 
+  "tiff": "image/tiff", 
+  "tmo": "application/vnd.tmobile-livetv", 
+  "torrent": "application/x-bittorrent", 
+  "tpl": "application/vnd.groove-tool-template", 
+  "tpt": "application/vnd.trid.tpt", 
+  "tr": "text/troff", 
+  "tra": "application/vnd.trueapp", 
+  "trm": "application/x-msterminal", 
+  "tsd": "application/timestamped-data", 
+  "tsv": "text/tab-separated-values", 
+  "ttc": "application/x-font-ttf", 
+  "ttf": "application/x-font-ttf", 
+  "ttl": "text/turtle", 
+  "twd": "application/vnd.simtech-mindmapper", 
+  "twds": "application/vnd.simtech-mindmapper", 
+  "txd": "application/vnd.genomatix.tuxedo", 
+  "txf": "application/vnd.mobius.txf", 
+  "txt": "text/plain", 
+  "u32": "application/x-authorware-bin", 
+  "udeb": "application/x-debian-package", 
+  "ufd": "application/vnd.ufdl", 
+  "ufdl": "application/vnd.ufdl", 
+  "ulx": "application/x-glulx", 
+  "umj": "application/vnd.umajin", 
+  "unityweb": "application/vnd.unity", 
+  "uoml": "application/vnd.uoml+xml", 
+  "uri": "text/uri-list", 
+  "uris": "text/uri-list", 
+  "urls": "text/uri-list", 
+  "ustar": "application/x-ustar", 
+  "utz": "application/vnd.uiq.theme", 
+  "uu": "text/x-uuencode", 
+  "uva": "audio/vnd.dece.audio", 
+  "uvd": "application/vnd.dece.data", 
+  "uvf": "application/vnd.dece.data", 
+  "uvg": "image/vnd.dece.graphic", 
+  "uvh": "video/vnd.dece.hd", 
+  "uvi": "image/vnd.dece.graphic", 
+  "uvm": "video/vnd.dece.mobile", 
+  "uvp": "video/vnd.dece.pd", 
+  "uvs": "video/vnd.dece.sd", 
+  "uvt": "application/vnd.dece.ttml+xml", 
+  "uvu": "video/vnd.uvvu.mp4", 
+  "uvv": "video/vnd.dece.video", 
+  "uvva": "audio/vnd.dece.audio", 
+  "uvvd": "application/vnd.dece.data", 
+  "uvvf": "application/vnd.dece.data", 
+  "uvvg": "image/vnd.dece.graphic", 
+  "uvvh": "video/vnd.dece.hd", 
+  "uvvi": "image/vnd.dece.graphic", 
+  "uvvm": "video/vnd.dece.mobile", 
+  "uvvp": "video/vnd.dece.pd", 
+  "uvvs": "video/vnd.dece.sd", 
+  "uvvt": "application/vnd.dece.ttml+xml", 
+  "uvvu": "video/vnd.uvvu.mp4", 
+  "uvvv": "video/vnd.dece.video", 
+  "uvvx": "application/vnd.dece.unspecified", 
+  "uvvz": "application/vnd.dece.zip", 
+  "uvx": "application/vnd.dece.unspecified", 
+  "uvz": "application/vnd.dece.zip", 
+  "vcard": "text/vcard", 
+  "vcd": "application/x-cdlink", 
+  "vcf": "text/x-vcard", 
+  "vcg": "application/vnd.groove-vcard", 
+  "vcs": "text/x-vcalendar", 
+  "vcx": "application/vnd.vcx", 
+  "vis": "application/vnd.visionary", 
+  "viv": "video/vnd.vivo", 
+  "vob": "video/x-ms-vob", 
+  "vor": "application/vnd.stardivision.writer", 
+  "vox": "application/x-authorware-bin", 
+  "vrml": "model/vrml", 
+  "vsd": "application/vnd.visio", 
+  "vsf": "application/vnd.vsf", 
+  "vss": "application/vnd.visio", 
+  "vst": "application/vnd.visio", 
+  "vsw": "application/vnd.visio", 
+  "vtu": "model/vnd.vtu", 
+  "vxml": "application/voicexml+xml", 
+  "w3d": "application/x-director", 
+  "wad": "application/x-doom", 
+  "wav": "audio/x-wav", 
+  "wax": "audio/x-ms-wax", 
+  "wbmp": "image/vnd.wap.wbmp", 
+  "wbs": "application/vnd.criticaltools.wbs+xml", 
+  "wbxml": "application/vnd.wap.wbxml", 
+  "wcm": "application/vnd.ms-works", 
+  "wdb": "application/vnd.ms-works", 
+  "wdp": "image/vnd.ms-photo", 
+  "weba": "audio/webm", 
+  "webm": "video/webm", 
+  "webp": "image/webp", 
+  "wg": "application/vnd.pmi.widget", 
+  "wgt": "application/widget", 
+  "wks": "application/vnd.ms-works", 
+  "wm": "video/x-ms-wm", 
+  "wma": "audio/x-ms-wma", 
+  "wmd": "application/x-ms-wmd", 
+  "wmf": "application/x-msmetafile", 
+  "wml": "text/vnd.wap.wml", 
+  "wmlc": "application/vnd.wap.wmlc", 
+  "wmls": "text/vnd.wap.wmlscript", 
+  "wmlsc": "application/vnd.wap.wmlscriptc", 
+  "wmv": "video/x-ms-wmv", 
+  "wmx": "video/x-ms-wmx", 
+  "wmz": "application/x-msmetafile", 
+  "woff": "application/x-font-woff", 
+  "wpd": "application/vnd.wordperfect", 
+  "wpl": "application/vnd.ms-wpl", 
+  "wps": "application/vnd.ms-works", 
+  "wqd": "application/vnd.wqd", 
+  "wri": "application/x-mswrite", 
+  "wrl": "model/vrml", 
+  "wsdl": "application/wsdl+xml", 
+  "wspolicy": "application/wspolicy+xml", 
+  "wtb": "application/vnd.webturbo", 
+  "wvx": "video/x-ms-wvx", 
+  "x32": "application/x-authorware-bin", 
+  "x3d": "model/x3d+xml", 
+  "x3db": "model/x3d+binary", 
+  "x3dbz": "model/x3d+binary", 
+  "x3dv": "model/x3d+vrml", 
+  "x3dvz": "model/x3d+vrml", 
+  "x3dz": "model/x3d+xml", 
+  "xaml": "application/xaml+xml", 
+  "xap": "application/x-silverlight-app", 
+  "xar": "application/vnd.xara", 
+  "xbap": "application/x-ms-xbap", 
+  "xbd": "application/vnd.fujixerox.docuworks.binder", 
+  "xbm": "image/x-xbitmap", 
+  "xdf": "application/xcap-diff+xml", 
+  "xdm": "application/vnd.syncml.dm+xml", 
+  "xdp": "application/vnd.adobe.xdp+xml", 
+  "xdssc": "application/dssc+xml", 
+  "xdw": "application/vnd.fujixerox.docuworks", 
+  "xenc": "application/xenc+xml", 
+  "xer": "application/patch-ops-error+xml", 
+  "xfdf": "application/vnd.adobe.xfdf", 
+  "xfdl": "application/vnd.xfdl", 
+  "xht": "application/xhtml+xml", 
+  "xhtml": "application/xhtml+xml", 
+  "xhvml": "application/xv+xml", 
+  "xif": "image/vnd.xiff", 
+  "xla": "application/vnd.ms-excel", 
+  "xlam": "application/vnd.ms-excel.addin.macroenabled.12", 
+  "xlc": "application/vnd.ms-excel", 
+  "xlf": "application/x-xliff+xml", 
+  "xlm": "application/vnd.ms-excel", 
+  "xls": "application/vnd.ms-excel", 
+  "xlsb": "application/vnd.ms-excel.sheet.binary.macroenabled.12", 
+  "xlsm": "application/vnd.ms-excel.sheet.macroenabled.12", 
+  "xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", 
+  "xlt": "application/vnd.ms-excel", 
+  "xltm": "application/vnd.ms-excel.template.macroenabled.12", 
+  "xltx": "application/vnd.openxmlformats-officedocument.spreadsheetml.template", 
+  "xlw": "application/vnd.ms-excel", 
+  "xm": "audio/xm", 
+  "xml": "application/xml", 
+  "xo": "application/vnd.olpc-sugar", 
+  "xop": "application/xop+xml", 
+  "xpi": "application/x-xpinstall", 
+  "xpl": "application/xproc+xml", 
+  "xpm": "image/x-xpixmap", 
+  "xpr": "application/vnd.is-xpr", 
+  "xps": "application/vnd.ms-xpsdocument", 
+  "xpw": "application/vnd.intercon.formnet", 
+  "xpx": "application/vnd.intercon.formnet", 
+  "xsl": "application/xml", 
+  "xslt": "application/xslt+xml", 
+  "xsm": "application/vnd.syncml+xml", 
+  "xspf": "application/xspf+xml", 
+  "xul": "application/vnd.mozilla.xul+xml", 
+  "xvm": "application/xv+xml", 
+  "xvml": "application/xv+xml", 
+  "xwd": "image/x-xwindowdump", 
+  "xyz": "chemical/x-xyz", 
+  "xz": "application/x-xz", 
+  "yang": "application/yang", 
+  "yin": "application/yin+xml", 
+  "z1": "application/x-zmachine", 
+  "z2": "application/x-zmachine", 
+  "z3": "application/x-zmachine", 
+  "z4": "application/x-zmachine", 
+  "z5": "application/x-zmachine", 
+  "z6": "application/x-zmachine", 
+  "z7": "application/x-zmachine", 
+  "z8": "application/x-zmachine", 
+  "zaz": "application/vnd.zzazz.deck+xml", 
+  "zip": "application/zip", 
+  "zir": "application/vnd.zul", 
+  "zirz": "application/vnd.zul", 
+  "zmm": "application/vnd.handheld-entertainment+xml"
+};
+var MIMECATEGORIES = {'video':[],'audio':[]}
+for (var key in MIMETYPES) {
+    if (MIMETYPES[key].startsWith('video/')) {
+        MIMECATEGORIES['video'].push( key )
+    } else if (MIMETYPES[key].startsWith('audio/')) {
+        MIMECATEGORIES['audio'].push( key )
+    }
+}
+WSC.MIMECATEGORIES = MIMECATEGORIES
+WSC.MIMETYPES = MIMETYPES
+})();
+(function() {
+function Buffer(opts) {
+    /*
+      FIFO queue type that lets you check when able to consume the
+      right amount of data.
+
+     */
+    this.opts = opts
+    this.max_buffer_size = 104857600
+    this._size = 0
+    this.deque = []
+}
+
+Buffer.prototype = {
+    clear: function() {
+        this.deque = []
+        this._size = 0
+    },
+    flatten: function() {
+        if (this.deque.length == 1) { return this.deque[0] }
+        // flattens the buffer deque to one element
+        var totalSz = 0
+        for (var i=0; i<this.deque.length; i++) {
+            totalSz += this.deque[i].byteLength
+        }
+        var arr = new Uint8Array(totalSz)
+        var idx = 0
+        for (var i=0; i<this.deque.length; i++) {
+            arr.set(new Uint8Array(this.deque[i]), idx)
+            idx += this.deque[i].byteLength
+        }
+        this.deque = [arr.buffer]
+        return arr.buffer
+    },
+    add: function(data) {
+        console.assert(data instanceof ArrayBuffer)
+        this._size = this._size + data.byteLength
+        this.deque.push(data)
+    },
+    consume_any_max: function(maxsz) {
+        if (this.size() <= maxsz) {
+            return this.consume(this.size())
+        } else {
+            return this.consume(maxsz)
+        }
+    },
+    consume: function(sz,putback) {
+        // returns a single array buffer of size sz
+        if (sz > this._size) {
+            console.assert(false)
+            return false
+        }
+
+        var consumed = 0
+
+        var ret = new Uint8Array(sz)
+        var curbuf
+        // consume from the left
+
+        while (consumed < sz) {
+            curbuf = this.deque[0]
+            console.assert(curbuf instanceof ArrayBuffer)
+
+            if (consumed + curbuf.byteLength <= sz) {
+                // curbuf fits in completely to return buffer
+                ret.set( new Uint8Array(curbuf), consumed )
+                consumed = consumed + curbuf.byteLength
+                this.deque.shift()
+            } else {
+                // curbuf too big! this will be the last buffer
+                var sliceleft = new Uint8Array( curbuf, 0, sz - consumed )
+                //console.log('left slice',sliceleft)
+
+                ret.set( sliceleft, consumed )
+                // we spliced off data, so set curbuf in deque
+
+                var remainsz = curbuf.byteLength - (sz - consumed)
+                var sliceright = new Uint8Array(curbuf, sz - consumed, remainsz)
+                //console.log('right slice',sliceright)
+                var remain = new Uint8Array(remainsz)
+                remain.set(sliceright, 0)
+                //console.log('right slice (newbuf)',remain)
+
+                this.deque[0] = remain.buffer
+                break
+            }
+        }
+        if (putback) {
+            this.deque = [ret.buffer].concat(this.deque)
+        } else {
+            this._size -= sz
+        }
+        return ret.buffer
+    },
+    size: function() {
+        return this._size
+    }
+}
+
+
+function test_buffer() {
+    var b = new Buffer;
+    b.add( new Uint8Array([1,2,3,4]).buffer )
+    console.assert( b.size() == 4 )
+    b.add( new Uint8Array([5,6,7]).buffer )
+    console.assert( b.size() == 7 )
+    b.add( new Uint8Array([8,9,10,11,12]).buffer )
+    console.assert( b.size() == 12 )
+    var data
+
+    data = b.consume(1);
+    console.assert(new Uint8Array(data)[0] == 1)
+    console.assert( data.byteLength == 1 )
+
+    data = b.consume(1);
+    console.assert(new Uint8Array(data)[0] == 2)
+    console.assert( data.byteLength == 1 )
+
+    data = b.consume(2);
+    console.assert( data.byteLength == 2 )
+    console.assert(new Uint8Array(data)[0] == 3)
+    console.assert(new Uint8Array(data)[1] == 4)
+}
+
+function test_buffer2() {
+    var b = new Buffer;
+    b.add( new Uint8Array([1,2,3,4]).buffer )
+    console.assert( b.size() == 4 )
+    b.add( new Uint8Array([5,6,7]).buffer )
+    console.assert( b.size() == 7 )
+    b.add( new Uint8Array([8,9,10,11,12]).buffer )
+    console.assert( b.size() == 12 )
+    var data
+
+    data = b.consume(6);
+    var adata = new Uint8Array(data)
+    console.assert(data.byteLength == 6)
+    console.assert(adata[0] == 1)
+    console.assert(adata[1] == 2)
+    console.assert(adata[2] == 3)
+    console.assert(adata[3] == 4)
+    console.assert(adata[4] == 5)
+    console.assert(adata[5] == 6)
+}
+
+function test_buffer3() {
+    var b = new Buffer;
+    b.add( new Uint8Array([1,2,3,4]).buffer )
+    b.add( new Uint8Array([5,6,7]).buffer )
+    b.add( new Uint8Array([8,9,10,11,12]).buffer )
+    var data
+    data = b.consume_any_max(1024);
+    var adata = new Uint8Array(data)
+    console.assert(data.byteLength == 12)
+    for (var i=0;i<12;i++) {
+        console.assert(adata[i] == i+1)
+    }
+}
+
+function test_buffer4() {
+    var b = new Buffer;
+    b.add( new Uint8Array([1,2,3,4]).buffer )
+    b.add( new Uint8Array([5,6,7]).buffer )
+    b.add( new Uint8Array([8,9,10,11,12]).buffer )
+    var data
+    data = b.consume_any_max(10);
+    var adata = new Uint8Array(data)
+    console.assert(data.byteLength == 10)
+    for (var i=0;i<10;i++) {
+        console.assert(adata[i] == i+1)
+    }
+}
+
+
+if (false) {
+    test_buffer()
+    test_buffer2()
+    test_buffer3()
+    test_buffer4()
+}
+WSC.Buffer = Buffer
+})();
+(function() {
+    function HTTPRequest(opts) {
+        this.method = opts.method
+        this.uri = opts.uri
+        this.version = opts.version
+        this.connection = opts.connection
+        this.headers = opts.headers
+        this.body = null
+        this.bodyparams = null
+
+        this.arguments = {}
+        var idx = this.uri.indexOf('?')
+        if (idx != -1) {
+            this.path = decodeURIComponent(this.uri.slice(0,idx))
+            var s = this.uri.slice(idx+1)
+            var parts = s.split('&')
+
+            for (var i=0; i<parts.length; i++) {
+                var p = parts[i]
+                var idx2 = p.indexOf('=')
+                this.arguments[decodeURIComponent(p.slice(0,idx2))] = decodeURIComponent(p.slice(idx2+1,s.length))
+            }
+        } else {
+            this.path = decodeURIComponent(this.uri)
+        }
+
+        this.origpath = this.path
+
+        if (this.path[this.path.length-1] == '/') {
+            this.path = this.path.slice(0,this.path.length-1)
+        }
+        
+    }
+
+    HTTPRequest.prototype = {
+        isKeepAlive: function() {
+            return this.headers['connection'] && this.headers['connection'].toLowerCase() != 'close'
+        }
+    }
+
+    WSC.HTTPRequest = HTTPRequest
+})();
+(function() {
+
+    var peerSockMap = {}
+
+    function onTCPReceive(info) {
+        var sockId = info.socketId
+        if (peerSockMap[sockId]) {
+            peerSockMap[sockId].onReadTCP(info)
+        }
+    }
+
+    chrome.sockets.tcp.onReceive.addListener( onTCPReceive )
+    chrome.sockets.tcp.onReceiveError.addListener( onTCPReceive )
+
+
+    var sockets = chrome.sockets
+    function IOStream(sockId) {
+        this.sockId = sockId
+        peerSockMap[this.sockId] = this
+        this.readCallback = null
+        this.readUntilDelimiter = null
+        this.readBuffer = new WSC.Buffer
+        this.writeBuffer = new WSC.Buffer
+        this.writing = false
+        this.pleaseReadBytes = null
+
+        this.remoteclosed = false
+        this.closed = false
+
+        this.halfclose = null
+        this.onclose = null
+        this._close_callbacks = []
+
+        this.onWriteBufferEmpty = null
+        chrome.sockets.tcp.setPaused(this.sockId, false, this.onUnpaused.bind(this))
+    }
+
+    IOStream.prototype = {
+        addCloseCallback: function(cb) {
+            this._close_callbacks.push(cb)
+        },
+        removeCloseCallback: function(cb) {
+            debugger
+        },
+        runCloseCallbacks: function() {
+            for (var i=0; i<this._close_callbacks.length; i++) {
+                this._close_callbacks[i](this)
+            }
+            if (this.onclose) { this.onclose() }
+        },
+        onUnpaused: function(info) {
+            //console.log('sock unpaused',info)
+        },
+        readUntil: function(delimiter, callback) {
+            this.readUntilDelimiter = delimiter
+            this.readCallback = callback
+            //this.tryRead() // set unpaused instead
+        },
+        readBytes: function(numBytes, callback) {
+            this.pleaseReadBytes = numBytes
+            this.readCallback = callback
+            this.checkBuffer()
+            //this.tryRead() // set unpaused instead
+        },
+        tryWrite: function(callback) {
+            if (this.writing) { 
+                //console.warn('already writing..'); 
+                return
+            }
+            if (this.closed) { 
+                console.warn(this.sockId,'cant write, closed'); 
+                return 
+            }
+            //console.log('tryWrite')
+            this.writing = true
+            var data = this.writeBuffer.consume_any_max(4096)
+            //console.log(this.sockId,'tcp.send',data.byteLength)
+            //console.log(this.sockId,'tcp.send',WSC.ui82str(new Uint8Array(data)))
+            sockets.tcp.send( this.sockId, data, this.onWrite.bind(this, callback) )
+        },
+        onWrite: function(callback, evt) {
+            var err = chrome.runtime.lastError
+            if (err) {
+                console.log('socket.send lastError',err)
+                this.tryClose()
+                return
+            }
+
+            // look at evt!
+            if (evt.bytesWritten <= 0) {
+                console.log('onwrite fail, closing',evt)
+                this.close()
+                return
+            }
+            this.writing = false
+            if (this.writeBuffer.size() > 0) {
+                //console.log('write more...')
+                if (this.closed) {
+                } else {
+                    this.tryWrite(callback)
+                }
+            } else {
+                if (this.onWriteBufferEmpty) { this.onWriteBufferEmpty(); }
+            }
+        },
+        onReadTCP: function(evt) {
+            //console.log('onRead',evt)
+            if (evt.resultCode == 0) {
+                //this.error({message:'remote closed connection'})
+                this.log('remote closed connection (halfduplex)')
+                this.remoteclosed = true
+                if (this.halfclose) { this.halfclose() }
+                if (this.request) {
+                    // do we even have a request yet? or like what to do ...
+                }
+            } else if (evt.resultCode < 0) {
+                this.log('remote killed connection',evt.resultCode)
+                this.error({message:'error code',errno:evt.resultCode})
+            } else {
+                this.readBuffer.add(evt.data)
+                this.checkBuffer()
+            }
+        },
+
+        log: function(msg,msg2,msg3) {
+            console.log(this.sockId,msg,msg2,msg3)
+        },
+        checkBuffer: function() {
+            //console.log('checkBuffer')
+            if (this.readUntilDelimiter) {
+                var buf = this.readBuffer.flatten()
+                var str = WSC.arrayBufferToString(buf)
+                var idx = str.indexOf(this.readUntilDelimiter)
+                if (idx != -1) {
+                    var callback = this.readCallback
+                    var toret = this.readBuffer.consume(idx+this.readUntilDelimiter.length)
+                    this.readUntilDelimiter = null
+                    this.readCallback = null
+                    callback(toret)
+                }
+            } else if (this.pleaseReadBytes) {
+                if (this.readBuffer.size() >= this.pleaseReadBytes) {
+                    var data = this.readBuffer.consume(this.pleaseReadBytes)
+                    var callback = this.readCallback
+                    this.readCallback = null
+                    this.pleaseReadBytes = null
+                    callback(data)
+                }
+            }
+        },
+        close: function() {
+            this.runCloseCallbacks()
+            console.log('tcp sock close',this.sockId)
+            delete peerSockMap[this.sockId]
+            sockets.tcp.disconnect(this.sockId)
+            //this.sockId = null
+            this.closed = true
+            this.cleanup()
+        },
+        error: function(data) {
+            console.warn(this.sockId,'closed')
+            //console.error(this,data)
+            // try close by writing 0 bytes
+            if (! this.closed) {
+                this.close()
+            }
+        },
+        checkedCallback: function(callback) {
+            var err = chrome.runtime.lastError;
+            if (err) {
+                console.warn('socket callback lastError',err,callback)
+            }
+        },
+        tryClose: function(callback) {
+            if (!callback) { callback=this.checkedCallback }
+            if (! this.closed) {
+                console.warn('cant close, already closed')
+                this.cleanup()
+                return
+            }
+            console.log(this.sockId,'tryClose')
+            sockets.tcp.send(this.sockId, new ArrayBuffer, callback)
+        },
+        cleanup: function() {
+            this.writeBuffer = new WSC.Buffer
+        }
+    }
+
+    WSC.IOStream = IOStream;
+
+})();
+(function() {
+    _DEBUG = false
+    function HTTPConnection(stream) {
+        this.stream = stream
+        this.curRequest = null
+        this.onRequestCallback = null
+        //this.log('new connection')
+        this.closed = false
+    }
+
+    HTTPConnection.prototype = {
+        log: function(msg) {
+            console.log(this.stream.sockId,msg)
+        },
+        tryRead: function() {
+            this.stream.readUntil('\r\n\r\n',this.onHeaders.bind(this))
+        },
+        write: function(data) {
+            if (typeof data == 'string') {
+                // convert to arraybuffer
+                // TODO fix with multi byte chars ( use encoding library )
+                var buf = WSC.stringToUint8Array(data).buffer
+            } else {
+                var buf = data
+            }
+            this.stream.writeBuffer.add(buf)
+            this.stream.tryWrite()
+        },
+        close: function() {
+            console.log('http conn close')
+            this.closed = true
+            this.stream.close()
+        },
+        addRequestCallback: function(cb) {
+            this.onRequestCallback = cb 
+        },
+        onHeaders: function(data) {
+            // TODO - http headers are Latin1, not ascii...
+            var datastr = WSC.arrayBufferToString(data)
+            var lines = datastr.split('\r\n')
+            var firstline = lines[0]
+            var flparts = firstline.split(' ')
+            var method = flparts[0]
+            var uri = flparts[1]
+            var version = flparts[2]
+
+            var headers = WSC.parseHeaders(lines.slice(1,lines.length-2))
+            this.curRequest = new WSC.HTTPRequest({headers:headers,
+                                           method:method,
+                                           uri:uri,
+                                           version:version,
+                                                   connection:this})
+            if (_DEBUG) {
+                this.log(this.curRequest.uri)
+            }
+            if (headers['content-length']) {
+                var clen = parseInt(headers['content-length'])
+                // TODO -- handle 100 continue..
+                if (clen > 0) {
+                    console.log('request had content length',clen)
+                    this.stream.readBytes(clen, this.onRequestBody.bind(this))
+                    return
+                } else {
+                    this.curRequest.body = null
+                }
+            }
+
+            
+            if (method == 'GET') {
+                this.onRequest(this.curRequest)
+            } else if (method == 'HEAD') {
+                this.onRequest(this.curRequest)
+            } else if (method == 'PUT') {
+                // handle request BODY?
+                this.onRequest(this.curRequest)
+            } else {
+                console.error('how to handle',this.curRequest)
+            }
+        },
+        onRequestBody: function(body) {
+            var req = this.curRequest
+            var ct = req.headers['content-type']
+            var default_charset = 'utf-8'
+            if (ct) {
+                ct = ct.toLowerCase()
+                if (ct.toLowerCase().startsWith('application/x-www-form-urlencoded')) {
+                    var charset_i = ct.indexOf('charset=')
+                    if (charset_i != -1) {
+                        var charset = ct.slice(charset_i + 'charset='.length,
+                                               ct.length)
+                        console.log('using charset',charset)
+                    } else {
+                        var charset = default_charset
+                    }
+
+                    var bodydata = new TextDecoder(charset).decode(body)
+                    var bodyparams = {}
+                    var items = bodydata.split('&')
+                    for (var i=0; i<items.length; i++) {
+                        var kv = items[i].split('=')
+                        bodyparams[ decodeURIComponent(kv[0]) ] = decodeURIComponent(kv[1])
+                    }
+                    req.bodyparams = bodyparams
+                }
+            }
+            this.curRequest.body = body
+            this.onRequest(this.curRequest)
+        },
+        onRequest: function(request) {
+            this.onRequestCallback(request)
+        }
+    }
+
+    WSC.HTTPConnection = HTTPConnection;
+
+})();
+(function(){
+    var sockets = chrome.sockets
+    var _DEBUG = false
+
+    function WebApplication(opts) {
+        // need to support creating multiple WebApplication...
+        if (_DEBUG) {
+            console.log('initialize webapp with opts',opts)
+        }
+        opts = opts || {}
+        this.id = Math.random().toString()
+        this.opts = opts
+        this.handlers = opts.handlers || []
+        this.init_handlers()
+        
+        if (opts.retainstr) {
+            // special option to setup a handler
+            chrome.fileSystem.restoreEntry( opts.retainstr, function(entry) {
+                if (entry) {
+                    this.on_entry(entry)
+
+                } else {
+                    console.error('error setting up retained entry')
+                }
+            }.bind(this))
+        }
+        if (opts.entry) {
+            this.on_entry(opts.entry)
+        }
+        this.host = this.get_host()
+        this.port = parseInt(opts.port || 8887)
+        this.sockInfo = null
+        this.lasterr = null
+        this.stopped = false
+        this.starting = false
+        this.started = false
+        this.streams = {}
+        this.on_status_change = null
+        this.interfaces = []
+        this.urls = []
+        if (this.port > 65535 || this.port < 1024) {
+            var err = 'bad port: ' + this.port
+            this.error(err)
+        }
+        if (_DEBUG) {
+            console.log('webapp created',this)
+        }
+    }
+
+    WebApplication.prototype = {
+        on_entry: function(entry) {
+            var fs = new WSC.FileSystem(entry)
+            this.add_handler(['.*',WSC.DirectoryEntryHandler.bind(null, fs)])
+            this.init_handlers()
+            if (_DEBUG) {
+                console.log('setup handler for entry',entry)
+            }
+            if (this.opts.optBackground) { this.start() }
+        },
+        get_host: function() {
+            var host
+            if (WSC.getchromeversion() >= 44 && this.opts.optAllInterfaces) {
+                host = this.opts.host || '0.0.0.0'
+            } else {
+                host = this.opts.host || '127.0.0.1'
+            }
+            return host
+        },
+        add_handler: function(handler) {
+            this.handlers.push(handler)
+        },
+        init_handlers: function() {
+            this.handlersMatch = []
+            for (var i=0; i<this.handlers.length; i++) {
+                var repat = this.handlers[i][0]
+                this.handlersMatch.push( [new RegExp(repat), this.handlers[i][1]] )
+            }
+            this.change()
+        },
+        change: function() {
+            if (this.on_status_change) { this.on_status_change() }
+        },
+        error: function(data) {
+            console.error(data)
+            this.lasterr = data
+            this.change()
+        },
+        stop: function(reason) {
+            if (! (this.started || this.starting)) {
+                this.change()
+                return
+            }
+
+            this.started = false
+            chrome.sockets.tcpServer.disconnect(this.sockInfo.socketId, this.onDisconnect.bind(this))
+            for (var key in this.streams) {
+                this.streams[key].close()
+            }
+            this.change()
+            // also disconnect any open connections...
+        },
+        onClose: function(info) {
+            var err = chrome.runtime.lastError
+            if (err) { console.warn(err) }
+            this.stopped = true
+            this.started = false
+            console.log('tcpserver onclose',info)
+        },
+        onDisconnect: function(info) {
+            var err = chrome.runtime.lastError
+            if (err) { console.warn(err) }
+            this.stopped = true
+            this.started = false
+            console.log('tcpserver ondisconnect',info)
+            if (this.sockInfo) {
+                chrome.sockets.tcpServer.close(this.sockInfo.socketId, this.onClose.bind(this))
+            }
+        },
+        onStreamClose: function(stream) {
+            console.assert(stream.sockId)
+            delete this.streams[stream.sockId]
+        },
+        start: function() {
+	    this.lasterr = null
+            if (_DEBUG) {
+                console.log('webapp attempt start with opts',this.opts)
+            }
+            this.change()
+            //if (this.lasterr) { return }
+            if (this.starting || this.started) { return }
+            this.stopped = false
+            this.starting = true
+            this.change()
+
+            this.urls = []
+            this.urls.push({url:'http://127.0.0.1:' + this.port})
+
+            if (this.opts.optAllInterfaces) {
+                chrome.system.network.getNetworkInterfaces( function(result) {
+                    console.log('network interfaces',result)
+                    if (result) {
+                        for (var i=0; i<result.length; i++) {
+                            if (result[i].prefixLength < 64) {
+                                this.urls.push({url:'http://'+result[i].address+':' + this.port})
+                                console.log('found interface address: ' + result[i].address)
+                            }
+                        }
+                    }
+                }.bind(this))
+            }
+            var host = this.get_host()
+            sockets.tcpServer.create({name:"listenSocket"},function(sockInfo) {
+                this.sockInfo = sockInfo
+                sockets.tcpServer.listen(this.sockInfo.socketId,
+                                         host,
+                                         this.port,
+                                         this.onListen.bind(this))
+                var lasterr = chrome.runtime.lastError
+                if (lasterr) {
+                    console.log('lasterr listen',lasterr)
+                }
+            }.bind(this));
+        },
+        onListen: function(result) {
+            //console.log('onListen',result)
+            this.starting = false
+            var lasterr = chrome.runtime.lastError
+            if (lasterr) {
+                this.error({message:lasterr})
+            } else if (result < 0) {
+                this.error({message:'unable to bind to port',
+                            errno:result})
+            } else {
+                this.started = true
+                var host = this.get_host()
+                console.log('Listening on','http://'+ host + ':' + this.port)
+                this.bindAcceptCallbacks()
+                this.change()
+            }
+        },
+        bindAcceptCallbacks: function() {
+            sockets.tcpServer.onAcceptError.addListener(this.onAcceptError.bind(this))
+            sockets.tcpServer.onAccept.addListener(this.onAccept.bind(this))
+        },
+        onAcceptError: function(acceptInfo) {
+            if (acceptInfo.socketId != this.sockInfo.socketId) { return }
+            // need to check against this.socketInfo.socketId
+            console.error('accept error',this.sockInfo.socketId,acceptInfo)
+            // set unpaused, etc
+        },
+        onAccept: function(acceptInfo) {
+            //console.log('onAccept',acceptInfo,this.sockInfo)
+            if (acceptInfo.socketId != this.sockInfo.socketId) { return }
+            if (acceptInfo.socketId) {
+                //var stream = new IOStream(acceptInfo.socketId)
+                var stream = new WSC.IOStream(acceptInfo.clientSocketId)
+                this.streams[acceptInfo.clientSocketId] = stream
+                stream.addCloseCallback(this.onStreamClose.bind(this))
+                var connection = new WSC.HTTPConnection(stream)
+                connection.addRequestCallback(this.onRequest.bind(this))
+                connection.tryRead()
+            }
+            if (! this.stopped) {
+                //this.doAccept() // new API no longer need to call this
+            }
+        },
+        onRequest: function(request) {
+            console.log('Request',request.method, request.uri)
+
+            if (this.opts.auth) {
+                var validAuth = false
+                var auth = request.headers['authorization']
+                if (auth) {
+                    if (auth.slice(0,6).toLowerCase() == 'basic ') {
+                        var userpass = atob(auth.slice(6,auth.length)).split(':')
+                        if (userpass[0] == this.opts.auth.username &&
+                            userpass[1] == this.opts.auth.password) {
+                            validAuth = true
+                        }
+                    }
+                }
+
+                if (! validAuth) {
+                    var handler = new WSC.BaseHandler(request)
+                    
+                    handler.app = this
+                    handler.request = request
+                    handler.setHeader("WWW-Authenticate", "Basic")
+                    handler.write("", 401)
+                    handler.finish()
+                    return
+                }
+            }
+
+            
+            for (var i=0; i<this.handlersMatch.length; i++) {
+                var re = this.handlersMatch[i][0]
+                var reresult = re.exec(request.uri)
+                if (reresult) {
+                    var cls = this.handlersMatch[i][1]
+                    var requestHandler = new cls(request)
+                    requestHandler.app = this
+                    requestHandler.request = request
+                    var handlerMethod = requestHandler[request.method.toLowerCase()]
+                    if (handlerMethod) {
+                        handlerMethod.apply(requestHandler, reresult.slice(1))
+                        return
+                    }
+                }
+            }
+            console.error('unhandled request',request)
+            // create a default handler...
+            var handler = new WSC.BaseHandler(request)
+            handler.app = this
+            handler.request = request
+            handler.write("Unhandled request. Did you select a folder to serve?", 404)
+            handler.finish()
+        }
+    }
+
+    function BaseHandler() {
+        this.headersWritten = false
+        this.responseHeaders = {}
+        this.responseData = []
+        this.responseLength = null
+    }
+    _.extend(BaseHandler.prototype, {
+        get_argument: function(key,def) {
+            if (this.request.arguments[key] !== undefined) {
+                return this.request.arguments[key]
+            } else {
+                return def
+            }
+        },
+        setHeader: function(k,v) {
+            this.responseHeaders[k] = v
+        },
+        writeHeaders: function(code, callback) {
+            if (code === undefined || isNaN(code)) { code = 200 }
+            this.headersWritten = true
+            var lines = []
+            if (code == 200) {
+                lines.push('HTTP/1.1 200 OK')
+            } else {
+                //console.log(this.request.connection.stream.sockId,'response code',code, this.responseLength)
+                lines.push('HTTP/1.1 '+ code + ' ' + WSC.HTTPRESPONSES[code])
+            }
+            if (this.responseHeaders['transfer-encoding'] === 'chunked') {
+                // pass
+            } else {
+                if (_DEBUG) {
+                    console.log(this.request.connection.stream.sockId,'response code',code, 'clen',this.responseLength)
+                }
+                console.assert(typeof this.responseLength == 'number')
+                lines.push('content-length: ' + this.responseLength)
+            }
+
+            var p = this.request.path.split('.')
+            if (p.length > 1 && ! this.isDirectoryListing) {
+                var ext = p[p.length-1].toLowerCase()
+                var type = WSC.MIMETYPES[ext]
+                if (type) {
+                    // go ahead and assume utf-8 for text/plain and text/html... (what other types?)
+                    // also how do we detect this in general? copy from nginx i guess?
+                    /*
+Changes with nginx 0.7.9                                         12 Aug 2008
+
+    *) Change: now ngx_http_charset_module works by default with following 
+       MIME types: text/html, text/css, text/xml, text/plain, 
+       text/vnd.wap.wml, application/x-javascript, and application/rss+xml.
+*/
+                    var default_types = ['text/html',
+                                         'text/xml',
+                                         'text/plain',
+                                         "text/vnd.wap.wml",
+                                         "application/javascript",
+                                         "application/rss+xml"]
+
+                    if (_.contains(default_types, type)) {
+                        type += '; charset=utf-8'
+                    }
+                    this.setHeader('content-type',type)
+                }
+            }
+
+            for (key in this.responseHeaders) {
+                lines.push(key +': '+this.responseHeaders[key])
+            }
+            lines.push('\r\n')
+            var headerstr = lines.join('\r\n')
+            //console.log('write headers',headerstr)
+            this.request.connection.write(headerstr, callback)
+        },
+        writeChunk: function(data) {
+            console.assert( data.byteLength !== undefined )
+            var chunkheader = data.byteLength.toString(16) + '\r\n'
+            //console.log('write chunk',[chunkheader])
+            this.request.connection.write( WSC.str2ab(chunkheader) )
+            this.request.connection.write( data )
+            this.request.connection.write( WSC.str2ab('\r\n') )
+        },
+        write: function(data, code, opt_finish) {
+            if (typeof data == "string") {
+                // using .write directly can be dumb/dangerous. Better to pass explicit array buffers
+                console.warn('putting strings into write is not well tested with multi byte characters')
+                data = new TextEncoder('utf-8').encode(data).buffer
+            }
+
+            console.assert(data.byteLength !== undefined)
+            if (code === undefined) { code = 200 }
+            this.responseData.push(data)
+            this.responseLength += data.byteLength
+            // todo - support chunked response?
+            if (! this.headersWritten) {
+                this.writeHeaders(code)
+            }
+            for (var i=0; i<this.responseData.length; i++) {
+                this.request.connection.write(this.responseData[i])
+            }
+            this.responseData = []
+            if (opt_finish !== false) {
+                this.finish()
+            }
+        },
+        finish: function() {
+            if (this.beforefinish) { this.beforefinish() }
+            this.request.connection.curRequest = null
+            if (this.request.isKeepAlive() && ! this.request.connection.stream.remoteclosed) {
+                this.request.connection.tryRead()
+                if (_DEBUG) {
+                    console.log('webapp.finish(keepalive)')
+                }
+            } else {
+                this.request.connection.close()
+                if (_DEBUG) {
+                    console.log('webapp.finish(close)')
+                }
+            }
+        }
+    })
+
+    function FileSystem(entry) {
+        this.entry = entry
+    }
+    _.extend(FileSystem.prototype, {
+        getByPath: function(path, callback) {
+            if (path == '/') { 
+                callback(this.entry)
+                return
+            }
+            var parts = path.split('/')
+            var newpath = parts.slice(1,parts.length)
+            WSC.recursiveGetEntry(this.entry, newpath, callback)
+        }
+    })
+
+    WSC.FileSystem = FileSystem
+    WSC.BaseHandler = BaseHandler
+    WSC.WebApplication = WebApplication
+
+})();
+
+(function(){
+    _DEBUG = false
+
+    function getEntryFile( entry, callback ) {
+        // XXX if file is 0 bytes, and then write some data, it stays cached... which is bad...
+        
+        var cacheKey = entry.filesystem.name + '/' + entry.fullPath
+        var inCache = WSC.entryFileCache.get(cacheKey)
+        if (inCache) { 
+            //console.log('file cache hit'); 
+            callback(inCache); return }
+        
+        entry.file( function(file) {
+            if (false) {
+                WSC.entryFileCache.set(cacheKey, file)
+            }
+            callback(file)
+        }, function(evt) {
+            // todo -- actually respond with the file error?
+            // or cleanup the context at least
+            console.error('entry.file() error',evt)
+            debugger
+        })
+    }
+
+
+
+    function DirectoryEntryHandler(fs, request) {
+        WSC.BaseHandler.prototype.constructor.call(this)
+        this.fs = fs
+        //this.debugInterval = setInterval( this.debug.bind(this), 1000)
+        this.entry = null
+        this.file = null
+        this.readChunkSize = 4096 * 16
+        this.fileOffset = 0
+        this.fileEndOffset = 0
+        this.bodyWritten = 0
+        this.isDirectoryListing = false
+        request.connection.stream.onclose = this.onClose.bind(this)
+    }
+    _.extend(DirectoryEntryHandler.prototype, {
+        onClose: function() {
+            //console.log('closed',this.request.path)
+            clearInterval(this.debugInterval)
+        },
+        debug: function() {
+            //console.log(this.request.connection.stream.sockId,'debug wb:',this.request.connection.stream.writeBuffer.size())
+        },
+        head: function() {
+            this.get()
+        },
+        get: function() {
+            //this.request.connection.stream.onWriteBufferEmpty = this.onWriteBufferEmpty.bind(this)
+
+            this.setHeader('accept-ranges','bytes')
+            this.setHeader('connection','keep-alive')
+            if (! this.fs) {
+                this.write("error: need to select a directory to serve",500)
+                return
+            }
+            //var path = decodeURI(this.request.path)
+
+            // strip '/' off end of path
+
+            this.fs.getByPath(this.request.path, this.onEntry.bind(this))
+        },
+        doReadChunk: function() {
+            //console.log(this.request.connection.stream.sockId, 'doReadChunk', this.fileOffset)
+            var reader = new FileReader;
+
+            var endByte = Math.min(this.fileOffset + this.readChunkSize,
+                                   this.fileEndOffset)
+            if (endByte >= this.file.size) {
+                console.error('bad readChunk')
+                console.assert(false)
+            }
+
+            //console.log('doReadChunk',this.fileOffset,endByte-this.fileOffset)
+            reader.onload = this.onReadChunk.bind(this)
+            reader.onerror = this.onReadChunk.bind(this)
+            var blobSlice = this.file.slice(this.fileOffset, endByte + 1)
+            var oldOffset = this.fileOffset
+            this.fileOffset += (endByte - this.fileOffset) + 1
+            //console.log('offset',oldOffset,this.fileOffset)
+            reader.readAsArrayBuffer(blobSlice)
+        },
+        onWriteBufferEmpty: function() {
+            if (! this.file) {
+                console.error('!this.file')
+                debugger
+                return
+            }
+            console.assert( this.bodyWritten <= this.responseLength )
+            //console.log('onWriteBufferEmpty', this.bodyWritten, '/', this.responseLength)
+            if (this.bodyWritten > this.responseLength) {
+                console.assert(false)
+            } else if (this.bodyWritten == this.responseLength) {
+                this.request.connection.stream.onWriteBufferEmpty = null
+                this.finish()
+                return
+            } else {
+                if (this.request.connection.stream.remoteclosed) {
+                    this.request.connection.close()
+                    // still read?
+                } else if (! this.request.connection.stream.closed) {
+                    this.doReadChunk()
+                }
+            }
+        },
+        onReadChunk: function(evt) {
+            //console.log('onReadChunk')
+            if (evt.target.result) {
+                this.bodyWritten += evt.target.result.byteLength
+                if (this.bodyWritten >= this.responseLength) {
+                    //this.request.connection.stream.onWriteBufferEmpty = null
+                }
+                //console.log(this.request.connection.stream.sockId,'write',evt.target.result.byteLength)
+                this.request.connection.write(evt.target.result)
+            } else {
+                console.error('onreadchunk error',evt.target.error)
+                this.request.connection.close()
+            }
+        },
+        onEntry: function(entry) {
+            this.entry = entry
+
+            if (this.entry && this.entry.isDirectory && ! this.request.origpath.endsWith('/')) {
+                var newloc = this.request.origpath + '/'
+                this.setHeader('location', newloc) // XXX - encode latin-1 somehow?
+                this.responseLength = 0
+                //console.log('redirect ->',newloc)
+                this.writeHeaders(301)
+
+                this.finish()
+                return
+            }
+
+
+
+            if (this.request.connection.stream.closed) {
+                console.warn(this.request.connection.stream.sockId,'request closed while processing request')
+                return
+            }
+            if (! entry) {
+                if (this.request.method == "HEAD") {
+                    this.responseLength = 0
+                    this.writeHeaders(404)
+                    this.finish()
+                } else {
+                    this.write('no entry',404)
+                }
+            } else if (entry.error) {
+                if (this.request.method == "HEAD") {
+                    this.responseLength = 0
+                    this.writeHeaders(404)
+                    this.finish()
+                } else {
+                    this.write('entry not found',404)
+                }
+            } else if (entry.isFile) {
+                this.renderFileContents(entry)
+            } else {
+                // directory
+                var reader = entry.createReader()
+                var allresults = []
+                this.isDirectoryListing = true
+
+                function onreaderr(evt) {
+                    WSC.entryCache.unset(this.entry.filesystem.name + this.entry.fullPath)
+                    console.error('error reading dir',evt)
+                    this.request.connection.close()
+                }
+
+                function alldone(results) {
+                    if (this.app.opts.renderIndex) {
+                        for (var i=0; i<results.length; i++) {
+                            if (results[i].name == 'index.html') {
+                                this.renderFileContents(results[i])
+                                return
+                            }
+                        }
+                    }
+                    if (this.request.arguments && this.request.arguments.static == '1' ||
+                        this.request.arguments.static == 'true'
+                       ) {
+                        this.renderDirectoryListing(results)
+                    } else {
+                        this.renderDirectoryListingTemplate(results)
+                    }
+                }
+
+                function onreadsuccess(results) {
+                    //console.log('onreadsuccess',results.length)
+                    if (results.length == 0) {
+                        alldone.bind(this)(allresults)
+                    } else {
+                        allresults = allresults.concat( results )
+                        reader.readEntries( onreadsuccess.bind(this),
+                                            onreaderr.bind(this) )
+                    }
+                }
+
+                //console.log('readentries')
+                reader.readEntries( onreadsuccess.bind(this),
+                                    onreaderr.bind(this))
+            }
+        },
+        renderFileContents: function(entry, file) {
+            getEntryFile(entry, function(file) {
+                this.file = file
+                if (this.request.method == "HEAD") {
+                    this.responseLength = this.file.size
+                    this.writeHeaders(200)
+                    this.finish()
+
+                } else if (this.file.size > this.readChunkSize * 8 ||
+                           this.request.headers['range']) {
+                    this.request.connection.stream.onWriteBufferEmpty = this.onWriteBufferEmpty.bind(this)
+
+                    if (this.request.headers['range']) {
+                        console.log(this.request.connection.stream.sockId,'RANGE',this.request.headers['range'])
+
+                        var range = this.request.headers['range'].split('=')[1].trim()
+
+                        var rparts = range.split('-')
+                        if (! rparts[1]) {
+                            this.fileOffset = parseInt(rparts[0])
+                            this.fileEndOffset = this.file.size - 1
+                            this.responseLength = this.file.size - this.fileOffset;
+                            this.setHeader('content-range','bytes '+this.fileOffset+'-'+(this.file.size-1)+'/'+this.file.size)
+                            if (this.fileOffset == 0) {
+                                this.writeHeaders(200)
+                            } else {
+                                this.writeHeaders(206)
+                            }
+
+                        } else {
+                            //debugger // TODO -- add support for partial file fetching...
+                            //this.writeHeaders(500)
+                            this.fileOffset = parseInt(rparts[0])
+                            this.fileEndOffset = parseInt(rparts[1])
+                            this.responseLength = this.fileEndOffset - this.fileOffset + 1
+                            this.setHeader('content-range','bytes '+this.fileOffset+'-'+(this.fileEndOffset)+'/'+this.file.size)
+                            this.writeHeaders(206)
+                        }
+
+
+                    } else {
+                        if (_DEBUG) {
+                            console.log('large file, streaming mode!')
+                        }
+                        this.fileOffset = 0
+                        this.fileEndOffset = this.file.size - 1
+                        this.responseLength = this.file.size
+                        this.writeHeaders(200)
+                    }
+                    
+                    
+
+
+
+                } else {
+                    //console.log(entry,file)
+                    var fr = new FileReader
+                    var cb = this.onReadEntry.bind(this)
+                    fr.onload = cb
+                    fr.onerror = cb
+                    fr.readAsArrayBuffer(file)
+                }
+            }.bind(this))
+        },
+        entriesSortFunc: function(a,b) {
+            var anl = a.name.toLowerCase()
+            var bnl = b.name.toLowerCase()
+            if (a.isDirectory && b.isDirectory) {
+                return anl.localeCompare(bnl)
+            } else if (a.isDirectory) {
+                return -1
+            } else if (b.isDirectory) {
+                return 1
+            } else {
+                /// both files
+                return anl.localeCompare(bnl)
+            }
+                
+        },
+        renderDirectoryListingTemplate: function(results) {
+            if (! WSC.template_data) {
+                return this.renderDirectoryListing(results)
+            }
+
+            this.setHeader('transfer-encoding','chunked')
+            this.writeHeaders(200)
+            this.writeChunk(WSC.template_data )
+            var html = ['<script>start("current directory...")<\/script>',
+                        '<script>addRow("..","..",1,"170 B","10/2/15, 8:32:45 PM");<\/script>']
+
+            for (var i=0; i<results.length; i++) {
+                var rawname = results[i].name
+                var name = encodeURIComponent(results[i].name)
+                var isdirectory = results[i].isDirectory
+                var filesize = '""'
+                //var modified = '10/13/15, 10:38:40 AM'
+                var modified = ''
+                // raw, urlencoded, isdirectory, size, 
+                html.push('<script>addRow("'+rawname+'","'+name+'",'+isdirectory+','+filesize+',"'+modified+'");<\/script>')
+            }
+            var data = html.join('\n')
+            data = new TextEncoder('utf-8').encode(data).buffer
+            this.writeChunk(data)
+            this.request.connection.write(WSC.str2ab('0\r\n\r\n'))
+            this.finish()
+        },
+        renderDirectoryListing: function(results) {
+            var html = ['<html>']
+            html.push('<style>li.directory {background:#aab}</style>')
+            html.push('<a href="../?static=1">parent</a>')
+            html.push('<ul>')
+            results.sort( this.entriesSortFunc )
+            
+            // TODO -- add sorting (by query parameter?) show file size?
+
+            for (var i=0; i<results.length; i++) {
+                var name = _.escape(results[i].name)
+                if (results[i].isDirectory) {
+                    html.push('<li class="directory"><a href="' + name + '/?static=1">' + name + '</a></li>')
+                } else {
+                    html.push('<li><a href="' + name + '?static=1">' + name + '</a></li>')
+                }
+            }
+            html.push('</ul></html>')
+            this.setHeader('content-type','text/html; charset=utf-8')
+            this.setHeader('test-foo-bar','999')
+            this.write(html.join('\n'))
+        },
+        onReadEntry: function(evt) {
+            if (evt.type == 'error') {
+                console.error('error reading',evt.target.error)
+                // clear this file from cache...
+                WSC.entryFileCache.unset( this.entry.filesystem.name + '/' + this.entry.fullPath )
+
+                this.request.connection.close()
+            } else {
+            // set mime types etc?
+                this.write(evt.target.result)
+            }
+
+        }
+    }, WSC.BaseHandler.prototype)
+
+    if (chrome.runtime.id == WSC.store_id) {
+        
+        chrome.runtime.getPackageDirectoryEntry( function(pentry) {
+            var template_filename = 'directory-listing-template.html'
+            var onfile = function(e) {
+                if (e instanceof FileError) {
+                    console.error('template fetch:',e)
+                } else {
+                    var onfile = function(file) {
+                        var onread = function(evt) {
+                            WSC.template_data = evt.target.result
+                        }
+                        var fr = new FileReader
+                        fr.onload = onread
+                        fr.onerror = onread
+                        fr.readAsArrayBuffer(file)
+                    }
+                    e.file( onfile, onfile )
+                }
+            }
+            pentry.getFile(template_filename,{create:false},onfile,onfile)
+        })
+    }
+
+
+    WSC.DirectoryEntryHandler = DirectoryEntryHandler
+
+})();
+(function() {
+var HTTPRESPONSES = {
+    "200": "OK", 
+    "201": "Created", 
+    "202": "Accepted", 
+    "203": "Non-Authoritative Information", 
+    "204": "No Content", 
+    "205": "Reset Content", 
+    "206": "Partial Content", 
+    "400": "Bad Request", 
+    "401": "Unauthorized", 
+    "402": "Payment Required", 
+    "403": "Forbidden", 
+    "404": "Not Found", 
+    "405": "Method Not Allowed", 
+    "406": "Not Acceptable", 
+    "407": "Proxy Authentication Required", 
+    "408": "Request Timeout", 
+    "409": "Conflict", 
+    "410": "Gone", 
+    "411": "Length Required", 
+    "412": "Precondition Failed", 
+    "413": "Request Entity Too Large", 
+    "414": "Request-URI Too Long", 
+    "415": "Unsupported Media Type", 
+    "416": "Requested Range Not Satisfiable", 
+    "417": "Expectation Failed", 
+    "100": "Continue", 
+    "101": "Switching Protocols", 
+    "300": "Multiple Choices", 
+    "301": "Moved Permanently", 
+    "302": "Found", 
+    "303": "See Other", 
+    "304": "Not Modified", 
+    "305": "Use Proxy", 
+    "306": "(Unused)", 
+    "307": "Temporary Redirect", 
+    "500": "Internal Server Error", 
+    "501": "Not Implemented", 
+    "502": "Bad Gateway", 
+    "503": "Service Unavailable", 
+    "504": "Gateway Timeout", 
+    "505": "HTTP Version Not Supported"
+}
+WSC.HTTPRESPONSES = HTTPRESPONSES
+})();
+// A dummy handler to just write something out in response as JSON.
+function DummyHandler(request) {
+  WSC.BaseHandler.prototype.constructor.call(this)
+}
+_.extend(DummyHandler.prototype, {
+  get: function() {
+    chrome.storage.local.get(null, function(data) {
+      this.setHeader('content-type','text/json')
+      var buf = new TextEncoder('utf-8').encode(JSON.stringify({foo: 'Hello server!'})).buffer
+      this.write(buf)
+      this.finish()
+    }.bind(this))
+  }
+}, WSC.BaseHandler.prototype);
+require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
+/*jshint esnext:true, bitwise: false */
+'use strict';
+
+/*
+ * https://github.com/justindarc/dns-sd.js
+ *
+ * The MIT License (MIT)
+ *
+ * Copyright (c) 2015 Justin D'Arcangelo
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to
+ * deal in the Software without restriction, including without limitation the
+ * rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+ * sell copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+ * IN THE SOFTWARE.
+ */
+
+
+/**
+ * ByteArray is an object that makes writing objects to an array of bytes more
+ * straightforward. Obtaining values from the ByteArray is accomplished by the
+ * ByteArrayReader. A single ByteArray can generate numerous ByteArrayReader
+ * objects.
+ *
+ * The ByteArray class is adopted slightly from an object of the same name by
+ * Justin D'Arcangelo. His original license and information is preserved above.
+ */
+
+var BinaryUtils = require('./binary-utils');
+
+var DEFAULT_SIZE = 512;
+
+/**
+ *  Bit   1-Byte    2-Bytes     3-Bytes     4-Bytes
+ *  -----------------------------------------------
+ *    0        1        256       65536    16777216
+ *    1        2        512      131072    33554432
+ *    2        4       1024      262144    67108864
+ *    3        8       2048      524288   134217728
+ *    4       16       4096     1048576   268435456
+ *    5       32       8192     2097152   536870912
+ *    6       64      16384     4194304  1073741824
+ *    7      128      32768     8388608  2147483648
+ *  -----------------------------------------------
+ *  Offset     0        255       65535    16777215
+ *  Total    255      65535    16777215  4294967295
+ */
+function valueToUint8Array(value, length) {
+  var arrayBuffer = new ArrayBuffer(length);
+  var uint8Array = new Uint8Array(arrayBuffer);
+  for (var i = length - 1; i >= 0; i--) {
+    uint8Array[i] = value & 0xff;
+    value = value >> 8;
+  }
+
+  return uint8Array;
+}
+
+function uint8ArrayToValue(uint8Array) {
+  var length = uint8Array.length;
+  if (length === 0) {
+    return null;
+  }
+
+  var value = 0;
+  for (var i = 0; i < length; i++) {
+    value = value << 8;
+    value += uint8Array[i];
+  }
+
+  return value;
+}
+
+/**
+ * Create a new ByteArray. 
+ *
+ * maxBytesOrData can be an integer indicating the starting number of maximum
+ * bytes, or it can be a ByteArray object to serve as the starting point. If
+ * maxBytesOrData is not present, the ByteArray will be created with an initial
+ * size of 256.
+ */
+exports.ByteArray = function ByteArray(maxBytesOrData) {
+  if (!(this instanceof ByteArray)) {
+    throw new Error('ByteArray must be called with new');
+  }
+
+  if (maxBytesOrData instanceof ByteArray) {
+    maxBytesOrData = maxBytesOrData.buffer;
+  }
+
+  if (maxBytesOrData instanceof Uint8Array ||
+      maxBytesOrData instanceof ArrayBuffer) {
+    this._data = new Uint8Array(maxBytesOrData);
+    this._buffer = this._data.buffer;
+    this._cursor = this._data.length;
+    return this;
+  }
+
+  this._buffer = new ArrayBuffer(maxBytesOrData || DEFAULT_SIZE);
+  this._data = new Uint8Array(this._buffer);
+  this._cursor = 0;
+
+
+};
+
+exports.ByteArray.prototype.constructor = exports.ByteArray;
+
+Object.defineProperty(exports.ByteArray.prototype, 'length', {
+  get: function() {
+    return this._cursor;
+  }
+});
+
+Object.defineProperty(exports.ByteArray.prototype, 'buffer', {
+  get: function() {
+    return this._buffer.slice(0, this._cursor);
+  }
+});
+
+exports.ByteArray.prototype.push = function(value, length) {
+  length = length || 1;
+
+  this.append(valueToUint8Array(value, length));
+};
+
+exports.ByteArray.prototype.append = function(data) {
+  // Get `data` as a `Uint8Array`
+  if (data instanceof exports.ByteArray) {
+    data = data.buffer;
+  }
+
+  if (data instanceof ArrayBuffer) {
+    data = new Uint8Array(data);
+  }
+
+  for (var i = 0, length = data.length; i < length; i++) {
+    this._data[this._cursor] = data[i];
+    this._cursor++;
+  }
+};
+
+exports.ByteArray.prototype.getReader = function(startByte) {
+  return new exports.ByteArrayReader(this, startByte);
+};
+
+exports.ByteArrayReader = function ByteArrayReader(byteArray, startByte) {
+  this.byteArray = byteArray;
+  this.cursor = startByte || 0;
+};
+
+exports.ByteArrayReader.prototype.constructor = exports.ByteArrayReader;
+
+Object.defineProperty(exports.ByteArrayReader.prototype, 'eof', {
+  get: function() {
+    return this.cursor >= this.byteArray.length;
+  }
+});
+
+exports.ByteArrayReader.prototype.getBytes = function(length) {
+  if (length === null || length === 0) {
+    return new Uint8Array();
+  }
+
+  length = length || 1;
+
+  var end = this.cursor + length;
+  if (end > this.byteArray.length) {
+    return new Uint8Array();
+  }
+
+  var uint8Array = new Uint8Array(this.byteArray._buffer.slice(this.cursor, end));
+  this.cursor += length;
+
+  return new exports.ByteArray(uint8Array);
+};
+
+exports.ByteArrayReader.prototype.getString = function(length) {
+  var byteArray = this.getBytes(length);
+  if (byteArray.length === 0) {
+    return '';
+  }
+
+  return BinaryUtils.arrayBufferToString(byteArray.buffer);
+};
+
+exports.ByteArrayReader.prototype.getValue = function(length) {
+  var byteArray = this.getBytes(length);
+  if (byteArray.length === 0) {
+    return null;
+  }
+
+  return uint8ArrayToValue(new Uint8Array(byteArray.buffer));
+};
+
+/**
+ * Get the ByteArray object as a Uint8Array. This is truncated to the correct
+ * size. The ByteArray might be a larger size than necessary, but the
+ * Uint8Array is truncated to just the size that is actually used by the
+ * ByteArray.
+ */
+exports.getByteArrayAsUint8Array = function(byteArr) {
+  return new Uint8Array(byteArr._buffer, 0, byteArr._cursor);
+};
+
+},{"./binary-utils":"binaryUtils"}],2:[function(require,module,exports){
+/*jshint esnext:true*/
+/*
+ * https://github.com/justindarc/dns-sd.js
+ *
+ * The MIT License (MIT)
+ *
+ * Copyright (c) 2015 Justin D'Arcangelo
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to
+ * deal in the Software without restriction, including without limitation the
+ * rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+ * sell copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+ * IN THE SOFTWARE.
+ */
+
+'use strict';
+
+exports.QUERY_RESPONSE_CODES = defineType({
+  QUERY       : 0,      // RFC 1035 - Query
+  RESPONSE    : 1       // RFC 1035 - Reponse
+});
+
+exports.OPERATION_CODES = defineType({
+  QUERY       : 0,      // RFC 1035 - Query
+  IQUERY      : 1,      // RFC 1035 - Inverse Query
+  STATUS      : 2,      // RFC 1035 - Status
+  NOTIFY      : 4,      // RFC 1996 - Notify
+  UPDATE      : 5       // RFC 2136 - Update
+});
+
+exports.AUTHORITATIVE_ANSWER_CODES = defineType({
+  NO          : 0,      // RFC 1035 - Not Authoritative
+  YES         : 1       // RFC 1035 - Is Authoritative
+});
+
+exports.TRUNCATED_RESPONSE_CODES = defineType({
+  NO          : 0,      // RFC 1035 - Not Truncated
+  YES         : 1       // RFC 1035 - Is Truncated
+});
+
+exports.RECURSION_DESIRED_CODES = defineType({
+  NO          : 0,      // RFC 1035 - Recursion Not Desired
+  YES         : 1       // RFC 1035 - Recursion Is Desired
+});
+
+exports.RECURSION_AVAILABLE_CODES = defineType({
+  NO          : 0,      // RFC 1035 - Recursive Query Support Not Available
+  YES         : 1       // RFC 1035 - Recursive Query Support Is Available
+});
+
+exports.AUTHENTIC_DATA_CODES = defineType({
+  NO          : 0,      // RFC 4035 - Response Has Not Been Authenticated/Verified
+  YES         : 1       // RFC 4035 - Response Has Been Authenticated/Verified
+});
+
+exports.CHECKING_DISABLED_CODES = defineType({
+  NO          : 0,      // RFC 4035 - Authentication/Verification Checking Not Disabled
+  YES         : 1       // RFC 4035 - Authentication/Verification Checking Is Disabled
+});
+
+exports.RETURN_CODES = defineType({
+  NOERROR     : 0,      // RFC 1035 - No Error
+  FORMERR     : 1,      // RFC 1035 - Format Error
+  SERVFAIL    : 2,      // RFC 1035 - Server Failure
+  NXDOMAIN    : 3,      // RFC 1035 - Non-Existent Domain
+  NOTIMP      : 4,      // RFC 1035 - Not Implemented
+  REFUSED     : 5,      // RFC 1035 - Query Refused
+  YXDOMAIN    : 6,      // RFC 2136 - Name Exists when it should not
+  YXRRSET     : 7,      // RFC 2136 - RR Set Exists when it should not
+  NXRRSET     : 8,      // RFC 2136 - RR Set that should exist does not
+  NOTAUTH     : 9,      // RFC 2136 - Server Not Authoritative for zone
+  NOTZONE     : 10      // RFC 2136 - NotZone Name not contained in zone
+});
+
+exports.CLASS_CODES = defineType({
+  IN          : 1,      // RFC 1035 - Internet
+  CS          : 2,      // RFC 1035 - CSNET
+  CH          : 3,      // RFC 1035 - CHAOS
+  HS          : 4,      // RFC 1035 - Hesiod
+  NONE        : 254,    // RFC 2136 - None
+  ANY         : 255     // RFC 1035 - Any
+});
+
+exports.OPTION_CODES = defineType({
+  LLQ         : 1,      // RFC ???? - Long-Lived Queries
+  UL          : 2,      // RFC ???? - Update Leases
+  NSID        : 3,      // RFC ???? - Name Server Identifier
+  OWNER       : 4,      // RFC ???? - Owner
+  UNKNOWN     : 65535   // RFC ???? - Token
+});
+
+exports.RECORD_TYPES = defineType({
+  SIGZERO     : 0,      // RFC 2931
+  A           : 1,      // RFC 1035
+  NS          : 2,      // RFC 1035
+  MD          : 3,      // RFC 1035
+  MF          : 4,      // RFC 1035
+  CNAME       : 5,      // RFC 1035
+  SOA         : 6,      // RFC 1035
+  MB          : 7,      // RFC 1035
+  MG          : 8,      // RFC 1035
+  MR          : 9,      // RFC 1035
+  NULL        : 10,     // RFC 1035
+  WKS         : 11,     // RFC 1035
+  PTR         : 12,     // RFC 1035
+  HINFO       : 13,     // RFC 1035
+  MINFO       : 14,     // RFC 1035
+  MX          : 15,     // RFC 1035
+  TXT         : 16,     // RFC 1035
+  RP          : 17,     // RFC 1183
+  AFSDB       : 18,     // RFC 1183
+  X25         : 19,     // RFC 1183
+  ISDN        : 20,     // RFC 1183
+  RT          : 21,     // RFC 1183
+  NSAP        : 22,     // RFC 1706
+  NSAP_PTR    : 23,     // RFC 1348
+  SIG         : 24,     // RFC 2535
+  KEY         : 25,     // RFC 2535
+  PX          : 26,     // RFC 2163
+  GPOS        : 27,     // RFC 1712
+  AAAA        : 28,     // RFC 1886
+  LOC         : 29,     // RFC 1876
+  NXT         : 30,     // RFC 2535
+  EID         : 31,     // RFC ????
+  NIMLOC      : 32,     // RFC ????
+  SRV         : 33,     // RFC 2052
+  ATMA        : 34,     // RFC ????
+  NAPTR       : 35,     // RFC 2168
+  KX          : 36,     // RFC 2230
+  CERT        : 37,     // RFC 2538
+  DNAME       : 39,     // RFC 2672
+  OPT         : 41,     // RFC 2671
+  APL         : 42,     // RFC 3123
+  DS          : 43,     // RFC 4034
+  SSHFP       : 44,     // RFC 4255
+  IPSECKEY    : 45,     // RFC 4025
+  RRSIG       : 46,     // RFC 4034
+  NSEC        : 47,     // RFC 4034
+  DNSKEY      : 48,     // RFC 4034
+  DHCID       : 49,     // RFC 4701
+  NSEC3       : 50,     // RFC ????
+  NSEC3PARAM  : 51,     // RFC ????
+  HIP         : 55,     // RFC 5205
+  SPF         : 99,     // RFC 4408
+  UINFO       : 100,    // RFC ????
+  UID         : 101,    // RFC ????
+  GID         : 102,    // RFC ????
+  UNSPEC      : 103,    // RFC ????
+  TKEY        : 249,    // RFC 2930
+  TSIG        : 250,    // RFC 2931
+  IXFR        : 251,    // RFC 1995
+  AXFR        : 252,    // RFC 1035
+  MAILB       : 253,    // RFC 1035
+  MAILA       : 254,    // RFC 1035
+  ANY         : 255,    // RFC 1035
+  DLV         : 32769   // RFC 4431
+});
+
+function defineType(values) {
+  function T(value) {
+    for (var name in T) {
+      if (T[name] === value) {
+        return name;
+      }
+    }
+
+    return null;
+  }
+
+  for (var name in values) {
+    T[name] = values[name];
+  }
+
+  return T;
+}
+
+},{}],3:[function(require,module,exports){
+/*jshint esnext:true, bitwise:false */
+
+/**
+ * Represents a DNS packet.
+ *
+ * The structure of the packet is based on the information in 'TCP/IP
+ * Illustrated, Volume 1: The Protocols' by Stevens.
+ */
+'use strict';
+
+var resRec = require('./resource-record');
+var dnsCodes = require('./dns-codes');
+var byteArray = require('./byte-array');
+var qSection = require('./question-section');
+
+var MAX_ID = 65535;
+var MAX_OPCODE = 15;
+var MAX_RETURN_CODE = 15;
+
+var NUM_OCTETS_ID = 2;
+var NUM_OCTETS_FLAGS = 2;
+var NUM_OCTETS_SECTION_LENGTHS = 2;
+
+/**
+ * Parse numRecords Resource Records from a ByteArrayReader object. Returns an
+ * array of resource record objects.
+ *
+ * @param {ByteArrayReader} reader the reader from which to construct resource
+ * records. reader should have been moved to the correct cursor position
+ * @param {integer} numRecords the number of records to parse
+ *
+ * @return {Array<resource record>} an Array of the parsed resource records
+ */
+function parseResourceRecordsFromReader(reader, numRecords) {
+  var result = [];
+  for (var i = 0; i < numRecords; i++) {
+    var recordType = resRec.peekTypeInReader(reader);
+
+    var record = null;
+    switch (recordType) {
+      case dnsCodes.RECORD_TYPES.A:
+        record = resRec.createARecordFromReader(reader);
+        break;
+      case dnsCodes.RECORD_TYPES.PTR:
+        record = resRec.createPtrRecordFromReader(reader);
+        break;
+      case dnsCodes.RECORD_TYPES.SRV:
+        record = resRec.createSrvRecordFromReader(reader);
+        break;
+      default:
+        throw new Error('Unsupported record type: ' + recordType);
+    }
+
+    result.push(record);
+  }
+
+  return result;
+}
+
+/**
+ * Create a DNS packet. This creates the packet with various flag values. The
+ * packet is not converted to byte format until a call is made to
+ * getAsByteArray().
+ *
+ * @param {integer} id a 2-octet identifier for the packet
+ * @param {boolean} isQuery true if packet is a query, false if it is a
+ * response
+ * @param {integer} opCode a 4-bit field. 0 is a standard query
+ * @param {boolea} isAuthoritativeAnswer true if the response is authoritative
+ * for the domain in the question section
+ * @param {boolean} isTruncated true if the reply is truncated
+ * @param {boolean} recursionIsDesired true if recursion is desired
+ * @param {boolean} recursionAvailable true or recursion is available
+ * @param {integer} returnCode a 4-bit field. 0 is no error and 3 is a name
+ * error. Name errors are returned only from the authoritative name server and
+ * means the domain name specified does not exist
+ */
+exports.DnsPacket = function DnsPacket(
+  id,
+  isQuery,
+  opCode,
+  isAuthorativeAnswer,
+  isTruncated,
+  recursionDesired,
+  recursionAvailable,
+  returnCode
+) {
+  if (!(this instanceof DnsPacket)) {
+    throw new Error('DnsPacket must be called with new');
+  }
+
+  // The ID must fit in two bytes.
+  if (id < 0 || id > MAX_ID) {
+    throw new Error('DNS Packet ID is < 0 or > ' + MAX_ID +': ' + id);
+  }
+  this.id = id;
+
+  this.isQuery = isQuery ? true : false;
+
+  if (opCode < 0 || opCode > MAX_OPCODE) {
+    throw new Error(
+      'DNS Packet opCode is < 0 or > ' +
+        MAX_OPCODE +
+        ': ' +
+        opCode
+    );
+  }
+  this.opCode = opCode;
+
+  this.isAuthorativeAnswer = isAuthorativeAnswer ? true : false;
+  this.isTruncated = isTruncated ? true : false;
+  this.recursionDesired = recursionDesired ? true : false;
+  this.recursionAvailable = recursionAvailable ? true : false;
+
+  if (returnCode < 0 || returnCode > MAX_RETURN_CODE) {
+    throw new Error('DNS Packet returnCode is < 0 or > ' +
+      MAX_RETURN_CODE +
+      ': ' +
+      returnCode
+    );
+  }
+  this.returnCode = returnCode;
+
+  this.questions = [];
+  this.answers = [];
+  this.authority = [];
+  this.additionalInfo = [];
+};
+
+/**
+ * Convert the DnsPacket to a ByteArray object. The format of a DNS Packet is
+ * as specified in 'TCP/IP Illustrated, Volume 1' by Stevens, as follows:
+ *
+ * 2 octet ID
+ *
+ * 2 octet flags (see dns-util)
+ *
+ * 2 octet number of question sections
+ *
+ * 2 octet number of answer Resource Records (RRs)
+ *
+ * 2 octet number of authority RRs
+ *
+ * 2 octet number of additional info RRs
+ *
+ * Variable number of bytes representing the questions
+ *
+ * Variable number of bytes representing the answers
+ *
+ * Variable number of bytes representing authorities
+ *
+ * Variable number of bytes representing additional info
+ */
+exports.DnsPacket.prototype.convertToByteArray = function() {
+  var result = new byteArray.ByteArray();
+
+  result.push(this.id, NUM_OCTETS_ID);
+
+  // Prepare flags to be passed to getFlagsAsValue
+  var qr = this.isQuery ? 0 : 1;  // 0 means query, 1 means response
+  var opcode = this.opCode;
+  var aa = this.isAuthorativeAnswer ? 1 : 0;
+  var tc = this.isTruncated ? 1 : 0;
+  var rd = this.recursionDesired ? 1 : 0;
+  var ra = this.recursionAvailable ? 1 : 0;
+  var rcode = this.returnCode;
+
+  var flagValue = exports.getFlagsAsValue(qr, opcode, aa, tc, rd, ra, rcode);
+  result.push(flagValue, NUM_OCTETS_FLAGS);
+
+  result.push(this.questions.length, NUM_OCTETS_SECTION_LENGTHS);
+  result.push(this.answers.length, NUM_OCTETS_SECTION_LENGTHS);
+  result.push(this.authority.length, NUM_OCTETS_SECTION_LENGTHS);
+  result.push(this.additionalInfo.length, NUM_OCTETS_SECTION_LENGTHS);
+
+  // We should have now met the requirement of adding 12 bytes to a DNS header.
+  if (result.length !== 12) {
+    throw new Error(
+      'Problem serializing DNS packet. Header length != 12 bytes'
+    );
+  }
+
+  this.questions.forEach(question => {
+    var byteArr = question.convertToByteArray();
+    result.append(byteArr);
+  });
+
+  this.answers.forEach(answer => {
+    var byteArr = answer.convertToByteArray();
+    result.append(byteArr);
+  });
+
+  this.authority.forEach(authority => {
+    var byteArr = authority.convertToByteArray();
+    result.append(byteArr);
+  });
+
+  this.additionalInfo.forEach(info => {
+    var byteArr = info.convertToByteArray();
+    result.append(byteArr);
+  });
+
+  return result;
+};
+
+/**
+ * Create a DNS Packet from a ByteArrayReader object. The contents of the
+ * reader are as expected to be output from convertToByteArray().
+ *
+ * @param {ByteArrayReader} reader the reader from which to construct the
+ * DnsPacket. Should be moved to the correct cursor position
+ *
+ * @return {DnsPacket} the packet constructed
+ */
+exports.createPacketFromReader = function(reader) {
+  var id = reader.getValue(NUM_OCTETS_ID);
+  var flagsAsValue = reader.getValue(NUM_OCTETS_FLAGS);
+  var numQuestions = reader.getValue(NUM_OCTETS_SECTION_LENGTHS);
+  var numAnswers = reader.getValue(NUM_OCTETS_SECTION_LENGTHS);
+  var numAuthority = reader.getValue(NUM_OCTETS_SECTION_LENGTHS);
+  var numAdditionalInfo = reader.getValue(NUM_OCTETS_SECTION_LENGTHS);
+
+  var flags = exports.getValueAsFlags(flagsAsValue);
+
+  var opCode = flags.opcode;
+  var returnCode = flags.rcode;
+
+  // 0 means it is a query, 1 means it is a response.
+  var isQuery;
+  if (flags.qr === 0) {
+    isQuery = true;
+  } else {
+    isQuery = false;
+  }
+
+  // The non-QR flags map more readily to 0/1 = false/true, so we will use
+  // ternary operators.
+  var isAuthorativeAnswer = flags.aa ? true : false;
+  var isTruncated = flags.tc ? true : false;
+  var recursionDesired = flags.rd ? true : false;
+  var recursionAvailable = flags.ra ? true : false;
+
+  var result = new exports.DnsPacket(
+    id,
+    isQuery,
+    opCode,
+    isAuthorativeAnswer,
+    isTruncated,
+    recursionDesired,
+    recursionAvailable,
+    returnCode
+  );
+
+  for (var i = 0; i < numQuestions; i++) {
+    var question = qSection.createQuestionFromReader(reader);
+    result.addQuestion(question);
+  }
+
+  var answers = parseResourceRecordsFromReader(reader, numAnswers);
+  var authorities = parseResourceRecordsFromReader(reader, numAuthority);
+  var infos = parseResourceRecordsFromReader(reader, numAdditionalInfo);
+
+  answers.forEach(answer => {
+    result.addAnswer(answer);
+  });
+  authorities.forEach(authority => {
+    result.addAuthority(authority);
+  });
+  infos.forEach(info => {
+    result.addAdditionalInfo(info);
+  });
+
+  return result;
+};
+
+/**
+ * Add a question resource to the DNS Packet.
+ *
+ * @param {QuestionSection} question the question to add to this packet 
+ */
+exports.DnsPacket.prototype.addQuestion = function(question) {
+  if (!(question instanceof qSection.QuestionSection)) {
+    throw new Error('question must be a QuestionSection but was: ' + question);
+  }
+  this.questions.push(question);
+};
+
+/**
+ * Add a Resource Record to the answer section.
+ *
+ * @param {resource record} resourceRecord the record to add to the answer
+ * section
+ */
+exports.DnsPacket.prototype.addAnswer = function(resourceRecord) {
+  this.answers.push(resourceRecord);
+};
+
+/**
+ * Add a Resource Record to the authority section.
+ *
+ * @param {resource record} resourceRecord the record to add to the authority
+ * section
+ */
+exports.DnsPacket.prototype.addAuthority = function(resourceRecord) {
+  this.authority.push(resourceRecord);
+};
+
+/**
+ * Add a Resource Record to the additional info section.
+ *
+ * @param {resource record} resourceRecord the record to add to the additional
+ * info section
+ */
+exports.DnsPacket.prototype.addAdditionalInfo = function(resourceRecord) {
+  this.additionalInfo.push(resourceRecord);
+};
+
+/**
+ * Convert the given value (in 16 bits) to an object containing the DNS header
+ * flags. The returned object will have the following properties: qr, opcdoe,
+ * aa, tc, rd, ra, rcode.
+ *
+ * @param {integer} value a number those lowest order 16 bits will be parsed to
+ * an object representing packet flags
+ *
+ * @return {object} a flag object like the following:
+ * {
+ *   qr: integer,
+ *   opcode: integer,
+ *   aa: integer,
+ *   tc: integer,
+ *   rd: integer,
+ *   ra: integer,
+ *   rcode integer
+ * }
+ */
+exports.getValueAsFlags = function(value) {
+  var qr = (value & 0x8000) >> 15;
+  var opcode = (value & 0x7800) >> 11;
+  var aa = (value & 0x0400) >> 10;
+  var tc = (value & 0x0200) >> 9;
+  var rd = (value & 0x0100) >> 8;
+  var ra = (value & 0x0080) >> 7;
+  var rcode = (value & 0x000f) >> 0;
+
+  return {
+    qr: qr,
+    opcode: opcode,
+    aa: aa,
+    tc: tc,
+    rd: rd,
+    ra: ra,
+    rcode: rcode
+  };
+};
+
+/**
+ * Convert DNS packet flags to a value that represents the flags (using bitwise
+ * operators), fitting in the last 16 bits. All parameters must be numbers.
+ *
+ * @param {integer} qr 0 if it is a query, 1 if it is a response
+ * @param {integer} opcode 0 for a standard query
+ * @param {integer} aa 1 if it is authoritative, else 0
+ * @param {integer} tc 1 if truncated
+ * @param {integer} rd 1 if recursion desired
+ * @param {integer} ra 1 if recursion available
+ * @param {integer} rcode 4-bit return code field. 0 for no error, 3 for name
+ * error (if this is the authoritative name server and the name does not exist)
+ *
+ * @return {integer} an integer representing the flag values in the lowest
+ * order 16 bits
+ */
+exports.getFlagsAsValue = function(qr, opcode, aa, tc, rd, ra, rcode) {
+  var value = 0x0000;
+
+  value = value << 1;
+  value += qr & 0x01;
+
+  value = value << 4;
+  value += opcode & 0x0f;
+
+  value = value << 1;
+  value += aa & 0x01;
+
+  value = value << 1;
+  value += tc & 0x01;
+
+  value = value << 1;
+  value += rd & 0x01;
+
+  value = value << 1;
+  value += ra & 0x01;
+
+  // These three bits are reserved for future use and must be set to 0.
+  value = value << 3;
+
+  value = value << 4;
+  value += rcode & 0x0f;
+
+  return value;
+};
+
+},{"./byte-array":1,"./dns-codes":2,"./question-section":5,"./resource-record":6}],4:[function(require,module,exports){
+'use strict';
+
+var byteArray = require('./byte-array');
+
+/**
+ * Various methods for common DNS-related operations.
+ */
+
+var MAX_LABEL_LENGTH = 63;
+var OCTET_LABEL_LENGTH = 1;
+
+exports.DEBUG = true;
+
+exports.DEFAULT_TTL = 10;
+exports.DEFAULT_PRIORITY = 0;
+exports.DEFAULT_WEIGHT = 0;
+
+/**
+ * Return the local suffix, i.e. ".local". The leading dot is included.
+ *
+ * @return {string}
+ */
+exports.getLocalSuffix = function() {
+  return '.local';
+};
+
+/**
+ * Return a random integer between [min, max).
+ *
+ * @param {integer} min
+ * @param {integer} max
+ *
+ * @return {integer} random value >= min and < max
+ */
+exports.randomInt = function(min, max) {
+  return Math.floor(Math.random() * (max - min)) + min;
+};
+
+/**
+ * Converts a domain name to a byte array. Despite the name, this can serialize
+ * any '.' separated string. _semcache._http.local is not a domain name, eg,
+ * but it is serializable in the same fashion. The name 'domain' is retained to
+ * be recognizable even to those that are not familiar with the term 'label'
+ * that is used in the DNS spec.
+ *
+ * The DNS protocol specifies that a domain name is serialized as a series of
+ * 'labels'. A label is a component of a name between a dot. www.example.com,
+ * for example, would consist of three labels: www, example, and com.
+ *
+ * Labels are serialized by a single byte indicating the length of the bytes to
+ * follow, terminated with a 0 byte to indicate there are no additional
+ * labels.
+ *
+ * Labels are limited to 63 bytes.
+ *
+ * @param {string} domain
+ *
+ * @return {ByteArray} a ByteArray containing the serialized domain
+ */
+exports.getDomainAsByteArray = function(domain) {
+  var result = new byteArray.ByteArray();
+
+  var labels = domain.split('.');
+
+  labels.forEach(label => {
+    var length = label.length;
+    if (length > MAX_LABEL_LENGTH) {
+      throw new Error('label exceeds max length: ' + label);
+    }
+
+    // A label is serialized as a single byte for its length, followed by the
+    // character code of each component.
+    result.push(length, OCTET_LABEL_LENGTH);
+
+    for (var i = 0; i < label.length; i++) {
+      result.push(label.charCodeAt(i), 1);
+    }
+  });
+
+  // The label is terminated by a 0 byte.
+  result.push(0, OCTET_LABEL_LENGTH);
+
+  return result;
+};
+
+/**
+ * Convert a serialized domain name from its DNS representation to a string.
+ * The byteArray should contain bytes as output by getDomainAsByteArray.
+ *
+ * @param {ByteArray} byteArr the ByteArray containing the serialized labels
+ * @param {integer} startByte an optional index indicating the start point of
+ * the serialization. If not present, assumes a starting index ov 0.
+ *
+ * @return {string}
+ */
+exports.getDomainFromByteArray = function(byteArr, startByte) {
+  if (!(byteArr instanceof byteArray.ByteArray)) {
+    throw new Error('byteArr is not type of ByteArray');
+  }
+
+  if (!startByte) {
+    // If a start byte hasn't been specified, we start at the beginning.
+    startByte = 0;
+  }
+
+  var reader = byteArr.getReader(startByte);
+  
+  var result = exports.getDomainFromByteArrayReader(reader, 0);
+  return result;
+};
+
+/**
+ * Convert a serialized domain name from its DNS representation to a string.
+ * The reader should contain bytes as output from getDomainAsByteArray.
+ *
+ * @param {ByteArrayReader} reader a ByteArrayReader containing the bytes to be
+ * deserialized. The reader will have all the domain bytes consumed.
+ *
+ * @return {string}
+ */
+exports.getDomainFromByteArrayReader = function(reader) {
+  var result = '';
+
+  // We expect a series of length charCode pairs, ending when the final length
+  // field is a 0. We'll do this by examining a single label at a time.
+  var lengthOfCurrentLabel = -1;
+  var iteration = 0;
+  // Sanity check because while loops are dangerous when faced with outside
+  // data.
+  var maxIterations = 10;
+  while (lengthOfCurrentLabel !== 0) {
+    if (iteration > maxIterations) {
+      throw new Error('Exceeded max iterations, likely malformed data');
+    }
+
+    // Get the first length, consuming the first byte of the reader.
+    lengthOfCurrentLabel = reader.getValue(1);
+
+    if (lengthOfCurrentLabel > MAX_LABEL_LENGTH) {
+      // This check will try to alert callers when they have an off by one or
+      // other error in the byte array.
+      throw new Error(
+        'Got a label length greater than the max: ' + lengthOfCurrentLabel
+      );
+    }
+
+    for (var i = 0; i < lengthOfCurrentLabel; i++) {
+      var currentCharCode = reader.getValue(1);
+      var currentChar = String.fromCharCode(currentCharCode);
+      result += currentChar;
+    }
+
+    // We've consumed a label unless we're in the last iteration of the while
+    // loop, add a '.'.
+    if (lengthOfCurrentLabel !== 0) {
+      result += '.';
+    }
+
+    iteration += 1;
+  }
+
+  // Unless we have an empty string, we've added one too many dots due to the
+  // fence post problem in the while loop.
+  if (result.length > 0) {
+    result = result.substring(0, result.length - 1);
+  }
+
+  return result;
+};
+
+/**
+ * Convert a string representation of an IP address to a ByteArray.
+ * '155.33.17.68' would return a ByteArray with length 4, corresponding to the
+ * bytes 155, 33, 17, 68.
+ *
+ * @param {string} ipAddress
+ *
+ * @return {ByteArray}
+ */
+exports.getIpStringAsByteArray = function(ipAddress) {
+  var parts = ipAddress.split('.');
+
+  if (parts.length < 4) {
+    throw new Error('IP string does not have 4 parts: ' + ipAddress);
+  }
+
+  var result = new byteArray.ByteArray();
+  
+  parts.forEach(part => {
+    var intValue = parseInt(part);
+    if (intValue < 0 || intValue > 255) {
+      throw new Error('A byte of the IP address < 0 or > 255: ' + ipAddress);
+    }
+    result.push(intValue, 1);
+  });
+
+  return result;
+};
+
+/**
+ * Recover an IP address in string representation from the ByteArrayReader.
+ *
+ * @param {ByteArrayReader} reader
+ *
+ * @return {string}
+ */
+exports.getIpStringFromByteArrayReader = function(reader) {
+  // We assume a single byte representing each string.
+  var parts = [];
+
+  var numParts = 4;
+  for (var i = 0; i < numParts; i++) {
+    var intValue = reader.getValue(1);
+    var stringValue = intValue.toString();
+    parts.push(stringValue);
+  }
+
+  var result = parts.join('.');
+  return result;
+};
+
+},{"./byte-array":1}],5:[function(require,module,exports){
+/* global exports, require */
+'use strict';
+
+var byteArray = require('./byte-array');
+var dnsUtil = require('./dns-util');
+
+var NUM_OCTETS_QUERY_TYPE = 2;
+var NUM_OCTETS_QUERY_CLASS = 2;
+
+var MAX_QUERY_TYPE = 65535;
+var MAX_QUERY_CLASS = 65535;
+
+/**
+ * A DNS Question section.
+ *
+ * @param {string} qName the name of the query
+ * @param {integer} qType the type of the query
+ * @param {integer} qClass the class of the query
+ */
+exports.QuestionSection = function QuestionSection(qName, qType, qClass) {
+  if (!(this instanceof QuestionSection)) {
+    throw new Error('QuestionSection must be called with new');
+  }
+
+  if (qType < 0 || qType > MAX_QUERY_TYPE) {
+    throw new Error(
+      'query type must be > 0 and < ' +
+        MAX_QUERY_TYPE +
+        ': ' +
+        qType
+    );
+  }
+
+  if (qClass < 0 || qClass > MAX_QUERY_CLASS) {
+    throw new Error(
+      'query class must be > 0 and < ' +
+        MAX_QUERY_CLASS +
+        ': ' +
+        qClass
+    );
+  }
+
+  this.queryName = qName;
+  this.queryType = qType;
+  this.queryClass = qClass;
+};
+
+/**
+ * Convert the QuestionSection to a ByteArray object. According to 'TCP/IP
+ * Illustrated, Volume 1' by Stevens, the format of the question section is as
+ * follows:
+ *
+ * variable number of octets representing the query name
+ *
+ * 2 octets representing the query type
+ *
+ * 2 octets representing the query class
+ *
+ * @return {ByteArray}
+ */
+exports.QuestionSection.prototype.convertToByteArray = function() {
+  var result = new byteArray.ByteArray();
+  
+  var queryAsBytes = dnsUtil.getDomainAsByteArray(this.queryName);
+  result.append(queryAsBytes);
+
+  result.push(this.queryType, NUM_OCTETS_QUERY_TYPE);
+  result.push(this.queryClass, NUM_OCTETS_QUERY_CLASS);
+
+  return result;
+};
+
+/**
+ * Returns true if the question has requested a unicast response, else false.
+ *
+ * @return {boolean}
+ */
+exports.QuestionSection.prototype.unicastResponseRequested = function() {
+  // For now, since we can't share a port in Chrome, we will assume that
+  // unicast responses are always requested.
+  return true;
+};
+
+/**
+ * Create a QuestionSection from a ByteArrayReader as serialized by
+ * convertToByteArray().
+ */
+exports.createQuestionFromReader = function(reader) {
+  var queryName = dnsUtil.getDomainFromByteArrayReader(reader);
+
+  var queryType = reader.getValue(NUM_OCTETS_QUERY_TYPE);
+  if (queryType < 0 || queryType > MAX_QUERY_TYPE) {
+    throw new Error('deserialized query type out of range: ' + queryType);
+  }
+
+  var queryClass = reader.getValue(NUM_OCTETS_QUERY_CLASS);
+  if (queryClass < 0 || queryClass > MAX_QUERY_CLASS) {
+    throw new Error('deserialized query class out of range: ' + queryClass);
+  }
+
+  var result = new exports.QuestionSection(queryName, queryType, queryClass);
+
+  return result;
+};
+
+},{"./byte-array":1,"./dns-util":4}],6:[function(require,module,exports){
+/* global exports, require */
+'use strict';
+
+var byteArray = require('./byte-array');
+var dnsUtil = require('./dns-util');
+var dnsCodes = require('./dns-codes');
+
+var NUM_OCTETS_TYPE = 2;
+var NUM_OCTETS_CLASS = 2;
+var NUM_OCTETS_TTL = 4;
+var NUM_OCTETS_RESOURCE_DATA_LENGTH = 2;
+
+/** An A Record has for bytes, all representing an IP address. */
+var NUM_OCTETS_RESOURCE_DATA_A_RECORD = 4;
+
+var NUM_OCTETS_PRIORITY = 2;
+var NUM_OCTETS_WEIGHT = 2;
+var NUM_OCTETS_PORT = 2;
+
+/**
+ * A resource record (RR) is a component of a DNS message. They share a similar
+ * structure but contain different information.
+ *
+ * Each resource record begins with a domain name, which can be a variable
+ * number of bytes.
+ *
+ * Then is a 2-octet type (e.g. A, SRV, etc).
+ *
+ * Then is a 2-octet class (e.g. IN for internet).
+ *
+ * Then is a 4-octet TTL.
+ *
+ * Then is a variable number of bytes representing the data in record. The
+ * first 2-octets are the length of the following data. The structure of that
+ * data depends on the type of the record.
+ *
+ * Information here is based on 'TCP/IP Illustrated, Volume 1' by Stevens and
+ * on the Bonjour Overview page provided by Apple:
+ *
+ * https://developer.apple.com/library/mac/documentation/Cocoa/Conceptual/NetServices/Articles/NetServicesArchitecture.html#//apple_ref/doc/uid/20001074-SW1
+ */
+
+/**
+ * An A record. A records respond to queries for a domain name to an IP
+ * address.
+ *
+ * @param {string} domainName: the domain name, e.g. www.example.com
+ * @param {integer} ttl: the time to live
+ * @param {string} ipAddress: the IP address of the domainName. This must be a string
+ * (e.g. '192.3.34.17').
+ * @param {integer} recordClass: the class of the record type. This is optional, and if not
+ * present or is not truthy will be set as IN for internet traffic.
+ */
+exports.ARecord = function ARecord(
+  domainName,
+  ttl,
+  ipAddress,
+  recordClass
+) {
+  if (!(this instanceof ARecord)) {
+    throw new Error('ARecord must be called with new');
+  }
+
+  if ((typeof ipAddress) !== 'string') {
+    throw new Error('ipAddress must be a String: ' + ipAddress);
+  }
+  
+  if (!recordClass) {
+    recordClass = dnsCodes.CLASS_CODES.IN;
+  }
+
+  this.recordType = dnsCodes.RECORD_TYPES.A;
+  this.recordClass = recordClass;
+
+  this.domainName = domainName;
+  this.name = domainName;
+  this.ttl = ttl;
+  this.ipAddress = ipAddress;
+};
+
+/**
+ * Get the A Record as a ByteArray object.
+ *
+ * The DNS spec indicates that an A Record is represented in byte form as
+ * follows.
+ *
+ * The common fields as indicated in getCommonFieldsAsByteArray.
+ *
+ * 2 octets representing the number 4, to indicate that 4 bytes follow.
+ *
+ * 4 octets representing a 4-byte IP address
+ *
+ * @return {ByteArray}
+ */
+exports.ARecord.prototype.convertToByteArray = function() {
+  var result = exports.getCommonFieldsAsByteArray(
+    this.domainName,
+    this.recordType,
+    this.recordClass,
+    this.ttl
+  );
+
+  // First we add the length of the resource data.
+  result.push(
+    NUM_OCTETS_RESOURCE_DATA_A_RECORD, 
+    NUM_OCTETS_RESOURCE_DATA_LENGTH
+  );
+
+  // Then add the IP address itself.
+  var ipStringAsBytes = dnsUtil.getIpStringAsByteArray(this.ipAddress);
+  result.append(ipStringAsBytes);
+
+  return result;
+};
+
+/**
+ * Create an A Record from a ByteArrayReader object. The reader should be at
+ * the correct cursor position, at the domain name of the A Record.
+ *
+ * @param {ByteArrayReader} reader
+ *
+ * @return {ARecord}
+ */
+exports.createARecordFromReader = function(reader) {
+  var commonFields = exports.getCommonFieldsFromByteArrayReader(reader);
+
+  if (commonFields.rrType !== dnsCodes.RECORD_TYPES.A) {
+    throw new Error(
+      'De-serialized A Record does not have A Record type: ' + 
+        commonFields.rrType
+    );
+  }
+
+  // And now we recover just the resource length and resource data.
+  var resourceLength = reader.getValue(NUM_OCTETS_RESOURCE_DATA_LENGTH);
+
+  // For an A Record this should always be 4.
+  if (resourceLength !== NUM_OCTETS_RESOURCE_DATA_A_RECORD) {
+    throw new Error(
+      'Recovered resource length does not match expected value for A ' +
+        '  Record: ' +
+        resourceLength
+    );
+  }
+
+  var ipString = dnsUtil.getIpStringFromByteArrayReader(reader);
+
+  var result = new exports.ARecord(
+    commonFields.domainName,
+    commonFields.ttl,
+    ipString,
+    commonFields.rrClass
+  );
+
+  return result;
+};
+
+/**
+ * Create a PTR Record from a ByteArrayReader object. The reader should be at
+ * the correct cursor position, at the service type query of the PTR Record.
+ *
+ * @param {ByteArrayReader} reader
+ *
+ * @return {PtrRecord}
+ */
+exports.createPtrRecordFromReader = function(reader) {
+  var commonFields = exports.getCommonFieldsFromByteArrayReader(reader);
+
+  if (commonFields.rrType !== dnsCodes.RECORD_TYPES.PTR) {
+    throw new Error(
+      'De-serialized PTR Record does not have PTR Record type: ' + 
+        commonFields.rrType
+    );
+  }
+
+  // And now we recover just the resource length and resource data.
+  var resourceLength = reader.getValue(NUM_OCTETS_RESOURCE_DATA_LENGTH);
+  if (resourceLength < 0 || resourceLength > 65535) {
+    throw new Error(
+      'Illegal length of PTR Record resource data: ' +
+        resourceLength);
+  }
+
+  // In a PTR Record, the domain name field of the RR is actually the service
+  // type (at least for mDNS).
+  var serviceType = commonFields.domainName;
+  var serviceName = dnsUtil.getDomainFromByteArrayReader(reader);
+
+  var result = new exports.PtrRecord(
+    serviceType,
+    commonFields.ttl,
+    serviceName,
+    commonFields.rrClass
+  );
+
+  return result;
+};
+
+/**
+ * Create an SRV Record from a ByteArrayReader object. The reader should be at
+ * the correct cursor position, at the service type query of the SRV Record.
+ *
+ * @param {ByteArrayReader} reader
+ *
+ * @return {SrvRecord}
+ */
+exports.createSrvRecordFromReader = function(reader) {
+  var commonFields = exports.getCommonFieldsFromByteArrayReader(reader);
+
+  if (commonFields.rrType !== dnsCodes.RECORD_TYPES.SRV) {
+    throw new Error(
+      'De-serialized SRV Record does not have SRV Record type: ' + 
+        commonFields.rrType
+    );
+  }
+
+  // And now we recover just the resource length and resource data.
+  var resourceLength = reader.getValue(NUM_OCTETS_RESOURCE_DATA_LENGTH);
+  if (resourceLength < 0 || resourceLength > 65535) {
+    throw new Error(
+      'Illegal length of SRV Record resource data: ' +
+        resourceLength);
+  }
+
+  // In a SRV Record, the domain name field of the RR is actually the service
+  // proto name.
+  var serviceInstanceName = commonFields.domainName;
+  
+  // After the common fields, we expect priority, weight, port, target name.
+  var priority = reader.getValue(NUM_OCTETS_PRIORITY);
+  if (priority < 0 || priority > 65535) {
+    throw new Error('Illegal length of SRV Record priority: ' + priority);
+  }
+
+  var weight = reader.getValue(NUM_OCTETS_WEIGHT);
+  if (weight < 0 || weight > 65535) {
+    throw new Error('Illegal length of SRV Record priority: ' + weight);
+  }
+
+  var port = reader.getValue(NUM_OCTETS_PORT);
+  if (port < 0 || port > 65535) {
+    throw new Error('Illegal length of SRV Record priority: ' + port);
+  }
+
+  var targetName = dnsUtil.getDomainFromByteArrayReader(reader);
+
+  var result = new exports.SrvRecord(
+    serviceInstanceName,
+    commonFields.ttl,
+    priority,
+    weight,
+    port,
+    targetName
+  );
+
+  return result;
+};
+
+/**
+ * A PTR record. PTR records respond to a query for a service type (eg
+ * '_printer._tcp.local'. They return the name of an instance offering the
+ * service (eg 'Printsalot._printer._tcp.local').
+ *
+ * @param {string} serviceType the string representation of the service that
+ * has been queried for.
+ * @param {integer} ttl the time to live
+ * @param {string} instanceName the name of the instance providing the
+ * serviceType
+ * @param {integer} rrClass the class of the record. If not truthy, will be set
+ * to IN for internet traffic.
+ */
+exports.PtrRecord = function PtrRecord(
+  serviceType,
+  ttl,
+  instanceName,
+  rrClass
+) {
+  if (!(this instanceof PtrRecord)) {
+    throw new Error('PtrRecord must be called with new');
+  }
+
+  if ((typeof serviceType) !== 'string') {
+    throw new Error('serviceType must be a String: ' + serviceType);
+  }
+  
+  if ((typeof instanceName) !== 'string') {
+    throw new Error('instanceName must be a String: ' + instanceName);
+  }
+
+  if (!rrClass) {
+    rrClass = dnsCodes.CLASS_CODES.IN;
+  }
+  
+  this.recordType = dnsCodes.RECORD_TYPES.PTR;
+  this.recordClass = rrClass;
+
+  this.serviceType = serviceType;
+  this.name = serviceType;
+  this.ttl = ttl;
+  this.instanceName = instanceName;
+};
+
+/**
+ * Get the PTR Record as a ByteArray object.
+ *
+ * The DNS spec indicates that an PTR Record is represented in byte form as
+ * follows. (Using this and section 3.3.12 as a guide:
+ * https://www.ietf.org/rfc/rfc1035.txt).
+ *
+ * The common fields as indicated in getCommonFieldsAsByteArray.
+ *
+ * 2 octets representing the length of the following component, in bytes.
+ *
+ * A variable number of octets representing "the domain-name, which points to
+ * some location in the domain name space". In the context of mDNS, this would
+ * be the name of the instance that actually provides the service that is being
+ * queried for.
+ *
+ * @return {ByteArray}
+ */
+exports.PtrRecord.prototype.convertToByteArray = function() {
+  var result = exports.getCommonFieldsAsByteArray(
+    this.serviceType,
+    this.recordType,
+    this.recordClass,
+    this.ttl
+  );
+
+  var instanceNameAsBytes = dnsUtil.getDomainAsByteArray(this.instanceName);
+  var resourceDataLength = instanceNameAsBytes.length;
+
+  // First we add the length of the resource data.
+  result.push(
+    resourceDataLength, 
+    NUM_OCTETS_RESOURCE_DATA_LENGTH
+  );
+
+  // Then add the instance name itself.
+  result.append(instanceNameAsBytes);
+
+  return result;
+};
+
+/**
+ * An SRV record. SRV records map the name of a service instance to the
+ * information needed to connect to the service. 
+ *
+ * @param {string} instanceTypeDomain: the name being queried for, e.g.
+ * 'PrintsALot._printer._tcp.local'
+ * @param {integer} ttl: the time to live
+ * @param {integer} priority: the priority of this record if multiple records
+ * are found. This must be a number from 0 to 65535.
+ * @param {integer} weight: the weight of the record if two records have the
+ * same priority. This must be a number from 0 to 65535.
+ * @param {integer} port: the port number on which to find the service. This
+ * must be a number from 0 to 65535.
+ * @param {string} targetDomain: the domain hosting the service (e.g.
+ * 'blackhawk.local')
+ */
+exports.SrvRecord = function SrvRecord(
+  instanceTypeDomain,
+  ttl,
+  priority,
+  weight,
+  port,
+  targetDomain
+) {
+  if (!(this instanceof SrvRecord)) {
+    throw new Error('SrvRecord must be called with new');
+  }
+  this.recordType = dnsCodes.RECORD_TYPES.SRV;
+  // Note that we're not exposing rrClass as a caller-specified variable,
+  // because according to the spec SRV records occur in the IN class.
+  this.recordClass = dnsCodes.CLASS_CODES.IN;
+
+  this.instanceTypeDomain = instanceTypeDomain;
+  this.name = instanceTypeDomain;
+  this.ttl = ttl;
+  this.priority = priority;
+  this.weight = weight;
+  this.port = port;
+  this.targetDomain = targetDomain;
+};
+
+/**
+ * Get the SRV Record as a ByteArray object.
+ *
+ * According to this document (https://tools.ietf.org/html/rfc2782) and more
+ * explicitly this document
+ * (http://www.tahi.org/dns/packages/RFC2782_S4-1_0_0/SV/SV_RFC2782_SRV_rdata.html),
+ * the layout of the SRV RR is as follows:
+ *
+ * The common fields as indicated in getCommonFieldsAsByteArray.
+ *
+ * 2 octets representing the length of the following component, in bytes.
+ *
+ * 2 octets indicating the priority
+ *
+ * 2 octets indicating the weight
+ *
+ * 2 octets indicating the port
+ *
+ * A variable number of octets encoding the target name (e.g.
+ * PrintsALot.local), encoded as a domain name.
+ *
+ * @return {ByteArray}
+ */
+exports.SrvRecord.prototype.convertToByteArray = function() {
+  var result = exports.getCommonFieldsAsByteArray(
+    this.instanceTypeDomain,
+    this.recordType,
+    this.recordClass,
+    this.ttl
+  );
+
+  var targetNameAsBytes = dnsUtil.getDomainAsByteArray(this.targetDomain);
+
+  var resourceDataLength = NUM_OCTETS_PRIORITY +
+    NUM_OCTETS_WEIGHT +
+    NUM_OCTETS_PORT +
+    targetNameAsBytes.length;
+
+  // First we add the length of the resource data.
+  result.push(
+    resourceDataLength, 
+    NUM_OCTETS_RESOURCE_DATA_LENGTH
+  );
+
+  // Then add the priority, weight, and port.
+  result.push(this.priority, NUM_OCTETS_PRIORITY);
+  result.push(this.weight, NUM_OCTETS_WEIGHT);
+  result.push(this.port, NUM_OCTETS_PORT);
+
+  result.append(targetNameAsBytes);
+
+  return result;
+};
+
+/**
+ * Get the common components of a RR as a ByteArray. As specified by the DNS
+ * spec and 'TCP/IP Illustrated, Volume 1' by Stevens, the format is as
+ * follows:
+ *
+ * Variable number of octets encoding the domain name to which the RR is
+ *   responding.
+ *
+ * 2 octets representing the RR type
+ *
+ * 2 octets representing the RR class
+ *
+ * 4 octets representing the TTL
+ *
+ * @return {ByteArray}
+ */
+exports.getCommonFieldsAsByteArray = function(
+  domainName,
+  rrType,
+  rrClass,
+  ttl
+) {
+  var result = new byteArray.ByteArray();
+
+  var domainNameAsBytes = dnsUtil.getDomainAsByteArray(domainName);
+  result.append(domainNameAsBytes);
+
+  result.push(rrType, NUM_OCTETS_TYPE);
+  result.push(rrClass, NUM_OCTETS_CLASS);
+  result.push(ttl, NUM_OCTETS_TTL);
+
+  return result;
+};
+
+/**
+ * Extract the common fields from the reader as encoded by
+ * getCommonFieldsAsByteArray.
+ *
+ * @param {ByteArrayReader} reader
+ *
+ * @return {object} Returns an object with fields: domainName, rrType, rrClass,
+ * and ttl.
+ */
+exports.getCommonFieldsFromByteArrayReader = function(reader) {
+  var domainName = dnsUtil.getDomainFromByteArrayReader(reader);
+  var rrType = reader.getValue(NUM_OCTETS_TYPE);
+  var rrClass = reader.getValue(NUM_OCTETS_CLASS);
+  var ttl = reader.getValue(NUM_OCTETS_TTL);
+
+  var result = {
+    domainName: domainName,
+    rrType: rrType,
+    rrClass: rrClass,
+    ttl: ttl
+  };
+
+  return result;
+};
+
+/**
+ * Return type of the Resource Record queued up in the reader. Peaking does not
+ * affect the position of the underlying reader.
+ *
+ * @param {ByteArrayReader} reader
+ *
+ * @return {integer}
+ */
+exports.peekTypeInReader = function(reader) {
+  // Getting values from the reader normally consumes bytes. Create a defensive
+  // copy to work with instead.
+  var byteArr = reader.byteArray;
+  var startByte = reader.cursor;
+  var safeReader = byteArr.getReader(startByte);
+
+  // Consume an encoded domain name. Note this means we're computing domain
+  // names twice, which isn't optimal.
+  dnsUtil.getDomainFromByteArrayReader(safeReader);
+  // After the domain, the type is next.
+  var result = safeReader.getValue(NUM_OCTETS_TYPE);
+  return result;
+};
+
+},{"./byte-array":1,"./dns-codes":2,"./dns-util":4}],7:[function(require,module,exports){
+/* globals chrome */
+'use strict';
+
+/**
+ * Add a callback function via chrome.runtime.onMessageExternal.addListener.
+ * @param {Function} fn
+ */
+exports.addOnMessageExternalListener = function(fn) {
+  chrome.runtime.onMessageExternal.addListener(fn);
+};
+
+/**
+ * Send a message using the chrome.runtime.sendMessage API.
+ *
+ * @param {string} id
+ * @param {any} message must be JSON-serializable
+ */
+exports.sendMessage = function(id, message) {
+  chrome.runtime.sendMessage(id, message);
+};
+
+},{}],8:[function(require,module,exports){
+/* globals chrome */
+'use strict';
+
+// Listens for the app launching then creates the window
+chrome.app.runtime.onLaunched.addListener(function() {
+  var width = 500;
+  var height = 300;
+
+  chrome.app.window.create('index.html', {
+    id: 'main',
+    bounds: {
+      width: width,
+      height: height,
+      left: Math.round((screen.availWidth - width) / 2),
+      top: Math.round((screen.availHeight - height)/2)
+    }
+  });
+});
+
+window.dnssd = require('dnssd');
+window.dnsc = require('dnsc');
+window.dnsSem = require('dnsSem');
+
+},{"dnsSem":"dnsSem","dnsc":"dnsc","dnssd":"dnssd"}],9:[function(require,module,exports){
+/* globals Promise, chrome */
+'use strict';
+
+/**
+ * This module provides a wrapper around the callback-heavy chrome.fileSystem
+ * API and provides an alternative based on Promises.
+ */
+
+/**
+ * @param {Entry} entry
+ *
+ * @return {Promise} Promise that resolves with the display path
+ */
+exports.getDisplayPath = function(entry) {
+  return new Promise(function(resolve) {
+    chrome.fileSystem.getDisplayPath(entry, function(displayPath) {
+      resolve(displayPath);
+    });
+  });
+};
+
+/**
+ * @param {Entry} entry the starting entry that will serve as the base for a
+ * writable entry
+ *
+ * @return {Promise} Promise that resolves with a writable entry
+ */
+exports.getWritableEntry = function(entry) {
+  return new Promise(function(resolve) {
+    chrome.fileSystem.getWritableEntry(entry, function(writableEntry) {
+      resolve(writableEntry);
+    });
+  });
+};
+
+/**
+ * @param {Entry} entry
+ *
+ * @return {Promise} Promise that resolves with a boolean
+ */
+exports.isWritableEntry = function(entry) {
+  return new Promise(function(resolve) {
+    chrome.fileSystem.isWritableEntry(entry, function(isWritable) {
+      resolve(isWritable);
+    });
+  });
+};
+
+/**
+ * The original Chrome callback takes two parameters: an entry and an array of
+ * FileEntries. No examples appear to make use of this second parameter,
+ * however, nor is it documented what the second parameter is for. For this
+ * reason we return only the first parameter, but callers should be aware of
+ * this difference compared to the original API.
+ *
+ * @param {object} options
+ *
+ * @return {Promise} Promise that resolves with an Entry
+ */
+exports.chooseEntry = function(options) {
+  return new Promise(function(resolve) {
+    chrome.fileSystem.chooseEntry(options, function(entry, arr) {
+      if (arr) {
+        console.warn(
+          'chrome.fileSystem.chooseEntry callback invoked with a 2nd ' +
+            'parameter that is being ignored: ',
+            arr);
+      }
+      resolve(entry);
+    });
+  });
+};
+
+/**
+ * @param {string} id id of a previous entry
+ *
+ * @return {Promise} Promise that resolves with an Entry
+ */
+exports.restoreEntry = function(id) {
+  return new Promise(function(resolve) {
+    chrome.fileSystem.restoreEntry(id, function(entry) {
+      resolve(entry);
+    });
+  });
+};
+
+/**
+ * @param {string} id
+ *
+ * @return {Promise} Promise that resolves with a boolean
+ */
+exports.isRestorable = function(id) {
+  return new Promise(function(resolve) {
+    chrome.fileSystem.isRestorable(id, function(isRestorable) {
+      resolve(isRestorable);
+    });
+  });
+};
+
+/**
+ * @param {Entry} entry
+ *
+ * @return {Promise} Promise that resolves with a string id that can be used to
+ * restore the Entry in the future. The underlying Chrome API is a synchronous
+ * call, but this is provided as a Promise to keep API parity with the rest of
+ * the module. A synchronous version is provided via retainEntrySync.
+ */
+exports.retainEntry = function(entry) {
+  var id = chrome.fileSystem.retainEntry(entry);
+  return Promise.resolve(id);
+};
+
+/**
+ * @param {Entry} entry
+ *
+ * @return {string} id that can be used to restore the Entry
+ */
+exports.retainEntrySync = function(entry) {
+  return chrome.fileSystem.retainEntry(entry);
+};
+
+/**
+ * @param {object} options
+ *
+ * @return {Promise} Promise that resolves with a FileSystem
+ */
+exports.requestFileSystem = function(options) {
+  return new Promise(function(resolve) {
+    chrome.fileSystem.requestFileSystem(options, function(fileSystem) {
+      resolve(fileSystem);
+    });
+  });
+};
+
+/**
+ * @return {Promise} Promise that resolves with a FileSystem
+ */
+exports.getVolumeList = function() {
+  return new Promise(function(resolve) {
+    chrome.fileSystem.getVolumeList(function(fileSystem) {
+      resolve(fileSystem);
+    });
+  });
+};
+
+},{}],10:[function(require,module,exports){
+/* globals Promise, chrome */
+'use strict';
+
+/**
+ * This module provides a wrapper around the chrome.storage.local API and
+ * provides an alternative based on Promises.
+ */
+
+/**
+ * @param {boolean} useSync
+ *
+ * @return {StorageArea} chrome.storage.sync or chrome.storage.local depending
+ * on the value of useSync
+ */
+function getStorageArea(useSync) {
+  if (useSync) {
+    return chrome.storage.sync;
+  } else {
+    return chrome.storage.local;
+  }
+}
+
+/**
+ * @param {string|Array<string>} keyOrKeys
+ * @param {boolean} useSync true to use chrome.storage.sync, otherwise will use
+ * chrome.storage.local
+ *
+ * @return {Promise} Promise that resolves with an object of key value mappings
+ */
+exports.get = function(keyOrKeys, useSync) {
+  var storageArea = getStorageArea(useSync);
+  return new Promise(function(resolve) {
+    storageArea.get(keyOrKeys, function(items) {
+      resolve(items);
+    });
+  });
+};
+
+/**
+ * @param {string|Array<string>} keyOrKeys
+ * @param {boolean} useSync true to use chrome.storage.sync, otherwise will use
+ * chrome.storage.local
+ *
+ * @return {Promise} Promise that resolves with an integer of the number of
+ * bytes in use for the given key or keys
+ */
+exports.getBytesInUse = function(keyOrKeys, useSync) {
+  var storageArea = getStorageArea(useSync);
+  return new Promise(function(resolve) {
+    storageArea.getBytesInUse(keyOrKeys, function(numBytes) {
+      resolve(numBytes);
+    });
+  });
+};
+
+/**
+ * @param {object} items an object of key value mappings
+ * @param {boolean} useSync true to use chrome.storage.sync, otherwise will use
+ * chrome.storage.local
+ *
+ * @return {Promise} Promise that resolves when the operation completes
+ */
+exports.set = function(items, useSync) {
+  var storageArea = getStorageArea(useSync);
+  return new Promise(function(resolve) {
+    storageArea.set(items, function() {
+      resolve();
+    });
+  });
+};
+
+/**
+ * @param {string|Array<string>} keyOrKeys
+ * @param {boolean} useSync true to use chrome.storage.sync, otherwise will use
+ * chrome.storage.local
+ *
+ * @return {Promise} Promise that resolves when the operation completes
+ */
+exports.remove = function(keyOrKeys, useSync) {
+  var storageArea = getStorageArea(useSync);
+  return new Promise(function(resolve) {
+    storageArea.remove(keyOrKeys, function() {
+      resolve();
+    });
+  });
+};
+
+/**
+ * @param {boolean} useSync true to use chrome.storage.sync, otherwise will use
+ * chrome.storage.local
+ *
+ * @return {Promise} Promise that resolves when the operation completes
+ */
+exports.clear = function(useSync) {
+  var storageArea = getStorageArea(useSync);
+  return new Promise(function(resolve) {
+    storageArea.clear(function() {
+      resolve();
+    });
+  });
+};
+
+},{}],11:[function(require,module,exports){
+/* globals Promise */
+'use strict';
+
+/**
+ * Abstractions for reading and writing cached pages. Clients of this class
+ * should not be concerned with the underlying file system.
+ */
+
+// Overview of the Datastore
+//
+// For the time being, there is no separate database or datastore. All
+// information is saved in the file name on disk, eg
+// "www.example.com_date". This will serve for a prototype but might become
+// limiting in the future.
+
+var fileSystem = require('./file-system');
+var fsUtil = require('./file-system-util');
+var serverApi = require('../server/server-api');
+
+/** The number of characters output by Date.toISOString() */
+var LENGTH_ISO_DATE_STR = 24;
+
+var URL_DATE_DELIMITER = '_';
+
+exports.MHTML_EXTENSION = '.mhtml';
+
+/**
+ * This object represents a page that is stored in the cache and can be browsed
+ * to.
+ *
+ * @param {string} captureUrl the URL of the original captured page
+ * @param {string} captureDate the ISO String representation of the datetime
+ * @param {string} accessPath the path in the cache that can be used to access
+ * the file the page was captured
+ */
+exports.CachedPage = function CachedPage(
+  captureUrl,
+  captureDate,
+  path
+) {
+  if (!(this instanceof CachedPage)) {
+    throw new Error('CachedPage must be called with new');
+  }
+  this.captureUrl = captureUrl;
+  this.captureDate = captureDate;
+  this.accessPath = path;
+};
+
+/**
+ * Write a page into the cache.
+ *
+ * @param {string} captureUrl the URL that generated the MHTML
+ * @param {string} captureDate the toISOString() of the date the page was
+ * captured
+ * @param {Blob} mhtmlBlob the contents of hte page
+ *
+ * @return {Promise} a Promise that resolves when the write is complete
+ */
+exports.addPageToCache = function(captureUrl, captureDate, mhtmlBlob) {
+  return new Promise(function(resolve, reject) {
+    // Get the directory to write into
+    // Create the file entry
+    // Perform the write
+    fileSystem.getDirectoryForCacheEntries()
+    .then(cacheDir => {
+      var fileName = exports.createFileNameForPage(captureUrl, captureDate);
+      var createOptions = {
+        create: true,     // create if it doesn't exist
+        exclusive: false  // OK if it already exists--will overwrite
+      };
+      return fsUtil.getFile(cacheDir, createOptions, fileName);
+    })
+    .then(fileEntry => {
+      return fsUtil.writeToFile(fileEntry, mhtmlBlob);
+    })
+    .then(() => {
+      resolve();
+    })
+    .catch(err => {
+      reject(err);
+    });
+  });
+};
+
+/**
+ * Get all the cached pages that are stored in the cache.
+ *
+ * @return {Promise} Promise that resolves with an Array of CachedPage objects
+ */
+exports.getAllCachedPages = function() {
+  return new Promise(function(resolve, reject) {
+    exports.getAllFileEntriesForPages()
+    .then(entries => {
+      var result = [];
+      entries.forEach(entry => {
+        var cachedPage = exports.getEntryAsCachedPage(entry);
+        result.push(cachedPage);
+      });
+      resolve(result);
+    })
+    .catch(err => {
+      reject(err);
+    });
+  });
+};
+
+/**
+ * Get all the FileEntries representing saved pages.
+ *
+ * @return {Promise} Promise that resolves with an array of FileEntry objects
+ */
+exports.getAllFileEntriesForPages = function() {
+  var flagDirNotSet = 1;
+  return new Promise(function(resolve, reject) {
+    fileSystem.getDirectoryForCacheEntries()
+    .then(dirEntry => {
+      if (!dirEntry) {
+        // We haven't set an entry.
+        throw flagDirNotSet;
+      }
+      return fsUtil.listEntries(dirEntry);
+    })
+    .then(entries => {
+      resolve(entries);
+    })
+    .catch(errFlag => {
+      if (errFlag === flagDirNotSet) {
+        reject('dir not set');
+      } else {
+        console.warn('unrecognized error flag: ', errFlag);
+      }
+    });
+  });
+};
+
+/**
+ * Convert an entry as represented on the file system to a CachedPage that can
+ * be consumed by clients.
+ *
+ * This is the workhorse function for mapping between the two types.
+ *
+ * @param {FileEntry} entry
+ *
+ * @return {CachedPage}
+ */
+exports.getEntryAsCachedPage = function(entry) {
+  var captureUrl = exports.getCaptureUrlFromName(entry.name);
+  var captureDate = exports.getCaptureDateFromName(entry.name);
+  var accessUrl = serverApi.getAccessUrlForCachedPage(entry.fullPath);
+
+  var result = new exports.CachedPage(captureUrl, captureDate, accessUrl);
+  return result;
+};
+
+/**
+ * Create the file name for the cached page in a way that can later be parsed.
+ *
+ * @param {string} captureUrl
+ * @param {string} captureDate the toISOString() representation of the date the
+ * page was captured
+ *
+ * @return {string}
+ */
+exports.createFileNameForPage = function(captureUrl, captureDate) {
+  return captureUrl +
+    URL_DATE_DELIMITER +
+    captureDate +
+    exports.MHTML_EXTENSION;
+};
+
+/**
+ * @param {string} name the name of the file
+ *
+ * @return {string} the capture url
+ */
+exports.getCaptureUrlFromName = function(name) {
+  var nonNameLength = LENGTH_ISO_DATE_STR +
+    URL_DATE_DELIMITER.length +
+    exports.MHTML_EXTENSION.length;
+  if (name.length < nonNameLength) {
+    // The file name is too short, fail fast.
+    throw new Error('name too short to store a url: ', name);
+  }
+
+  var result = name.substring(
+    0,
+    name.length - nonNameLength
+  );
+  return result;
+};
+
+/**
+ * @param {string} name the name of the file
+ * 
+ * @return {string} the capture date's ISO string representation
+ */
+exports.getCaptureDateFromName = function(name) {
+  // The date is stored at the end of the string.
+  if (name.length < LENGTH_ISO_DATE_STR) {
+    // We've violated an invariant, fail fast.
+    throw new Error('name too short to store a date: ', name);
+  }
+
+  var dateStartIndex = name.length -
+    LENGTH_ISO_DATE_STR -
+    exports.MHTML_EXTENSION.length;
+  var dateEndIndex = name.length - exports.MHTML_EXTENSION.length;
+
+  var result = name.substring(dateStartIndex, dateEndIndex);
+  return result;
+};
+
+},{"../server/server-api":13,"./file-system":"fileSystem","./file-system-util":"fsUtil"}],12:[function(require,module,exports){
+/* globals WSC */
+'use strict';
+
+var _ = require('underscore');
+var api = require('./server-api');
+var fileSystem = require('../persistence/file-system');
+var fsUtil = require('../persistence/file-system-util');
+
+/**
+ * Handlers for the webserver backing SemCache. The idea for handlers is based
+ * on https://github.com/kzahel/web-server-chrome, which is in turn based on
+ * Python's Tornado web library, and is the back end for our web server.
+ */
+
+/**
+ * Handler for the JSON endpoint for listing all pages in the cache.
+ */
+exports.ListCachedPagesHandler = function() {
+  if (!WSC) {
+    console.warn('CachedPagesHandler: WSC global object not present');
+    return;
+  }
+  WSC.BaseHandler.prototype.constructor.call(this);
+};
+
+_.extend(exports.ListCachedPagesHandler.prototype,
+  {
+    get: function() {
+      api.getResponseForAllCachedPages()
+        .then(response => {
+          this.setHeader('content-type', 'text/json');
+          var encoder = new TextEncoder('utf-8');
+          var buffer = encoder.encode(JSON.stringify(response)).buffer;
+          this.write(buffer);
+          this.finish();
+        });
+    }
+  },
+  WSC.BaseHandler.prototype
+);
+
+exports.CachedPageHandler = function() {
+  if (!WSC) {
+    console.warn('CachedPagesHandler: WSC global object not present');
+    return;
+  }
+  WSC.BaseHandler.prototype.constructor.call(this);
+};
+
+_.extend(exports.CachedPageHandler.prototype,
+  {
+    get: function() {
+      var fileName = api.getCachedFileNameFromPath(this.request.path);
+
+      fileSystem.getDirectoryForCacheEntries()
+        .then(cacheDir => {
+          return fsUtil.getFile(
+            cacheDir, 
+            {
+              create: false,
+              exclusive: false
+            },
+            fileName
+          );
+        })
+        .then(fileEntry => {
+          fileEntry.file(file => {
+            var that = this;
+            var fileReader = new FileReader();
+
+            fileReader.onload = function(evt) {
+              // set mime types etc?
+              that.write(evt.target.result);
+            };
+
+            fileReader.onerror = function(evt) {
+              console.error('error reading', evt.target.error);
+              that.request.connection.close();
+            };
+
+            fileReader.readAsArrayBuffer(file);
+          });
+        })
+        .catch(err => {
+          console.log('Error reading file: ', err);
+        });
+    }
+  },
+  WSC.BaseHandler.prototype
+);
+
+},{"../persistence/file-system":"fileSystem","../persistence/file-system-util":"fsUtil","./server-api":13,"underscore":15}],13:[function(require,module,exports){
+'use strict';
+
+/**
+ * Controls the API for the server backing SemCache.
+ */
+
+var datastore = require('../persistence/datastore');
+var appController = require('../app-controller');
+
+var HTTP_SCHEME = 'http://';
+
+var VERSION = 0.0;
+
+/** 
+ * The path from the root of the server that serves cached pages.
+ */
+var PATH_LIST_PAGE_CACHE = 'list_pages';
+var PATH_GET_CACHED_PAGE = 'pages';
+
+/**
+ * Create the metadata object that is returned in server responses.
+ */
+exports.createMetadatObj = function() {
+  var result = {};
+  result.version = VERSION;
+  return result;
+};
+
+/**
+ * Returns an object mapping API end points to their paths. The paths do not
+ * include leading or trailing slashes, but they can contain internal slashes
+ * (e.g. 'foo' or 'foo/bar' but never '/foo/bar'). The paths do not contain
+ * scheme, host, or port.
+ *
+ * @return {object} an object mapping API end points to string paths, like the
+ * following:
+ * {
+ *   pageCache: '',
+ *   listPageCache: ''
+ * }
+ */
+exports.getApiEndpoints = function() {
+  return {
+    pageCache: PATH_GET_CACHED_PAGE,
+    listPageCache: PATH_LIST_PAGE_CACHE
+  };
+};
+
+/**
+ * Create the full access path that can be used to access the cached page.
+ *
+ * @param {string} fullPath the full path of the file that is to be accessed
+ *
+ * @return {string} a fully qualified and valid URL
+ */
+exports.getAccessUrlForCachedPage = function(fullPath) {
+  var scheme = HTTP_SCHEME;
+  // TODO: this might have to strip the path of directory where things are
+  // stored--it basically maps between the two urls.
+  var httpIface = appController.getListeningHttpInterface();
+  var addressAndPort = httpIface.address + ':' + httpIface.port;
+  var apiPath = exports.getApiEndpoints().pageCache;
+  var result = scheme + [addressAndPort, apiPath, fullPath].join('/');
+  return result;
+};
+
+/**
+ * Return a JSON object response for the all cached pages endpoing.
+ *
+ * @return {Promise} Promise that resolves with an object like the following:
+ * {
+ *   metadata: {},
+ *   cachedPages: [CachedPage, CachedPage]
+ * }
+ */
+exports.getResponseForAllCachedPages = function() {
+  return new Promise(function(resolve, reject) {
+    datastore.getAllCachedPages()
+      .then(pages => {
+        var result = {};
+        result.metadata = exports.createMetadatObj();
+        result.cachedPages = pages;
+        resolve(result);
+      })
+      .catch(err => {
+        reject(err);
+      });
+  });
+};
+
+/**
+ * Get the file name of the file that is being requested.
+ *
+ * @param {string} path the path of the request
+ */
+exports.getCachedFileNameFromPath = function(path) {
+  var parts = path.split('/');
+  // The file name is the last part of the path.
+  var result = parts[parts.length - 1];
+  return result;
+};
+
+},{"../app-controller":"appController","../persistence/datastore":11}],14:[function(require,module,exports){
+(function (global){
+/*! http://mths.be/base64 v0.1.0 by @mathias | MIT license */
+;(function(root) {
+
+	// Detect free variables `exports`.
+	var freeExports = typeof exports == 'object' && exports;
+
+	// Detect free variable `module`.
+	var freeModule = typeof module == 'object' && module &&
+		module.exports == freeExports && module;
+
+	// Detect free variable `global`, from Node.js or Browserified code, and use
+	// it as `root`.
+	var freeGlobal = typeof global == 'object' && global;
+	if (freeGlobal.global === freeGlobal || freeGlobal.window === freeGlobal) {
+		root = freeGlobal;
+	}
+
+	/*--------------------------------------------------------------------------*/
+
+	var InvalidCharacterError = function(message) {
+		this.message = message;
+	};
+	InvalidCharacterError.prototype = new Error;
+	InvalidCharacterError.prototype.name = 'InvalidCharacterError';
+
+	var error = function(message) {
+		// Note: the error messages used throughout this file match those used by
+		// the native `atob`/`btoa` implementation in Chromium.
+		throw new InvalidCharacterError(message);
+	};
+
+	var TABLE = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+	// http://whatwg.org/html/common-microsyntaxes.html#space-character
+	var REGEX_SPACE_CHARACTERS = /[\t\n\f\r ]/g;
+
+	// `decode` is designed to be fully compatible with `atob` as described in the
+	// HTML Standard. http://whatwg.org/html/webappapis.html#dom-windowbase64-atob
+	// The optimized base64-decoding algorithm used is based on @atk’s excellent
+	// implementation. https://gist.github.com/atk/1020396
+	var decode = function(input) {
+		input = String(input)
+			.replace(REGEX_SPACE_CHARACTERS, '');
+		var length = input.length;
+		if (length % 4 == 0) {
+			input = input.replace(/==?$/, '');
+			length = input.length;
+		}
+		if (
+			length % 4 == 1 ||
+			// http://whatwg.org/C#alphanumeric-ascii-characters
+			/[^+a-zA-Z0-9/]/.test(input)
+		) {
+			error(
+				'Invalid character: the string to be decoded is not correctly encoded.'
+			);
+		}
+		var bitCounter = 0;
+		var bitStorage;
+		var buffer;
+		var output = '';
+		var position = -1;
+		while (++position < length) {
+			buffer = TABLE.indexOf(input.charAt(position));
+			bitStorage = bitCounter % 4 ? bitStorage * 64 + buffer : buffer;
+			// Unless this is the first of a group of 4 characters…
+			if (bitCounter++ % 4) {
+				// …convert the first 8 bits to a single ASCII character.
+				output += String.fromCharCode(
+					0xFF & bitStorage >> (-2 * bitCounter & 6)
+				);
+			}
+		}
+		return output;
+	};
+
+	// `encode` is designed to be fully compatible with `btoa` as described in the
+	// HTML Standard: http://whatwg.org/html/webappapis.html#dom-windowbase64-btoa
+	var encode = function(input) {
+		input = String(input);
+		if (/[^\0-\xFF]/.test(input)) {
+			// Note: no need to special-case astral symbols here, as surrogates are
+			// matched, and the input is supposed to only contain ASCII anyway.
+			error(
+				'The string to be encoded contains characters outside of the ' +
+				'Latin1 range.'
+			);
+		}
+		var padding = input.length % 3;
+		var output = '';
+		var position = -1;
+		var a;
+		var b;
+		var c;
+		var d;
+		var buffer;
+		// Make sure any padding is handled outside of the loop.
+		var length = input.length - padding;
+
+		while (++position < length) {
+			// Read three bytes, i.e. 24 bits.
+			a = input.charCodeAt(position) << 16;
+			b = input.charCodeAt(++position) << 8;
+			c = input.charCodeAt(++position);
+			buffer = a + b + c;
+			// Turn the 24 bits into four chunks of 6 bits each, and append the
+			// matching character for each of them to the output.
+			output += (
+				TABLE.charAt(buffer >> 18 & 0x3F) +
+				TABLE.charAt(buffer >> 12 & 0x3F) +
+				TABLE.charAt(buffer >> 6 & 0x3F) +
+				TABLE.charAt(buffer & 0x3F)
+			);
+		}
+
+		if (padding == 2) {
+			a = input.charCodeAt(position) << 8;
+			b = input.charCodeAt(++position);
+			buffer = a + b;
+			output += (
+				TABLE.charAt(buffer >> 10) +
+				TABLE.charAt((buffer >> 4) & 0x3F) +
+				TABLE.charAt((buffer << 2) & 0x3F) +
+				'='
+			);
+		} else if (padding == 1) {
+			buffer = input.charCodeAt(position);
+			output += (
+				TABLE.charAt(buffer >> 2) +
+				TABLE.charAt((buffer << 4) & 0x3F) +
+				'=='
+			);
+		}
+
+		return output;
+	};
+
+	var base64 = {
+		'encode': encode,
+		'decode': decode,
+		'version': '0.1.0'
+	};
+
+	// Some AMD build optimizers, like r.js, check for specific condition patterns
+	// like the following:
+	if (
+		typeof define == 'function' &&
+		typeof define.amd == 'object' &&
+		define.amd
+	) {
+		define(function() {
+			return base64;
+		});
+	}	else if (freeExports && !freeExports.nodeType) {
+		if (freeModule) { // in Node.js or RingoJS v0.8.0+
+			freeModule.exports = base64;
+		} else { // in Narwhal or RingoJS v0.7.0-
+			for (var key in base64) {
+				base64.hasOwnProperty(key) && (freeExports[key] = base64[key]);
+			}
+		}
+	} else { // in Rhino or a web browser
+		root.base64 = base64;
+	}
+
+}(this));
+
+}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
+},{}],15:[function(require,module,exports){
+//     Underscore.js 1.8.3
+//     http://underscorejs.org
+//     (c) 2009-2015 Jeremy Ashkenas, DocumentCloud and Investigative Reporters & Editors
+//     Underscore may be freely distributed under the MIT license.
+
+(function() {
+
+  // Baseline setup
+  // --------------
+
+  // Establish the root object, `window` in the browser, or `exports` on the server.
+  var root = this;
+
+  // Save the previous value of the `_` variable.
+  var previousUnderscore = root._;
+
+  // Save bytes in the minified (but not gzipped) version:
+  var ArrayProto = Array.prototype, ObjProto = Object.prototype, FuncProto = Function.prototype;
+
+  // Create quick reference variables for speed access to core prototypes.
+  var
+    push             = ArrayProto.push,
+    slice            = ArrayProto.slice,
+    toString         = ObjProto.toString,
+    hasOwnProperty   = ObjProto.hasOwnProperty;
+
+  // All **ECMAScript 5** native function implementations that we hope to use
+  // are declared here.
+  var
+    nativeIsArray      = Array.isArray,
+    nativeKeys         = Object.keys,
+    nativeBind         = FuncProto.bind,
+    nativeCreate       = Object.create;
+
+  // Naked function reference for surrogate-prototype-swapping.
+  var Ctor = function(){};
+
+  // Create a safe reference to the Underscore object for use below.
+  var _ = function(obj) {
+    if (obj instanceof _) return obj;
+    if (!(this instanceof _)) return new _(obj);
+    this._wrapped = obj;
+  };
+
+  // Export the Underscore object for **Node.js**, with
+  // backwards-compatibility for the old `require()` API. If we're in
+  // the browser, add `_` as a global object.
+  if (typeof exports !== 'undefined') {
+    if (typeof module !== 'undefined' && module.exports) {
+      exports = module.exports = _;
+    }
+    exports._ = _;
+  } else {
+    root._ = _;
+  }
+
+  // Current version.
+  _.VERSION = '1.8.3';
+
+  // Internal function that returns an efficient (for current engines) version
+  // of the passed-in callback, to be repeatedly applied in other Underscore
+  // functions.
+  var optimizeCb = function(func, context, argCount) {
+    if (context === void 0) return func;
+    switch (argCount == null ? 3 : argCount) {
+      case 1: return function(value) {
+        return func.call(context, value);
+      };
+      case 2: return function(value, other) {
+        return func.call(context, value, other);
+      };
+      case 3: return function(value, index, collection) {
+        return func.call(context, value, index, collection);
+      };
+      case 4: return function(accumulator, value, index, collection) {
+        return func.call(context, accumulator, value, index, collection);
+      };
+    }
+    return function() {
+      return func.apply(context, arguments);
+    };
+  };
+
+  // A mostly-internal function to generate callbacks that can be applied
+  // to each element in a collection, returning the desired result — either
+  // identity, an arbitrary callback, a property matcher, or a property accessor.
+  var cb = function(value, context, argCount) {
+    if (value == null) return _.identity;
+    if (_.isFunction(value)) return optimizeCb(value, context, argCount);
+    if (_.isObject(value)) return _.matcher(value);
+    return _.property(value);
+  };
+  _.iteratee = function(value, context) {
+    return cb(value, context, Infinity);
+  };
+
+  // An internal function for creating assigner functions.
+  var createAssigner = function(keysFunc, undefinedOnly) {
+    return function(obj) {
+      var length = arguments.length;
+      if (length < 2 || obj == null) return obj;
+      for (var index = 1; index < length; index++) {
+        var source = arguments[index],
+            keys = keysFunc(source),
+            l = keys.length;
+        for (var i = 0; i < l; i++) {
+          var key = keys[i];
+          if (!undefinedOnly || obj[key] === void 0) obj[key] = source[key];
+        }
+      }
+      return obj;
+    };
+  };
+
+  // An internal function for creating a new object that inherits from another.
+  var baseCreate = function(prototype) {
+    if (!_.isObject(prototype)) return {};
+    if (nativeCreate) return nativeCreate(prototype);
+    Ctor.prototype = prototype;
+    var result = new Ctor;
+    Ctor.prototype = null;
+    return result;
+  };
+
+  var property = function(key) {
+    return function(obj) {
+      return obj == null ? void 0 : obj[key];
+    };
+  };
+
+  // Helper for collection methods to determine whether a collection
+  // should be iterated as an array or as an object
+  // Related: http://people.mozilla.org/~jorendorff/es6-draft.html#sec-tolength
+  // Avoids a very nasty iOS 8 JIT bug on ARM-64. #2094
+  var MAX_ARRAY_INDEX = Math.pow(2, 53) - 1;
+  var getLength = property('length');
+  var isArrayLike = function(collection) {
+    var length = getLength(collection);
+    return typeof length == 'number' && length >= 0 && length <= MAX_ARRAY_INDEX;
+  };
+
+  // Collection Functions
+  // --------------------
+
+  // The cornerstone, an `each` implementation, aka `forEach`.
+  // Handles raw objects in addition to array-likes. Treats all
+  // sparse array-likes as if they were dense.
+  _.each = _.forEach = function(obj, iteratee, context) {
+    iteratee = optimizeCb(iteratee, context);
+    var i, length;
+    if (isArrayLike(obj)) {
+      for (i = 0, length = obj.length; i < length; i++) {
+        iteratee(obj[i], i, obj);
+      }
+    } else {
+      var keys = _.keys(obj);
+      for (i = 0, length = keys.length; i < length; i++) {
+        iteratee(obj[keys[i]], keys[i], obj);
+      }
+    }
+    return obj;
+  };
+
+  // Return the results of applying the iteratee to each element.
+  _.map = _.collect = function(obj, iteratee, context) {
+    iteratee = cb(iteratee, context);
+    var keys = !isArrayLike(obj) && _.keys(obj),
+        length = (keys || obj).length,
+        results = Array(length);
+    for (var index = 0; index < length; index++) {
+      var currentKey = keys ? keys[index] : index;
+      results[index] = iteratee(obj[currentKey], currentKey, obj);
+    }
+    return results;
+  };
+
+  // Create a reducing function iterating left or right.
+  function createReduce(dir) {
+    // Optimized iterator function as using arguments.length
+    // in the main function will deoptimize the, see #1991.
+    function iterator(obj, iteratee, memo, keys, index, length) {
+      for (; index >= 0 && index < length; index += dir) {
+        var currentKey = keys ? keys[index] : index;
+        memo = iteratee(memo, obj[currentKey], currentKey, obj);
+      }
+      return memo;
+    }
+
+    return function(obj, iteratee, memo, context) {
+      iteratee = optimizeCb(iteratee, context, 4);
+      var keys = !isArrayLike(obj) && _.keys(obj),
+          length = (keys || obj).length,
+          index = dir > 0 ? 0 : length - 1;
+      // Determine the initial value if none is provided.
+      if (arguments.length < 3) {
+        memo = obj[keys ? keys[index] : index];
+        index += dir;
+      }
+      return iterator(obj, iteratee, memo, keys, index, length);
+    };
+  }
+
+  // **Reduce** builds up a single result from a list of values, aka `inject`,
+  // or `foldl`.
+  _.reduce = _.foldl = _.inject = createReduce(1);
+
+  // The right-associative version of reduce, also known as `foldr`.
+  _.reduceRight = _.foldr = createReduce(-1);
+
+  // Return the first value which passes a truth test. Aliased as `detect`.
+  _.find = _.detect = function(obj, predicate, context) {
+    var key;
+    if (isArrayLike(obj)) {
+      key = _.findIndex(obj, predicate, context);
+    } else {
+      key = _.findKey(obj, predicate, context);
+    }
+    if (key !== void 0 && key !== -1) return obj[key];
+  };
+
+  // Return all the elements that pass a truth test.
+  // Aliased as `select`.
+  _.filter = _.select = function(obj, predicate, context) {
+    var results = [];
+    predicate = cb(predicate, context);
+    _.each(obj, function(value, index, list) {
+      if (predicate(value, index, list)) results.push(value);
+    });
+    return results;
+  };
+
+  // Return all the elements for which a truth test fails.
+  _.reject = function(obj, predicate, context) {
+    return _.filter(obj, _.negate(cb(predicate)), context);
+  };
+
+  // Determine whether all of the elements match a truth test.
+  // Aliased as `all`.
+  _.every = _.all = function(obj, predicate, context) {
+    predicate = cb(predicate, context);
+    var keys = !isArrayLike(obj) && _.keys(obj),
+        length = (keys || obj).length;
+    for (var index = 0; index < length; index++) {
+      var currentKey = keys ? keys[index] : index;
+      if (!predicate(obj[currentKey], currentKey, obj)) return false;
+    }
+    return true;
+  };
+
+  // Determine if at least one element in the object matches a truth test.
+  // Aliased as `any`.
+  _.some = _.any = function(obj, predicate, context) {
+    predicate = cb(predicate, context);
+    var keys = !isArrayLike(obj) && _.keys(obj),
+        length = (keys || obj).length;
+    for (var index = 0; index < length; index++) {
+      var currentKey = keys ? keys[index] : index;
+      if (predicate(obj[currentKey], currentKey, obj)) return true;
+    }
+    return false;
+  };
+
+  // Determine if the array or object contains a given item (using `===`).
+  // Aliased as `includes` and `include`.
+  _.contains = _.includes = _.include = function(obj, item, fromIndex, guard) {
+    if (!isArrayLike(obj)) obj = _.values(obj);
+    if (typeof fromIndex != 'number' || guard) fromIndex = 0;
+    return _.indexOf(obj, item, fromIndex) >= 0;
+  };
+
+  // Invoke a method (with arguments) on every item in a collection.
+  _.invoke = function(obj, method) {
+    var args = slice.call(arguments, 2);
+    var isFunc = _.isFunction(method);
+    return _.map(obj, function(value) {
+      var func = isFunc ? method : value[method];
+      return func == null ? func : func.apply(value, args);
+    });
+  };
+
+  // Convenience version of a common use case of `map`: fetching a property.
+  _.pluck = function(obj, key) {
+    return _.map(obj, _.property(key));
+  };
+
+  // Convenience version of a common use case of `filter`: selecting only objects
+  // containing specific `key:value` pairs.
+  _.where = function(obj, attrs) {
+    return _.filter(obj, _.matcher(attrs));
+  };
+
+  // Convenience version of a common use case of `find`: getting the first object
+  // containing specific `key:value` pairs.
+  _.findWhere = function(obj, attrs) {
+    return _.find(obj, _.matcher(attrs));
+  };
+
+  // Return the maximum element (or element-based computation).
+  _.max = function(obj, iteratee, context) {
+    var result = -Infinity, lastComputed = -Infinity,
+        value, computed;
+    if (iteratee == null && obj != null) {
+      obj = isArrayLike(obj) ? obj : _.values(obj);
+      for (var i = 0, length = obj.length; i < length; i++) {
+        value = obj[i];
+        if (value > result) {
+          result = value;
+        }
+      }
+    } else {
+      iteratee = cb(iteratee, context);
+      _.each(obj, function(value, index, list) {
+        computed = iteratee(value, index, list);
+        if (computed > lastComputed || computed === -Infinity && result === -Infinity) {
+          result = value;
+          lastComputed = computed;
+        }
+      });
+    }
+    return result;
+  };
+
+  // Return the minimum element (or element-based computation).
+  _.min = function(obj, iteratee, context) {
+    var result = Infinity, lastComputed = Infinity,
+        value, computed;
+    if (iteratee == null && obj != null) {
+      obj = isArrayLike(obj) ? obj : _.values(obj);
+      for (var i = 0, length = obj.length; i < length; i++) {
+        value = obj[i];
+        if (value < result) {
+          result = value;
+        }
+      }
+    } else {
+      iteratee = cb(iteratee, context);
+      _.each(obj, function(value, index, list) {
+        computed = iteratee(value, index, list);
+        if (computed < lastComputed || computed === Infinity && result === Infinity) {
+          result = value;
+          lastComputed = computed;
+        }
+      });
+    }
+    return result;
+  };
+
+  // Shuffle a collection, using the modern version of the
+  // [Fisher-Yates shuffle](http://en.wikipedia.org/wiki/Fisher–Yates_shuffle).
+  _.shuffle = function(obj) {
+    var set = isArrayLike(obj) ? obj : _.values(obj);
+    var length = set.length;
+    var shuffled = Array(length);
+    for (var index = 0, rand; index < length; index++) {
+      rand = _.random(0, index);
+      if (rand !== index) shuffled[index] = shuffled[rand];
+      shuffled[rand] = set[index];
+    }
+    return shuffled;
+  };
+
+  // Sample **n** random values from a collection.
+  // If **n** is not specified, returns a single random element.
+  // The internal `guard` argument allows it to work with `map`.
+  _.sample = function(obj, n, guard) {
+    if (n == null || guard) {
+      if (!isArrayLike(obj)) obj = _.values(obj);
+      return obj[_.random(obj.length - 1)];
+    }
+    return _.shuffle(obj).slice(0, Math.max(0, n));
+  };
+
+  // Sort the object's values by a criterion produced by an iteratee.
+  _.sortBy = function(obj, iteratee, context) {
+    iteratee = cb(iteratee, context);
+    return _.pluck(_.map(obj, function(value, index, list) {
+      return {
+        value: value,
+        index: index,
+        criteria: iteratee(value, index, list)
+      };
+    }).sort(function(left, right) {
+      var a = left.criteria;
+      var b = right.criteria;
+      if (a !== b) {
+        if (a > b || a === void 0) return 1;
+        if (a < b || b === void 0) return -1;
+      }
+      return left.index - right.index;
+    }), 'value');
+  };
+
+  // An internal function used for aggregate "group by" operations.
+  var group = function(behavior) {
+    return function(obj, iteratee, context) {
+      var result = {};
+      iteratee = cb(iteratee, context);
+      _.each(obj, function(value, index) {
+        var key = iteratee(value, index, obj);
+        behavior(result, value, key);
+      });
+      return result;
+    };
+  };
+
+  // Groups the object's values by a criterion. Pass either a string attribute
+  // to group by, or a function that returns the criterion.
+  _.groupBy = group(function(result, value, key) {
+    if (_.has(result, key)) result[key].push(value); else result[key] = [value];
+  });
+
+  // Indexes the object's values by a criterion, similar to `groupBy`, but for
+  // when you know that your index values will be unique.
+  _.indexBy = group(function(result, value, key) {
+    result[key] = value;
+  });
+
+  // Counts instances of an object that group by a certain criterion. Pass
+  // either a string attribute to count by, or a function that returns the
+  // criterion.
+  _.countBy = group(function(result, value, key) {
+    if (_.has(result, key)) result[key]++; else result[key] = 1;
+  });
+
+  // Safely create a real, live array from anything iterable.
+  _.toArray = function(obj) {
+    if (!obj) return [];
+    if (_.isArray(obj)) return slice.call(obj);
+    if (isArrayLike(obj)) return _.map(obj, _.identity);
+    return _.values(obj);
+  };
+
+  // Return the number of elements in an object.
+  _.size = function(obj) {
+    if (obj == null) return 0;
+    return isArrayLike(obj) ? obj.length : _.keys(obj).length;
+  };
+
+  // Split a collection into two arrays: one whose elements all satisfy the given
+  // predicate, and one whose elements all do not satisfy the predicate.
+  _.partition = function(obj, predicate, context) {
+    predicate = cb(predicate, context);
+    var pass = [], fail = [];
+    _.each(obj, function(value, key, obj) {
+      (predicate(value, key, obj) ? pass : fail).push(value);
+    });
+    return [pass, fail];
+  };
+
+  // Array Functions
+  // ---------------
+
+  // Get the first element of an array. Passing **n** will return the first N
+  // values in the array. Aliased as `head` and `take`. The **guard** check
+  // allows it to work with `_.map`.
+  _.first = _.head = _.take = function(array, n, guard) {
+    if (array == null) return void 0;
+    if (n == null || guard) return array[0];
+    return _.initial(array, array.length - n);
+  };
+
+  // Returns everything but the last entry of the array. Especially useful on
+  // the arguments object. Passing **n** will return all the values in
+  // the array, excluding the last N.
+  _.initial = function(array, n, guard) {
+    return slice.call(array, 0, Math.max(0, array.length - (n == null || guard ? 1 : n)));
+  };
+
+  // Get the last element of an array. Passing **n** will return the last N
+  // values in the array.
+  _.last = function(array, n, guard) {
+    if (array == null) return void 0;
+    if (n == null || guard) return array[array.length - 1];
+    return _.rest(array, Math.max(0, array.length - n));
+  };
+
+  // Returns everything but the first entry of the array. Aliased as `tail` and `drop`.
+  // Especially useful on the arguments object. Passing an **n** will return
+  // the rest N values in the array.
+  _.rest = _.tail = _.drop = function(array, n, guard) {
+    return slice.call(array, n == null || guard ? 1 : n);
+  };
+
+  // Trim out all falsy values from an array.
+  _.compact = function(array) {
+    return _.filter(array, _.identity);
+  };
+
+  // Internal implementation of a recursive `flatten` function.
+  var flatten = function(input, shallow, strict, startIndex) {
+    var output = [], idx = 0;
+    for (var i = startIndex || 0, length = getLength(input); i < length; i++) {
+      var value = input[i];
+      if (isArrayLike(value) && (_.isArray(value) || _.isArguments(value))) {
+        //flatten current level of array or arguments object
+        if (!shallow) value = flatten(value, shallow, strict);
+        var j = 0, len = value.length;
+        output.length += len;
+        while (j < len) {
+          output[idx++] = value[j++];
+        }
+      } else if (!strict) {
+        output[idx++] = value;
+      }
+    }
+    return output;
+  };
+
+  // Flatten out an array, either recursively (by default), or just one level.
+  _.flatten = function(array, shallow) {
+    return flatten(array, shallow, false);
+  };
+
+  // Return a version of the array that does not contain the specified value(s).
+  _.without = function(array) {
+    return _.difference(array, slice.call(arguments, 1));
+  };
+
+  // Produce a duplicate-free version of the array. If the array has already
+  // been sorted, you have the option of using a faster algorithm.
+  // Aliased as `unique`.
+  _.uniq = _.unique = function(array, isSorted, iteratee, context) {
+    if (!_.isBoolean(isSorted)) {
+      context = iteratee;
+      iteratee = isSorted;
+      isSorted = false;
+    }
+    if (iteratee != null) iteratee = cb(iteratee, context);
+    var result = [];
+    var seen = [];
+    for (var i = 0, length = getLength(array); i < length; i++) {
+      var value = array[i],
+          computed = iteratee ? iteratee(value, i, array) : value;
+      if (isSorted) {
+        if (!i || seen !== computed) result.push(value);
+        seen = computed;
+      } else if (iteratee) {
+        if (!_.contains(seen, computed)) {
+          seen.push(computed);
+          result.push(value);
+        }
+      } else if (!_.contains(result, value)) {
+        result.push(value);
+      }
+    }
+    return result;
+  };
+
+  // Produce an array that contains the union: each distinct element from all of
+  // the passed-in arrays.
+  _.union = function() {
+    return _.uniq(flatten(arguments, true, true));
+  };
+
+  // Produce an array that contains every item shared between all the
+  // passed-in arrays.
+  _.intersection = function(array) {
+    var result = [];
+    var argsLength = arguments.length;
+    for (var i = 0, length = getLength(array); i < length; i++) {
+      var item = array[i];
+      if (_.contains(result, item)) continue;
+      for (var j = 1; j < argsLength; j++) {
+        if (!_.contains(arguments[j], item)) break;
+      }
+      if (j === argsLength) result.push(item);
+    }
+    return result;
+  };
+
+  // Take the difference between one array and a number of other arrays.
+  // Only the elements present in just the first array will remain.
+  _.difference = function(array) {
+    var rest = flatten(arguments, true, true, 1);
+    return _.filter(array, function(value){
+      return !_.contains(rest, value);
+    });
+  };
+
+  // Zip together multiple lists into a single array -- elements that share
+  // an index go together.
+  _.zip = function() {
+    return _.unzip(arguments);
+  };
+
+  // Complement of _.zip. Unzip accepts an array of arrays and groups
+  // each array's elements on shared indices
+  _.unzip = function(array) {
+    var length = array && _.max(array, getLength).length || 0;
+    var result = Array(length);
+
+    for (var index = 0; index < length; index++) {
+      result[index] = _.pluck(array, index);
+    }
+    return result;
+  };
+
+  // Converts lists into objects. Pass either a single array of `[key, value]`
+  // pairs, or two parallel arrays of the same length -- one of keys, and one of
+  // the corresponding values.
+  _.object = function(list, values) {
+    var result = {};
+    for (var i = 0, length = getLength(list); i < length; i++) {
+      if (values) {
+        result[list[i]] = values[i];
+      } else {
+        result[list[i][0]] = list[i][1];
+      }
+    }
+    return result;
+  };
+
+  // Generator function to create the findIndex and findLastIndex functions
+  function createPredicateIndexFinder(dir) {
+    return function(array, predicate, context) {
+      predicate = cb(predicate, context);
+      var length = getLength(array);
+      var index = dir > 0 ? 0 : length - 1;
+      for (; index >= 0 && index < length; index += dir) {
+        if (predicate(array[index], index, array)) return index;
+      }
+      return -1;
+    };
+  }
+
+  // Returns the first index on an array-like that passes a predicate test
+  _.findIndex = createPredicateIndexFinder(1);
+  _.findLastIndex = createPredicateIndexFinder(-1);
+
+  // Use a comparator function to figure out the smallest index at which
+  // an object should be inserted so as to maintain order. Uses binary search.
+  _.sortedIndex = function(array, obj, iteratee, context) {
+    iteratee = cb(iteratee, context, 1);
+    var value = iteratee(obj);
+    var low = 0, high = getLength(array);
+    while (low < high) {
+      var mid = Math.floor((low + high) / 2);
+      if (iteratee(array[mid]) < value) low = mid + 1; else high = mid;
+    }
+    return low;
+  };
+
+  // Generator function to create the indexOf and lastIndexOf functions
+  function createIndexFinder(dir, predicateFind, sortedIndex) {
+    return function(array, item, idx) {
+      var i = 0, length = getLength(array);
+      if (typeof idx == 'number') {
+        if (dir > 0) {
+            i = idx >= 0 ? idx : Math.max(idx + length, i);
+        } else {
+            length = idx >= 0 ? Math.min(idx + 1, length) : idx + length + 1;
+        }
+      } else if (sortedIndex && idx && length) {
+        idx = sortedIndex(array, item);
+        return array[idx] === item ? idx : -1;
+      }
+      if (item !== item) {
+        idx = predicateFind(slice.call(array, i, length), _.isNaN);
+        return idx >= 0 ? idx + i : -1;
+      }
+      for (idx = dir > 0 ? i : length - 1; idx >= 0 && idx < length; idx += dir) {
+        if (array[idx] === item) return idx;
+      }
+      return -1;
+    };
+  }
+
+  // Return the position of the first occurrence of an item in an array,
+  // or -1 if the item is not included in the array.
+  // If the array is large and already in sort order, pass `true`
+  // for **isSorted** to use binary search.
+  _.indexOf = createIndexFinder(1, _.findIndex, _.sortedIndex);
+  _.lastIndexOf = createIndexFinder(-1, _.findLastIndex);
+
+  // Generate an integer Array containing an arithmetic progression. A port of
+  // the native Python `range()` function. See
+  // [the Python documentation](http://docs.python.org/library/functions.html#range).
+  _.range = function(start, stop, step) {
+    if (stop == null) {
+      stop = start || 0;
+      start = 0;
+    }
+    step = step || 1;
+
+    var length = Math.max(Math.ceil((stop - start) / step), 0);
+    var range = Array(length);
+
+    for (var idx = 0; idx < length; idx++, start += step) {
+      range[idx] = start;
+    }
+
+    return range;
+  };
+
+  // Function (ahem) Functions
+  // ------------------
+
+  // Determines whether to execute a function as a constructor
+  // or a normal function with the provided arguments
+  var executeBound = function(sourceFunc, boundFunc, context, callingContext, args) {
+    if (!(callingContext instanceof boundFunc)) return sourceFunc.apply(context, args);
+    var self = baseCreate(sourceFunc.prototype);
+    var result = sourceFunc.apply(self, args);
+    if (_.isObject(result)) return result;
+    return self;
+  };
+
+  // Create a function bound to a given object (assigning `this`, and arguments,
+  // optionally). Delegates to **ECMAScript 5**'s native `Function.bind` if
+  // available.
+  _.bind = function(func, context) {
+    if (nativeBind && func.bind === nativeBind) return nativeBind.apply(func, slice.call(arguments, 1));
+    if (!_.isFunction(func)) throw new TypeError('Bind must be called on a function');
+    var args = slice.call(arguments, 2);
+    var bound = function() {
+      return executeBound(func, bound, context, this, args.concat(slice.call(arguments)));
+    };
+    return bound;
+  };
+
+  // Partially apply a function by creating a version that has had some of its
+  // arguments pre-filled, without changing its dynamic `this` context. _ acts
+  // as a placeholder, allowing any combination of arguments to be pre-filled.
+  _.partial = function(func) {
+    var boundArgs = slice.call(arguments, 1);
+    var bound = function() {
+      var position = 0, length = boundArgs.length;
+      var args = Array(length);
+      for (var i = 0; i < length; i++) {
+        args[i] = boundArgs[i] === _ ? arguments[position++] : boundArgs[i];
+      }
+      while (position < arguments.length) args.push(arguments[position++]);
+      return executeBound(func, bound, this, this, args);
+    };
+    return bound;
+  };
+
+  // Bind a number of an object's methods to that object. Remaining arguments
+  // are the method names to be bound. Useful for ensuring that all callbacks
+  // defined on an object belong to it.
+  _.bindAll = function(obj) {
+    var i, length = arguments.length, key;
+    if (length <= 1) throw new Error('bindAll must be passed function names');
+    for (i = 1; i < length; i++) {
+      key = arguments[i];
+      obj[key] = _.bind(obj[key], obj);
+    }
+    return obj;
+  };
+
+  // Memoize an expensive function by storing its results.
+  _.memoize = function(func, hasher) {
+    var memoize = function(key) {
+      var cache = memoize.cache;
+      var address = '' + (hasher ? hasher.apply(this, arguments) : key);
+      if (!_.has(cache, address)) cache[address] = func.apply(this, arguments);
+      return cache[address];
+    };
+    memoize.cache = {};
+    return memoize;
+  };
+
+  // Delays a function for the given number of milliseconds, and then calls
+  // it with the arguments supplied.
+  _.delay = function(func, wait) {
+    var args = slice.call(arguments, 2);
+    return setTimeout(function(){
+      return func.apply(null, args);
+    }, wait);
+  };
+
+  // Defers a function, scheduling it to run after the current call stack has
+  // cleared.
+  _.defer = _.partial(_.delay, _, 1);
+
+  // Returns a function, that, when invoked, will only be triggered at most once
+  // during a given window of time. Normally, the throttled function will run
+  // as much as it can, without ever going more than once per `wait` duration;
+  // but if you'd like to disable the execution on the leading edge, pass
+  // `{leading: false}`. To disable execution on the trailing edge, ditto.
+  _.throttle = function(func, wait, options) {
+    var context, args, result;
+    var timeout = null;
+    var previous = 0;
+    if (!options) options = {};
+    var later = function() {
+      previous = options.leading === false ? 0 : _.now();
+      timeout = null;
+      result = func.apply(context, args);
+      if (!timeout) context = args = null;
+    };
+    return function() {
+      var now = _.now();
+      if (!previous && options.leading === false) previous = now;
+      var remaining = wait - (now - previous);
+      context = this;
+      args = arguments;
+      if (remaining <= 0 || remaining > wait) {
+        if (timeout) {
+          clearTimeout(timeout);
+          timeout = null;
+        }
+        previous = now;
+        result = func.apply(context, args);
+        if (!timeout) context = args = null;
+      } else if (!timeout && options.trailing !== false) {
+        timeout = setTimeout(later, remaining);
+      }
+      return result;
+    };
+  };
+
+  // Returns a function, that, as long as it continues to be invoked, will not
+  // be triggered. The function will be called after it stops being called for
+  // N milliseconds. If `immediate` is passed, trigger the function on the
+  // leading edge, instead of the trailing.
+  _.debounce = function(func, wait, immediate) {
+    var timeout, args, context, timestamp, result;
+
+    var later = function() {
+      var last = _.now() - timestamp;
+
+      if (last < wait && last >= 0) {
+        timeout = setTimeout(later, wait - last);
+      } else {
+        timeout = null;
+        if (!immediate) {
+          result = func.apply(context, args);
+          if (!timeout) context = args = null;
+        }
+      }
+    };
+
+    return function() {
+      context = this;
+      args = arguments;
+      timestamp = _.now();
+      var callNow = immediate && !timeout;
+      if (!timeout) timeout = setTimeout(later, wait);
+      if (callNow) {
+        result = func.apply(context, args);
+        context = args = null;
+      }
+
+      return result;
+    };
+  };
+
+  // Returns the first function passed as an argument to the second,
+  // allowing you to adjust arguments, run code before and after, and
+  // conditionally execute the original function.
+  _.wrap = function(func, wrapper) {
+    return _.partial(wrapper, func);
+  };
+
+  // Returns a negated version of the passed-in predicate.
+  _.negate = function(predicate) {
+    return function() {
+      return !predicate.apply(this, arguments);
+    };
+  };
+
+  // Returns a function that is the composition of a list of functions, each
+  // consuming the return value of the function that follows.
+  _.compose = function() {
+    var args = arguments;
+    var start = args.length - 1;
+    return function() {
+      var i = start;
+      var result = args[start].apply(this, arguments);
+      while (i--) result = args[i].call(this, result);
+      return result;
+    };
+  };
+
+  // Returns a function that will only be executed on and after the Nth call.
+  _.after = function(times, func) {
+    return function() {
+      if (--times < 1) {
+        return func.apply(this, arguments);
+      }
+    };
+  };
+
+  // Returns a function that will only be executed up to (but not including) the Nth call.
+  _.before = function(times, func) {
+    var memo;
+    return function() {
+      if (--times > 0) {
+        memo = func.apply(this, arguments);
+      }
+      if (times <= 1) func = null;
+      return memo;
+    };
+  };
+
+  // Returns a function that will be executed at most one time, no matter how
+  // often you call it. Useful for lazy initialization.
+  _.once = _.partial(_.before, 2);
+
+  // Object Functions
+  // ----------------
+
+  // Keys in IE < 9 that won't be iterated by `for key in ...` and thus missed.
+  var hasEnumBug = !{toString: null}.propertyIsEnumerable('toString');
+  var nonEnumerableProps = ['valueOf', 'isPrototypeOf', 'toString',
+                      'propertyIsEnumerable', 'hasOwnProperty', 'toLocaleString'];
+
+  function collectNonEnumProps(obj, keys) {
+    var nonEnumIdx = nonEnumerableProps.length;
+    var constructor = obj.constructor;
+    var proto = (_.isFunction(constructor) && constructor.prototype) || ObjProto;
+
+    // Constructor is a special case.
+    var prop = 'constructor';
+    if (_.has(obj, prop) && !_.contains(keys, prop)) keys.push(prop);
+
+    while (nonEnumIdx--) {
+      prop = nonEnumerableProps[nonEnumIdx];
+      if (prop in obj && obj[prop] !== proto[prop] && !_.contains(keys, prop)) {
+        keys.push(prop);
+      }
+    }
+  }
+
+  // Retrieve the names of an object's own properties.
+  // Delegates to **ECMAScript 5**'s native `Object.keys`
+  _.keys = function(obj) {
+    if (!_.isObject(obj)) return [];
+    if (nativeKeys) return nativeKeys(obj);
+    var keys = [];
+    for (var key in obj) if (_.has(obj, key)) keys.push(key);
+    // Ahem, IE < 9.
+    if (hasEnumBug) collectNonEnumProps(obj, keys);
+    return keys;
+  };
+
+  // Retrieve all the property names of an object.
+  _.allKeys = function(obj) {
+    if (!_.isObject(obj)) return [];
+    var keys = [];
+    for (var key in obj) keys.push(key);
+    // Ahem, IE < 9.
+    if (hasEnumBug) collectNonEnumProps(obj, keys);
+    return keys;
+  };
+
+  // Retrieve the values of an object's properties.
+  _.values = function(obj) {
+    var keys = _.keys(obj);
+    var length = keys.length;
+    var values = Array(length);
+    for (var i = 0; i < length; i++) {
+      values[i] = obj[keys[i]];
+    }
+    return values;
+  };
+
+  // Returns the results of applying the iteratee to each element of the object
+  // In contrast to _.map it returns an object
+  _.mapObject = function(obj, iteratee, context) {
+    iteratee = cb(iteratee, context);
+    var keys =  _.keys(obj),
+          length = keys.length,
+          results = {},
+          currentKey;
+      for (var index = 0; index < length; index++) {
+        currentKey = keys[index];
+        results[currentKey] = iteratee(obj[currentKey], currentKey, obj);
+      }
+      return results;
+  };
+
+  // Convert an object into a list of `[key, value]` pairs.
+  _.pairs = function(obj) {
+    var keys = _.keys(obj);
+    var length = keys.length;
+    var pairs = Array(length);
+    for (var i = 0; i < length; i++) {
+      pairs[i] = [keys[i], obj[keys[i]]];
+    }
+    return pairs;
+  };
+
+  // Invert the keys and values of an object. The values must be serializable.
+  _.invert = function(obj) {
+    var result = {};
+    var keys = _.keys(obj);
+    for (var i = 0, length = keys.length; i < length; i++) {
+      result[obj[keys[i]]] = keys[i];
+    }
+    return result;
+  };
+
+  // Return a sorted list of the function names available on the object.
+  // Aliased as `methods`
+  _.functions = _.methods = function(obj) {
+    var names = [];
+    for (var key in obj) {
+      if (_.isFunction(obj[key])) names.push(key);
+    }
+    return names.sort();
+  };
+
+  // Extend a given object with all the properties in passed-in object(s).
+  _.extend = createAssigner(_.allKeys);
+
+  // Assigns a given object with all the own properties in the passed-in object(s)
+  // (https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Object/assign)
+  _.extendOwn = _.assign = createAssigner(_.keys);
+
+  // Returns the first key on an object that passes a predicate test
+  _.findKey = function(obj, predicate, context) {
+    predicate = cb(predicate, context);
+    var keys = _.keys(obj), key;
+    for (var i = 0, length = keys.length; i < length; i++) {
+      key = keys[i];
+      if (predicate(obj[key], key, obj)) return key;
+    }
+  };
+
+  // Return a copy of the object only containing the whitelisted properties.
+  _.pick = function(object, oiteratee, context) {
+    var result = {}, obj = object, iteratee, keys;
+    if (obj == null) return result;
+    if (_.isFunction(oiteratee)) {
+      keys = _.allKeys(obj);
+      iteratee = optimizeCb(oiteratee, context);
+    } else {
+      keys = flatten(arguments, false, false, 1);
+      iteratee = function(value, key, obj) { return key in obj; };
+      obj = Object(obj);
+    }
+    for (var i = 0, length = keys.length; i < length; i++) {
+      var key = keys[i];
+      var value = obj[key];
+      if (iteratee(value, key, obj)) result[key] = value;
+    }
+    return result;
+  };
+
+   // Return a copy of the object without the blacklisted properties.
+  _.omit = function(obj, iteratee, context) {
+    if (_.isFunction(iteratee)) {
+      iteratee = _.negate(iteratee);
+    } else {
+      var keys = _.map(flatten(arguments, false, false, 1), String);
+      iteratee = function(value, key) {
+        return !_.contains(keys, key);
+      };
+    }
+    return _.pick(obj, iteratee, context);
+  };
+
+  // Fill in a given object with default properties.
+  _.defaults = createAssigner(_.allKeys, true);
+
+  // Creates an object that inherits from the given prototype object.
+  // If additional properties are provided then they will be added to the
+  // created object.
+  _.create = function(prototype, props) {
+    var result = baseCreate(prototype);
+    if (props) _.extendOwn(result, props);
+    return result;
+  };
+
+  // Create a (shallow-cloned) duplicate of an object.
+  _.clone = function(obj) {
+    if (!_.isObject(obj)) return obj;
+    return _.isArray(obj) ? obj.slice() : _.extend({}, obj);
+  };
+
+  // Invokes interceptor with the obj, and then returns obj.
+  // The primary purpose of this method is to "tap into" a method chain, in
+  // order to perform operations on intermediate results within the chain.
+  _.tap = function(obj, interceptor) {
+    interceptor(obj);
+    return obj;
+  };
+
+  // Returns whether an object has a given set of `key:value` pairs.
+  _.isMatch = function(object, attrs) {
+    var keys = _.keys(attrs), length = keys.length;
+    if (object == null) return !length;
+    var obj = Object(object);
+    for (var i = 0; i < length; i++) {
+      var key = keys[i];
+      if (attrs[key] !== obj[key] || !(key in obj)) return false;
+    }
+    return true;
+  };
+
+
+  // Internal recursive comparison function for `isEqual`.
+  var eq = function(a, b, aStack, bStack) {
+    // Identical objects are equal. `0 === -0`, but they aren't identical.
+    // See the [Harmony `egal` proposal](http://wiki.ecmascript.org/doku.php?id=harmony:egal).
+    if (a === b) return a !== 0 || 1 / a === 1 / b;
+    // A strict comparison is necessary because `null == undefined`.
+    if (a == null || b == null) return a === b;
+    // Unwrap any wrapped objects.
+    if (a instanceof _) a = a._wrapped;
+    if (b instanceof _) b = b._wrapped;
+    // Compare `[[Class]]` names.
+    var className = toString.call(a);
+    if (className !== toString.call(b)) return false;
+    switch (className) {
+      // Strings, numbers, regular expressions, dates, and booleans are compared by value.
+      case '[object RegExp]':
+      // RegExps are coerced to strings for comparison (Note: '' + /a/i === '/a/i')
+      case '[object String]':
+        // Primitives and their corresponding object wrappers are equivalent; thus, `"5"` is
+        // equivalent to `new String("5")`.
+        return '' + a === '' + b;
+      case '[object Number]':
+        // `NaN`s are equivalent, but non-reflexive.
+        // Object(NaN) is equivalent to NaN
+        if (+a !== +a) return +b !== +b;
+        // An `egal` comparison is performed for other numeric values.
+        return +a === 0 ? 1 / +a === 1 / b : +a === +b;
+      case '[object Date]':
+      case '[object Boolean]':
+        // Coerce dates and booleans to numeric primitive values. Dates are compared by their
+        // millisecond representations. Note that invalid dates with millisecond representations
+        // of `NaN` are not equivalent.
+        return +a === +b;
+    }
+
+    var areArrays = className === '[object Array]';
+    if (!areArrays) {
+      if (typeof a != 'object' || typeof b != 'object') return false;
+
+      // Objects with different constructors are not equivalent, but `Object`s or `Array`s
+      // from different frames are.
+      var aCtor = a.constructor, bCtor = b.constructor;
+      if (aCtor !== bCtor && !(_.isFunction(aCtor) && aCtor instanceof aCtor &&
+                               _.isFunction(bCtor) && bCtor instanceof bCtor)
+                          && ('constructor' in a && 'constructor' in b)) {
+        return false;
+      }
+    }
+    // Assume equality for cyclic structures. The algorithm for detecting cyclic
+    // structures is adapted from ES 5.1 section 15.12.3, abstract operation `JO`.
+
+    // Initializing stack of traversed objects.
+    // It's done here since we only need them for objects and arrays comparison.
+    aStack = aStack || [];
+    bStack = bStack || [];
+    var length = aStack.length;
+    while (length--) {
+      // Linear search. Performance is inversely proportional to the number of
+      // unique nested structures.
+      if (aStack[length] === a) return bStack[length] === b;
+    }
+
+    // Add the first object to the stack of traversed objects.
+    aStack.push(a);
+    bStack.push(b);
+
+    // Recursively compare objects and arrays.
+    if (areArrays) {
+      // Compare array lengths to determine if a deep comparison is necessary.
+      length = a.length;
+      if (length !== b.length) return false;
+      // Deep compare the contents, ignoring non-numeric properties.
+      while (length--) {
+        if (!eq(a[length], b[length], aStack, bStack)) return false;
+      }
+    } else {
+      // Deep compare objects.
+      var keys = _.keys(a), key;
+      length = keys.length;
+      // Ensure that both objects contain the same number of properties before comparing deep equality.
+      if (_.keys(b).length !== length) return false;
+      while (length--) {
+        // Deep compare each member
+        key = keys[length];
+        if (!(_.has(b, key) && eq(a[key], b[key], aStack, bStack))) return false;
+      }
+    }
+    // Remove the first object from the stack of traversed objects.
+    aStack.pop();
+    bStack.pop();
+    return true;
+  };
+
+  // Perform a deep comparison to check if two objects are equal.
+  _.isEqual = function(a, b) {
+    return eq(a, b);
+  };
+
+  // Is a given array, string, or object empty?
+  // An "empty" object has no enumerable own-properties.
+  _.isEmpty = function(obj) {
+    if (obj == null) return true;
+    if (isArrayLike(obj) && (_.isArray(obj) || _.isString(obj) || _.isArguments(obj))) return obj.length === 0;
+    return _.keys(obj).length === 0;
+  };
+
+  // Is a given value a DOM element?
+  _.isElement = function(obj) {
+    return !!(obj && obj.nodeType === 1);
+  };
+
+  // Is a given value an array?
+  // Delegates to ECMA5's native Array.isArray
+  _.isArray = nativeIsArray || function(obj) {
+    return toString.call(obj) === '[object Array]';
+  };
+
+  // Is a given variable an object?
+  _.isObject = function(obj) {
+    var type = typeof obj;
+    return type === 'function' || type === 'object' && !!obj;
+  };
+
+  // Add some isType methods: isArguments, isFunction, isString, isNumber, isDate, isRegExp, isError.
+  _.each(['Arguments', 'Function', 'String', 'Number', 'Date', 'RegExp', 'Error'], function(name) {
+    _['is' + name] = function(obj) {
+      return toString.call(obj) === '[object ' + name + ']';
+    };
+  });
+
+  // Define a fallback version of the method in browsers (ahem, IE < 9), where
+  // there isn't any inspectable "Arguments" type.
+  if (!_.isArguments(arguments)) {
+    _.isArguments = function(obj) {
+      return _.has(obj, 'callee');
+    };
+  }
+
+  // Optimize `isFunction` if appropriate. Work around some typeof bugs in old v8,
+  // IE 11 (#1621), and in Safari 8 (#1929).
+  if (typeof /./ != 'function' && typeof Int8Array != 'object') {
+    _.isFunction = function(obj) {
+      return typeof obj == 'function' || false;
+    };
+  }
+
+  // Is a given object a finite number?
+  _.isFinite = function(obj) {
+    return isFinite(obj) && !isNaN(parseFloat(obj));
+  };
+
+  // Is the given value `NaN`? (NaN is the only number which does not equal itself).
+  _.isNaN = function(obj) {
+    return _.isNumber(obj) && obj !== +obj;
+  };
+
+  // Is a given value a boolean?
+  _.isBoolean = function(obj) {
+    return obj === true || obj === false || toString.call(obj) === '[object Boolean]';
+  };
+
+  // Is a given value equal to null?
+  _.isNull = function(obj) {
+    return obj === null;
+  };
+
+  // Is a given variable undefined?
+  _.isUndefined = function(obj) {
+    return obj === void 0;
+  };
+
+  // Shortcut function for checking if an object has a given property directly
+  // on itself (in other words, not on a prototype).
+  _.has = function(obj, key) {
+    return obj != null && hasOwnProperty.call(obj, key);
+  };
+
+  // Utility Functions
+  // -----------------
+
+  // Run Underscore.js in *noConflict* mode, returning the `_` variable to its
+  // previous owner. Returns a reference to the Underscore object.
+  _.noConflict = function() {
+    root._ = previousUnderscore;
+    return this;
+  };
+
+  // Keep the identity function around for default iteratees.
+  _.identity = function(value) {
+    return value;
+  };
+
+  // Predicate-generating functions. Often useful outside of Underscore.
+  _.constant = function(value) {
+    return function() {
+      return value;
+    };
+  };
+
+  _.noop = function(){};
+
+  _.property = property;
+
+  // Generates a function for a given object that returns a given property.
+  _.propertyOf = function(obj) {
+    return obj == null ? function(){} : function(key) {
+      return obj[key];
+    };
+  };
+
+  // Returns a predicate for checking whether an object has a given set of
+  // `key:value` pairs.
+  _.matcher = _.matches = function(attrs) {
+    attrs = _.extendOwn({}, attrs);
+    return function(obj) {
+      return _.isMatch(obj, attrs);
+    };
+  };
+
+  // Run a function **n** times.
+  _.times = function(n, iteratee, context) {
+    var accum = Array(Math.max(0, n));
+    iteratee = optimizeCb(iteratee, context, 1);
+    for (var i = 0; i < n; i++) accum[i] = iteratee(i);
+    return accum;
+  };
+
+  // Return a random integer between min and max (inclusive).
+  _.random = function(min, max) {
+    if (max == null) {
+      max = min;
+      min = 0;
+    }
+    return min + Math.floor(Math.random() * (max - min + 1));
+  };
+
+  // A (possibly faster) way to get the current timestamp as an integer.
+  _.now = Date.now || function() {
+    return new Date().getTime();
+  };
+
+   // List of HTML entities for escaping.
+  var escapeMap = {
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#x27;',
+    '`': '&#x60;'
+  };
+  var unescapeMap = _.invert(escapeMap);
+
+  // Functions for escaping and unescaping strings to/from HTML interpolation.
+  var createEscaper = function(map) {
+    var escaper = function(match) {
+      return map[match];
+    };
+    // Regexes for identifying a key that needs to be escaped
+    var source = '(?:' + _.keys(map).join('|') + ')';
+    var testRegexp = RegExp(source);
+    var replaceRegexp = RegExp(source, 'g');
+    return function(string) {
+      string = string == null ? '' : '' + string;
+      return testRegexp.test(string) ? string.replace(replaceRegexp, escaper) : string;
+    };
+  };
+  _.escape = createEscaper(escapeMap);
+  _.unescape = createEscaper(unescapeMap);
+
+  // If the value of the named `property` is a function then invoke it with the
+  // `object` as context; otherwise, return it.
+  _.result = function(object, property, fallback) {
+    var value = object == null ? void 0 : object[property];
+    if (value === void 0) {
+      value = fallback;
+    }
+    return _.isFunction(value) ? value.call(object) : value;
+  };
+
+  // Generate a unique integer id (unique within the entire client session).
+  // Useful for temporary DOM ids.
+  var idCounter = 0;
+  _.uniqueId = function(prefix) {
+    var id = ++idCounter + '';
+    return prefix ? prefix + id : id;
+  };
+
+  // By default, Underscore uses ERB-style template delimiters, change the
+  // following template settings to use alternative delimiters.
+  _.templateSettings = {
+    evaluate    : /<%([\s\S]+?)%>/g,
+    interpolate : /<%=([\s\S]+?)%>/g,
+    escape      : /<%-([\s\S]+?)%>/g
+  };
+
+  // When customizing `templateSettings`, if you don't want to define an
+  // interpolation, evaluation or escaping regex, we need one that is
+  // guaranteed not to match.
+  var noMatch = /(.)^/;
+
+  // Certain characters need to be escaped so that they can be put into a
+  // string literal.
+  var escapes = {
+    "'":      "'",
+    '\\':     '\\',
+    '\r':     'r',
+    '\n':     'n',
+    '\u2028': 'u2028',
+    '\u2029': 'u2029'
+  };
+
+  var escaper = /\\|'|\r|\n|\u2028|\u2029/g;
+
+  var escapeChar = function(match) {
+    return '\\' + escapes[match];
+  };
+
+  // JavaScript micro-templating, similar to John Resig's implementation.
+  // Underscore templating handles arbitrary delimiters, preserves whitespace,
+  // and correctly escapes quotes within interpolated code.
+  // NB: `oldSettings` only exists for backwards compatibility.
+  _.template = function(text, settings, oldSettings) {
+    if (!settings && oldSettings) settings = oldSettings;
+    settings = _.defaults({}, settings, _.templateSettings);
+
+    // Combine delimiters into one regular expression via alternation.
+    var matcher = RegExp([
+      (settings.escape || noMatch).source,
+      (settings.interpolate || noMatch).source,
+      (settings.evaluate || noMatch).source
+    ].join('|') + '|$', 'g');
+
+    // Compile the template source, escaping string literals appropriately.
+    var index = 0;
+    var source = "__p+='";
+    text.replace(matcher, function(match, escape, interpolate, evaluate, offset) {
+      source += text.slice(index, offset).replace(escaper, escapeChar);
+      index = offset + match.length;
+
+      if (escape) {
+        source += "'+\n((__t=(" + escape + "))==null?'':_.escape(__t))+\n'";
+      } else if (interpolate) {
+        source += "'+\n((__t=(" + interpolate + "))==null?'':__t)+\n'";
+      } else if (evaluate) {
+        source += "';\n" + evaluate + "\n__p+='";
+      }
+
+      // Adobe VMs need the match returned to produce the correct offest.
+      return match;
+    });
+    source += "';\n";
+
+    // If a variable is not specified, place data values in local scope.
+    if (!settings.variable) source = 'with(obj||{}){\n' + source + '}\n';
+
+    source = "var __t,__p='',__j=Array.prototype.join," +
+      "print=function(){__p+=__j.call(arguments,'');};\n" +
+      source + 'return __p;\n';
+
+    try {
+      var render = new Function(settings.variable || 'obj', '_', source);
+    } catch (e) {
+      e.source = source;
+      throw e;
+    }
+
+    var template = function(data) {
+      return render.call(this, data, _);
+    };
+
+    // Provide the compiled source as a convenience for precompilation.
+    var argument = settings.variable || 'obj';
+    template.source = 'function(' + argument + '){\n' + source + '}';
+
+    return template;
+  };
+
+  // Add a "chain" function. Start chaining a wrapped Underscore object.
+  _.chain = function(obj) {
+    var instance = _(obj);
+    instance._chain = true;
+    return instance;
+  };
+
+  // OOP
+  // ---------------
+  // If Underscore is called as a function, it returns a wrapped object that
+  // can be used OO-style. This wrapper holds altered versions of all the
+  // underscore functions. Wrapped objects may be chained.
+
+  // Helper function to continue chaining intermediate results.
+  var result = function(instance, obj) {
+    return instance._chain ? _(obj).chain() : obj;
+  };
+
+  // Add your own custom functions to the Underscore object.
+  _.mixin = function(obj) {
+    _.each(_.functions(obj), function(name) {
+      var func = _[name] = obj[name];
+      _.prototype[name] = function() {
+        var args = [this._wrapped];
+        push.apply(args, arguments);
+        return result(this, func.apply(_, args));
+      };
+    });
+  };
+
+  // Add all of the Underscore functions to the wrapper object.
+  _.mixin(_);
+
+  // Add all mutator Array functions to the wrapper.
+  _.each(['pop', 'push', 'reverse', 'shift', 'sort', 'splice', 'unshift'], function(name) {
+    var method = ArrayProto[name];
+    _.prototype[name] = function() {
+      var obj = this._wrapped;
+      method.apply(obj, arguments);
+      if ((name === 'shift' || name === 'splice') && obj.length === 0) delete obj[0];
+      return result(this, obj);
+    };
+  });
+
+  // Add all accessor Array functions to the wrapper.
+  _.each(['concat', 'join', 'slice'], function(name) {
+    var method = ArrayProto[name];
+    _.prototype[name] = function() {
+      return result(this, method.apply(this._wrapped, arguments));
+    };
+  });
+
+  // Extracts the result from a wrapped and chained object.
+  _.prototype.value = function() {
+    return this._wrapped;
+  };
+
+  // Provide unwrapping proxy for some methods used in engine operations
+  // such as arithmetic and JSON stringification.
+  _.prototype.valueOf = _.prototype.toJSON = _.prototype.value;
+
+  _.prototype.toString = function() {
+    return '' + this._wrapped;
+  };
+
+  // AMD registration happens at the end for compatibility with AMD loaders
+  // that may not enforce next-turn semantics on modules. Even though general
+  // practice for AMD registration is to be anonymous, underscore registers
+  // as a named module because, like jQuery, it is a base library that is
+  // popular enough to be bundled in a third party lib, but not be part of
+  // an AMD load request. Those cases could generate an error when an
+  // anonymous define() is called outside of a loader request.
+  if (typeof define === 'function' && define.amd) {
+    define('underscore', [], function() {
+      return _;
+    });
+  }
+}.call(this));
+
+},{}],"appController":[function(require,module,exports){
+'use strict';
+
+/**
+ * The main controlling piece of the app. It composes the other modules.
+ */
+
+var chromeUdp = require('./dnssd/chromeUdp');
+
+var LISTENING_HTTP_INTERFACE = null;
+
+/**
+ * This port is hard-coded for now, as the web server requires that we pass a
+ * port. This will be amended and should be dynamically allocated.
+ */
+var HTTP_PORT = 9876;
+
+/**
+ * Get the interface on which the app is listening for incoming http
+ * connections.
+ *
+ * @return {object} an object of the form:
+ * {
+ *   name: string,
+ *   address: string,
+ *   prefixLength: integer,
+ *   port: integer
+ * }
+ */
+exports.getListeningHttpInterface = function() {
+  if (!LISTENING_HTTP_INTERFACE) {
+    console.warn('listening http interface not set, is app started?');
+  }
+  return LISTENING_HTTP_INTERFACE;
+};
+
+/**
+ * Start the app.
+ *
+ * @return {Promise} Promise that resolves when the app is started
+ */
+exports.start = function() {
+  return new Promise(function(resolve) {
+    chromeUdp.getNetworkInterfaces()
+      .then(interfaces => {
+        var ipv4Interfaces = [];
+        interfaces.forEach(iface => {
+          if (iface.address.indexOf(':') === -1) {
+            // ipv4
+            ipv4Interfaces.push(iface);
+          }
+        });
+        if (ipv4Interfaces.length === 0) {
+          console.log('Could not find ipv4 interface: ', interfaces);
+        } else {
+          var iface = ipv4Interfaces[0];
+          iface.port = HTTP_PORT;
+          LISTENING_HTTP_INTERFACE = iface;
+        }
+        resolve();
+      });
+  });
+};
+
+},{"./dnssd/chromeUdp":"chromeUdp"}],"binaryUtils":[function(require,module,exports){
+/*jshint esnext:true*/
+/*
+ * https://github.com/justindarc/dns-sd.js
+ *
+ * The MIT License (MIT)
+ *
+ * Copyright (c) 2015 Justin D'Arcangelo
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to
+ * deal in the Software without restriction, including without limitation the
+ * rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+ * sell copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+ * IN THE SOFTWARE.
+ */
+
+'use strict';
+
+exports.BinaryUtils = (function() {
+
+var BinaryUtils = {
+  stringToArrayBuffer: function(string) {
+    var length = (string || '').length;
+    var arrayBuffer = new ArrayBuffer(length);
+    var uint8Array = new Uint8Array(arrayBuffer);
+    for (var i = 0; i < length; i++) {
+      uint8Array[i] = string.charCodeAt(i);
+    }
+
+    return arrayBuffer;
+  },
+
+  arrayBufferToString: function(arrayBuffer) {
+    var results = [];
+    var uint8Array = new Uint8Array(arrayBuffer);
+
+    for (var i = 0, length = uint8Array.length; i < length; i += 200000) {
+      results.push(String.fromCharCode.apply(null, uint8Array.subarray(i, i + 200000)));
+    }
+
+    return results.join('');
+  },
+
+  blobToArrayBuffer: function(blob, callback) {
+    var fileReader = new FileReader();
+    fileReader.onload = function() {
+      if (typeof callback === 'function') {
+        callback(fileReader.result);
+      }
+    };
+    fileReader.readAsArrayBuffer(blob);
+
+    return fileReader.result;
+  },
+
+  mergeArrayBuffers: function(arrayBuffers, callback) {
+    return this.blobToArrayBuffer(new Blob(arrayBuffers), callback);
+  }
+};
+
+return BinaryUtils;
+
+})();
+
+},{}],"chromeUdp":[function(require,module,exports){
+/* globals Promise, chrome */
+'use strict';
+
+var DEBUG = true;
+
+exports.ChromeUdpSocket = function ChromeUdpSocket(socketInfo) {
+  if (!(this instanceof ChromeUdpSocket)) {
+    throw new Error('ChromeUdpSocket must be called with new');
+  }
+  this.socketInfo = socketInfo;
+  this.socketId = socketInfo.socketId;
+};
+
+/**
+ * Send data over the port and return a promise with the sendInfo result.
+ * Behaves as a thin wrapper around chromeUdp.send.
+ */
+exports.ChromeUdpSocket.prototype.send = function(arrayBuffer, address, port) {
+  return exports.send(this.socketId, arrayBuffer, address, port);
+};
+
+/**
+ * Add listener via call to chrome.sockets.udp.onReceive.addListener.
+ */
+exports.addOnReceiveListener = function(listener) {
+  chrome.sockets.udp.onReceive.addListener(listener);
+};
+
+/**
+ * Add listener via call to chrome.sockets.udp.onReceiveError.addListener.
+ */
+exports.addOnReceiveErrorListener = function(listener) {
+  chrome.sockets.udp.onReceiveError.addListener(listener);
+};
+
+exports.create = function(obj) {
+  return new Promise(function(resolve) {
+    chrome.sockets.udp.create(obj, function(socketInfo) {
+      resolve(socketInfo);
+    });
+  });
+};
+
+exports.bind = function(socketId, address, port) {
+  return new Promise(function(resolve, reject) {
+    chrome.sockets.udp.bind(socketId, address, port, function(result) {
+      if (result < 0) {
+        console.log('chromeUdp.bind: result < 0, rejecting');
+        console.log('    socketId: ', socketId);
+        console.log('    address: ', address);
+        console.log('    port: ', port);
+        reject(result);
+      } else {
+        resolve(result);
+      }
+    });
+  });
+};
+
+exports.send = function(socketId, arrayBuffer, address, port) {
+  if (!socketId || !arrayBuffer || !address || !port) {
+    console.warn(
+      'send received bad arg: ', socketId, arrayBuffer, address, port
+    );
+  }
+  return new Promise(function(resolve, reject) {
+    if (DEBUG) {
+      console.log('chromeUdp.send');
+      console.log('    socketId: ', socketId);
+      console.log('    address: ', address);
+      console.log('    port: ', port);
+      console.log('    arrayBuffer: ', arrayBuffer);
+    }
+    chrome.sockets.udp.send(
+      socketId,
+      arrayBuffer,
+      address,
+      port,
+      function(sendInfo) {
+        if (sendInfo.resultCode < 0) {
+          console.log('chromeUdp.send: result < 0, rejecting');
+          reject(sendInfo);
+        } else {
+          resolve(sendInfo);
+        }
+      }
+    );
+  });
+};
+
+exports.joinGroup = function(socketId, address) {
+  return new Promise(function(resolve, reject) {
+    chrome.sockets.udp.joinGroup(socketId, address, function(result) {
+      console.log('socketId: ', socketId);
+      console.log('address: ', address);
+      if (result < 0) {
+        console.log('chromeUdp.joinGroup: result < 0, reject');
+        reject(result);
+      } else {
+        resolve(result);
+      }
+    });
+  });
+};
+
+exports.getSockets = function() {
+  return new Promise(function(resolve) {
+    chrome.sockets.udp.getSockets(function(allSockets) {
+      resolve(allSockets);
+    });
+  });
+};
+
+exports.getInfo = function(socketId) {
+  return new Promise(function(resolve) {
+    chrome.sockets.udp.getInfo(socketId, function(socketInfo) {
+      resolve(socketInfo);
+    });
+  });
+};
+
+exports.closeAllSockets = function() {
+  exports.getSockets().then(function(allSockets) {
+    allSockets.forEach(function(socketInfo) {
+      console.log('Closing socket with id: ', socketInfo.socketId);
+      chrome.sockets.udp.close(socketInfo.socketId);
+    });
+  });
+};
+
+exports.listAllSockets = function() {
+  exports.getSockets().then(function(allSockets) {
+    allSockets.forEach(function(socketInfo) {
+      console.log(socketInfo);
+    });
+  });
+};
+
+exports.logSocketInfo = function(info) {
+  console.log('Received data via UDP on ', new Date());
+  console.log('    socketId: ', info.socketId);
+  console.log('    remoteAddress: ', info.remoteAddress);
+  console.log('    remotePort: ', info.remotePort);
+  console.log('    data: ', info.data);
+  console.log('    info: ', info);
+};
+
+/**
+ * Returns a Promise that resolves with a list of network interfaces.
+ */
+exports.getNetworkInterfaces = function() {
+  return new Promise(function(resolve) {
+    chrome.system.network.getNetworkInterfaces(function(interfaces) {
+      resolve(interfaces);
+    });
+  });
+};
+
+},{}],"dnsSem":[function(require,module,exports){
+/*jshint esnext:true*/
+'use strict';
+
+/**
+ * A SemCache-specific wrapper around the mDNS and DNSSD APIs. SemCache clients
+ * should use this module, as it handles things like service strings. More
+ * general clients--i.e. those not implementing a SemCache instance--should
+ * use the dns-sd module.
+ */
+
+var dnssd = require('./dns-sd');
+
+var SEMCACHE_SERVICE_STRING = '_semcache._tcp';
+
+/**
+ * Return the service string representing SemCache, e.g. "_semcache._tcp".
+ */
+exports.getSemCacheServiceString = function() {
+  return SEMCACHE_SERVICE_STRING;
+};
+
+/**
+ * Register a SemCache instance. Returns a Promise that resolves with an object
+ * like the following:
+ *
+ * {
+ *   serviceName: "Sam's SemCache",
+ *   type: "_http._local",
+ *   domain: "laptop.local"
+ * }
+ *
+ * name: the user-friendly name of the instance, e.g. "Sam's SemCache".
+ * port: the port on which the SemCache instance is running.
+ */
+exports.registerSemCache = function(host, name, port) {
+  var result = dnssd.register(host, name, SEMCACHE_SERVICE_STRING, port);
+  return result;
+};
+
+/**
+ * Browse for SemCache instances on the local network. Returns a Promise that
+ * resolves with a list of objects like the following:
+ *
+ * {
+ *   serviceName: "Sam's SemCache",
+ *   type: "_http._local",
+ *   domain: "laptop.local",
+ *   port: 8889
+ * }
+ *
+ * Resolves with an empty list if no instances are found.
+ */
+exports.browseForSemCacheInstances = function() {
+  var result = dnssd.browseServiceInstances(SEMCACHE_SERVICE_STRING);
+  return result;
+};
+
+},{"./dns-sd":"dnssd"}],"dnsc":[function(require,module,exports){
+/*jshint esnext:true*/
+/* globals Promise */
+'use strict';
+
+var chromeUdp = require('./chromeUdp');
+var dnsUtil = require('./dns-util');
+var dnsPacket = require('./dns-packet');
+var byteArray = require('./byte-array');
+var dnsCodes = require('./dns-codes');
+var qSection = require('./question-section');
+
+/**
+ * This module maintains DNS state and serves as the DNS server. It is
+ * responsible for issuing DNS requests.
+ */
+
+var DNSSD_MULTICAST_GROUP = '224.0.0.251';
+var DNSSD_PORT = 53531;
+var DNSSD_SERVICE_NAME = '_services._dns-sd._udp.local';
+
+/** True if the service has started. */
+var started = false;
+
+exports.DNSSD_MULTICAST_GROUP = DNSSD_MULTICAST_GROUP;
+exports.DNSSD_PORT = DNSSD_PORT;
+exports.DNSSD_SERVICE_NAME = DNSSD_SERVICE_NAME;
+
+/**
+ * These are the records owned by this module. They are maintained in an object
+ * of domain name to array of records, e.g. { 'www.example.com': [Object,
+ * Object, Object], 'www.foo.com': [Object] }.
+ */
+var records = {};
+
+var onReceiveCallbacks = [];
+
+/**
+ * The IPv4 interfaces for this machine, cached to provide synchronous calls.
+ */
+var ipv4Interfaces = [];
+
+/**
+ * Returns all records known to this module.
+ *
+ * @return {Array<resource record>} all the resource records known to this
+ * module
+ */
+exports.getRecords = function() {
+  return records;
+};
+
+/**
+ * Returns all the callbacks currently registered to be invoked with incoming
+ * packets.
+ *
+ * @return {Array<function>} all the onReceive callbacks that have been
+ * registered
+ */
+exports.getOnReceiveCallbacks = function() {
+  return onReceiveCallbacks;
+};
+
+/**
+ * The socket used for accessing the network. Object of type
+ * chromeUdp.ChromeUdpSocket.
+ */
+exports.socket = null;
+/** The information about the socket we are using. */
+exports.socketInfo = null;
+
+/**
+ * True if the service is started.
+ *
+ * @return {boolean} representing whether or not the service has started
+ */
+exports.isStarted = function() {
+  return started;
+};
+
+/**
+ * Return a cached array of IPv4 interfaces for this machine.
+ *
+ * @return {object} an array of all the IPv4 interfaces known to this machine.
+ * The objects have the form: 
+ * {
+ *   name: string,
+ *   address: string,
+ *   prefixLength: integer
+ * }
+ */
+exports.getIPv4Interfaces = function() {
+  if (!exports.isStarted()) {
+    console.log('Called getIPv4Interfaces when controller was not started');
+  }
+  if (!ipv4Interfaces) {
+    return [];
+  } else {
+    return ipv4Interfaces;
+  }
+};
+
+/**
+ * Add a callback to be invoked with received packets.
+ *
+ * @param {function} callback a callback to be invoked with received packets.
+ */
+exports.addOnReceiveCallback = function(callback) {
+  onReceiveCallbacks.push(callback);
+};
+
+/**
+ * Remove the callback.
+ *
+ * @param {function} callback the callback function to be removed. The callback
+ * should already have been added via a call to addOnReceiveCallback().
+ */
+exports.removeOnReceiveCallback = function(callback) {
+  var index = onReceiveCallbacks.indexOf(callback);
+  if (index >= 0) {
+    onReceiveCallbacks.splice(index, 1);
+  }
+};
+
+/**
+ * The listener that is attached to chrome.sockets.udp.onReceive.addListener
+ * when the service is started.
+ *
+ * @param {object} info the object that is called by the chrome.sockets.udp
+ * API. It is expected to look like:
+ * {
+ *   data: ArrayBuffer,
+ *   remoteAddress: string,
+ *   remotePort: integer
+ * }
+ */
+exports.onReceiveListener = function(info) {
+  if (dnsUtil.DEBUG) {
+    chromeUdp.logSocketInfo(info);
+  }
+
+  if (!exports.socket) {
+    // We don't have a socket with which to listen.
+    return;
+  }
+
+  if (exports.socket.socketId !== info.socketId) {
+    if (dnsUtil.DEBUG) {
+      console.log('Message is for this address but not this socket, ignoring');
+    }
+    return;
+  }
+
+  if (dnsUtil.DEBUG) {
+    console.log('Message is for us, parsing');
+  }
+  
+  // Create a DNS packet.
+  var byteArr = new byteArray.ByteArray(info.data);
+  var packet = dnsPacket.createPacketFromReader(byteArr.getReader());
+
+  exports.handleIncomingPacket(packet, info.remoteAddress, info.remotePort);
+};
+
+/**
+ * Respond to an incoming packet.
+ *
+ * @param {DnsPacket} packet the incoming packet
+ * @param {string} remoteAddress the remote address sending the packet
+ * @param {integer} remotePort the remote port sending the packet
+ */
+exports.handleIncomingPacket = function(packet, remoteAddress, remotePort) {
+  // For now, we are expecting callers to register and de-register their own
+  // onReceiveCallback to track responses. This means if it's a response we
+  // will just ignore invoke the callbacks and return. If it is a query, we
+  // need to respond to it.
+
+  // First, invoke all the callbacks.
+  for (var i = 0; i < onReceiveCallbacks.length; i++) {
+    var fn = onReceiveCallbacks[i];
+    fn(packet);
+  }
+
+  // Second, see if it's a query. If it is, get the requested records,
+  // construct a packet, and send the packet.
+  if (!packet.isQuery) {
+    return;
+  }
+
+  if (packet.questions.length === 0) {
+    console.log('Query packet has no questions: ', packet.questions);
+    return;
+  }
+
+  // According to the RFC, multiple questions in the same packet are an
+  // optimization and nothing more. We will respond to each question with its
+  // own packet while still being compliant.
+  packet.questions.forEach(question => {
+    var responsePacket = exports.createResponsePacket(packet);
+    var records = exports.getResourcesForQuery(
+      question.queryName,
+      question.queryType,
+      question.queryClass
+    );
+
+    // If we didn't get any records, don't send anything.
+    if (records.length === 0) {
+      return;
+    }
+
+    records.forEach(record => {
+      responsePacket.addAnswer(record);
+    });
+
+    // We may be multicasting, or we may be unicast responding.
+    var sendAddr = DNSSD_MULTICAST_GROUP;
+    var sendPort = DNSSD_PORT;
+    if (question.unicastResponseRequested()) {
+      sendAddr = remoteAddress;
+      sendPort = remotePort;
+    }
+    exports.sendPacket(responsePacket, sendAddr, sendPort);
+  });
+};
+
+/**
+ * Create a response packet with the appropriate parameters for the given
+ * query. It does not include any resource records (including questions).
+ *
+ * @param {DnsPacket} queryPacket the query packet to create a response to.
+ *
+ * @return {DnsPacket} the packet in response. No records are included.
+ */
+exports.createResponsePacket = function(queryPacket) {
+  // According to section 6 of the RFC we do not include the question we are
+  // answering in response packets:
+  // "Multicast DNS responses MUST NOT contain any questions in the Question
+  // Section.  Any questions in the Question Section of a received Multicast
+  // DNS response MUST be silently ignored.  Multicast DNS queriers receiving
+  // Multicast DNS responses do not care what question elicited the response;
+  // they care only that the information in the response is true and accurate."
+  if (queryPacket) {
+    // We aren't actually using the query packet yet, but we might be in the
+    // future, so the API includes it.
+    // no op.
+  }
+  var result = new dnsPacket.DnsPacket(
+    0,      // 18.1: IDs in responses MUST be set to 0
+    false,  // not a query.
+    0,      // 18.3: MUST be set to 0
+    true,   // 18.4: in response MUST be set to one
+    0,      // 18.5: might be non-0, but caller can adjust if truncated
+    0,      // 18.6: SHOULD be 0
+    0,      // 18.7 MUST be 0
+    0       // 18.11 MUST be 0
+  );
+  return result;
+};
+
+/**
+ * Return the resource records belonging to this server that are appropriate
+ * for this query. According to section 6 of the RFC, we only respond with
+ * records for which we are authoritative. Thus we also must omit records from
+ * any cache we are maintaining, unless those records originated from us and
+ * are thus considered authoritative.
+ *
+ * @param {String} qName the query name
+ * @param {number} qType the query type
+ * @param {number} qClass the query class
+ *
+ * @return {Array<resource record>} the array of resource records appropriate
+ * for this query
+ */
+exports.getResourcesForQuery = function(qName, qType, qClass) {
+  // According to RFC section 6: 
+  // "The determination of whether a given record answers a given question is
+  // made using the standard DNS rules: the record name must match the question
+  // name, the record rrtype must match the question qtype unless the qtype is
+  // "ANY" (255) or the rrtype is "CNAME" (5), and the record rrclass must
+  // match the question qclass unless the qclass is "ANY" (255).  As with
+  // Unicast DNS, generally only DNS class 1 ("Internet") is used, but should
+  // client software use classes other than 1, the matching rules described
+  // above MUST be used."
+
+  // records stored as {qName: [record, record, record] }
+  var namedRecords = records[qName];
+
+  // We need to special case the DNSSD service enumeration string, as specified
+  // in RFC 6763, Section 9.
+  if (qName === DNSSD_SERVICE_NAME) {
+    // This essentially is just a request for all PTR records, regardless of
+    // name. We will just get all the records and let the later machinery
+    // filter as necessary for class and type.
+    namedRecords = [];
+    Object.keys(records).forEach(key => {
+      var keyRecords = records[key];
+      keyRecords.forEach(record => {
+        if (record.recordType === dnsCodes.RECORD_TYPES.PTR) {
+          namedRecords.push(record);
+        }
+      });
+    });
+  }
+
+  if (!namedRecords) {
+    // Nothing at all--return an empty array
+    return [];
+  }
+
+  var result = exports.filterResourcesForQuery(
+    namedRecords, qName, qType, qClass
+  );
+
+  return result;
+};
+
+/**
+ * Return an Array with only the elements of resources that match the query
+ * terms.
+ * 
+ * @param {Array<resource record>} resources an Array of resource records that
+ * will be filtered
+ * @param {string} qName the name of the query
+ * @param {integer} qType the type of the query
+ * @param {integer} qClass the class of the query
+ *
+ * @return {Array<resource record>} the subset of resources that match the
+ * query terms
+ */
+exports.filterResourcesForQuery = function(resources, qName, qType, qClass) {
+  var result = [];
+
+  resources.forEach(record => {
+    var meetsName = false;
+    var meetsType = false;
+    var meetsClass = false;
+    if (qName === record.name || qName === DNSSD_SERVICE_NAME) {
+      meetsName = true;
+    }
+    if (qType === dnsCodes.RECORD_TYPES.ANY || record.recordType === qType) {
+      meetsType = true;
+    }
+    if (qClass === dnsCodes.CLASS_CODES.ANY || record.recordClass === qClass) {
+      meetsClass = true;
+    }
+
+    if (meetsName && meetsType && meetsClass) {
+      result.push(record);
+    }
+  });
+
+  return result;
+};
+
+/**
+ * Start the system. This must be called before any other calls to this module.
+ *
+ * Returns a promise that resolves with the socket.
+ *
+ * @return {Promise} that resolves with a ChromeUdpSocket
+ */
+exports.getSocket = function() {
+  if (exports.socket) {
+    // Already started, resolve immediately.
+    return new Promise(resolve => { resolve(exports.socket); });
+  }
+
+  // Attach our listeners.
+  chromeUdp.addOnReceiveListener(exports.onReceiveListener);
+
+  return new Promise((resolve, reject) => {
+    // We have two steps to do here: create a socket and bind that socket to
+    // the mDNS port.
+    var createPromise = chromeUdp.create({});
+    createPromise.then(info => {
+      exports.socketInfo = info;
+      return info;
+    })
+    .then(info => {
+      return chromeUdp.bind(info.socketId, '0.0.0.0', DNSSD_PORT);
+    })
+    .then(function success() {
+      // We've bound to the DNSSD port successfully.
+      return chromeUdp.joinGroup(
+        exports.socketInfo.socketId,
+        DNSSD_MULTICAST_GROUP
+      );
+    }, function err(error) {
+      chromeUdp.closeAllSockets();
+      reject(new Error('Error when binding DNSSD port:', error));
+    })
+    .then(function joinedGroup() {
+      exports.socket = new chromeUdp.ChromeUdpSocket(exports.socketInfo);
+      started = true;
+      resolve(exports.socket);
+    }, function failedToJoinGroup(result) {
+      chromeUdp.closeAllSockets();
+      reject(new Error('Error when joining DNSSD group: ', result));
+    });
+  });
+};
+
+/**
+ * Start the service.
+ *
+ * Returns a Promise that resolves when everything is up and running.
+ *
+ * @return {Promise}
+ */
+exports.start = function() {
+  if (exports.isStarted()) {
+    if (dnsUtil.DEBUG) {
+      console.log('start called when already started');
+    }
+    // Already started, resolve immediately.
+    return new Promise();
+  } else {
+    // All the initialization we need to do is create the socket (so that we
+    // can receive even if we aren't advertising ourselves) and retrieve our
+    // network interfaces.
+    return new Promise(function(resolve, reject) {
+      exports.getSocket()
+      .then(function startedSocket() {
+        exports.initializeNetworkInterfaceCache();
+      })
+      .then(function initializedInterfaces() {
+        resolve();
+      })
+      .catch(function startWhenWrong() {
+        reject();
+      });
+    });
+  }
+};
+
+/**
+ * Initialize the cache of network interfaces known to this machine.
+ *
+ * @return {Promise} resolves when the cache is initialized
+ */
+exports.initializeNetworkInterfaceCache = function() {
+  return new Promise(function(resolve) {
+    chromeUdp.getNetworkInterfaces().then(function success(interfaces) {
+      interfaces.forEach(iface => {
+        if (iface.address.indexOf(':') !== -1) {
+          console.log('Not yet supporting IPv6: ', iface);
+        } else {
+          ipv4Interfaces.push(iface);
+        }
+      });
+      resolve();
+    });
+  });
+};
+
+/**
+ * Shuts down the system.
+ */
+exports.stop = function() {
+  if (exports.socket) {
+    if (dnsUtil.DEBUG) {
+      console.log('Stopping: found socket, closing');
+    }
+    chromeUdp.closeAllSockets();
+    exports.socket = null;
+    started = false;
+  } else {
+    if (dnsUtil.DEBUG) {
+      console.log('Stopping: no socket found');
+    }
+  }
+};
+
+/**
+ * Send the packet to the given address and port.
+ *
+ * @param {DnsPacket} packet the packet to send
+ * @param {string} address the address to which to send the packet
+ * @param {number} port the port to sent the packet to
+ */
+exports.sendPacket = function(packet, address, port) {
+  var byteArr = packet.convertToByteArray();
+  // And now we need the underlying buffer of the byteArray, truncated to the
+  // correct size.
+  var uint8Arr = byteArray.getByteArrayAsUint8Array(byteArr);
+
+  exports.getSocket().then(socket => {
+    socket.send(uint8Arr.buffer, address, port);
+  });
+};
+
+/**
+ * Perform an mDNS query on the network.
+ *
+ * @param {string} queryName
+ * @param {integer} queryType
+ * @param {integer} queryClass
+ */
+exports.query = function(queryName, queryType, queryClass) {
+  // ID is zero, as mDNS ignores the id field.
+  var packet = new dnsPacket.DnsPacket(
+    0,
+    true,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+  );
+
+  var question = new qSection.QuestionSection(
+    queryName,
+    queryType,
+    queryClass
+  );
+  packet.addQuestion(question);
+
+  exports.sendPacket(packet, DNSSD_MULTICAST_GROUP, DNSSD_PORT);
+};
+
+/**
+ * Issue a query for an A Record with the given domain name. Returns a promise
+ * that resolves with a list of ARecords received in response. Resolves with an
+ * empty list if none are found.
+ *
+ * @param {string} domainName the domain name for which to return A Records
+ *
+ * @return {Array<resource record>} the A Records corresponding to this domain
+ * name
+ */
+exports.queryForARecord = function(domainName) {
+  return exports.getResourcesForQuery(
+    domainName,
+    dnsCodes.RECORD_TYPES.A,
+    dnsCodes.CLASS_CODES.IN
+  );
+};
+
+/**
+ * Issue a query for PTR Records advertising the given service name. Returns a
+ * promise that resolves with a list of PtrRecords received in response.
+ * Resolves with an empty list if none are found.
+ *
+ * @param {string} serviceName the serviceName for which to query for PTR
+ * Records
+ *
+ * @return {Array<resource record> the PTR Records for the service
+ */
+exports.queryForPtrRecord = function(serviceName) {
+  return exports.getResourcesForQuery(
+    serviceName,
+    dnsCodes.RECORD_TYPES.PTR,
+    dnsCodes.CLASS_CODES.IN
+  );
+};
+
+/**
+ * Issue a query for SRV Records corresponding to the given instance name.
+ * Returns a promise that resolves with a list of SrvRecords received in
+ * response. Resolves with an empty list if none are found.
+ *
+ * @param {string} instanceName the instance name for which you are querying
+ * for SRV Records
+ *
+ * @return {Array<resource record>} the SRV Records matching this query
+ */
+exports.queryForSrvRecord = function(instanceName) {
+  return exports.getResourcesForQuery(
+    instanceName,
+    dnsCodes.RECORD_TYPES.SRV,
+    dnsCodes.CLASS_CODES.IN
+  );
+};
+
+/**
+ * Add a record corresponding to name to the internal data structures.
+ *
+ * @param {string} name the name of the resource record to add
+ * @param {resource record} record the record to add
+ */
+exports.addRecord = function(name, record) {
+  var existingRecords = records[name];
+  if (!existingRecords) {
+    existingRecords = [];
+    records[name] = existingRecords;
+  }
+  existingRecords.push(record);
+};
+
+},{"./byte-array":1,"./chromeUdp":"chromeUdp","./dns-codes":2,"./dns-packet":3,"./dns-util":4,"./question-section":5}],"dnssd":[function(require,module,exports){
+/*jshint esnext:true*/
+/* globals Promise */
+'use strict';
+
+/**
+ * The client API for interacting with mDNS and DNS-SD.
+ *
+ * This is based in part on the Bonjour APIs outlined in 'Zero Configuration
+ * Networking: The Definitive Guide' by Cheshire and Steinberg in order to
+ * provide a familiar interface.
+ *
+ * 'RFC 6762: Multicast DNS' is the model for many of the decisions and actions
+ * take in this module. 'The RFC' in comments below refers to this RFC. It can
+ * be accessed here:
+ *
+ * https://tools.ietf.org/html/rfc6762#
+ *
+ * Since this is programming to a specification (or at least to an RFC), it is
+ * conforming to a standard. Actions are explained in comments, with direct
+ * references to RFC sections as much as is possible.
+ */
+
+
+var dnsUtil = require('./dns-util');
+var dnsController = require('./dns-controller');
+var dnsCodes = require('./dns-codes');
+var resRec = require('./resource-record');
+var dnsPacket = require('./dns-packet');
+
+var MAX_PROBE_WAIT = 250;
+var DEFAULT_QUERY_WAIT_TIME = 2000;
+
+exports.DEFAULT_QUERY_WAIT_TIME = DEFAULT_QUERY_WAIT_TIME;
+
+exports.LOCAL_SUFFIX = 'local';
+
+/**
+ * Returns a promise that resolves after the given time (in ms).
+ *
+ * @param {integer} ms the number of milliseconds to wait before resolving
+ */
+exports.wait = function(ms) {
+  return new Promise(resolve => {
+    setTimeout(() => resolve(), ms);
+  });
+};
+
+/**
+ * Returns a Promise that resolves after 0-250 ms (inclusive).
+ *
+ * @return {Promise}
+ */
+exports.waitForProbeTime = function() {
+  // +1 because randomInt is by default [min, max)
+  return exports.wait(dnsUtil.randomInt(0, MAX_PROBE_WAIT + 1));
+};
+
+/**
+ * Returns true if the DnsPacket is for this queryName.
+ *
+ * @param {DnsPacket} packet
+ * @param {string} qName
+ * @param {integer} qType
+ * @param {integer} qClass
+ *
+ * @return {boolean}
+ */
+exports.packetIsForQuery = function(packet, qName, qType, qClass) {
+  var filteredRecords = dnsController.filterResourcesForQuery(
+    packet.answers, qName, qType, qClass
+  );
+  return filteredRecords.length !== 0;
+};
+
+/**
+ * Generates a semi-random hostname ending with ".local". An example might be
+ * 'host123.local'.
+ *
+ * @param {string}
+ */
+exports.createHostName = function() {
+  var start = 'host';
+  // We'll return within the range 0, 1000.
+  var randomInt = dnsUtil.randomInt(0, 1001);
+  var result = start + randomInt + dnsUtil.getLocalSuffix();
+  return result;
+};
+
+/**
+ * Advertise the resource records.
+ *
+ * @param {Array<resource records>} resourceRecords the records to advertise
+ */
+exports.advertiseService = function(resourceRecords) {
+  var advertisePacket = new dnsPacket.DnsPacket(
+    0,      // id 0 for mDNS
+    false,  // not a query
+    0,      // opCode must be 0 on transmit (18.3)
+    false,  // authoritative must be false on transmit (18.4)
+    false,  // isTruncated must be false on transmit (18.5)
+    false,  // recursion desired should be 0 (18.6)
+    false,  // recursion available must be 0 (18.7)
+    false   // return code must be 0 (18.11)
+  );
+
+  // advertisements should be sent in the answer section
+  resourceRecords.forEach(record => {
+    advertisePacket.addAnswer(record);
+  });
+  dnsController.sendPacket(
+    advertisePacket,
+    dnsController.DNSSD_MULTICAST_GROUP,
+    dnsController.DNSSD_PORT
+  );
+};
+
+/**
+ * Register a service via mDNS. Returns a Promise that resolves with an object
+ * like the following:
+ *
+ * {
+ *   serviceName: "Sam's SemCache",
+ *   type: "_http._local",
+ *   domain: "laptop.local",
+ *   port: 1234
+ * }
+ *
+ * @param {string} host the host of the service, e.g. 'laptop.local'
+ * @param {string} name a user-friendly string to be the name of the instance,
+ * e.g. "Sam's SemCache".
+ * @param {string} type the service type string. This should be the protocol
+ * spoken and the transport protocol, eg "_http._tcp".
+ * @param {integer} port the port the service is available on
+ */
+exports.register = function(host, name, type, port) {
+  // Registration is a multi-step process. According to the RFC, section 8.
+  //
+  // 8.1 indicates that the first step is to send an mDNS query of type ANY
+  // (255) for a given domain name.
+  //
+  // 8.1 also indicates that the host should wait a random time between 0-250ms
+  // before issuing the query. This must be performed a total of three times
+  // before a lack of responses indicates that the name is free.
+  //
+  // The probes should be sent with QU questions with the unicast response bit
+  // set.
+  //
+  // 8.2 goes into tiebreaking. That is omitted here.
+  //
+  // 8.3 covers announcing. After probing, announcing is performed with all of
+  // the newly created resource records in the Answer Section. This must be
+  // performed twice, one second apart.
+
+  var result = new Promise(function(resolve, reject) {
+    var foundHostFree = null;
+    // We start by probing for messages of type ANY with the hostname.
+    exports.issueProbe(
+      host,
+      dnsCodes.RECORD_TYPES.ANY,
+      dnsCodes.CLASS_CODES.IN
+    ).then(function hostFree() {
+      foundHostFree = true;
+      // We need to probe for the name under which a SRV record would be, which
+      // is name.type.local
+      var srvName = exports.createSrvName(name, type, 'local');
+      return exports.issueProbe(
+        srvName,
+        dnsCodes.RECORD_TYPES.ANY,
+        dnsCodes.CLASS_CODES.IN
+      );
+    }, function hostTaken() {
+      foundHostFree = false;
+      reject(new Error('host taken: ' + host));
+    }).then(function instanceFree() {
+      if (foundHostFree) {
+        var hostRecords = exports.createHostRecords(host);
+        var serviceRecords = exports.createServiceRecords(
+          name,
+          type,
+          port,
+          host
+        );
+        var allRecords = hostRecords.concat(serviceRecords);
+        exports.advertiseService(allRecords);
+
+        resolve(
+          {
+            serviceName: name,
+            type: type,
+            domain: host,
+            port: port
+          }
+        );
+      }
+    }, function instanceTaken() {
+      console.log('INSTANCE TAKEN');
+      reject(new Error('instance taken: ' + name));
+    });
+  });
+
+  return result;
+};
+
+/**
+ * Register the host on the network. Assumes that a probe has occurred and the
+ * hostname is free.
+ *
+ * @param {string} host
+ *
+ * @return {Array<resource records>} an Array of the records that were added.
+ */
+exports.createHostRecords = function(host) {
+  // This just consists of an A Record. Make an entry for every IPv4 address.
+  var result = [];
+  dnsController.getIPv4Interfaces().forEach(iface => {
+    var aRecord = new resRec.ARecord(
+      host,
+      dnsUtil.DEFAULT_TTL,
+      iface.address,
+      dnsCodes.CLASS_CODES.IN
+    );
+    result.push(aRecord);
+    dnsController.addRecord(host, aRecord);
+  });
+  return result;
+};
+
+/**
+ * Create the complete name of the service as is appropriate for a SRV record,
+ * e.g. "Sam Cache._semcache._tcp.local".
+ *
+ * @param {string} userFriendlyName the friendly name of the instance, e.g.
+ * "Sam Cache"
+ * @param {string} type the type string of the service, e.g. "_semcache._tcp"
+ * @param {string} domain the domain in which to find the service, e.g. "local"
+ *
+ * @return {string}
+ */
+exports.createSrvName = function(userFriendlyName, type, domain) {
+  return [userFriendlyName, type, domain].join('.');
+};
+
+/**
+ * Register the service on the network. Assumes that a probe has occured and
+ * the service name is free.
+ *
+ * @param {string} name name of the instance, e.g. 'Sam Cache'
+ * @param {string} type type of the service, e.g. _semcache._tcp
+ * @param {integer} port port the service is running on, eg 7777
+ * @param {string} domain target domain/host the service is running on, e.g.
+ * 'blackhack.local'
+ *
+ * @return {Array<resource records>} an Array of the records that were added.
+ */
+exports.createServiceRecords = function(name, type, port, domain) {
+  // We need to add a PTR record and an SRV record.
+
+  // SRV Records are named according to name.type.domain, which we always
+  // assume to be local.
+  var srvName = exports.createSrvName(name, type, 'local');
+  var srvRecord = new resRec.SrvRecord(
+    srvName,
+    dnsUtil.DEFAULT_TTL,
+    dnsUtil.DEFAULT_PRIORITY,
+    dnsUtil.DEFAULT_WEIGHT,
+    port,
+    domain
+  );
+
+  var ptrRecord = new resRec.PtrRecord(
+    type,
+    dnsUtil.DEFAULT_TTL,
+    srvName,
+    dnsCodes.CLASS_CODES.IN
+  );
+
+  dnsController.addRecord(srvName, srvRecord);
+  dnsController.addRecord(type, ptrRecord);
+
+  var result = [srvRecord, ptrRecord];
+  return result;
+};
+
+exports.receivedResponsePacket = function(packets, qName, qType, qClass) {
+  for (var i = 0; i < packets.length; i++) {
+    var packet = packets[i];
+    if (
+      !packet.isQuery &&
+        exports.packetIsForQuery(packet, qName, qType, qClass)
+    ) {
+      return true;
+    }
+  }
+  return false;
+};
+
+/**
+ * Issue a probe compliant with the mDNS spec, which specifies that a probe
+ * happen three times at random intervals.
+ *
+ * @param {string} queryName
+ * @param {integer} queryType
+ * @param {integer} queryClass
+ *
+ * @return {Promise} Returns a promise that resolves if the probe returns
+ * nothing, meaning that the queryName is available, and rejects if it is
+ * taken.
+ */
+exports.issueProbe = function(queryName, queryType, queryClass) {
+  // Track the packets we receive whilst querying.
+  var packets = [];
+  var callback = function(packet) {
+    packets.push(packet);
+  };
+  dnsController.addOnReceiveCallback(callback);
+
+  // Now we kick off a series of queries. We wait a random time to issue a
+  // query. 250ms after that we issue another, then another.
+  var result = new Promise(function(resolve, reject) {
+    exports.waitForProbeTime()
+      .then(function success() {
+        dnsController.query(
+          queryName,
+          queryType,
+          queryClass
+        );
+        return exports.wait(MAX_PROBE_WAIT);
+      }).then(function success() {
+        if (exports.receivedResponsePacket(
+          packets, queryName, queryType, queryClass
+        )) {
+          throw new Error('received a packet, jump to catch');
+        } else {
+          dnsController.query(
+            queryName,
+            queryType,
+            queryClass
+          );
+          return exports.wait(MAX_PROBE_WAIT);
+        }
+      })
+      .then(function success() {
+        if (exports.receivedResponsePacket(
+          packets, queryName, queryType, queryClass
+        )) {
+          throw new Error('received a packet, jump to catch');
+        } else {
+          dnsController.query(
+            queryName,
+            queryType,
+            queryClass
+          );
+          return exports.wait(MAX_PROBE_WAIT);
+        }
+      })
+      .then(function success() {
+        if (exports.receivedResponsePacket(
+          packets, queryName, queryType, queryClass
+        )) {
+          throw new Error('received a packet, jump to catch');
+        } else {
+          resolve();
+          dnsController.removeOnReceiveCallback(callback);
+        }
+      })
+      .catch(function failured() {
+        dnsController.removeOnReceiveCallback(callback);
+        reject();
+      });
+  });
+
+  return result;
+};
+
+/**
+ * Get operational information on all services of a given type on the network.
+ *
+ * This is a convenience method for issuing a series of requests--for PTR
+ * records to find the specific instances providing a service, SRV records for
+ * finding the port and host name of those instances, and finally A records for
+ * determining the IP addresses of the hosts.
+ *
+ * @param {string} serviceType the type of the service to browse for
+ *
+ * @return {Promise} a Promise that resolves with operational information for
+ * all instances. This is an Array of objects like the following:
+ * {
+ *   serviceType: '_semcache._tcp',
+ *   instanceName: 'Sam Cache',
+ *   domainName: 'laptop.local',
+ *   ipAddress: '123.4.5.6',
+ *   port: 8888
+ * }
+ */
+exports.browseServiceInstances = function(serviceType) {
+  return new Promise(function(resolve, reject) {
+    var ptrResponses = [];
+    var srvResponses = [];
+    var aResponses = [];
+    exports.queryForServiceInstances(serviceType)
+      .then(function success(ptrInfos) {
+        var srvRequests = [];
+        ptrInfos.forEach(ptr => {
+          ptrResponses.push(ptr);
+          var instanceName = ptr.serviceName;
+          var req = exports.queryForInstanceInfo(
+            instanceName, exports.DEFAULT_QUERY_WAIT_TIME
+          );
+          srvRequests.push(req);
+        });
+        return Promise.all(srvRequests);
+      })
+      .then(function success(srvInfos) {
+        var aRequests = [];
+        srvInfos.forEach(srv => {
+          // the query methods return an Array of responses, even if only a
+          // single response is requested. This allows for for API similarity
+          // across calls and for an eventual implementation that permits both
+          // A and AAAA records when querying for IP addresses, e.g., but means
+          // that we are effectively iterating over an array of arrays. For
+          // simplicity, however, we will assume at this stage that we only
+          // ever expect a single response, which is correct in the vast
+          // majority of cases.
+          srv = srv[0];
+          srvResponses.push(srv);
+          var hostname = srv.domain;
+          var req = exports.queryForIpAddress(
+            hostname, exports.DEFAULT_QUERY_WAIT_TIME
+          );
+          aRequests.push(req);
+        });
+        return Promise.all(aRequests);
+      })
+      .then(function success(aInfos) {
+        aInfos.forEach(aInfo => {
+          aInfo = aInfo[0];
+          aResponses.push(aInfo);
+        });
+        
+        var result = [];
+        for (var i = 0; i < ptrResponses.length; i++) {
+          var ptr = ptrResponses[i];
+          var srv = srvResponses[i];
+          var aRec = aResponses[i];
+          result.push({
+            serviceType: serviceType,
+            instanceName: ptr.serviceName,
+            domainName: srv.domain,
+            ipAddress: aRec.ipAddress,
+            port: srv.port
+          });
+        }
+
+        resolve(result);
+      })
+      .catch(function failed(err) {
+        console.log(err);
+        reject('Caught error in browsing for service: ' + err);
+      });
+  });
+};
+
+/**
+ * Issue a query for instances of a particular service type. Tantamout to
+ * issueing PTR requests.
+ *
+ * @param {string} serviceType the service string to query for
+ * @param {number} waitTime the time to wait for responses. As multiple
+ * responses can be expected in response to a query for instances of a service
+ * (as multiple instances can exist on the same network), the Promise will
+ * always resolve after this many milliseconds.
+ *
+ * @return {Promise} Returns a Promise that resolves with a list of objects
+ * representing services, like the following:
+ * {
+ *   serviceType: '_semcache._tcp',
+ *   serviceName: 'Magic Cache'
+ * }
+ */
+exports.queryForServiceInstances = function(serviceType, timeout) {
+  timeout = timeout || exports.DEFAULT_QUERY_WAIT_TIME;
+  var rType = dnsCodes.RECORD_TYPES.PTR;
+  var rClass = dnsCodes.CLASS_CODES.IN;
+  return new Promise(function(resolve) {
+    exports.queryForResponses(
+      serviceType,
+      rType,
+      rClass,
+      true,
+      timeout
+    )
+    .then(function gotPackets(packets) {
+      var result = [];
+      packets.forEach(packet => {
+        packet.answers.forEach(answer => {
+          if (answer.recordType === rType && answer.recordClass === rClass) {
+            result.push(
+              {
+                serviceType: answer.serviceType,
+                serviceName: answer.instanceName
+              }
+            );
+          }
+        });
+      });
+      resolve(result);
+    });
+  });
+};
+
+/**
+ * Issue a query for an IP address mapping to a domain.
+ *
+ * @param {string} domainName the domain name to query for
+ * @param {number} timeout the number of ms after which to time out
+ *
+ * @return {Promise} Returns a Promise that resolves with a list of objects
+ * representing services, like the following:
+ * {
+ *   domainName: 'example.local',
+ *   ipAddress: '123.4.5.6'
+ * }
+ */
+exports.queryForIpAddress = function(domainName, timeout) {
+  // Note that this method ignores the fact that you could have multiple IP
+  // addresses per domain name. At a minimum, you could have IPv6 and IPv4
+  // addresses. For prototyping purposes, a single IP address is sufficient.
+  timeout = timeout || exports.DEFAULT_QUERY_WAIT_TIME;
+  var rType = dnsCodes.RECORD_TYPES.A;
+  var rClass = dnsCodes.CLASS_CODES.IN;
+  return new Promise(function(resolve) {
+    exports.queryForResponses(
+      domainName,
+      rType,
+      rClass,
+      false,
+      timeout
+    )
+    .then(function gotPackets(packets) {
+      var result = [];
+      packets.forEach(packet => {
+        packet.answers.forEach(answer => {
+          if (answer.recordType === rType && answer.recordClass === rClass) {
+            result.push(
+              {
+                domainName: answer.domainName,
+                ipAddress: answer.ipAddress
+              }
+            );
+          }
+        });
+      });
+      resolve(result);
+    });
+  });
+};
+
+/**
+ * Issue a query for information about a service instance name, including the
+ * port and domain name on which it is active.
+ *
+ * @param {string} instanceName the instance name to query for
+ * @param {number} timeout the number of ms after which to time out
+ *
+ * @return {Promise} Returns a Promise that resolves with a list of objects
+ * representing services, like the following:
+ * {
+ *   instanceName: 'Sam Cache',
+ *   domain: 'example.local',
+ *   port: 1234
+ * }
+ */
+exports.queryForInstanceInfo = function(instanceName, timeout) {
+  timeout = timeout || exports.DEFAULT_QUERY_WAIT_TIME;
+  var rType = dnsCodes.RECORD_TYPES.SRV;
+  var rClass = dnsCodes.CLASS_CODES.IN;
+  return new Promise(function(resolve) {
+    exports.queryForResponses(
+      instanceName,
+      rType,
+      rClass,
+      false,
+      timeout
+    )
+    .then(function gotPackets(packets) {
+      var result = [];
+      packets.forEach(packet => {
+        packet.answers.forEach(answer => {
+          if (answer.recordType === rType && answer.recordClass === rClass) {
+            result.push(
+              {
+                instanceName: answer.instanceTypeDomain,
+                domain: answer.targetDomain,
+                port: answer.port
+              }
+            );
+          }
+        });
+      });
+      resolve(result);
+    });
+  });
+};
+
+/**
+ * Issue a query and listen for responses. (As opposed to simply issuing a DNS
+ * query without being interested in the responses.)
+ * 
+ * @param {String} qName the name of the query to issue
+ * @param {number} qType the type of the query to issue
+ * @param {number} qClass the class of the query to issue
+ * @param {boolean} multipleResponses true if we can expect multiple or an open
+ * ended number of responses to this query
+ * @param {number} timeoutOrWait if multipleExpected is true, this is the
+ * amount of time we wait before returning results. If multipleExpected is
+ * false (e.g. querying for an A Record, which should have a single answer),
+ * this is the amount of time we wait before timing out and resolving with an
+ * empty list.
+ *
+ * @return {Promise} Returns a Promise that resolves with an Array of Packets
+ * received in response to the query. If multipleResponses is true, will not
+ * resolve until timeoutOrWait milliseconds. If multipleResponses is false,
+ * will resolve after the first packet is received or after timeoutOrWait is
+ * satifised. 
+ */
+exports.queryForResponses = function(
+  qName,
+  qType,
+  qClass,
+  multipleResponses,
+  timeoutOrWait
+) {
+  // Considerations for querying exist in RFC 6762 Section 5.2: Continuous
+  // Multicast DNS Querying. This scenario essentially allows for a standing
+  // request for notifications of instances of a particular type. This is
+  // useful for to automatically update a list of available printers, for
+  // example. For the current implementation, we are instead going to just
+  // issue a query for PTR records of the given type.
+  //
+  // Several considerations are made in the RFC for how to responsibly browse
+  // the network. First, queries should be delayed by a random value between
+  // 20 and 120ms, in order to not collide or flood in the event that a browse
+  // is triggered at the same time, e.g. by a common event. Second, the first
+  // two queries must take place 1 second apart. Third, the period between
+  // queries must increase by at least a factor of 2. Finally, known-answer
+  // suppression must be employed.
+  //
+  // For now, we are not implementing those more sophisticated features.
+  // Instead, this method provides a way to issue a query immediately. This can
+  // include a general standing query (if multipleResponses is true), or a
+  // query for the first response (if multipleResponses is false).
+
+  return new Promise(function(resolve) {
+    // Code executes even after a promise resolves, so we will use this flag to
+    // make sure we never try to resolve more than once.
+    var resolved = false;
+
+    // Track the packets we received while querying.
+    var packets = [];
+    var callback = function(packet) {
+      if (exports.packetIsForQuery(packet, qName, qType, qClass)) {
+        packets.push(packet);
+        if (!multipleResponses) {
+          // We can go ahead an resolve.
+          resolved = true;
+          dnsController.removeOnReceiveCallback(callback);
+          resolve(packets);
+        }
+      }
+    };
+    dnsController.addOnReceiveCallback(callback);
+
+    dnsController.query(
+      qName,
+      qType,
+      qClass
+    );
+    
+    exports.wait(timeoutOrWait)
+      .then(function waited() {
+        if (!resolved) {
+          dnsController.removeOnReceiveCallback(callback);
+          resolved = true;
+          resolve(packets);
+        }
+      })
+      .catch(function somethingWentWrong(err) {
+        console.log('Something went wrong in query: ', err);
+      });
+  });
+};
+
+},{"./dns-codes":2,"./dns-controller":"dnsc","./dns-packet":3,"./dns-util":4,"./resource-record":6}],"extBridge":[function(require,module,exports){
+'use strict';
+
+var chromeWrapper = require('./chromeRuntimeWrapper');
+var datastore = require('../persistence/datastore');
+var base64 = require('base-64');
+
+/**
+ * ID of the Semcache extension.
+ */
+exports.EXTENSION_ID = 'malgfdapbefeeidjfndgioclhfpfglhe';
+
+/**
+ * Send a message to the extension.
+ *
+ * @param {any} message
+ */
+exports.sendMessageToExtension = function(message) {
+  chromeWrapper.sendMessage(exports.EXTENSION_ID, message);
+};
+
+/**
+ * Function to handle messages coming from the SemCache extension.
+ *
+ * @param {object} message message sent by the extension. Expected to have the
+ * following format:
+ * {
+ *   type: 'write'
+ *   params: {captureUrl: 'url', captureDate: 'iso', dataUrl: 'string'}
+ * }
+ * @param {MessageSender}
+ * @param {function}
+ */
+exports.handleExternalMessage = function(message, sender, response) {
+  if (sender.id !== exports.EXTENSION_ID) {
+    console.log('ID not from SemCache extension: ', sender);
+    return;
+  }
+  if (message.type === 'write') {
+    var blob = exports.getBlobFromDataUrl(message.params.dataUrl);
+    var captureUrl = message.params.captureUrl;
+    var captureDate = message.params.captureDate;
+    datastore.addPageToCache(captureUrl, captureDate, blob);
+    if (response) {
+      response();
+    }
+  } else {
+    console.log('Unrecognized message type from extension: ', message.type);
+  }
+};
+
+/**
+ * @param {string} dataUrl a data url as encoded by FileReader.readAsDataURL
+ *
+ * @return {Blob}
+ */
+exports.getBlobFromDataUrl = function(dataUrl) {
+  // Decoding from data URL based on:
+  // https://gist.github.com/fupslot/5015897
+  var byteString = base64.decode(dataUrl.split(',')[1]);
+  var mime = dataUrl.split(',')[0].split(':')[1].split(';')[0];
+  // write the bytes of the string to an ArrayBuffer
+  var ab = new ArrayBuffer(byteString.length);
+  var ia = new Uint8Array(ab);
+  for (var i = 0; i < byteString.length; i++) {
+    ia[i] = byteString.charCodeAt(i);
+  }
+  // write the ArrayBuffer to a blob, and you're done
+  var result = new Blob([ab], {type: mime});
+  return result;
+};
+
+exports.attachListeners = function() {
+  chromeWrapper.addOnMessageExternalListener(exports.handleExternalMessage);
+};
+
+/**
+ * Send a message to the Extension instructing it to open the URL.
+ *
+ * @param {string} url
+ */
+exports.sendMessageToOpenUrl = function(url) {
+  var message = {
+    type: 'open',
+    params: {
+      url: url
+    }
+  };
+  exports.sendMessageToExtension(message);
+};
+
+},{"../persistence/datastore":11,"./chromeRuntimeWrapper":7,"base-64":14}],"fileSystem":[function(require,module,exports){
+/*jshint esnext:true*/
+/* globals Promise */
+'use strict';
+
+var chromefs = require('./chromeFileSystem');
+var chromeStorage = require('./chromeStorage');
+var fsUtil = require('./file-system-util');
+
+/** The local storage key for the entry ID of the base directory. */
+exports.KEY_BASE_DIR = 'baseDir';
+
+/** 
+ * The path of the directory storing the cache entries relative to the root of
+ * the storage directory. Begins with './'.
+ */
+exports.PATH_CACHE_DIR = 'cacheEntries';
+
+/**
+ * Get the directory where cache entries are stored.
+ *
+ * @return {Promise} Promise that resolves with a DirectoryEntry that is the
+ * base cache directory. Rejects if the base directory has not been set.
+ */
+exports.getDirectoryForCacheEntries = function() {
+  return new Promise(function(resolve, reject) {
+    exports.getPersistedBaseDir()
+    .then(baseDir => {
+      var dirName = exports.PATH_CACHE_DIR;
+      var options = {
+        create: true,
+        exclusive: false
+      };
+      return fsUtil.getDirectory(baseDir, options, dirName);
+    })
+    .then(cacheDir => {
+      resolve(cacheDir);
+    })
+    .catch(err => {
+      reject(err);
+    });
+  });
+
+};
+
+/**
+ * Return the base directory behaving as the root of the SemCache file system.
+ * This returns the "persisted" base directory in the sense that the directory
+ * must have already been chosen via a file chooser. If a base directory has
+ * not been chosen, it will return null.
+ *
+ * @return {DirectoryEntry} the directory that has been set as the root of the
+ * SemCache file system. Returns null if the directory has not been set.
+ */
+exports.getPersistedBaseDir = function() {
+  return new Promise(function(resolve) {
+    exports.baseDirIsSet()
+    .then(isSet => {
+      if (isSet) {
+        chromeStorage.get(exports.KEY_BASE_DIR)
+        .then(keyValue => {
+          var id = keyValue[exports.KEY_BASE_DIR];
+          return chromefs.restoreEntry(id);
+        })
+        .then(dirEntry => {
+          resolve(dirEntry);
+        });
+      } else {
+        // Null if not set.
+        resolve(null);
+      }
+    });
+  });
+};
+
+/**
+ * @return {Promise} Promise that resolves with a boolean
+ */
+exports.baseDirIsSet = function() {
+  return new Promise(function(resolve) {
+    chromeStorage.get(exports.KEY_BASE_DIR)
+    .then(keyValue => {
+      var isSet = false;
+      if (keyValue && keyValue[exports.KEY_BASE_DIR]) {
+        isSet = true;
+      }
+      resolve(isSet);
+    });
+  });
+};
+
+/**
+ * Set an entry as the base directory to be used for the SemCache file system.
+ *
+ * @param {DirectoryEntry} dirEntry the entry that will be set as the base
+ */
+exports.setBaseCacheDir = function(dirEntry) {
+  var keyObj = {};
+  var id = chromefs.retainEntrySync(dirEntry);
+  keyObj[exports.KEY_BASE_DIR] = id;
+  chromeStorage.set(keyObj);
+};
+
+/**
+ * Prompt the user to choose a directory.
+ *
+ * @return {Promise} a promise that resolves with a DirectoryEntry that has
+ * been chosen by the user.
+ */
+exports.promptForDir = function() {
+  return new Promise(function(resolve) {
+    chromefs.chooseEntry({type: 'openDirectory'})
+    .then(entry => {
+      resolve(entry);
+    });
+  });
+};
+
+},{"./chromeFileSystem":9,"./chromeStorage":10,"./file-system-util":"fsUtil"}],"fsUtil":[function(require,module,exports){
+/* globals Promise */
+'use strict';
+
+/**
+ * General file system operations on top of the web APIs.
+ */
+
+/*
+ * This code is based on the Mozilla and HTML5Rocks examples shown here:
+ * https://developer.mozilla.org/en/docs/Web/API/DirectoryReader
+ */
+function toArray(list) {
+  return Array.prototype.slice.call(list || [], 0);
+}
+
+/**
+ * @param {DirectoryEntry} dirEntry the directory to list
+ *
+ * @return {Promise} Promise that resolves with an Array of Entry objects
+ * that are the contents of the directory
+ */
+exports.listEntries = function(dirEntry) {
+  // This code is based on the Mozilla and HTML5Rocks examples shown here:
+  // https://developer.mozilla.org/en/docs/Web/API/DirectoryReader
+  var dirReader = dirEntry.createReader();
+  var entries = [];
+
+  return new Promise(function(resolve, reject) {
+
+    // Keep calling readEntries() until no more results are returned.
+    var readEntries = function() {
+      dirReader.readEntries (function(results) {
+        if (!results.length) {
+          resolve(entries.sort());
+        } else {
+          entries = entries.concat(toArray(results));
+          readEntries();
+        }
+      }, function(err) {
+        reject(err);
+      });
+    };
+
+    readEntries();
+  });
+};
+
+/**
+ * @param {FileEntry} fileEntry the file that will be written to
+ * @param {Blob} fileBlob the content to write
+ *
+ * @return {Promise} Promise that resolves when the write is complete or
+ * rejects with an error
+ */
+exports.writeToFile = function(fileEntry, fileBlob) {
+  return new Promise(function(resolve, reject) {
+    fileEntry.createWriter(function(fileWriter) {
+
+      fileWriter.onwriteend = function() {
+        resolve();
+      };
+
+      fileWriter.onerror = function(err) {
+        reject(err);
+      };
+
+      fileWriter.write(fileBlob);
+    });
+  });
+};
+
+/**
+ * A Promise-ified version of DirectoryEntry.getFile().
+ *
+ * @param {DirectoryEntry} dirEntry the parent directory
+ * @param {object} options object to pass to getFile function
+ * @param {string} name the file name in dirEntry
+ *
+ * @return {Promise} Promise that resolves with the FileEntry or rejects with
+ * an error
+ */
+exports.getFile = function(dirEntry, options, name) {
+  return new Promise(function(resolve, reject) {
+    dirEntry.getFile(name, options, function(fileEntry) {
+      resolve(fileEntry);
+    },
+    function(err) {
+      reject(err);
+    });
+  });
+};
+
+/**
+ * A Promise-ified version of DirectoryEntry.getDirectory().
+ *
+ * @param {DirectoryEntry} dirEntry the parent directory
+ * @param {object} options object to pass to getDirectory function
+ * @param {string} name the file name in dirEntry
+ *
+ * @return {Promise} Promise that resolves with the DirectoryEntry or rejects
+ * with an error
+ */
+exports.getDirectory = function(dirEntry, options, name) {
+  return new Promise(function(resolve, reject) {
+    dirEntry.getDirectory(name, options, function(dirEntry) {
+      resolve(dirEntry);
+    },
+    function(err) {
+      reject(err);
+    });
+  });
+};
+
+},{}],"serverController":[function(require,module,exports){
+/* global WSC, DummyHandler */
+'use strict';
+
+var api = require('./server-api');
+var handlers = require('./handlers');
+
+function startServer(host, port, endpointHandlers) {
+  window.httpServer = new WSC.WebApplication({
+    host: host,
+    port: port,
+    handlers: endpointHandlers,
+    renderIndex: false,
+    optCORS: true,
+    optAllInterfaces: true
+  });
+
+  window.httpServer.start();
+}
+
+/**
+ * Start the web server.
+ */
+exports.start = function(host, port) {
+  if (!WSC) {
+    console.log('Cannot start server, WSC not truthy: ', WSC);
+    return;
+  }
+
+  var endpoints = api.getApiEndpoints();
+
+  var endpointHandlers = [
+    [
+      endpoints.listPageCache,
+      handlers.ListCachedPagesHandler
+    ],
+    [
+      '/test.*',
+      DummyHandler
+    ],
+    [
+      endpoints.pageCache,
+      handlers.CachedPageHandler
+    ]
+  ];
+
+  startServer(host, port, endpointHandlers);
+};
+
+},{"./handlers":12,"./server-api":13}]},{},[8]);
+require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
+/*jshint esnext:true, bitwise: false */
+'use strict';
+
+/*
+ * https://github.com/justindarc/dns-sd.js
+ *
+ * The MIT License (MIT)
+ *
+ * Copyright (c) 2015 Justin D'Arcangelo
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to
+ * deal in the Software without restriction, including without limitation the
+ * rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+ * sell copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+ * IN THE SOFTWARE.
+ */
+
+
+/**
+ * ByteArray is an object that makes writing objects to an array of bytes more
+ * straightforward. Obtaining values from the ByteArray is accomplished by the
+ * ByteArrayReader. A single ByteArray can generate numerous ByteArrayReader
+ * objects.
+ *
+ * The ByteArray class is adopted slightly from an object of the same name by
+ * Justin D'Arcangelo. His original license and information is preserved above.
+ */
+
+var BinaryUtils = require('./binary-utils');
+
+var DEFAULT_SIZE = 512;
+
+/**
+ *  Bit   1-Byte    2-Bytes     3-Bytes     4-Bytes
+ *  -----------------------------------------------
+ *    0        1        256       65536    16777216
+ *    1        2        512      131072    33554432
+ *    2        4       1024      262144    67108864
+ *    3        8       2048      524288   134217728
+ *    4       16       4096     1048576   268435456
+ *    5       32       8192     2097152   536870912
+ *    6       64      16384     4194304  1073741824
+ *    7      128      32768     8388608  2147483648
+ *  -----------------------------------------------
+ *  Offset     0        255       65535    16777215
+ *  Total    255      65535    16777215  4294967295
+ */
+function valueToUint8Array(value, length) {
+  var arrayBuffer = new ArrayBuffer(length);
+  var uint8Array = new Uint8Array(arrayBuffer);
+  for (var i = length - 1; i >= 0; i--) {
+    uint8Array[i] = value & 0xff;
+    value = value >> 8;
+  }
+
+  return uint8Array;
+}
+
+function uint8ArrayToValue(uint8Array) {
+  var length = uint8Array.length;
+  if (length === 0) {
+    return null;
+  }
+
+  var value = 0;
+  for (var i = 0; i < length; i++) {
+    value = value << 8;
+    value += uint8Array[i];
+  }
+
+  return value;
+}
+
+/**
+ * Create a new ByteArray. 
+ *
+ * maxBytesOrData can be an integer indicating the starting number of maximum
+ * bytes, or it can be a ByteArray object to serve as the starting point. If
+ * maxBytesOrData is not present, the ByteArray will be created with an initial
+ * size of 256.
+ */
+exports.ByteArray = function ByteArray(maxBytesOrData) {
+  if (!(this instanceof ByteArray)) {
+    throw new Error('ByteArray must be called with new');
+  }
+
+  if (maxBytesOrData instanceof ByteArray) {
+    maxBytesOrData = maxBytesOrData.buffer;
+  }
+
+  if (maxBytesOrData instanceof Uint8Array ||
+      maxBytesOrData instanceof ArrayBuffer) {
+    this._data = new Uint8Array(maxBytesOrData);
+    this._buffer = this._data.buffer;
+    this._cursor = this._data.length;
+    return this;
+  }
+
+  this._buffer = new ArrayBuffer(maxBytesOrData || DEFAULT_SIZE);
+  this._data = new Uint8Array(this._buffer);
+  this._cursor = 0;
+
+
+};
+
+exports.ByteArray.prototype.constructor = exports.ByteArray;
+
+Object.defineProperty(exports.ByteArray.prototype, 'length', {
+  get: function() {
+    return this._cursor;
+  }
+});
+
+Object.defineProperty(exports.ByteArray.prototype, 'buffer', {
+  get: function() {
+    return this._buffer.slice(0, this._cursor);
+  }
+});
+
+exports.ByteArray.prototype.push = function(value, length) {
+  length = length || 1;
+
+  this.append(valueToUint8Array(value, length));
+};
+
+exports.ByteArray.prototype.append = function(data) {
+  // Get `data` as a `Uint8Array`
+  if (data instanceof exports.ByteArray) {
+    data = data.buffer;
+  }
+
+  if (data instanceof ArrayBuffer) {
+    data = new Uint8Array(data);
+  }
+
+  for (var i = 0, length = data.length; i < length; i++) {
+    this._data[this._cursor] = data[i];
+    this._cursor++;
+  }
+};
+
+exports.ByteArray.prototype.getReader = function(startByte) {
+  return new exports.ByteArrayReader(this, startByte);
+};
+
+exports.ByteArrayReader = function ByteArrayReader(byteArray, startByte) {
+  this.byteArray = byteArray;
+  this.cursor = startByte || 0;
+};
+
+exports.ByteArrayReader.prototype.constructor = exports.ByteArrayReader;
+
+Object.defineProperty(exports.ByteArrayReader.prototype, 'eof', {
+  get: function() {
+    return this.cursor >= this.byteArray.length;
+  }
+});
+
+exports.ByteArrayReader.prototype.getBytes = function(length) {
+  if (length === null || length === 0) {
+    return new Uint8Array();
+  }
+
+  length = length || 1;
+
+  var end = this.cursor + length;
+  if (end > this.byteArray.length) {
+    return new Uint8Array();
+  }
+
+  var uint8Array = new Uint8Array(this.byteArray._buffer.slice(this.cursor, end));
+  this.cursor += length;
+
+  return new exports.ByteArray(uint8Array);
+};
+
+exports.ByteArrayReader.prototype.getString = function(length) {
+  var byteArray = this.getBytes(length);
+  if (byteArray.length === 0) {
+    return '';
+  }
+
+  return BinaryUtils.arrayBufferToString(byteArray.buffer);
+};
+
+exports.ByteArrayReader.prototype.getValue = function(length) {
+  var byteArray = this.getBytes(length);
+  if (byteArray.length === 0) {
+    return null;
+  }
+
+  return uint8ArrayToValue(new Uint8Array(byteArray.buffer));
+};
+
+/**
+ * Get the ByteArray object as a Uint8Array. This is truncated to the correct
+ * size. The ByteArray might be a larger size than necessary, but the
+ * Uint8Array is truncated to just the size that is actually used by the
+ * ByteArray.
+ */
+exports.getByteArrayAsUint8Array = function(byteArr) {
+  return new Uint8Array(byteArr._buffer, 0, byteArr._cursor);
+};
+
+},{"./binary-utils":"binaryUtils"}],2:[function(require,module,exports){
+/*jshint esnext:true*/
+/*
+ * https://github.com/justindarc/dns-sd.js
+ *
+ * The MIT License (MIT)
+ *
+ * Copyright (c) 2015 Justin D'Arcangelo
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to
+ * deal in the Software without restriction, including without limitation the
+ * rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+ * sell copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+ * IN THE SOFTWARE.
+ */
+
+'use strict';
+
+exports.QUERY_RESPONSE_CODES = defineType({
+  QUERY       : 0,      // RFC 1035 - Query
+  RESPONSE    : 1       // RFC 1035 - Reponse
+});
+
+exports.OPERATION_CODES = defineType({
+  QUERY       : 0,      // RFC 1035 - Query
+  IQUERY      : 1,      // RFC 1035 - Inverse Query
+  STATUS      : 2,      // RFC 1035 - Status
+  NOTIFY      : 4,      // RFC 1996 - Notify
+  UPDATE      : 5       // RFC 2136 - Update
+});
+
+exports.AUTHORITATIVE_ANSWER_CODES = defineType({
+  NO          : 0,      // RFC 1035 - Not Authoritative
+  YES         : 1       // RFC 1035 - Is Authoritative
+});
+
+exports.TRUNCATED_RESPONSE_CODES = defineType({
+  NO          : 0,      // RFC 1035 - Not Truncated
+  YES         : 1       // RFC 1035 - Is Truncated
+});
+
+exports.RECURSION_DESIRED_CODES = defineType({
+  NO          : 0,      // RFC 1035 - Recursion Not Desired
+  YES         : 1       // RFC 1035 - Recursion Is Desired
+});
+
+exports.RECURSION_AVAILABLE_CODES = defineType({
+  NO          : 0,      // RFC 1035 - Recursive Query Support Not Available
+  YES         : 1       // RFC 1035 - Recursive Query Support Is Available
+});
+
+exports.AUTHENTIC_DATA_CODES = defineType({
+  NO          : 0,      // RFC 4035 - Response Has Not Been Authenticated/Verified
+  YES         : 1       // RFC 4035 - Response Has Been Authenticated/Verified
+});
+
+exports.CHECKING_DISABLED_CODES = defineType({
+  NO          : 0,      // RFC 4035 - Authentication/Verification Checking Not Disabled
+  YES         : 1       // RFC 4035 - Authentication/Verification Checking Is Disabled
+});
+
+exports.RETURN_CODES = defineType({
+  NOERROR     : 0,      // RFC 1035 - No Error
+  FORMERR     : 1,      // RFC 1035 - Format Error
+  SERVFAIL    : 2,      // RFC 1035 - Server Failure
+  NXDOMAIN    : 3,      // RFC 1035 - Non-Existent Domain
+  NOTIMP      : 4,      // RFC 1035 - Not Implemented
+  REFUSED     : 5,      // RFC 1035 - Query Refused
+  YXDOMAIN    : 6,      // RFC 2136 - Name Exists when it should not
+  YXRRSET     : 7,      // RFC 2136 - RR Set Exists when it should not
+  NXRRSET     : 8,      // RFC 2136 - RR Set that should exist does not
+  NOTAUTH     : 9,      // RFC 2136 - Server Not Authoritative for zone
+  NOTZONE     : 10      // RFC 2136 - NotZone Name not contained in zone
+});
+
+exports.CLASS_CODES = defineType({
+  IN          : 1,      // RFC 1035 - Internet
+  CS          : 2,      // RFC 1035 - CSNET
+  CH          : 3,      // RFC 1035 - CHAOS
+  HS          : 4,      // RFC 1035 - Hesiod
+  NONE        : 254,    // RFC 2136 - None
+  ANY         : 255     // RFC 1035 - Any
+});
+
+exports.OPTION_CODES = defineType({
+  LLQ         : 1,      // RFC ???? - Long-Lived Queries
+  UL          : 2,      // RFC ???? - Update Leases
+  NSID        : 3,      // RFC ???? - Name Server Identifier
+  OWNER       : 4,      // RFC ???? - Owner
+  UNKNOWN     : 65535   // RFC ???? - Token
+});
+
+exports.RECORD_TYPES = defineType({
+  SIGZERO     : 0,      // RFC 2931
+  A           : 1,      // RFC 1035
+  NS          : 2,      // RFC 1035
+  MD          : 3,      // RFC 1035
+  MF          : 4,      // RFC 1035
+  CNAME       : 5,      // RFC 1035
+  SOA         : 6,      // RFC 1035
+  MB          : 7,      // RFC 1035
+  MG          : 8,      // RFC 1035
+  MR          : 9,      // RFC 1035
+  NULL        : 10,     // RFC 1035
+  WKS         : 11,     // RFC 1035
+  PTR         : 12,     // RFC 1035
+  HINFO       : 13,     // RFC 1035
+  MINFO       : 14,     // RFC 1035
+  MX          : 15,     // RFC 1035
+  TXT         : 16,     // RFC 1035
+  RP          : 17,     // RFC 1183
+  AFSDB       : 18,     // RFC 1183
+  X25         : 19,     // RFC 1183
+  ISDN        : 20,     // RFC 1183
+  RT          : 21,     // RFC 1183
+  NSAP        : 22,     // RFC 1706
+  NSAP_PTR    : 23,     // RFC 1348
+  SIG         : 24,     // RFC 2535
+  KEY         : 25,     // RFC 2535
+  PX          : 26,     // RFC 2163
+  GPOS        : 27,     // RFC 1712
+  AAAA        : 28,     // RFC 1886
+  LOC         : 29,     // RFC 1876
+  NXT         : 30,     // RFC 2535
+  EID         : 31,     // RFC ????
+  NIMLOC      : 32,     // RFC ????
+  SRV         : 33,     // RFC 2052
+  ATMA        : 34,     // RFC ????
+  NAPTR       : 35,     // RFC 2168
+  KX          : 36,     // RFC 2230
+  CERT        : 37,     // RFC 2538
+  DNAME       : 39,     // RFC 2672
+  OPT         : 41,     // RFC 2671
+  APL         : 42,     // RFC 3123
+  DS          : 43,     // RFC 4034
+  SSHFP       : 44,     // RFC 4255
+  IPSECKEY    : 45,     // RFC 4025
+  RRSIG       : 46,     // RFC 4034
+  NSEC        : 47,     // RFC 4034
+  DNSKEY      : 48,     // RFC 4034
+  DHCID       : 49,     // RFC 4701
+  NSEC3       : 50,     // RFC ????
+  NSEC3PARAM  : 51,     // RFC ????
+  HIP         : 55,     // RFC 5205
+  SPF         : 99,     // RFC 4408
+  UINFO       : 100,    // RFC ????
+  UID         : 101,    // RFC ????
+  GID         : 102,    // RFC ????
+  UNSPEC      : 103,    // RFC ????
+  TKEY        : 249,    // RFC 2930
+  TSIG        : 250,    // RFC 2931
+  IXFR        : 251,    // RFC 1995
+  AXFR        : 252,    // RFC 1035
+  MAILB       : 253,    // RFC 1035
+  MAILA       : 254,    // RFC 1035
+  ANY         : 255,    // RFC 1035
+  DLV         : 32769   // RFC 4431
+});
+
+function defineType(values) {
+  function T(value) {
+    for (var name in T) {
+      if (T[name] === value) {
+        return name;
+      }
+    }
+
+    return null;
+  }
+
+  for (var name in values) {
+    T[name] = values[name];
+  }
+
+  return T;
+}
+
+},{}],3:[function(require,module,exports){
+/*jshint esnext:true, bitwise:false */
+
+/**
+ * Represents a DNS packet.
+ *
+ * The structure of the packet is based on the information in 'TCP/IP
+ * Illustrated, Volume 1: The Protocols' by Stevens.
+ */
+'use strict';
+
+var resRec = require('./resource-record');
+var dnsCodes = require('./dns-codes');
+var byteArray = require('./byte-array');
+var qSection = require('./question-section');
+
+var MAX_ID = 65535;
+var MAX_OPCODE = 15;
+var MAX_RETURN_CODE = 15;
+
+var NUM_OCTETS_ID = 2;
+var NUM_OCTETS_FLAGS = 2;
+var NUM_OCTETS_SECTION_LENGTHS = 2;
+
+/**
+ * Parse numRecords Resource Records from a ByteArrayReader object. Returns an
+ * array of resource record objects.
+ *
+ * @param {ByteArrayReader} reader the reader from which to construct resource
+ * records. reader should have been moved to the correct cursor position
+ * @param {integer} numRecords the number of records to parse
+ *
+ * @return {Array<resource record>} an Array of the parsed resource records
+ */
+function parseResourceRecordsFromReader(reader, numRecords) {
+  var result = [];
+  for (var i = 0; i < numRecords; i++) {
+    var recordType = resRec.peekTypeInReader(reader);
+
+    var record = null;
+    switch (recordType) {
+      case dnsCodes.RECORD_TYPES.A:
+        record = resRec.createARecordFromReader(reader);
+        break;
+      case dnsCodes.RECORD_TYPES.PTR:
+        record = resRec.createPtrRecordFromReader(reader);
+        break;
+      case dnsCodes.RECORD_TYPES.SRV:
+        record = resRec.createSrvRecordFromReader(reader);
+        break;
+      default:
+        throw new Error('Unsupported record type: ' + recordType);
+    }
+
+    result.push(record);
+  }
+
+  return result;
+}
+
+/**
+ * Create a DNS packet. This creates the packet with various flag values. The
+ * packet is not converted to byte format until a call is made to
+ * getAsByteArray().
+ *
+ * @param {integer} id a 2-octet identifier for the packet
+ * @param {boolean} isQuery true if packet is a query, false if it is a
+ * response
+ * @param {integer} opCode a 4-bit field. 0 is a standard query
+ * @param {boolea} isAuthoritativeAnswer true if the response is authoritative
+ * for the domain in the question section
+ * @param {boolean} isTruncated true if the reply is truncated
+ * @param {boolean} recursionIsDesired true if recursion is desired
+ * @param {boolean} recursionAvailable true or recursion is available
+ * @param {integer} returnCode a 4-bit field. 0 is no error and 3 is a name
+ * error. Name errors are returned only from the authoritative name server and
+ * means the domain name specified does not exist
+ */
+exports.DnsPacket = function DnsPacket(
+  id,
+  isQuery,
+  opCode,
+  isAuthorativeAnswer,
+  isTruncated,
+  recursionDesired,
+  recursionAvailable,
+  returnCode
+) {
+  if (!(this instanceof DnsPacket)) {
+    throw new Error('DnsPacket must be called with new');
+  }
+
+  // The ID must fit in two bytes.
+  if (id < 0 || id > MAX_ID) {
+    throw new Error('DNS Packet ID is < 0 or > ' + MAX_ID +': ' + id);
+  }
+  this.id = id;
+
+  this.isQuery = isQuery ? true : false;
+
+  if (opCode < 0 || opCode > MAX_OPCODE) {
+    throw new Error(
+      'DNS Packet opCode is < 0 or > ' +
+        MAX_OPCODE +
+        ': ' +
+        opCode
+    );
+  }
+  this.opCode = opCode;
+
+  this.isAuthorativeAnswer = isAuthorativeAnswer ? true : false;
+  this.isTruncated = isTruncated ? true : false;
+  this.recursionDesired = recursionDesired ? true : false;
+  this.recursionAvailable = recursionAvailable ? true : false;
+
+  if (returnCode < 0 || returnCode > MAX_RETURN_CODE) {
+    throw new Error('DNS Packet returnCode is < 0 or > ' +
+      MAX_RETURN_CODE +
+      ': ' +
+      returnCode
+    );
+  }
+  this.returnCode = returnCode;
+
+  this.questions = [];
+  this.answers = [];
+  this.authority = [];
+  this.additionalInfo = [];
+};
+
+/**
+ * Convert the DnsPacket to a ByteArray object. The format of a DNS Packet is
+ * as specified in 'TCP/IP Illustrated, Volume 1' by Stevens, as follows:
+ *
+ * 2 octet ID
+ *
+ * 2 octet flags (see dns-util)
+ *
+ * 2 octet number of question sections
+ *
+ * 2 octet number of answer Resource Records (RRs)
+ *
+ * 2 octet number of authority RRs
+ *
+ * 2 octet number of additional info RRs
+ *
+ * Variable number of bytes representing the questions
+ *
+ * Variable number of bytes representing the answers
+ *
+ * Variable number of bytes representing authorities
+ *
+ * Variable number of bytes representing additional info
+ */
+exports.DnsPacket.prototype.convertToByteArray = function() {
+  var result = new byteArray.ByteArray();
+
+  result.push(this.id, NUM_OCTETS_ID);
+
+  // Prepare flags to be passed to getFlagsAsValue
+  var qr = this.isQuery ? 0 : 1;  // 0 means query, 1 means response
+  var opcode = this.opCode;
+  var aa = this.isAuthorativeAnswer ? 1 : 0;
+  var tc = this.isTruncated ? 1 : 0;
+  var rd = this.recursionDesired ? 1 : 0;
+  var ra = this.recursionAvailable ? 1 : 0;
+  var rcode = this.returnCode;
+
+  var flagValue = exports.getFlagsAsValue(qr, opcode, aa, tc, rd, ra, rcode);
+  result.push(flagValue, NUM_OCTETS_FLAGS);
+
+  result.push(this.questions.length, NUM_OCTETS_SECTION_LENGTHS);
+  result.push(this.answers.length, NUM_OCTETS_SECTION_LENGTHS);
+  result.push(this.authority.length, NUM_OCTETS_SECTION_LENGTHS);
+  result.push(this.additionalInfo.length, NUM_OCTETS_SECTION_LENGTHS);
+
+  // We should have now met the requirement of adding 12 bytes to a DNS header.
+  if (result.length !== 12) {
+    throw new Error(
+      'Problem serializing DNS packet. Header length != 12 bytes'
+    );
+  }
+
+  this.questions.forEach(question => {
+    var byteArr = question.convertToByteArray();
+    result.append(byteArr);
+  });
+
+  this.answers.forEach(answer => {
+    var byteArr = answer.convertToByteArray();
+    result.append(byteArr);
+  });
+
+  this.authority.forEach(authority => {
+    var byteArr = authority.convertToByteArray();
+    result.append(byteArr);
+  });
+
+  this.additionalInfo.forEach(info => {
+    var byteArr = info.convertToByteArray();
+    result.append(byteArr);
+  });
+
+  return result;
+};
+
+/**
+ * Create a DNS Packet from a ByteArrayReader object. The contents of the
+ * reader are as expected to be output from convertToByteArray().
+ *
+ * @param {ByteArrayReader} reader the reader from which to construct the
+ * DnsPacket. Should be moved to the correct cursor position
+ *
+ * @return {DnsPacket} the packet constructed
+ */
+exports.createPacketFromReader = function(reader) {
+  var id = reader.getValue(NUM_OCTETS_ID);
+  var flagsAsValue = reader.getValue(NUM_OCTETS_FLAGS);
+  var numQuestions = reader.getValue(NUM_OCTETS_SECTION_LENGTHS);
+  var numAnswers = reader.getValue(NUM_OCTETS_SECTION_LENGTHS);
+  var numAuthority = reader.getValue(NUM_OCTETS_SECTION_LENGTHS);
+  var numAdditionalInfo = reader.getValue(NUM_OCTETS_SECTION_LENGTHS);
+
+  var flags = exports.getValueAsFlags(flagsAsValue);
+
+  var opCode = flags.opcode;
+  var returnCode = flags.rcode;
+
+  // 0 means it is a query, 1 means it is a response.
+  var isQuery;
+  if (flags.qr === 0) {
+    isQuery = true;
+  } else {
+    isQuery = false;
+  }
+
+  // The non-QR flags map more readily to 0/1 = false/true, so we will use
+  // ternary operators.
+  var isAuthorativeAnswer = flags.aa ? true : false;
+  var isTruncated = flags.tc ? true : false;
+  var recursionDesired = flags.rd ? true : false;
+  var recursionAvailable = flags.ra ? true : false;
+
+  var result = new exports.DnsPacket(
+    id,
+    isQuery,
+    opCode,
+    isAuthorativeAnswer,
+    isTruncated,
+    recursionDesired,
+    recursionAvailable,
+    returnCode
+  );
+
+  for (var i = 0; i < numQuestions; i++) {
+    var question = qSection.createQuestionFromReader(reader);
+    result.addQuestion(question);
+  }
+
+  var answers = parseResourceRecordsFromReader(reader, numAnswers);
+  var authorities = parseResourceRecordsFromReader(reader, numAuthority);
+  var infos = parseResourceRecordsFromReader(reader, numAdditionalInfo);
+
+  answers.forEach(answer => {
+    result.addAnswer(answer);
+  });
+  authorities.forEach(authority => {
+    result.addAuthority(authority);
+  });
+  infos.forEach(info => {
+    result.addAdditionalInfo(info);
+  });
+
+  return result;
+};
+
+/**
+ * Add a question resource to the DNS Packet.
+ *
+ * @param {QuestionSection} question the question to add to this packet 
+ */
+exports.DnsPacket.prototype.addQuestion = function(question) {
+  if (!(question instanceof qSection.QuestionSection)) {
+    throw new Error('question must be a QuestionSection but was: ' + question);
+  }
+  this.questions.push(question);
+};
+
+/**
+ * Add a Resource Record to the answer section.
+ *
+ * @param {resource record} resourceRecord the record to add to the answer
+ * section
+ */
+exports.DnsPacket.prototype.addAnswer = function(resourceRecord) {
+  this.answers.push(resourceRecord);
+};
+
+/**
+ * Add a Resource Record to the authority section.
+ *
+ * @param {resource record} resourceRecord the record to add to the authority
+ * section
+ */
+exports.DnsPacket.prototype.addAuthority = function(resourceRecord) {
+  this.authority.push(resourceRecord);
+};
+
+/**
+ * Add a Resource Record to the additional info section.
+ *
+ * @param {resource record} resourceRecord the record to add to the additional
+ * info section
+ */
+exports.DnsPacket.prototype.addAdditionalInfo = function(resourceRecord) {
+  this.additionalInfo.push(resourceRecord);
+};
+
+/**
+ * Convert the given value (in 16 bits) to an object containing the DNS header
+ * flags. The returned object will have the following properties: qr, opcdoe,
+ * aa, tc, rd, ra, rcode.
+ *
+ * @param {integer} value a number those lowest order 16 bits will be parsed to
+ * an object representing packet flags
+ *
+ * @return {object} a flag object like the following:
+ * {
+ *   qr: integer,
+ *   opcode: integer,
+ *   aa: integer,
+ *   tc: integer,
+ *   rd: integer,
+ *   ra: integer,
+ *   rcode integer
+ * }
+ */
+exports.getValueAsFlags = function(value) {
+  var qr = (value & 0x8000) >> 15;
+  var opcode = (value & 0x7800) >> 11;
+  var aa = (value & 0x0400) >> 10;
+  var tc = (value & 0x0200) >> 9;
+  var rd = (value & 0x0100) >> 8;
+  var ra = (value & 0x0080) >> 7;
+  var rcode = (value & 0x000f) >> 0;
+
+  return {
+    qr: qr,
+    opcode: opcode,
+    aa: aa,
+    tc: tc,
+    rd: rd,
+    ra: ra,
+    rcode: rcode
+  };
+};
+
+/**
+ * Convert DNS packet flags to a value that represents the flags (using bitwise
+ * operators), fitting in the last 16 bits. All parameters must be numbers.
+ *
+ * @param {integer} qr 0 if it is a query, 1 if it is a response
+ * @param {integer} opcode 0 for a standard query
+ * @param {integer} aa 1 if it is authoritative, else 0
+ * @param {integer} tc 1 if truncated
+ * @param {integer} rd 1 if recursion desired
+ * @param {integer} ra 1 if recursion available
+ * @param {integer} rcode 4-bit return code field. 0 for no error, 3 for name
+ * error (if this is the authoritative name server and the name does not exist)
+ *
+ * @return {integer} an integer representing the flag values in the lowest
+ * order 16 bits
+ */
+exports.getFlagsAsValue = function(qr, opcode, aa, tc, rd, ra, rcode) {
+  var value = 0x0000;
+
+  value = value << 1;
+  value += qr & 0x01;
+
+  value = value << 4;
+  value += opcode & 0x0f;
+
+  value = value << 1;
+  value += aa & 0x01;
+
+  value = value << 1;
+  value += tc & 0x01;
+
+  value = value << 1;
+  value += rd & 0x01;
+
+  value = value << 1;
+  value += ra & 0x01;
+
+  // These three bits are reserved for future use and must be set to 0.
+  value = value << 3;
+
+  value = value << 4;
+  value += rcode & 0x0f;
+
+  return value;
+};
+
+},{"./byte-array":1,"./dns-codes":2,"./question-section":5,"./resource-record":6}],4:[function(require,module,exports){
+'use strict';
+
+var byteArray = require('./byte-array');
+
+/**
+ * Various methods for common DNS-related operations.
+ */
+
+var MAX_LABEL_LENGTH = 63;
+var OCTET_LABEL_LENGTH = 1;
+
+exports.DEBUG = true;
+
+exports.DEFAULT_TTL = 10;
+exports.DEFAULT_PRIORITY = 0;
+exports.DEFAULT_WEIGHT = 0;
+
+/**
+ * Return the local suffix, i.e. ".local". The leading dot is included.
+ *
+ * @return {string}
+ */
+exports.getLocalSuffix = function() {
+  return '.local';
+};
+
+/**
+ * Return a random integer between [min, max).
+ *
+ * @param {integer} min
+ * @param {integer} max
+ *
+ * @return {integer} random value >= min and < max
+ */
+exports.randomInt = function(min, max) {
+  return Math.floor(Math.random() * (max - min)) + min;
+};
+
+/**
+ * Converts a domain name to a byte array. Despite the name, this can serialize
+ * any '.' separated string. _semcache._http.local is not a domain name, eg,
+ * but it is serializable in the same fashion. The name 'domain' is retained to
+ * be recognizable even to those that are not familiar with the term 'label'
+ * that is used in the DNS spec.
+ *
+ * The DNS protocol specifies that a domain name is serialized as a series of
+ * 'labels'. A label is a component of a name between a dot. www.example.com,
+ * for example, would consist of three labels: www, example, and com.
+ *
+ * Labels are serialized by a single byte indicating the length of the bytes to
+ * follow, terminated with a 0 byte to indicate there are no additional
+ * labels.
+ *
+ * Labels are limited to 63 bytes.
+ *
+ * @param {string} domain
+ *
+ * @return {ByteArray} a ByteArray containing the serialized domain
+ */
+exports.getDomainAsByteArray = function(domain) {
+  var result = new byteArray.ByteArray();
+
+  var labels = domain.split('.');
+
+  labels.forEach(label => {
+    var length = label.length;
+    if (length > MAX_LABEL_LENGTH) {
+      throw new Error('label exceeds max length: ' + label);
+    }
+
+    // A label is serialized as a single byte for its length, followed by the
+    // character code of each component.
+    result.push(length, OCTET_LABEL_LENGTH);
+
+    for (var i = 0; i < label.length; i++) {
+      result.push(label.charCodeAt(i), 1);
+    }
+  });
+
+  // The label is terminated by a 0 byte.
+  result.push(0, OCTET_LABEL_LENGTH);
+
+  return result;
+};
+
+/**
+ * Convert a serialized domain name from its DNS representation to a string.
+ * The byteArray should contain bytes as output by getDomainAsByteArray.
+ *
+ * @param {ByteArray} byteArr the ByteArray containing the serialized labels
+ * @param {integer} startByte an optional index indicating the start point of
+ * the serialization. If not present, assumes a starting index ov 0.
+ *
+ * @return {string}
+ */
+exports.getDomainFromByteArray = function(byteArr, startByte) {
+  if (!(byteArr instanceof byteArray.ByteArray)) {
+    throw new Error('byteArr is not type of ByteArray');
+  }
+
+  if (!startByte) {
+    // If a start byte hasn't been specified, we start at the beginning.
+    startByte = 0;
+  }
+
+  var reader = byteArr.getReader(startByte);
+  
+  var result = exports.getDomainFromByteArrayReader(reader, 0);
+  return result;
+};
+
+/**
+ * Convert a serialized domain name from its DNS representation to a string.
+ * The reader should contain bytes as output from getDomainAsByteArray.
+ *
+ * @param {ByteArrayReader} reader a ByteArrayReader containing the bytes to be
+ * deserialized. The reader will have all the domain bytes consumed.
+ *
+ * @return {string}
+ */
+exports.getDomainFromByteArrayReader = function(reader) {
+  var result = '';
+
+  // We expect a series of length charCode pairs, ending when the final length
+  // field is a 0. We'll do this by examining a single label at a time.
+  var lengthOfCurrentLabel = -1;
+  var iteration = 0;
+  // Sanity check because while loops are dangerous when faced with outside
+  // data.
+  var maxIterations = 10;
+  while (lengthOfCurrentLabel !== 0) {
+    if (iteration > maxIterations) {
+      throw new Error('Exceeded max iterations, likely malformed data');
+    }
+
+    // Get the first length, consuming the first byte of the reader.
+    lengthOfCurrentLabel = reader.getValue(1);
+
+    if (lengthOfCurrentLabel > MAX_LABEL_LENGTH) {
+      // This check will try to alert callers when they have an off by one or
+      // other error in the byte array.
+      throw new Error(
+        'Got a label length greater than the max: ' + lengthOfCurrentLabel
+      );
+    }
+
+    for (var i = 0; i < lengthOfCurrentLabel; i++) {
+      var currentCharCode = reader.getValue(1);
+      var currentChar = String.fromCharCode(currentCharCode);
+      result += currentChar;
+    }
+
+    // We've consumed a label unless we're in the last iteration of the while
+    // loop, add a '.'.
+    if (lengthOfCurrentLabel !== 0) {
+      result += '.';
+    }
+
+    iteration += 1;
+  }
+
+  // Unless we have an empty string, we've added one too many dots due to the
+  // fence post problem in the while loop.
+  if (result.length > 0) {
+    result = result.substring(0, result.length - 1);
+  }
+
+  return result;
+};
+
+/**
+ * Convert a string representation of an IP address to a ByteArray.
+ * '155.33.17.68' would return a ByteArray with length 4, corresponding to the
+ * bytes 155, 33, 17, 68.
+ *
+ * @param {string} ipAddress
+ *
+ * @return {ByteArray}
+ */
+exports.getIpStringAsByteArray = function(ipAddress) {
+  var parts = ipAddress.split('.');
+
+  if (parts.length < 4) {
+    throw new Error('IP string does not have 4 parts: ' + ipAddress);
+  }
+
+  var result = new byteArray.ByteArray();
+  
+  parts.forEach(part => {
+    var intValue = parseInt(part);
+    if (intValue < 0 || intValue > 255) {
+      throw new Error('A byte of the IP address < 0 or > 255: ' + ipAddress);
+    }
+    result.push(intValue, 1);
+  });
+
+  return result;
+};
+
+/**
+ * Recover an IP address in string representation from the ByteArrayReader.
+ *
+ * @param {ByteArrayReader} reader
+ *
+ * @return {string}
+ */
+exports.getIpStringFromByteArrayReader = function(reader) {
+  // We assume a single byte representing each string.
+  var parts = [];
+
+  var numParts = 4;
+  for (var i = 0; i < numParts; i++) {
+    var intValue = reader.getValue(1);
+    var stringValue = intValue.toString();
+    parts.push(stringValue);
+  }
+
+  var result = parts.join('.');
+  return result;
+};
+
+},{"./byte-array":1}],5:[function(require,module,exports){
+/* global exports, require */
+'use strict';
+
+var byteArray = require('./byte-array');
+var dnsUtil = require('./dns-util');
+
+var NUM_OCTETS_QUERY_TYPE = 2;
+var NUM_OCTETS_QUERY_CLASS = 2;
+
+var MAX_QUERY_TYPE = 65535;
+var MAX_QUERY_CLASS = 65535;
+
+/**
+ * A DNS Question section.
+ *
+ * @param {string} qName the name of the query
+ * @param {integer} qType the type of the query
+ * @param {integer} qClass the class of the query
+ */
+exports.QuestionSection = function QuestionSection(qName, qType, qClass) {
+  if (!(this instanceof QuestionSection)) {
+    throw new Error('QuestionSection must be called with new');
+  }
+
+  if (qType < 0 || qType > MAX_QUERY_TYPE) {
+    throw new Error(
+      'query type must be > 0 and < ' +
+        MAX_QUERY_TYPE +
+        ': ' +
+        qType
+    );
+  }
+
+  if (qClass < 0 || qClass > MAX_QUERY_CLASS) {
+    throw new Error(
+      'query class must be > 0 and < ' +
+        MAX_QUERY_CLASS +
+        ': ' +
+        qClass
+    );
+  }
+
+  this.queryName = qName;
+  this.queryType = qType;
+  this.queryClass = qClass;
+};
+
+/**
+ * Convert the QuestionSection to a ByteArray object. According to 'TCP/IP
+ * Illustrated, Volume 1' by Stevens, the format of the question section is as
+ * follows:
+ *
+ * variable number of octets representing the query name
+ *
+ * 2 octets representing the query type
+ *
+ * 2 octets representing the query class
+ *
+ * @return {ByteArray}
+ */
+exports.QuestionSection.prototype.convertToByteArray = function() {
+  var result = new byteArray.ByteArray();
+  
+  var queryAsBytes = dnsUtil.getDomainAsByteArray(this.queryName);
+  result.append(queryAsBytes);
+
+  result.push(this.queryType, NUM_OCTETS_QUERY_TYPE);
+  result.push(this.queryClass, NUM_OCTETS_QUERY_CLASS);
+
+  return result;
+};
+
+/**
+ * Returns true if the question has requested a unicast response, else false.
+ *
+ * @return {boolean}
+ */
+exports.QuestionSection.prototype.unicastResponseRequested = function() {
+  // For now, since we can't share a port in Chrome, we will assume that
+  // unicast responses are always requested.
+  return true;
+};
+
+/**
+ * Create a QuestionSection from a ByteArrayReader as serialized by
+ * convertToByteArray().
+ */
+exports.createQuestionFromReader = function(reader) {
+  var queryName = dnsUtil.getDomainFromByteArrayReader(reader);
+
+  var queryType = reader.getValue(NUM_OCTETS_QUERY_TYPE);
+  if (queryType < 0 || queryType > MAX_QUERY_TYPE) {
+    throw new Error('deserialized query type out of range: ' + queryType);
+  }
+
+  var queryClass = reader.getValue(NUM_OCTETS_QUERY_CLASS);
+  if (queryClass < 0 || queryClass > MAX_QUERY_CLASS) {
+    throw new Error('deserialized query class out of range: ' + queryClass);
+  }
+
+  var result = new exports.QuestionSection(queryName, queryType, queryClass);
+
+  return result;
+};
+
+},{"./byte-array":1,"./dns-util":4}],6:[function(require,module,exports){
+/* global exports, require */
+'use strict';
+
+var byteArray = require('./byte-array');
+var dnsUtil = require('./dns-util');
+var dnsCodes = require('./dns-codes');
+
+var NUM_OCTETS_TYPE = 2;
+var NUM_OCTETS_CLASS = 2;
+var NUM_OCTETS_TTL = 4;
+var NUM_OCTETS_RESOURCE_DATA_LENGTH = 2;
+
+/** An A Record has for bytes, all representing an IP address. */
+var NUM_OCTETS_RESOURCE_DATA_A_RECORD = 4;
+
+var NUM_OCTETS_PRIORITY = 2;
+var NUM_OCTETS_WEIGHT = 2;
+var NUM_OCTETS_PORT = 2;
+
+/**
+ * A resource record (RR) is a component of a DNS message. They share a similar
+ * structure but contain different information.
+ *
+ * Each resource record begins with a domain name, which can be a variable
+ * number of bytes.
+ *
+ * Then is a 2-octet type (e.g. A, SRV, etc).
+ *
+ * Then is a 2-octet class (e.g. IN for internet).
+ *
+ * Then is a 4-octet TTL.
+ *
+ * Then is a variable number of bytes representing the data in record. The
+ * first 2-octets are the length of the following data. The structure of that
+ * data depends on the type of the record.
+ *
+ * Information here is based on 'TCP/IP Illustrated, Volume 1' by Stevens and
+ * on the Bonjour Overview page provided by Apple:
+ *
+ * https://developer.apple.com/library/mac/documentation/Cocoa/Conceptual/NetServices/Articles/NetServicesArchitecture.html#//apple_ref/doc/uid/20001074-SW1
+ */
+
+/**
+ * An A record. A records respond to queries for a domain name to an IP
+ * address.
+ *
+ * @param {string} domainName: the domain name, e.g. www.example.com
+ * @param {integer} ttl: the time to live
+ * @param {string} ipAddress: the IP address of the domainName. This must be a string
+ * (e.g. '192.3.34.17').
+ * @param {integer} recordClass: the class of the record type. This is optional, and if not
+ * present or is not truthy will be set as IN for internet traffic.
+ */
+exports.ARecord = function ARecord(
+  domainName,
+  ttl,
+  ipAddress,
+  recordClass
+) {
+  if (!(this instanceof ARecord)) {
+    throw new Error('ARecord must be called with new');
+  }
+
+  if ((typeof ipAddress) !== 'string') {
+    throw new Error('ipAddress must be a String: ' + ipAddress);
+  }
+  
+  if (!recordClass) {
+    recordClass = dnsCodes.CLASS_CODES.IN;
+  }
+
+  this.recordType = dnsCodes.RECORD_TYPES.A;
+  this.recordClass = recordClass;
+
+  this.domainName = domainName;
+  this.name = domainName;
+  this.ttl = ttl;
+  this.ipAddress = ipAddress;
+};
+
+/**
+ * Get the A Record as a ByteArray object.
+ *
+ * The DNS spec indicates that an A Record is represented in byte form as
+ * follows.
+ *
+ * The common fields as indicated in getCommonFieldsAsByteArray.
+ *
+ * 2 octets representing the number 4, to indicate that 4 bytes follow.
+ *
+ * 4 octets representing a 4-byte IP address
+ *
+ * @return {ByteArray}
+ */
+exports.ARecord.prototype.convertToByteArray = function() {
+  var result = exports.getCommonFieldsAsByteArray(
+    this.domainName,
+    this.recordType,
+    this.recordClass,
+    this.ttl
+  );
+
+  // First we add the length of the resource data.
+  result.push(
+    NUM_OCTETS_RESOURCE_DATA_A_RECORD, 
+    NUM_OCTETS_RESOURCE_DATA_LENGTH
+  );
+
+  // Then add the IP address itself.
+  var ipStringAsBytes = dnsUtil.getIpStringAsByteArray(this.ipAddress);
+  result.append(ipStringAsBytes);
+
+  return result;
+};
+
+/**
+ * Create an A Record from a ByteArrayReader object. The reader should be at
+ * the correct cursor position, at the domain name of the A Record.
+ *
+ * @param {ByteArrayReader} reader
+ *
+ * @return {ARecord}
+ */
+exports.createARecordFromReader = function(reader) {
+  var commonFields = exports.getCommonFieldsFromByteArrayReader(reader);
+
+  if (commonFields.rrType !== dnsCodes.RECORD_TYPES.A) {
+    throw new Error(
+      'De-serialized A Record does not have A Record type: ' + 
+        commonFields.rrType
+    );
+  }
+
+  // And now we recover just the resource length and resource data.
+  var resourceLength = reader.getValue(NUM_OCTETS_RESOURCE_DATA_LENGTH);
+
+  // For an A Record this should always be 4.
+  if (resourceLength !== NUM_OCTETS_RESOURCE_DATA_A_RECORD) {
+    throw new Error(
+      'Recovered resource length does not match expected value for A ' +
+        '  Record: ' +
+        resourceLength
+    );
+  }
+
+  var ipString = dnsUtil.getIpStringFromByteArrayReader(reader);
+
+  var result = new exports.ARecord(
+    commonFields.domainName,
+    commonFields.ttl,
+    ipString,
+    commonFields.rrClass
+  );
+
+  return result;
+};
+
+/**
+ * Create a PTR Record from a ByteArrayReader object. The reader should be at
+ * the correct cursor position, at the service type query of the PTR Record.
+ *
+ * @param {ByteArrayReader} reader
+ *
+ * @return {PtrRecord}
+ */
+exports.createPtrRecordFromReader = function(reader) {
+  var commonFields = exports.getCommonFieldsFromByteArrayReader(reader);
+
+  if (commonFields.rrType !== dnsCodes.RECORD_TYPES.PTR) {
+    throw new Error(
+      'De-serialized PTR Record does not have PTR Record type: ' + 
+        commonFields.rrType
+    );
+  }
+
+  // And now we recover just the resource length and resource data.
+  var resourceLength = reader.getValue(NUM_OCTETS_RESOURCE_DATA_LENGTH);
+  if (resourceLength < 0 || resourceLength > 65535) {
+    throw new Error(
+      'Illegal length of PTR Record resource data: ' +
+        resourceLength);
+  }
+
+  // In a PTR Record, the domain name field of the RR is actually the service
+  // type (at least for mDNS).
+  var serviceType = commonFields.domainName;
+  var serviceName = dnsUtil.getDomainFromByteArrayReader(reader);
+
+  var result = new exports.PtrRecord(
+    serviceType,
+    commonFields.ttl,
+    serviceName,
+    commonFields.rrClass
+  );
+
+  return result;
+};
+
+/**
+ * Create an SRV Record from a ByteArrayReader object. The reader should be at
+ * the correct cursor position, at the service type query of the SRV Record.
+ *
+ * @param {ByteArrayReader} reader
+ *
+ * @return {SrvRecord}
+ */
+exports.createSrvRecordFromReader = function(reader) {
+  var commonFields = exports.getCommonFieldsFromByteArrayReader(reader);
+
+  if (commonFields.rrType !== dnsCodes.RECORD_TYPES.SRV) {
+    throw new Error(
+      'De-serialized SRV Record does not have SRV Record type: ' + 
+        commonFields.rrType
+    );
+  }
+
+  // And now we recover just the resource length and resource data.
+  var resourceLength = reader.getValue(NUM_OCTETS_RESOURCE_DATA_LENGTH);
+  if (resourceLength < 0 || resourceLength > 65535) {
+    throw new Error(
+      'Illegal length of SRV Record resource data: ' +
+        resourceLength);
+  }
+
+  // In a SRV Record, the domain name field of the RR is actually the service
+  // proto name.
+  var serviceInstanceName = commonFields.domainName;
+  
+  // After the common fields, we expect priority, weight, port, target name.
+  var priority = reader.getValue(NUM_OCTETS_PRIORITY);
+  if (priority < 0 || priority > 65535) {
+    throw new Error('Illegal length of SRV Record priority: ' + priority);
+  }
+
+  var weight = reader.getValue(NUM_OCTETS_WEIGHT);
+  if (weight < 0 || weight > 65535) {
+    throw new Error('Illegal length of SRV Record priority: ' + weight);
+  }
+
+  var port = reader.getValue(NUM_OCTETS_PORT);
+  if (port < 0 || port > 65535) {
+    throw new Error('Illegal length of SRV Record priority: ' + port);
+  }
+
+  var targetName = dnsUtil.getDomainFromByteArrayReader(reader);
+
+  var result = new exports.SrvRecord(
+    serviceInstanceName,
+    commonFields.ttl,
+    priority,
+    weight,
+    port,
+    targetName
+  );
+
+  return result;
+};
+
+/**
+ * A PTR record. PTR records respond to a query for a service type (eg
+ * '_printer._tcp.local'. They return the name of an instance offering the
+ * service (eg 'Printsalot._printer._tcp.local').
+ *
+ * @param {string} serviceType the string representation of the service that
+ * has been queried for.
+ * @param {integer} ttl the time to live
+ * @param {string} instanceName the name of the instance providing the
+ * serviceType
+ * @param {integer} rrClass the class of the record. If not truthy, will be set
+ * to IN for internet traffic.
+ */
+exports.PtrRecord = function PtrRecord(
+  serviceType,
+  ttl,
+  instanceName,
+  rrClass
+) {
+  if (!(this instanceof PtrRecord)) {
+    throw new Error('PtrRecord must be called with new');
+  }
+
+  if ((typeof serviceType) !== 'string') {
+    throw new Error('serviceType must be a String: ' + serviceType);
+  }
+  
+  if ((typeof instanceName) !== 'string') {
+    throw new Error('instanceName must be a String: ' + instanceName);
+  }
+
+  if (!rrClass) {
+    rrClass = dnsCodes.CLASS_CODES.IN;
+  }
+  
+  this.recordType = dnsCodes.RECORD_TYPES.PTR;
+  this.recordClass = rrClass;
+
+  this.serviceType = serviceType;
+  this.name = serviceType;
+  this.ttl = ttl;
+  this.instanceName = instanceName;
+};
+
+/**
+ * Get the PTR Record as a ByteArray object.
+ *
+ * The DNS spec indicates that an PTR Record is represented in byte form as
+ * follows. (Using this and section 3.3.12 as a guide:
+ * https://www.ietf.org/rfc/rfc1035.txt).
+ *
+ * The common fields as indicated in getCommonFieldsAsByteArray.
+ *
+ * 2 octets representing the length of the following component, in bytes.
+ *
+ * A variable number of octets representing "the domain-name, which points to
+ * some location in the domain name space". In the context of mDNS, this would
+ * be the name of the instance that actually provides the service that is being
+ * queried for.
+ *
+ * @return {ByteArray}
+ */
+exports.PtrRecord.prototype.convertToByteArray = function() {
+  var result = exports.getCommonFieldsAsByteArray(
+    this.serviceType,
+    this.recordType,
+    this.recordClass,
+    this.ttl
+  );
+
+  var instanceNameAsBytes = dnsUtil.getDomainAsByteArray(this.instanceName);
+  var resourceDataLength = instanceNameAsBytes.length;
+
+  // First we add the length of the resource data.
+  result.push(
+    resourceDataLength, 
+    NUM_OCTETS_RESOURCE_DATA_LENGTH
+  );
+
+  // Then add the instance name itself.
+  result.append(instanceNameAsBytes);
+
+  return result;
+};
+
+/**
+ * An SRV record. SRV records map the name of a service instance to the
+ * information needed to connect to the service. 
+ *
+ * @param {string} instanceTypeDomain: the name being queried for, e.g.
+ * 'PrintsALot._printer._tcp.local'
+ * @param {integer} ttl: the time to live
+ * @param {integer} priority: the priority of this record if multiple records
+ * are found. This must be a number from 0 to 65535.
+ * @param {integer} weight: the weight of the record if two records have the
+ * same priority. This must be a number from 0 to 65535.
+ * @param {integer} port: the port number on which to find the service. This
+ * must be a number from 0 to 65535.
+ * @param {string} targetDomain: the domain hosting the service (e.g.
+ * 'blackhawk.local')
+ */
+exports.SrvRecord = function SrvRecord(
+  instanceTypeDomain,
+  ttl,
+  priority,
+  weight,
+  port,
+  targetDomain
+) {
+  if (!(this instanceof SrvRecord)) {
+    throw new Error('SrvRecord must be called with new');
+  }
+  this.recordType = dnsCodes.RECORD_TYPES.SRV;
+  // Note that we're not exposing rrClass as a caller-specified variable,
+  // because according to the spec SRV records occur in the IN class.
+  this.recordClass = dnsCodes.CLASS_CODES.IN;
+
+  this.instanceTypeDomain = instanceTypeDomain;
+  this.name = instanceTypeDomain;
+  this.ttl = ttl;
+  this.priority = priority;
+  this.weight = weight;
+  this.port = port;
+  this.targetDomain = targetDomain;
+};
+
+/**
+ * Get the SRV Record as a ByteArray object.
+ *
+ * According to this document (https://tools.ietf.org/html/rfc2782) and more
+ * explicitly this document
+ * (http://www.tahi.org/dns/packages/RFC2782_S4-1_0_0/SV/SV_RFC2782_SRV_rdata.html),
+ * the layout of the SRV RR is as follows:
+ *
+ * The common fields as indicated in getCommonFieldsAsByteArray.
+ *
+ * 2 octets representing the length of the following component, in bytes.
+ *
+ * 2 octets indicating the priority
+ *
+ * 2 octets indicating the weight
+ *
+ * 2 octets indicating the port
+ *
+ * A variable number of octets encoding the target name (e.g.
+ * PrintsALot.local), encoded as a domain name.
+ *
+ * @return {ByteArray}
+ */
+exports.SrvRecord.prototype.convertToByteArray = function() {
+  var result = exports.getCommonFieldsAsByteArray(
+    this.instanceTypeDomain,
+    this.recordType,
+    this.recordClass,
+    this.ttl
+  );
+
+  var targetNameAsBytes = dnsUtil.getDomainAsByteArray(this.targetDomain);
+
+  var resourceDataLength = NUM_OCTETS_PRIORITY +
+    NUM_OCTETS_WEIGHT +
+    NUM_OCTETS_PORT +
+    targetNameAsBytes.length;
+
+  // First we add the length of the resource data.
+  result.push(
+    resourceDataLength, 
+    NUM_OCTETS_RESOURCE_DATA_LENGTH
+  );
+
+  // Then add the priority, weight, and port.
+  result.push(this.priority, NUM_OCTETS_PRIORITY);
+  result.push(this.weight, NUM_OCTETS_WEIGHT);
+  result.push(this.port, NUM_OCTETS_PORT);
+
+  result.append(targetNameAsBytes);
+
+  return result;
+};
+
+/**
+ * Get the common components of a RR as a ByteArray. As specified by the DNS
+ * spec and 'TCP/IP Illustrated, Volume 1' by Stevens, the format is as
+ * follows:
+ *
+ * Variable number of octets encoding the domain name to which the RR is
+ *   responding.
+ *
+ * 2 octets representing the RR type
+ *
+ * 2 octets representing the RR class
+ *
+ * 4 octets representing the TTL
+ *
+ * @return {ByteArray}
+ */
+exports.getCommonFieldsAsByteArray = function(
+  domainName,
+  rrType,
+  rrClass,
+  ttl
+) {
+  var result = new byteArray.ByteArray();
+
+  var domainNameAsBytes = dnsUtil.getDomainAsByteArray(domainName);
+  result.append(domainNameAsBytes);
+
+  result.push(rrType, NUM_OCTETS_TYPE);
+  result.push(rrClass, NUM_OCTETS_CLASS);
+  result.push(ttl, NUM_OCTETS_TTL);
+
+  return result;
+};
+
+/**
+ * Extract the common fields from the reader as encoded by
+ * getCommonFieldsAsByteArray.
+ *
+ * @param {ByteArrayReader} reader
+ *
+ * @return {object} Returns an object with fields: domainName, rrType, rrClass,
+ * and ttl.
+ */
+exports.getCommonFieldsFromByteArrayReader = function(reader) {
+  var domainName = dnsUtil.getDomainFromByteArrayReader(reader);
+  var rrType = reader.getValue(NUM_OCTETS_TYPE);
+  var rrClass = reader.getValue(NUM_OCTETS_CLASS);
+  var ttl = reader.getValue(NUM_OCTETS_TTL);
+
+  var result = {
+    domainName: domainName,
+    rrType: rrType,
+    rrClass: rrClass,
+    ttl: ttl
+  };
+
+  return result;
+};
+
+/**
+ * Return type of the Resource Record queued up in the reader. Peaking does not
+ * affect the position of the underlying reader.
+ *
+ * @param {ByteArrayReader} reader
+ *
+ * @return {integer}
+ */
+exports.peekTypeInReader = function(reader) {
+  // Getting values from the reader normally consumes bytes. Create a defensive
+  // copy to work with instead.
+  var byteArr = reader.byteArray;
+  var startByte = reader.cursor;
+  var safeReader = byteArr.getReader(startByte);
+
+  // Consume an encoded domain name. Note this means we're computing domain
+  // names twice, which isn't optimal.
+  dnsUtil.getDomainFromByteArrayReader(safeReader);
+  // After the domain, the type is next.
+  var result = safeReader.getValue(NUM_OCTETS_TYPE);
+  return result;
+};
+
+},{"./byte-array":1,"./dns-codes":2,"./dns-util":4}],7:[function(require,module,exports){
+/* globals chrome */
+'use strict';
+
+/**
+ * Add a callback function via chrome.runtime.onMessageExternal.addListener.
+ * @param {Function} fn
+ */
+exports.addOnMessageExternalListener = function(fn) {
+  chrome.runtime.onMessageExternal.addListener(fn);
+};
+
+/**
+ * Send a message using the chrome.runtime.sendMessage API.
+ *
+ * @param {string} id
+ * @param {any} message must be JSON-serializable
+ */
+exports.sendMessage = function(id, message) {
+  chrome.runtime.sendMessage(id, message);
+};
+
+},{}],8:[function(require,module,exports){
+/* globals $ */
+'use strict';
+
+var fileSystem = require('fileSystem');
+var extensionBridge = require('extBridge');
+
+extensionBridge.attachListeners();
+
+document.addEventListener('DOMContentLoaded', function() {
+  var h1 = document.getElementsByTagName('h1');
+  if (h1.length > 0) {
+    h1[0].innerText = h1[0].innerText + ' \'Allo';
+  }
+  var chooseDirButton = document.getElementById('choose_dir');
+  chooseDirButton.addEventListener('click', function() {
+    fileSystem.promptForDir().then(function(entry) {
+      console.log('GOT NEW BASE DIR: ', entry);
+      fileSystem.setBaseCacheDir(entry);
+    });
+  });
+}, false);
+
+function clearContainer() {
+  var $container = $('#content-container');
+  $container.children().hide();
+}
+
+function initUi() {
+
+}
+
+$(function() {
+  console.log('SETTING UP READY BUSINESS');
+
+  initUi();
+});
+
+},{"extBridge":"extBridge","fileSystem":"fileSystem"}],9:[function(require,module,exports){
+/* globals Promise, chrome */
+'use strict';
+
+/**
+ * This module provides a wrapper around the callback-heavy chrome.fileSystem
+ * API and provides an alternative based on Promises.
+ */
+
+/**
+ * @param {Entry} entry
+ *
+ * @return {Promise} Promise that resolves with the display path
+ */
+exports.getDisplayPath = function(entry) {
+  return new Promise(function(resolve) {
+    chrome.fileSystem.getDisplayPath(entry, function(displayPath) {
+      resolve(displayPath);
+    });
+  });
+};
+
+/**
+ * @param {Entry} entry the starting entry that will serve as the base for a
+ * writable entry
+ *
+ * @return {Promise} Promise that resolves with a writable entry
+ */
+exports.getWritableEntry = function(entry) {
+  return new Promise(function(resolve) {
+    chrome.fileSystem.getWritableEntry(entry, function(writableEntry) {
+      resolve(writableEntry);
+    });
+  });
+};
+
+/**
+ * @param {Entry} entry
+ *
+ * @return {Promise} Promise that resolves with a boolean
+ */
+exports.isWritableEntry = function(entry) {
+  return new Promise(function(resolve) {
+    chrome.fileSystem.isWritableEntry(entry, function(isWritable) {
+      resolve(isWritable);
+    });
+  });
+};
+
+/**
+ * The original Chrome callback takes two parameters: an entry and an array of
+ * FileEntries. No examples appear to make use of this second parameter,
+ * however, nor is it documented what the second parameter is for. For this
+ * reason we return only the first parameter, but callers should be aware of
+ * this difference compared to the original API.
+ *
+ * @param {object} options
+ *
+ * @return {Promise} Promise that resolves with an Entry
+ */
+exports.chooseEntry = function(options) {
+  return new Promise(function(resolve) {
+    chrome.fileSystem.chooseEntry(options, function(entry, arr) {
+      if (arr) {
+        console.warn(
+          'chrome.fileSystem.chooseEntry callback invoked with a 2nd ' +
+            'parameter that is being ignored: ',
+            arr);
+      }
+      resolve(entry);
+    });
+  });
+};
+
+/**
+ * @param {string} id id of a previous entry
+ *
+ * @return {Promise} Promise that resolves with an Entry
+ */
+exports.restoreEntry = function(id) {
+  return new Promise(function(resolve) {
+    chrome.fileSystem.restoreEntry(id, function(entry) {
+      resolve(entry);
+    });
+  });
+};
+
+/**
+ * @param {string} id
+ *
+ * @return {Promise} Promise that resolves with a boolean
+ */
+exports.isRestorable = function(id) {
+  return new Promise(function(resolve) {
+    chrome.fileSystem.isRestorable(id, function(isRestorable) {
+      resolve(isRestorable);
+    });
+  });
+};
+
+/**
+ * @param {Entry} entry
+ *
+ * @return {Promise} Promise that resolves with a string id that can be used to
+ * restore the Entry in the future. The underlying Chrome API is a synchronous
+ * call, but this is provided as a Promise to keep API parity with the rest of
+ * the module. A synchronous version is provided via retainEntrySync.
+ */
+exports.retainEntry = function(entry) {
+  var id = chrome.fileSystem.retainEntry(entry);
+  return Promise.resolve(id);
+};
+
+/**
+ * @param {Entry} entry
+ *
+ * @return {string} id that can be used to restore the Entry
+ */
+exports.retainEntrySync = function(entry) {
+  return chrome.fileSystem.retainEntry(entry);
+};
+
+/**
+ * @param {object} options
+ *
+ * @return {Promise} Promise that resolves with a FileSystem
+ */
+exports.requestFileSystem = function(options) {
+  return new Promise(function(resolve) {
+    chrome.fileSystem.requestFileSystem(options, function(fileSystem) {
+      resolve(fileSystem);
+    });
+  });
+};
+
+/**
+ * @return {Promise} Promise that resolves with a FileSystem
+ */
+exports.getVolumeList = function() {
+  return new Promise(function(resolve) {
+    chrome.fileSystem.getVolumeList(function(fileSystem) {
+      resolve(fileSystem);
+    });
+  });
+};
+
+},{}],10:[function(require,module,exports){
+/* globals Promise, chrome */
+'use strict';
+
+/**
+ * This module provides a wrapper around the chrome.storage.local API and
+ * provides an alternative based on Promises.
+ */
+
+/**
+ * @param {boolean} useSync
+ *
+ * @return {StorageArea} chrome.storage.sync or chrome.storage.local depending
+ * on the value of useSync
+ */
+function getStorageArea(useSync) {
+  if (useSync) {
+    return chrome.storage.sync;
+  } else {
+    return chrome.storage.local;
+  }
+}
+
+/**
+ * @param {string|Array<string>} keyOrKeys
+ * @param {boolean} useSync true to use chrome.storage.sync, otherwise will use
+ * chrome.storage.local
+ *
+ * @return {Promise} Promise that resolves with an object of key value mappings
+ */
+exports.get = function(keyOrKeys, useSync) {
+  var storageArea = getStorageArea(useSync);
+  return new Promise(function(resolve) {
+    storageArea.get(keyOrKeys, function(items) {
+      resolve(items);
+    });
+  });
+};
+
+/**
+ * @param {string|Array<string>} keyOrKeys
+ * @param {boolean} useSync true to use chrome.storage.sync, otherwise will use
+ * chrome.storage.local
+ *
+ * @return {Promise} Promise that resolves with an integer of the number of
+ * bytes in use for the given key or keys
+ */
+exports.getBytesInUse = function(keyOrKeys, useSync) {
+  var storageArea = getStorageArea(useSync);
+  return new Promise(function(resolve) {
+    storageArea.getBytesInUse(keyOrKeys, function(numBytes) {
+      resolve(numBytes);
+    });
+  });
+};
+
+/**
+ * @param {object} items an object of key value mappings
+ * @param {boolean} useSync true to use chrome.storage.sync, otherwise will use
+ * chrome.storage.local
+ *
+ * @return {Promise} Promise that resolves when the operation completes
+ */
+exports.set = function(items, useSync) {
+  var storageArea = getStorageArea(useSync);
+  return new Promise(function(resolve) {
+    storageArea.set(items, function() {
+      resolve();
+    });
+  });
+};
+
+/**
+ * @param {string|Array<string>} keyOrKeys
+ * @param {boolean} useSync true to use chrome.storage.sync, otherwise will use
+ * chrome.storage.local
+ *
+ * @return {Promise} Promise that resolves when the operation completes
+ */
+exports.remove = function(keyOrKeys, useSync) {
+  var storageArea = getStorageArea(useSync);
+  return new Promise(function(resolve) {
+    storageArea.remove(keyOrKeys, function() {
+      resolve();
+    });
+  });
+};
+
+/**
+ * @param {boolean} useSync true to use chrome.storage.sync, otherwise will use
+ * chrome.storage.local
+ *
+ * @return {Promise} Promise that resolves when the operation completes
+ */
+exports.clear = function(useSync) {
+  var storageArea = getStorageArea(useSync);
+  return new Promise(function(resolve) {
+    storageArea.clear(function() {
+      resolve();
+    });
+  });
+};
+
+},{}],11:[function(require,module,exports){
+/* globals Promise */
+'use strict';
+
+/**
+ * Abstractions for reading and writing cached pages. Clients of this class
+ * should not be concerned with the underlying file system.
+ */
+
+// Overview of the Datastore
+//
+// For the time being, there is no separate database or datastore. All
+// information is saved in the file name on disk, eg
+// "www.example.com_date". This will serve for a prototype but might become
+// limiting in the future.
+
+var fileSystem = require('./file-system');
+var fsUtil = require('./file-system-util');
+var serverApi = require('../server/server-api');
+
+/** The number of characters output by Date.toISOString() */
+var LENGTH_ISO_DATE_STR = 24;
+
+var URL_DATE_DELIMITER = '_';
+
+exports.MHTML_EXTENSION = '.mhtml';
+
+/**
+ * This object represents a page that is stored in the cache and can be browsed
+ * to.
+ *
+ * @param {string} captureUrl the URL of the original captured page
+ * @param {string} captureDate the ISO String representation of the datetime
+ * @param {string} accessPath the path in the cache that can be used to access
+ * the file the page was captured
+ */
+exports.CachedPage = function CachedPage(
+  captureUrl,
+  captureDate,
+  path
+) {
+  if (!(this instanceof CachedPage)) {
+    throw new Error('CachedPage must be called with new');
+  }
+  this.captureUrl = captureUrl;
+  this.captureDate = captureDate;
+  this.accessPath = path;
+};
+
+/**
+ * Write a page into the cache.
+ *
+ * @param {string} captureUrl the URL that generated the MHTML
+ * @param {string} captureDate the toISOString() of the date the page was
+ * captured
+ * @param {Blob} mhtmlBlob the contents of hte page
+ *
+ * @return {Promise} a Promise that resolves when the write is complete
+ */
+exports.addPageToCache = function(captureUrl, captureDate, mhtmlBlob) {
+  return new Promise(function(resolve, reject) {
+    // Get the directory to write into
+    // Create the file entry
+    // Perform the write
+    fileSystem.getDirectoryForCacheEntries()
+    .then(cacheDir => {
+      var fileName = exports.createFileNameForPage(captureUrl, captureDate);
+      var createOptions = {
+        create: true,     // create if it doesn't exist
+        exclusive: false  // OK if it already exists--will overwrite
+      };
+      return fsUtil.getFile(cacheDir, createOptions, fileName);
+    })
+    .then(fileEntry => {
+      return fsUtil.writeToFile(fileEntry, mhtmlBlob);
+    })
+    .then(() => {
+      resolve();
+    })
+    .catch(err => {
+      reject(err);
+    });
+  });
+};
+
+/**
+ * Get all the cached pages that are stored in the cache.
+ *
+ * @return {Promise} Promise that resolves with an Array of CachedPage objects
+ */
+exports.getAllCachedPages = function() {
+  return new Promise(function(resolve, reject) {
+    exports.getAllFileEntriesForPages()
+    .then(entries => {
+      var result = [];
+      entries.forEach(entry => {
+        var cachedPage = exports.getEntryAsCachedPage(entry);
+        result.push(cachedPage);
+      });
+      resolve(result);
+    })
+    .catch(err => {
+      reject(err);
+    });
+  });
+};
+
+/**
+ * Get all the FileEntries representing saved pages.
+ *
+ * @return {Promise} Promise that resolves with an array of FileEntry objects
+ */
+exports.getAllFileEntriesForPages = function() {
+  var flagDirNotSet = 1;
+  return new Promise(function(resolve, reject) {
+    fileSystem.getDirectoryForCacheEntries()
+    .then(dirEntry => {
+      if (!dirEntry) {
+        // We haven't set an entry.
+        throw flagDirNotSet;
+      }
+      return fsUtil.listEntries(dirEntry);
+    })
+    .then(entries => {
+      resolve(entries);
+    })
+    .catch(errFlag => {
+      if (errFlag === flagDirNotSet) {
+        reject('dir not set');
+      } else {
+        console.warn('unrecognized error flag: ', errFlag);
+      }
+    });
+  });
+};
+
+/**
+ * Convert an entry as represented on the file system to a CachedPage that can
+ * be consumed by clients.
+ *
+ * This is the workhorse function for mapping between the two types.
+ *
+ * @param {FileEntry} entry
+ *
+ * @return {CachedPage}
+ */
+exports.getEntryAsCachedPage = function(entry) {
+  var captureUrl = exports.getCaptureUrlFromName(entry.name);
+  var captureDate = exports.getCaptureDateFromName(entry.name);
+  var accessUrl = serverApi.getAccessUrlForCachedPage(entry.fullPath);
+
+  var result = new exports.CachedPage(captureUrl, captureDate, accessUrl);
+  return result;
+};
+
+/**
+ * Create the file name for the cached page in a way that can later be parsed.
+ *
+ * @param {string} captureUrl
+ * @param {string} captureDate the toISOString() representation of the date the
+ * page was captured
+ *
+ * @return {string}
+ */
+exports.createFileNameForPage = function(captureUrl, captureDate) {
+  return captureUrl +
+    URL_DATE_DELIMITER +
+    captureDate +
+    exports.MHTML_EXTENSION;
+};
+
+/**
+ * @param {string} name the name of the file
+ *
+ * @return {string} the capture url
+ */
+exports.getCaptureUrlFromName = function(name) {
+  var nonNameLength = LENGTH_ISO_DATE_STR +
+    URL_DATE_DELIMITER.length +
+    exports.MHTML_EXTENSION.length;
+  if (name.length < nonNameLength) {
+    // The file name is too short, fail fast.
+    throw new Error('name too short to store a url: ', name);
+  }
+
+  var result = name.substring(
+    0,
+    name.length - nonNameLength
+  );
+  return result;
+};
+
+/**
+ * @param {string} name the name of the file
+ * 
+ * @return {string} the capture date's ISO string representation
+ */
+exports.getCaptureDateFromName = function(name) {
+  // The date is stored at the end of the string.
+  if (name.length < LENGTH_ISO_DATE_STR) {
+    // We've violated an invariant, fail fast.
+    throw new Error('name too short to store a date: ', name);
+  }
+
+  var dateStartIndex = name.length -
+    LENGTH_ISO_DATE_STR -
+    exports.MHTML_EXTENSION.length;
+  var dateEndIndex = name.length - exports.MHTML_EXTENSION.length;
+
+  var result = name.substring(dateStartIndex, dateEndIndex);
+  return result;
+};
+
+},{"../server/server-api":13,"./file-system":"fileSystem","./file-system-util":"fsUtil"}],12:[function(require,module,exports){
+/* globals WSC */
+'use strict';
+
+var _ = require('underscore');
+var api = require('./server-api');
+var fileSystem = require('../persistence/file-system');
+var fsUtil = require('../persistence/file-system-util');
+
+/**
+ * Handlers for the webserver backing SemCache. The idea for handlers is based
+ * on https://github.com/kzahel/web-server-chrome, which is in turn based on
+ * Python's Tornado web library, and is the back end for our web server.
+ */
+
+/**
+ * Handler for the JSON endpoint for listing all pages in the cache.
+ */
+exports.ListCachedPagesHandler = function() {
+  if (!WSC) {
+    console.warn('CachedPagesHandler: WSC global object not present');
+    return;
+  }
+  WSC.BaseHandler.prototype.constructor.call(this);
+};
+
+_.extend(exports.ListCachedPagesHandler.prototype,
+  {
+    get: function() {
+      api.getResponseForAllCachedPages()
+        .then(response => {
+          this.setHeader('content-type', 'text/json');
+          var encoder = new TextEncoder('utf-8');
+          var buffer = encoder.encode(JSON.stringify(response)).buffer;
+          this.write(buffer);
+          this.finish();
+        });
+    }
+  },
+  WSC.BaseHandler.prototype
+);
+
+exports.CachedPageHandler = function() {
+  if (!WSC) {
+    console.warn('CachedPagesHandler: WSC global object not present');
+    return;
+  }
+  WSC.BaseHandler.prototype.constructor.call(this);
+};
+
+_.extend(exports.CachedPageHandler.prototype,
+  {
+    get: function() {
+      var fileName = api.getCachedFileNameFromPath(this.request.path);
+
+      fileSystem.getDirectoryForCacheEntries()
+        .then(cacheDir => {
+          return fsUtil.getFile(
+            cacheDir, 
+            {
+              create: false,
+              exclusive: false
+            },
+            fileName
+          );
+        })
+        .then(fileEntry => {
+          fileEntry.file(file => {
+            var that = this;
+            var fileReader = new FileReader();
+
+            fileReader.onload = function(evt) {
+              // set mime types etc?
+              that.write(evt.target.result);
+            };
+
+            fileReader.onerror = function(evt) {
+              console.error('error reading', evt.target.error);
+              that.request.connection.close();
+            };
+
+            fileReader.readAsArrayBuffer(file);
+          });
+        })
+        .catch(err => {
+          console.log('Error reading file: ', err);
+        });
+    }
+  },
+  WSC.BaseHandler.prototype
+);
+
+},{"../persistence/file-system":"fileSystem","../persistence/file-system-util":"fsUtil","./server-api":13,"underscore":15}],13:[function(require,module,exports){
+'use strict';
+
+/**
+ * Controls the API for the server backing SemCache.
+ */
+
+var datastore = require('../persistence/datastore');
+var appController = require('../app-controller');
+
+var HTTP_SCHEME = 'http://';
+
+var VERSION = 0.0;
+
+/** 
+ * The path from the root of the server that serves cached pages.
+ */
+var PATH_LIST_PAGE_CACHE = 'list_pages';
+var PATH_GET_CACHED_PAGE = 'pages';
+
+/**
+ * Create the metadata object that is returned in server responses.
+ */
+exports.createMetadatObj = function() {
+  var result = {};
+  result.version = VERSION;
+  return result;
+};
+
+/**
+ * Returns an object mapping API end points to their paths. The paths do not
+ * include leading or trailing slashes, but they can contain internal slashes
+ * (e.g. 'foo' or 'foo/bar' but never '/foo/bar'). The paths do not contain
+ * scheme, host, or port.
+ *
+ * @return {object} an object mapping API end points to string paths, like the
+ * following:
+ * {
+ *   pageCache: '',
+ *   listPageCache: ''
+ * }
+ */
+exports.getApiEndpoints = function() {
+  return {
+    pageCache: PATH_GET_CACHED_PAGE,
+    listPageCache: PATH_LIST_PAGE_CACHE
+  };
+};
+
+/**
+ * Create the full access path that can be used to access the cached page.
+ *
+ * @param {string} fullPath the full path of the file that is to be accessed
+ *
+ * @return {string} a fully qualified and valid URL
+ */
+exports.getAccessUrlForCachedPage = function(fullPath) {
+  var scheme = HTTP_SCHEME;
+  // TODO: this might have to strip the path of directory where things are
+  // stored--it basically maps between the two urls.
+  var httpIface = appController.getListeningHttpInterface();
+  var addressAndPort = httpIface.address + ':' + httpIface.port;
+  var apiPath = exports.getApiEndpoints().pageCache;
+  var result = scheme + [addressAndPort, apiPath, fullPath].join('/');
+  return result;
+};
+
+/**
+ * Return a JSON object response for the all cached pages endpoing.
+ *
+ * @return {Promise} Promise that resolves with an object like the following:
+ * {
+ *   metadata: {},
+ *   cachedPages: [CachedPage, CachedPage]
+ * }
+ */
+exports.getResponseForAllCachedPages = function() {
+  return new Promise(function(resolve, reject) {
+    datastore.getAllCachedPages()
+      .then(pages => {
+        var result = {};
+        result.metadata = exports.createMetadatObj();
+        result.cachedPages = pages;
+        resolve(result);
+      })
+      .catch(err => {
+        reject(err);
+      });
+  });
+};
+
+/**
+ * Get the file name of the file that is being requested.
+ *
+ * @param {string} path the path of the request
+ */
+exports.getCachedFileNameFromPath = function(path) {
+  var parts = path.split('/');
+  // The file name is the last part of the path.
+  var result = parts[parts.length - 1];
+  return result;
+};
+
+},{"../app-controller":"appController","../persistence/datastore":11}],14:[function(require,module,exports){
+(function (global){
+/*! http://mths.be/base64 v0.1.0 by @mathias | MIT license */
+;(function(root) {
+
+	// Detect free variables `exports`.
+	var freeExports = typeof exports == 'object' && exports;
+
+	// Detect free variable `module`.
+	var freeModule = typeof module == 'object' && module &&
+		module.exports == freeExports && module;
+
+	// Detect free variable `global`, from Node.js or Browserified code, and use
+	// it as `root`.
+	var freeGlobal = typeof global == 'object' && global;
+	if (freeGlobal.global === freeGlobal || freeGlobal.window === freeGlobal) {
+		root = freeGlobal;
+	}
+
+	/*--------------------------------------------------------------------------*/
+
+	var InvalidCharacterError = function(message) {
+		this.message = message;
+	};
+	InvalidCharacterError.prototype = new Error;
+	InvalidCharacterError.prototype.name = 'InvalidCharacterError';
+
+	var error = function(message) {
+		// Note: the error messages used throughout this file match those used by
+		// the native `atob`/`btoa` implementation in Chromium.
+		throw new InvalidCharacterError(message);
+	};
+
+	var TABLE = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+	// http://whatwg.org/html/common-microsyntaxes.html#space-character
+	var REGEX_SPACE_CHARACTERS = /[\t\n\f\r ]/g;
+
+	// `decode` is designed to be fully compatible with `atob` as described in the
+	// HTML Standard. http://whatwg.org/html/webappapis.html#dom-windowbase64-atob
+	// The optimized base64-decoding algorithm used is based on @atk’s excellent
+	// implementation. https://gist.github.com/atk/1020396
+	var decode = function(input) {
+		input = String(input)
+			.replace(REGEX_SPACE_CHARACTERS, '');
+		var length = input.length;
+		if (length % 4 == 0) {
+			input = input.replace(/==?$/, '');
+			length = input.length;
+		}
+		if (
+			length % 4 == 1 ||
+			// http://whatwg.org/C#alphanumeric-ascii-characters
+			/[^+a-zA-Z0-9/]/.test(input)
+		) {
+			error(
+				'Invalid character: the string to be decoded is not correctly encoded.'
+			);
+		}
+		var bitCounter = 0;
+		var bitStorage;
+		var buffer;
+		var output = '';
+		var position = -1;
+		while (++position < length) {
+			buffer = TABLE.indexOf(input.charAt(position));
+			bitStorage = bitCounter % 4 ? bitStorage * 64 + buffer : buffer;
+			// Unless this is the first of a group of 4 characters…
+			if (bitCounter++ % 4) {
+				// …convert the first 8 bits to a single ASCII character.
+				output += String.fromCharCode(
+					0xFF & bitStorage >> (-2 * bitCounter & 6)
+				);
+			}
+		}
+		return output;
+	};
+
+	// `encode` is designed to be fully compatible with `btoa` as described in the
+	// HTML Standard: http://whatwg.org/html/webappapis.html#dom-windowbase64-btoa
+	var encode = function(input) {
+		input = String(input);
+		if (/[^\0-\xFF]/.test(input)) {
+			// Note: no need to special-case astral symbols here, as surrogates are
+			// matched, and the input is supposed to only contain ASCII anyway.
+			error(
+				'The string to be encoded contains characters outside of the ' +
+				'Latin1 range.'
+			);
+		}
+		var padding = input.length % 3;
+		var output = '';
+		var position = -1;
+		var a;
+		var b;
+		var c;
+		var d;
+		var buffer;
+		// Make sure any padding is handled outside of the loop.
+		var length = input.length - padding;
+
+		while (++position < length) {
+			// Read three bytes, i.e. 24 bits.
+			a = input.charCodeAt(position) << 16;
+			b = input.charCodeAt(++position) << 8;
+			c = input.charCodeAt(++position);
+			buffer = a + b + c;
+			// Turn the 24 bits into four chunks of 6 bits each, and append the
+			// matching character for each of them to the output.
+			output += (
+				TABLE.charAt(buffer >> 18 & 0x3F) +
+				TABLE.charAt(buffer >> 12 & 0x3F) +
+				TABLE.charAt(buffer >> 6 & 0x3F) +
+				TABLE.charAt(buffer & 0x3F)
+			);
+		}
+
+		if (padding == 2) {
+			a = input.charCodeAt(position) << 8;
+			b = input.charCodeAt(++position);
+			buffer = a + b;
+			output += (
+				TABLE.charAt(buffer >> 10) +
+				TABLE.charAt((buffer >> 4) & 0x3F) +
+				TABLE.charAt((buffer << 2) & 0x3F) +
+				'='
+			);
+		} else if (padding == 1) {
+			buffer = input.charCodeAt(position);
+			output += (
+				TABLE.charAt(buffer >> 2) +
+				TABLE.charAt((buffer << 4) & 0x3F) +
+				'=='
+			);
+		}
+
+		return output;
+	};
+
+	var base64 = {
+		'encode': encode,
+		'decode': decode,
+		'version': '0.1.0'
+	};
+
+	// Some AMD build optimizers, like r.js, check for specific condition patterns
+	// like the following:
+	if (
+		typeof define == 'function' &&
+		typeof define.amd == 'object' &&
+		define.amd
+	) {
+		define(function() {
+			return base64;
+		});
+	}	else if (freeExports && !freeExports.nodeType) {
+		if (freeModule) { // in Node.js or RingoJS v0.8.0+
+			freeModule.exports = base64;
+		} else { // in Narwhal or RingoJS v0.7.0-
+			for (var key in base64) {
+				base64.hasOwnProperty(key) && (freeExports[key] = base64[key]);
+			}
+		}
+	} else { // in Rhino or a web browser
+		root.base64 = base64;
+	}
+
+}(this));
+
+}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
+},{}],15:[function(require,module,exports){
+//     Underscore.js 1.8.3
+//     http://underscorejs.org
+//     (c) 2009-2015 Jeremy Ashkenas, DocumentCloud and Investigative Reporters & Editors
+//     Underscore may be freely distributed under the MIT license.
+
+(function() {
+
+  // Baseline setup
+  // --------------
+
+  // Establish the root object, `window` in the browser, or `exports` on the server.
+  var root = this;
+
+  // Save the previous value of the `_` variable.
+  var previousUnderscore = root._;
+
+  // Save bytes in the minified (but not gzipped) version:
+  var ArrayProto = Array.prototype, ObjProto = Object.prototype, FuncProto = Function.prototype;
+
+  // Create quick reference variables for speed access to core prototypes.
+  var
+    push             = ArrayProto.push,
+    slice            = ArrayProto.slice,
+    toString         = ObjProto.toString,
+    hasOwnProperty   = ObjProto.hasOwnProperty;
+
+  // All **ECMAScript 5** native function implementations that we hope to use
+  // are declared here.
+  var
+    nativeIsArray      = Array.isArray,
+    nativeKeys         = Object.keys,
+    nativeBind         = FuncProto.bind,
+    nativeCreate       = Object.create;
+
+  // Naked function reference for surrogate-prototype-swapping.
+  var Ctor = function(){};
+
+  // Create a safe reference to the Underscore object for use below.
+  var _ = function(obj) {
+    if (obj instanceof _) return obj;
+    if (!(this instanceof _)) return new _(obj);
+    this._wrapped = obj;
+  };
+
+  // Export the Underscore object for **Node.js**, with
+  // backwards-compatibility for the old `require()` API. If we're in
+  // the browser, add `_` as a global object.
+  if (typeof exports !== 'undefined') {
+    if (typeof module !== 'undefined' && module.exports) {
+      exports = module.exports = _;
+    }
+    exports._ = _;
+  } else {
+    root._ = _;
+  }
+
+  // Current version.
+  _.VERSION = '1.8.3';
+
+  // Internal function that returns an efficient (for current engines) version
+  // of the passed-in callback, to be repeatedly applied in other Underscore
+  // functions.
+  var optimizeCb = function(func, context, argCount) {
+    if (context === void 0) return func;
+    switch (argCount == null ? 3 : argCount) {
+      case 1: return function(value) {
+        return func.call(context, value);
+      };
+      case 2: return function(value, other) {
+        return func.call(context, value, other);
+      };
+      case 3: return function(value, index, collection) {
+        return func.call(context, value, index, collection);
+      };
+      case 4: return function(accumulator, value, index, collection) {
+        return func.call(context, accumulator, value, index, collection);
+      };
+    }
+    return function() {
+      return func.apply(context, arguments);
+    };
+  };
+
+  // A mostly-internal function to generate callbacks that can be applied
+  // to each element in a collection, returning the desired result — either
+  // identity, an arbitrary callback, a property matcher, or a property accessor.
+  var cb = function(value, context, argCount) {
+    if (value == null) return _.identity;
+    if (_.isFunction(value)) return optimizeCb(value, context, argCount);
+    if (_.isObject(value)) return _.matcher(value);
+    return _.property(value);
+  };
+  _.iteratee = function(value, context) {
+    return cb(value, context, Infinity);
+  };
+
+  // An internal function for creating assigner functions.
+  var createAssigner = function(keysFunc, undefinedOnly) {
+    return function(obj) {
+      var length = arguments.length;
+      if (length < 2 || obj == null) return obj;
+      for (var index = 1; index < length; index++) {
+        var source = arguments[index],
+            keys = keysFunc(source),
+            l = keys.length;
+        for (var i = 0; i < l; i++) {
+          var key = keys[i];
+          if (!undefinedOnly || obj[key] === void 0) obj[key] = source[key];
+        }
+      }
+      return obj;
+    };
+  };
+
+  // An internal function for creating a new object that inherits from another.
+  var baseCreate = function(prototype) {
+    if (!_.isObject(prototype)) return {};
+    if (nativeCreate) return nativeCreate(prototype);
+    Ctor.prototype = prototype;
+    var result = new Ctor;
+    Ctor.prototype = null;
+    return result;
+  };
+
+  var property = function(key) {
+    return function(obj) {
+      return obj == null ? void 0 : obj[key];
+    };
+  };
+
+  // Helper for collection methods to determine whether a collection
+  // should be iterated as an array or as an object
+  // Related: http://people.mozilla.org/~jorendorff/es6-draft.html#sec-tolength
+  // Avoids a very nasty iOS 8 JIT bug on ARM-64. #2094
+  var MAX_ARRAY_INDEX = Math.pow(2, 53) - 1;
+  var getLength = property('length');
+  var isArrayLike = function(collection) {
+    var length = getLength(collection);
+    return typeof length == 'number' && length >= 0 && length <= MAX_ARRAY_INDEX;
+  };
+
+  // Collection Functions
+  // --------------------
+
+  // The cornerstone, an `each` implementation, aka `forEach`.
+  // Handles raw objects in addition to array-likes. Treats all
+  // sparse array-likes as if they were dense.
+  _.each = _.forEach = function(obj, iteratee, context) {
+    iteratee = optimizeCb(iteratee, context);
+    var i, length;
+    if (isArrayLike(obj)) {
+      for (i = 0, length = obj.length; i < length; i++) {
+        iteratee(obj[i], i, obj);
+      }
+    } else {
+      var keys = _.keys(obj);
+      for (i = 0, length = keys.length; i < length; i++) {
+        iteratee(obj[keys[i]], keys[i], obj);
+      }
+    }
+    return obj;
+  };
+
+  // Return the results of applying the iteratee to each element.
+  _.map = _.collect = function(obj, iteratee, context) {
+    iteratee = cb(iteratee, context);
+    var keys = !isArrayLike(obj) && _.keys(obj),
+        length = (keys || obj).length,
+        results = Array(length);
+    for (var index = 0; index < length; index++) {
+      var currentKey = keys ? keys[index] : index;
+      results[index] = iteratee(obj[currentKey], currentKey, obj);
+    }
+    return results;
+  };
+
+  // Create a reducing function iterating left or right.
+  function createReduce(dir) {
+    // Optimized iterator function as using arguments.length
+    // in the main function will deoptimize the, see #1991.
+    function iterator(obj, iteratee, memo, keys, index, length) {
+      for (; index >= 0 && index < length; index += dir) {
+        var currentKey = keys ? keys[index] : index;
+        memo = iteratee(memo, obj[currentKey], currentKey, obj);
+      }
+      return memo;
+    }
+
+    return function(obj, iteratee, memo, context) {
+      iteratee = optimizeCb(iteratee, context, 4);
+      var keys = !isArrayLike(obj) && _.keys(obj),
+          length = (keys || obj).length,
+          index = dir > 0 ? 0 : length - 1;
+      // Determine the initial value if none is provided.
+      if (arguments.length < 3) {
+        memo = obj[keys ? keys[index] : index];
+        index += dir;
+      }
+      return iterator(obj, iteratee, memo, keys, index, length);
+    };
+  }
+
+  // **Reduce** builds up a single result from a list of values, aka `inject`,
+  // or `foldl`.
+  _.reduce = _.foldl = _.inject = createReduce(1);
+
+  // The right-associative version of reduce, also known as `foldr`.
+  _.reduceRight = _.foldr = createReduce(-1);
+
+  // Return the first value which passes a truth test. Aliased as `detect`.
+  _.find = _.detect = function(obj, predicate, context) {
+    var key;
+    if (isArrayLike(obj)) {
+      key = _.findIndex(obj, predicate, context);
+    } else {
+      key = _.findKey(obj, predicate, context);
+    }
+    if (key !== void 0 && key !== -1) return obj[key];
+  };
+
+  // Return all the elements that pass a truth test.
+  // Aliased as `select`.
+  _.filter = _.select = function(obj, predicate, context) {
+    var results = [];
+    predicate = cb(predicate, context);
+    _.each(obj, function(value, index, list) {
+      if (predicate(value, index, list)) results.push(value);
+    });
+    return results;
+  };
+
+  // Return all the elements for which a truth test fails.
+  _.reject = function(obj, predicate, context) {
+    return _.filter(obj, _.negate(cb(predicate)), context);
+  };
+
+  // Determine whether all of the elements match a truth test.
+  // Aliased as `all`.
+  _.every = _.all = function(obj, predicate, context) {
+    predicate = cb(predicate, context);
+    var keys = !isArrayLike(obj) && _.keys(obj),
+        length = (keys || obj).length;
+    for (var index = 0; index < length; index++) {
+      var currentKey = keys ? keys[index] : index;
+      if (!predicate(obj[currentKey], currentKey, obj)) return false;
+    }
+    return true;
+  };
+
+  // Determine if at least one element in the object matches a truth test.
+  // Aliased as `any`.
+  _.some = _.any = function(obj, predicate, context) {
+    predicate = cb(predicate, context);
+    var keys = !isArrayLike(obj) && _.keys(obj),
+        length = (keys || obj).length;
+    for (var index = 0; index < length; index++) {
+      var currentKey = keys ? keys[index] : index;
+      if (predicate(obj[currentKey], currentKey, obj)) return true;
+    }
+    return false;
+  };
+
+  // Determine if the array or object contains a given item (using `===`).
+  // Aliased as `includes` and `include`.
+  _.contains = _.includes = _.include = function(obj, item, fromIndex, guard) {
+    if (!isArrayLike(obj)) obj = _.values(obj);
+    if (typeof fromIndex != 'number' || guard) fromIndex = 0;
+    return _.indexOf(obj, item, fromIndex) >= 0;
+  };
+
+  // Invoke a method (with arguments) on every item in a collection.
+  _.invoke = function(obj, method) {
+    var args = slice.call(arguments, 2);
+    var isFunc = _.isFunction(method);
+    return _.map(obj, function(value) {
+      var func = isFunc ? method : value[method];
+      return func == null ? func : func.apply(value, args);
+    });
+  };
+
+  // Convenience version of a common use case of `map`: fetching a property.
+  _.pluck = function(obj, key) {
+    return _.map(obj, _.property(key));
+  };
+
+  // Convenience version of a common use case of `filter`: selecting only objects
+  // containing specific `key:value` pairs.
+  _.where = function(obj, attrs) {
+    return _.filter(obj, _.matcher(attrs));
+  };
+
+  // Convenience version of a common use case of `find`: getting the first object
+  // containing specific `key:value` pairs.
+  _.findWhere = function(obj, attrs) {
+    return _.find(obj, _.matcher(attrs));
+  };
+
+  // Return the maximum element (or element-based computation).
+  _.max = function(obj, iteratee, context) {
+    var result = -Infinity, lastComputed = -Infinity,
+        value, computed;
+    if (iteratee == null && obj != null) {
+      obj = isArrayLike(obj) ? obj : _.values(obj);
+      for (var i = 0, length = obj.length; i < length; i++) {
+        value = obj[i];
+        if (value > result) {
+          result = value;
+        }
+      }
+    } else {
+      iteratee = cb(iteratee, context);
+      _.each(obj, function(value, index, list) {
+        computed = iteratee(value, index, list);
+        if (computed > lastComputed || computed === -Infinity && result === -Infinity) {
+          result = value;
+          lastComputed = computed;
+        }
+      });
+    }
+    return result;
+  };
+
+  // Return the minimum element (or element-based computation).
+  _.min = function(obj, iteratee, context) {
+    var result = Infinity, lastComputed = Infinity,
+        value, computed;
+    if (iteratee == null && obj != null) {
+      obj = isArrayLike(obj) ? obj : _.values(obj);
+      for (var i = 0, length = obj.length; i < length; i++) {
+        value = obj[i];
+        if (value < result) {
+          result = value;
+        }
+      }
+    } else {
+      iteratee = cb(iteratee, context);
+      _.each(obj, function(value, index, list) {
+        computed = iteratee(value, index, list);
+        if (computed < lastComputed || computed === Infinity && result === Infinity) {
+          result = value;
+          lastComputed = computed;
+        }
+      });
+    }
+    return result;
+  };
+
+  // Shuffle a collection, using the modern version of the
+  // [Fisher-Yates shuffle](http://en.wikipedia.org/wiki/Fisher–Yates_shuffle).
+  _.shuffle = function(obj) {
+    var set = isArrayLike(obj) ? obj : _.values(obj);
+    var length = set.length;
+    var shuffled = Array(length);
+    for (var index = 0, rand; index < length; index++) {
+      rand = _.random(0, index);
+      if (rand !== index) shuffled[index] = shuffled[rand];
+      shuffled[rand] = set[index];
+    }
+    return shuffled;
+  };
+
+  // Sample **n** random values from a collection.
+  // If **n** is not specified, returns a single random element.
+  // The internal `guard` argument allows it to work with `map`.
+  _.sample = function(obj, n, guard) {
+    if (n == null || guard) {
+      if (!isArrayLike(obj)) obj = _.values(obj);
+      return obj[_.random(obj.length - 1)];
+    }
+    return _.shuffle(obj).slice(0, Math.max(0, n));
+  };
+
+  // Sort the object's values by a criterion produced by an iteratee.
+  _.sortBy = function(obj, iteratee, context) {
+    iteratee = cb(iteratee, context);
+    return _.pluck(_.map(obj, function(value, index, list) {
+      return {
+        value: value,
+        index: index,
+        criteria: iteratee(value, index, list)
+      };
+    }).sort(function(left, right) {
+      var a = left.criteria;
+      var b = right.criteria;
+      if (a !== b) {
+        if (a > b || a === void 0) return 1;
+        if (a < b || b === void 0) return -1;
+      }
+      return left.index - right.index;
+    }), 'value');
+  };
+
+  // An internal function used for aggregate "group by" operations.
+  var group = function(behavior) {
+    return function(obj, iteratee, context) {
+      var result = {};
+      iteratee = cb(iteratee, context);
+      _.each(obj, function(value, index) {
+        var key = iteratee(value, index, obj);
+        behavior(result, value, key);
+      });
+      return result;
+    };
+  };
+
+  // Groups the object's values by a criterion. Pass either a string attribute
+  // to group by, or a function that returns the criterion.
+  _.groupBy = group(function(result, value, key) {
+    if (_.has(result, key)) result[key].push(value); else result[key] = [value];
+  });
+
+  // Indexes the object's values by a criterion, similar to `groupBy`, but for
+  // when you know that your index values will be unique.
+  _.indexBy = group(function(result, value, key) {
+    result[key] = value;
+  });
+
+  // Counts instances of an object that group by a certain criterion. Pass
+  // either a string attribute to count by, or a function that returns the
+  // criterion.
+  _.countBy = group(function(result, value, key) {
+    if (_.has(result, key)) result[key]++; else result[key] = 1;
+  });
+
+  // Safely create a real, live array from anything iterable.
+  _.toArray = function(obj) {
+    if (!obj) return [];
+    if (_.isArray(obj)) return slice.call(obj);
+    if (isArrayLike(obj)) return _.map(obj, _.identity);
+    return _.values(obj);
+  };
+
+  // Return the number of elements in an object.
+  _.size = function(obj) {
+    if (obj == null) return 0;
+    return isArrayLike(obj) ? obj.length : _.keys(obj).length;
+  };
+
+  // Split a collection into two arrays: one whose elements all satisfy the given
+  // predicate, and one whose elements all do not satisfy the predicate.
+  _.partition = function(obj, predicate, context) {
+    predicate = cb(predicate, context);
+    var pass = [], fail = [];
+    _.each(obj, function(value, key, obj) {
+      (predicate(value, key, obj) ? pass : fail).push(value);
+    });
+    return [pass, fail];
+  };
+
+  // Array Functions
+  // ---------------
+
+  // Get the first element of an array. Passing **n** will return the first N
+  // values in the array. Aliased as `head` and `take`. The **guard** check
+  // allows it to work with `_.map`.
+  _.first = _.head = _.take = function(array, n, guard) {
+    if (array == null) return void 0;
+    if (n == null || guard) return array[0];
+    return _.initial(array, array.length - n);
+  };
+
+  // Returns everything but the last entry of the array. Especially useful on
+  // the arguments object. Passing **n** will return all the values in
+  // the array, excluding the last N.
+  _.initial = function(array, n, guard) {
+    return slice.call(array, 0, Math.max(0, array.length - (n == null || guard ? 1 : n)));
+  };
+
+  // Get the last element of an array. Passing **n** will return the last N
+  // values in the array.
+  _.last = function(array, n, guard) {
+    if (array == null) return void 0;
+    if (n == null || guard) return array[array.length - 1];
+    return _.rest(array, Math.max(0, array.length - n));
+  };
+
+  // Returns everything but the first entry of the array. Aliased as `tail` and `drop`.
+  // Especially useful on the arguments object. Passing an **n** will return
+  // the rest N values in the array.
+  _.rest = _.tail = _.drop = function(array, n, guard) {
+    return slice.call(array, n == null || guard ? 1 : n);
+  };
+
+  // Trim out all falsy values from an array.
+  _.compact = function(array) {
+    return _.filter(array, _.identity);
+  };
+
+  // Internal implementation of a recursive `flatten` function.
+  var flatten = function(input, shallow, strict, startIndex) {
+    var output = [], idx = 0;
+    for (var i = startIndex || 0, length = getLength(input); i < length; i++) {
+      var value = input[i];
+      if (isArrayLike(value) && (_.isArray(value) || _.isArguments(value))) {
+        //flatten current level of array or arguments object
+        if (!shallow) value = flatten(value, shallow, strict);
+        var j = 0, len = value.length;
+        output.length += len;
+        while (j < len) {
+          output[idx++] = value[j++];
+        }
+      } else if (!strict) {
+        output[idx++] = value;
+      }
+    }
+    return output;
+  };
+
+  // Flatten out an array, either recursively (by default), or just one level.
+  _.flatten = function(array, shallow) {
+    return flatten(array, shallow, false);
+  };
+
+  // Return a version of the array that does not contain the specified value(s).
+  _.without = function(array) {
+    return _.difference(array, slice.call(arguments, 1));
+  };
+
+  // Produce a duplicate-free version of the array. If the array has already
+  // been sorted, you have the option of using a faster algorithm.
+  // Aliased as `unique`.
+  _.uniq = _.unique = function(array, isSorted, iteratee, context) {
+    if (!_.isBoolean(isSorted)) {
+      context = iteratee;
+      iteratee = isSorted;
+      isSorted = false;
+    }
+    if (iteratee != null) iteratee = cb(iteratee, context);
+    var result = [];
+    var seen = [];
+    for (var i = 0, length = getLength(array); i < length; i++) {
+      var value = array[i],
+          computed = iteratee ? iteratee(value, i, array) : value;
+      if (isSorted) {
+        if (!i || seen !== computed) result.push(value);
+        seen = computed;
+      } else if (iteratee) {
+        if (!_.contains(seen, computed)) {
+          seen.push(computed);
+          result.push(value);
+        }
+      } else if (!_.contains(result, value)) {
+        result.push(value);
+      }
+    }
+    return result;
+  };
+
+  // Produce an array that contains the union: each distinct element from all of
+  // the passed-in arrays.
+  _.union = function() {
+    return _.uniq(flatten(arguments, true, true));
+  };
+
+  // Produce an array that contains every item shared between all the
+  // passed-in arrays.
+  _.intersection = function(array) {
+    var result = [];
+    var argsLength = arguments.length;
+    for (var i = 0, length = getLength(array); i < length; i++) {
+      var item = array[i];
+      if (_.contains(result, item)) continue;
+      for (var j = 1; j < argsLength; j++) {
+        if (!_.contains(arguments[j], item)) break;
+      }
+      if (j === argsLength) result.push(item);
+    }
+    return result;
+  };
+
+  // Take the difference between one array and a number of other arrays.
+  // Only the elements present in just the first array will remain.
+  _.difference = function(array) {
+    var rest = flatten(arguments, true, true, 1);
+    return _.filter(array, function(value){
+      return !_.contains(rest, value);
+    });
+  };
+
+  // Zip together multiple lists into a single array -- elements that share
+  // an index go together.
+  _.zip = function() {
+    return _.unzip(arguments);
+  };
+
+  // Complement of _.zip. Unzip accepts an array of arrays and groups
+  // each array's elements on shared indices
+  _.unzip = function(array) {
+    var length = array && _.max(array, getLength).length || 0;
+    var result = Array(length);
+
+    for (var index = 0; index < length; index++) {
+      result[index] = _.pluck(array, index);
+    }
+    return result;
+  };
+
+  // Converts lists into objects. Pass either a single array of `[key, value]`
+  // pairs, or two parallel arrays of the same length -- one of keys, and one of
+  // the corresponding values.
+  _.object = function(list, values) {
+    var result = {};
+    for (var i = 0, length = getLength(list); i < length; i++) {
+      if (values) {
+        result[list[i]] = values[i];
+      } else {
+        result[list[i][0]] = list[i][1];
+      }
+    }
+    return result;
+  };
+
+  // Generator function to create the findIndex and findLastIndex functions
+  function createPredicateIndexFinder(dir) {
+    return function(array, predicate, context) {
+      predicate = cb(predicate, context);
+      var length = getLength(array);
+      var index = dir > 0 ? 0 : length - 1;
+      for (; index >= 0 && index < length; index += dir) {
+        if (predicate(array[index], index, array)) return index;
+      }
+      return -1;
+    };
+  }
+
+  // Returns the first index on an array-like that passes a predicate test
+  _.findIndex = createPredicateIndexFinder(1);
+  _.findLastIndex = createPredicateIndexFinder(-1);
+
+  // Use a comparator function to figure out the smallest index at which
+  // an object should be inserted so as to maintain order. Uses binary search.
+  _.sortedIndex = function(array, obj, iteratee, context) {
+    iteratee = cb(iteratee, context, 1);
+    var value = iteratee(obj);
+    var low = 0, high = getLength(array);
+    while (low < high) {
+      var mid = Math.floor((low + high) / 2);
+      if (iteratee(array[mid]) < value) low = mid + 1; else high = mid;
+    }
+    return low;
+  };
+
+  // Generator function to create the indexOf and lastIndexOf functions
+  function createIndexFinder(dir, predicateFind, sortedIndex) {
+    return function(array, item, idx) {
+      var i = 0, length = getLength(array);
+      if (typeof idx == 'number') {
+        if (dir > 0) {
+            i = idx >= 0 ? idx : Math.max(idx + length, i);
+        } else {
+            length = idx >= 0 ? Math.min(idx + 1, length) : idx + length + 1;
+        }
+      } else if (sortedIndex && idx && length) {
+        idx = sortedIndex(array, item);
+        return array[idx] === item ? idx : -1;
+      }
+      if (item !== item) {
+        idx = predicateFind(slice.call(array, i, length), _.isNaN);
+        return idx >= 0 ? idx + i : -1;
+      }
+      for (idx = dir > 0 ? i : length - 1; idx >= 0 && idx < length; idx += dir) {
+        if (array[idx] === item) return idx;
+      }
+      return -1;
+    };
+  }
+
+  // Return the position of the first occurrence of an item in an array,
+  // or -1 if the item is not included in the array.
+  // If the array is large and already in sort order, pass `true`
+  // for **isSorted** to use binary search.
+  _.indexOf = createIndexFinder(1, _.findIndex, _.sortedIndex);
+  _.lastIndexOf = createIndexFinder(-1, _.findLastIndex);
+
+  // Generate an integer Array containing an arithmetic progression. A port of
+  // the native Python `range()` function. See
+  // [the Python documentation](http://docs.python.org/library/functions.html#range).
+  _.range = function(start, stop, step) {
+    if (stop == null) {
+      stop = start || 0;
+      start = 0;
+    }
+    step = step || 1;
+
+    var length = Math.max(Math.ceil((stop - start) / step), 0);
+    var range = Array(length);
+
+    for (var idx = 0; idx < length; idx++, start += step) {
+      range[idx] = start;
+    }
+
+    return range;
+  };
+
+  // Function (ahem) Functions
+  // ------------------
+
+  // Determines whether to execute a function as a constructor
+  // or a normal function with the provided arguments
+  var executeBound = function(sourceFunc, boundFunc, context, callingContext, args) {
+    if (!(callingContext instanceof boundFunc)) return sourceFunc.apply(context, args);
+    var self = baseCreate(sourceFunc.prototype);
+    var result = sourceFunc.apply(self, args);
+    if (_.isObject(result)) return result;
+    return self;
+  };
+
+  // Create a function bound to a given object (assigning `this`, and arguments,
+  // optionally). Delegates to **ECMAScript 5**'s native `Function.bind` if
+  // available.
+  _.bind = function(func, context) {
+    if (nativeBind && func.bind === nativeBind) return nativeBind.apply(func, slice.call(arguments, 1));
+    if (!_.isFunction(func)) throw new TypeError('Bind must be called on a function');
+    var args = slice.call(arguments, 2);
+    var bound = function() {
+      return executeBound(func, bound, context, this, args.concat(slice.call(arguments)));
+    };
+    return bound;
+  };
+
+  // Partially apply a function by creating a version that has had some of its
+  // arguments pre-filled, without changing its dynamic `this` context. _ acts
+  // as a placeholder, allowing any combination of arguments to be pre-filled.
+  _.partial = function(func) {
+    var boundArgs = slice.call(arguments, 1);
+    var bound = function() {
+      var position = 0, length = boundArgs.length;
+      var args = Array(length);
+      for (var i = 0; i < length; i++) {
+        args[i] = boundArgs[i] === _ ? arguments[position++] : boundArgs[i];
+      }
+      while (position < arguments.length) args.push(arguments[position++]);
+      return executeBound(func, bound, this, this, args);
+    };
+    return bound;
+  };
+
+  // Bind a number of an object's methods to that object. Remaining arguments
+  // are the method names to be bound. Useful for ensuring that all callbacks
+  // defined on an object belong to it.
+  _.bindAll = function(obj) {
+    var i, length = arguments.length, key;
+    if (length <= 1) throw new Error('bindAll must be passed function names');
+    for (i = 1; i < length; i++) {
+      key = arguments[i];
+      obj[key] = _.bind(obj[key], obj);
+    }
+    return obj;
+  };
+
+  // Memoize an expensive function by storing its results.
+  _.memoize = function(func, hasher) {
+    var memoize = function(key) {
+      var cache = memoize.cache;
+      var address = '' + (hasher ? hasher.apply(this, arguments) : key);
+      if (!_.has(cache, address)) cache[address] = func.apply(this, arguments);
+      return cache[address];
+    };
+    memoize.cache = {};
+    return memoize;
+  };
+
+  // Delays a function for the given number of milliseconds, and then calls
+  // it with the arguments supplied.
+  _.delay = function(func, wait) {
+    var args = slice.call(arguments, 2);
+    return setTimeout(function(){
+      return func.apply(null, args);
+    }, wait);
+  };
+
+  // Defers a function, scheduling it to run after the current call stack has
+  // cleared.
+  _.defer = _.partial(_.delay, _, 1);
+
+  // Returns a function, that, when invoked, will only be triggered at most once
+  // during a given window of time. Normally, the throttled function will run
+  // as much as it can, without ever going more than once per `wait` duration;
+  // but if you'd like to disable the execution on the leading edge, pass
+  // `{leading: false}`. To disable execution on the trailing edge, ditto.
+  _.throttle = function(func, wait, options) {
+    var context, args, result;
+    var timeout = null;
+    var previous = 0;
+    if (!options) options = {};
+    var later = function() {
+      previous = options.leading === false ? 0 : _.now();
+      timeout = null;
+      result = func.apply(context, args);
+      if (!timeout) context = args = null;
+    };
+    return function() {
+      var now = _.now();
+      if (!previous && options.leading === false) previous = now;
+      var remaining = wait - (now - previous);
+      context = this;
+      args = arguments;
+      if (remaining <= 0 || remaining > wait) {
+        if (timeout) {
+          clearTimeout(timeout);
+          timeout = null;
+        }
+        previous = now;
+        result = func.apply(context, args);
+        if (!timeout) context = args = null;
+      } else if (!timeout && options.trailing !== false) {
+        timeout = setTimeout(later, remaining);
+      }
+      return result;
+    };
+  };
+
+  // Returns a function, that, as long as it continues to be invoked, will not
+  // be triggered. The function will be called after it stops being called for
+  // N milliseconds. If `immediate` is passed, trigger the function on the
+  // leading edge, instead of the trailing.
+  _.debounce = function(func, wait, immediate) {
+    var timeout, args, context, timestamp, result;
+
+    var later = function() {
+      var last = _.now() - timestamp;
+
+      if (last < wait && last >= 0) {
+        timeout = setTimeout(later, wait - last);
+      } else {
+        timeout = null;
+        if (!immediate) {
+          result = func.apply(context, args);
+          if (!timeout) context = args = null;
+        }
+      }
+    };
+
+    return function() {
+      context = this;
+      args = arguments;
+      timestamp = _.now();
+      var callNow = immediate && !timeout;
+      if (!timeout) timeout = setTimeout(later, wait);
+      if (callNow) {
+        result = func.apply(context, args);
+        context = args = null;
+      }
+
+      return result;
+    };
+  };
+
+  // Returns the first function passed as an argument to the second,
+  // allowing you to adjust arguments, run code before and after, and
+  // conditionally execute the original function.
+  _.wrap = function(func, wrapper) {
+    return _.partial(wrapper, func);
+  };
+
+  // Returns a negated version of the passed-in predicate.
+  _.negate = function(predicate) {
+    return function() {
+      return !predicate.apply(this, arguments);
+    };
+  };
+
+  // Returns a function that is the composition of a list of functions, each
+  // consuming the return value of the function that follows.
+  _.compose = function() {
+    var args = arguments;
+    var start = args.length - 1;
+    return function() {
+      var i = start;
+      var result = args[start].apply(this, arguments);
+      while (i--) result = args[i].call(this, result);
+      return result;
+    };
+  };
+
+  // Returns a function that will only be executed on and after the Nth call.
+  _.after = function(times, func) {
+    return function() {
+      if (--times < 1) {
+        return func.apply(this, arguments);
+      }
+    };
+  };
+
+  // Returns a function that will only be executed up to (but not including) the Nth call.
+  _.before = function(times, func) {
+    var memo;
+    return function() {
+      if (--times > 0) {
+        memo = func.apply(this, arguments);
+      }
+      if (times <= 1) func = null;
+      return memo;
+    };
+  };
+
+  // Returns a function that will be executed at most one time, no matter how
+  // often you call it. Useful for lazy initialization.
+  _.once = _.partial(_.before, 2);
+
+  // Object Functions
+  // ----------------
+
+  // Keys in IE < 9 that won't be iterated by `for key in ...` and thus missed.
+  var hasEnumBug = !{toString: null}.propertyIsEnumerable('toString');
+  var nonEnumerableProps = ['valueOf', 'isPrototypeOf', 'toString',
+                      'propertyIsEnumerable', 'hasOwnProperty', 'toLocaleString'];
+
+  function collectNonEnumProps(obj, keys) {
+    var nonEnumIdx = nonEnumerableProps.length;
+    var constructor = obj.constructor;
+    var proto = (_.isFunction(constructor) && constructor.prototype) || ObjProto;
+
+    // Constructor is a special case.
+    var prop = 'constructor';
+    if (_.has(obj, prop) && !_.contains(keys, prop)) keys.push(prop);
+
+    while (nonEnumIdx--) {
+      prop = nonEnumerableProps[nonEnumIdx];
+      if (prop in obj && obj[prop] !== proto[prop] && !_.contains(keys, prop)) {
+        keys.push(prop);
+      }
+    }
+  }
+
+  // Retrieve the names of an object's own properties.
+  // Delegates to **ECMAScript 5**'s native `Object.keys`
+  _.keys = function(obj) {
+    if (!_.isObject(obj)) return [];
+    if (nativeKeys) return nativeKeys(obj);
+    var keys = [];
+    for (var key in obj) if (_.has(obj, key)) keys.push(key);
+    // Ahem, IE < 9.
+    if (hasEnumBug) collectNonEnumProps(obj, keys);
+    return keys;
+  };
+
+  // Retrieve all the property names of an object.
+  _.allKeys = function(obj) {
+    if (!_.isObject(obj)) return [];
+    var keys = [];
+    for (var key in obj) keys.push(key);
+    // Ahem, IE < 9.
+    if (hasEnumBug) collectNonEnumProps(obj, keys);
+    return keys;
+  };
+
+  // Retrieve the values of an object's properties.
+  _.values = function(obj) {
+    var keys = _.keys(obj);
+    var length = keys.length;
+    var values = Array(length);
+    for (var i = 0; i < length; i++) {
+      values[i] = obj[keys[i]];
+    }
+    return values;
+  };
+
+  // Returns the results of applying the iteratee to each element of the object
+  // In contrast to _.map it returns an object
+  _.mapObject = function(obj, iteratee, context) {
+    iteratee = cb(iteratee, context);
+    var keys =  _.keys(obj),
+          length = keys.length,
+          results = {},
+          currentKey;
+      for (var index = 0; index < length; index++) {
+        currentKey = keys[index];
+        results[currentKey] = iteratee(obj[currentKey], currentKey, obj);
+      }
+      return results;
+  };
+
+  // Convert an object into a list of `[key, value]` pairs.
+  _.pairs = function(obj) {
+    var keys = _.keys(obj);
+    var length = keys.length;
+    var pairs = Array(length);
+    for (var i = 0; i < length; i++) {
+      pairs[i] = [keys[i], obj[keys[i]]];
+    }
+    return pairs;
+  };
+
+  // Invert the keys and values of an object. The values must be serializable.
+  _.invert = function(obj) {
+    var result = {};
+    var keys = _.keys(obj);
+    for (var i = 0, length = keys.length; i < length; i++) {
+      result[obj[keys[i]]] = keys[i];
+    }
+    return result;
+  };
+
+  // Return a sorted list of the function names available on the object.
+  // Aliased as `methods`
+  _.functions = _.methods = function(obj) {
+    var names = [];
+    for (var key in obj) {
+      if (_.isFunction(obj[key])) names.push(key);
+    }
+    return names.sort();
+  };
+
+  // Extend a given object with all the properties in passed-in object(s).
+  _.extend = createAssigner(_.allKeys);
+
+  // Assigns a given object with all the own properties in the passed-in object(s)
+  // (https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Object/assign)
+  _.extendOwn = _.assign = createAssigner(_.keys);
+
+  // Returns the first key on an object that passes a predicate test
+  _.findKey = function(obj, predicate, context) {
+    predicate = cb(predicate, context);
+    var keys = _.keys(obj), key;
+    for (var i = 0, length = keys.length; i < length; i++) {
+      key = keys[i];
+      if (predicate(obj[key], key, obj)) return key;
+    }
+  };
+
+  // Return a copy of the object only containing the whitelisted properties.
+  _.pick = function(object, oiteratee, context) {
+    var result = {}, obj = object, iteratee, keys;
+    if (obj == null) return result;
+    if (_.isFunction(oiteratee)) {
+      keys = _.allKeys(obj);
+      iteratee = optimizeCb(oiteratee, context);
+    } else {
+      keys = flatten(arguments, false, false, 1);
+      iteratee = function(value, key, obj) { return key in obj; };
+      obj = Object(obj);
+    }
+    for (var i = 0, length = keys.length; i < length; i++) {
+      var key = keys[i];
+      var value = obj[key];
+      if (iteratee(value, key, obj)) result[key] = value;
+    }
+    return result;
+  };
+
+   // Return a copy of the object without the blacklisted properties.
+  _.omit = function(obj, iteratee, context) {
+    if (_.isFunction(iteratee)) {
+      iteratee = _.negate(iteratee);
+    } else {
+      var keys = _.map(flatten(arguments, false, false, 1), String);
+      iteratee = function(value, key) {
+        return !_.contains(keys, key);
+      };
+    }
+    return _.pick(obj, iteratee, context);
+  };
+
+  // Fill in a given object with default properties.
+  _.defaults = createAssigner(_.allKeys, true);
+
+  // Creates an object that inherits from the given prototype object.
+  // If additional properties are provided then they will be added to the
+  // created object.
+  _.create = function(prototype, props) {
+    var result = baseCreate(prototype);
+    if (props) _.extendOwn(result, props);
+    return result;
+  };
+
+  // Create a (shallow-cloned) duplicate of an object.
+  _.clone = function(obj) {
+    if (!_.isObject(obj)) return obj;
+    return _.isArray(obj) ? obj.slice() : _.extend({}, obj);
+  };
+
+  // Invokes interceptor with the obj, and then returns obj.
+  // The primary purpose of this method is to "tap into" a method chain, in
+  // order to perform operations on intermediate results within the chain.
+  _.tap = function(obj, interceptor) {
+    interceptor(obj);
+    return obj;
+  };
+
+  // Returns whether an object has a given set of `key:value` pairs.
+  _.isMatch = function(object, attrs) {
+    var keys = _.keys(attrs), length = keys.length;
+    if (object == null) return !length;
+    var obj = Object(object);
+    for (var i = 0; i < length; i++) {
+      var key = keys[i];
+      if (attrs[key] !== obj[key] || !(key in obj)) return false;
+    }
+    return true;
+  };
+
+
+  // Internal recursive comparison function for `isEqual`.
+  var eq = function(a, b, aStack, bStack) {
+    // Identical objects are equal. `0 === -0`, but they aren't identical.
+    // See the [Harmony `egal` proposal](http://wiki.ecmascript.org/doku.php?id=harmony:egal).
+    if (a === b) return a !== 0 || 1 / a === 1 / b;
+    // A strict comparison is necessary because `null == undefined`.
+    if (a == null || b == null) return a === b;
+    // Unwrap any wrapped objects.
+    if (a instanceof _) a = a._wrapped;
+    if (b instanceof _) b = b._wrapped;
+    // Compare `[[Class]]` names.
+    var className = toString.call(a);
+    if (className !== toString.call(b)) return false;
+    switch (className) {
+      // Strings, numbers, regular expressions, dates, and booleans are compared by value.
+      case '[object RegExp]':
+      // RegExps are coerced to strings for comparison (Note: '' + /a/i === '/a/i')
+      case '[object String]':
+        // Primitives and their corresponding object wrappers are equivalent; thus, `"5"` is
+        // equivalent to `new String("5")`.
+        return '' + a === '' + b;
+      case '[object Number]':
+        // `NaN`s are equivalent, but non-reflexive.
+        // Object(NaN) is equivalent to NaN
+        if (+a !== +a) return +b !== +b;
+        // An `egal` comparison is performed for other numeric values.
+        return +a === 0 ? 1 / +a === 1 / b : +a === +b;
+      case '[object Date]':
+      case '[object Boolean]':
+        // Coerce dates and booleans to numeric primitive values. Dates are compared by their
+        // millisecond representations. Note that invalid dates with millisecond representations
+        // of `NaN` are not equivalent.
+        return +a === +b;
+    }
+
+    var areArrays = className === '[object Array]';
+    if (!areArrays) {
+      if (typeof a != 'object' || typeof b != 'object') return false;
+
+      // Objects with different constructors are not equivalent, but `Object`s or `Array`s
+      // from different frames are.
+      var aCtor = a.constructor, bCtor = b.constructor;
+      if (aCtor !== bCtor && !(_.isFunction(aCtor) && aCtor instanceof aCtor &&
+                               _.isFunction(bCtor) && bCtor instanceof bCtor)
+                          && ('constructor' in a && 'constructor' in b)) {
+        return false;
+      }
+    }
+    // Assume equality for cyclic structures. The algorithm for detecting cyclic
+    // structures is adapted from ES 5.1 section 15.12.3, abstract operation `JO`.
+
+    // Initializing stack of traversed objects.
+    // It's done here since we only need them for objects and arrays comparison.
+    aStack = aStack || [];
+    bStack = bStack || [];
+    var length = aStack.length;
+    while (length--) {
+      // Linear search. Performance is inversely proportional to the number of
+      // unique nested structures.
+      if (aStack[length] === a) return bStack[length] === b;
+    }
+
+    // Add the first object to the stack of traversed objects.
+    aStack.push(a);
+    bStack.push(b);
+
+    // Recursively compare objects and arrays.
+    if (areArrays) {
+      // Compare array lengths to determine if a deep comparison is necessary.
+      length = a.length;
+      if (length !== b.length) return false;
+      // Deep compare the contents, ignoring non-numeric properties.
+      while (length--) {
+        if (!eq(a[length], b[length], aStack, bStack)) return false;
+      }
+    } else {
+      // Deep compare objects.
+      var keys = _.keys(a), key;
+      length = keys.length;
+      // Ensure that both objects contain the same number of properties before comparing deep equality.
+      if (_.keys(b).length !== length) return false;
+      while (length--) {
+        // Deep compare each member
+        key = keys[length];
+        if (!(_.has(b, key) && eq(a[key], b[key], aStack, bStack))) return false;
+      }
+    }
+    // Remove the first object from the stack of traversed objects.
+    aStack.pop();
+    bStack.pop();
+    return true;
+  };
+
+  // Perform a deep comparison to check if two objects are equal.
+  _.isEqual = function(a, b) {
+    return eq(a, b);
+  };
+
+  // Is a given array, string, or object empty?
+  // An "empty" object has no enumerable own-properties.
+  _.isEmpty = function(obj) {
+    if (obj == null) return true;
+    if (isArrayLike(obj) && (_.isArray(obj) || _.isString(obj) || _.isArguments(obj))) return obj.length === 0;
+    return _.keys(obj).length === 0;
+  };
+
+  // Is a given value a DOM element?
+  _.isElement = function(obj) {
+    return !!(obj && obj.nodeType === 1);
+  };
+
+  // Is a given value an array?
+  // Delegates to ECMA5's native Array.isArray
+  _.isArray = nativeIsArray || function(obj) {
+    return toString.call(obj) === '[object Array]';
+  };
+
+  // Is a given variable an object?
+  _.isObject = function(obj) {
+    var type = typeof obj;
+    return type === 'function' || type === 'object' && !!obj;
+  };
+
+  // Add some isType methods: isArguments, isFunction, isString, isNumber, isDate, isRegExp, isError.
+  _.each(['Arguments', 'Function', 'String', 'Number', 'Date', 'RegExp', 'Error'], function(name) {
+    _['is' + name] = function(obj) {
+      return toString.call(obj) === '[object ' + name + ']';
+    };
+  });
+
+  // Define a fallback version of the method in browsers (ahem, IE < 9), where
+  // there isn't any inspectable "Arguments" type.
+  if (!_.isArguments(arguments)) {
+    _.isArguments = function(obj) {
+      return _.has(obj, 'callee');
+    };
+  }
+
+  // Optimize `isFunction` if appropriate. Work around some typeof bugs in old v8,
+  // IE 11 (#1621), and in Safari 8 (#1929).
+  if (typeof /./ != 'function' && typeof Int8Array != 'object') {
+    _.isFunction = function(obj) {
+      return typeof obj == 'function' || false;
+    };
+  }
+
+  // Is a given object a finite number?
+  _.isFinite = function(obj) {
+    return isFinite(obj) && !isNaN(parseFloat(obj));
+  };
+
+  // Is the given value `NaN`? (NaN is the only number which does not equal itself).
+  _.isNaN = function(obj) {
+    return _.isNumber(obj) && obj !== +obj;
+  };
+
+  // Is a given value a boolean?
+  _.isBoolean = function(obj) {
+    return obj === true || obj === false || toString.call(obj) === '[object Boolean]';
+  };
+
+  // Is a given value equal to null?
+  _.isNull = function(obj) {
+    return obj === null;
+  };
+
+  // Is a given variable undefined?
+  _.isUndefined = function(obj) {
+    return obj === void 0;
+  };
+
+  // Shortcut function for checking if an object has a given property directly
+  // on itself (in other words, not on a prototype).
+  _.has = function(obj, key) {
+    return obj != null && hasOwnProperty.call(obj, key);
+  };
+
+  // Utility Functions
+  // -----------------
+
+  // Run Underscore.js in *noConflict* mode, returning the `_` variable to its
+  // previous owner. Returns a reference to the Underscore object.
+  _.noConflict = function() {
+    root._ = previousUnderscore;
+    return this;
+  };
+
+  // Keep the identity function around for default iteratees.
+  _.identity = function(value) {
+    return value;
+  };
+
+  // Predicate-generating functions. Often useful outside of Underscore.
+  _.constant = function(value) {
+    return function() {
+      return value;
+    };
+  };
+
+  _.noop = function(){};
+
+  _.property = property;
+
+  // Generates a function for a given object that returns a given property.
+  _.propertyOf = function(obj) {
+    return obj == null ? function(){} : function(key) {
+      return obj[key];
+    };
+  };
+
+  // Returns a predicate for checking whether an object has a given set of
+  // `key:value` pairs.
+  _.matcher = _.matches = function(attrs) {
+    attrs = _.extendOwn({}, attrs);
+    return function(obj) {
+      return _.isMatch(obj, attrs);
+    };
+  };
+
+  // Run a function **n** times.
+  _.times = function(n, iteratee, context) {
+    var accum = Array(Math.max(0, n));
+    iteratee = optimizeCb(iteratee, context, 1);
+    for (var i = 0; i < n; i++) accum[i] = iteratee(i);
+    return accum;
+  };
+
+  // Return a random integer between min and max (inclusive).
+  _.random = function(min, max) {
+    if (max == null) {
+      max = min;
+      min = 0;
+    }
+    return min + Math.floor(Math.random() * (max - min + 1));
+  };
+
+  // A (possibly faster) way to get the current timestamp as an integer.
+  _.now = Date.now || function() {
+    return new Date().getTime();
+  };
+
+   // List of HTML entities for escaping.
+  var escapeMap = {
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#x27;',
+    '`': '&#x60;'
+  };
+  var unescapeMap = _.invert(escapeMap);
+
+  // Functions for escaping and unescaping strings to/from HTML interpolation.
+  var createEscaper = function(map) {
+    var escaper = function(match) {
+      return map[match];
+    };
+    // Regexes for identifying a key that needs to be escaped
+    var source = '(?:' + _.keys(map).join('|') + ')';
+    var testRegexp = RegExp(source);
+    var replaceRegexp = RegExp(source, 'g');
+    return function(string) {
+      string = string == null ? '' : '' + string;
+      return testRegexp.test(string) ? string.replace(replaceRegexp, escaper) : string;
+    };
+  };
+  _.escape = createEscaper(escapeMap);
+  _.unescape = createEscaper(unescapeMap);
+
+  // If the value of the named `property` is a function then invoke it with the
+  // `object` as context; otherwise, return it.
+  _.result = function(object, property, fallback) {
+    var value = object == null ? void 0 : object[property];
+    if (value === void 0) {
+      value = fallback;
+    }
+    return _.isFunction(value) ? value.call(object) : value;
+  };
+
+  // Generate a unique integer id (unique within the entire client session).
+  // Useful for temporary DOM ids.
+  var idCounter = 0;
+  _.uniqueId = function(prefix) {
+    var id = ++idCounter + '';
+    return prefix ? prefix + id : id;
+  };
+
+  // By default, Underscore uses ERB-style template delimiters, change the
+  // following template settings to use alternative delimiters.
+  _.templateSettings = {
+    evaluate    : /<%([\s\S]+?)%>/g,
+    interpolate : /<%=([\s\S]+?)%>/g,
+    escape      : /<%-([\s\S]+?)%>/g
+  };
+
+  // When customizing `templateSettings`, if you don't want to define an
+  // interpolation, evaluation or escaping regex, we need one that is
+  // guaranteed not to match.
+  var noMatch = /(.)^/;
+
+  // Certain characters need to be escaped so that they can be put into a
+  // string literal.
+  var escapes = {
+    "'":      "'",
+    '\\':     '\\',
+    '\r':     'r',
+    '\n':     'n',
+    '\u2028': 'u2028',
+    '\u2029': 'u2029'
+  };
+
+  var escaper = /\\|'|\r|\n|\u2028|\u2029/g;
+
+  var escapeChar = function(match) {
+    return '\\' + escapes[match];
+  };
+
+  // JavaScript micro-templating, similar to John Resig's implementation.
+  // Underscore templating handles arbitrary delimiters, preserves whitespace,
+  // and correctly escapes quotes within interpolated code.
+  // NB: `oldSettings` only exists for backwards compatibility.
+  _.template = function(text, settings, oldSettings) {
+    if (!settings && oldSettings) settings = oldSettings;
+    settings = _.defaults({}, settings, _.templateSettings);
+
+    // Combine delimiters into one regular expression via alternation.
+    var matcher = RegExp([
+      (settings.escape || noMatch).source,
+      (settings.interpolate || noMatch).source,
+      (settings.evaluate || noMatch).source
+    ].join('|') + '|$', 'g');
+
+    // Compile the template source, escaping string literals appropriately.
+    var index = 0;
+    var source = "__p+='";
+    text.replace(matcher, function(match, escape, interpolate, evaluate, offset) {
+      source += text.slice(index, offset).replace(escaper, escapeChar);
+      index = offset + match.length;
+
+      if (escape) {
+        source += "'+\n((__t=(" + escape + "))==null?'':_.escape(__t))+\n'";
+      } else if (interpolate) {
+        source += "'+\n((__t=(" + interpolate + "))==null?'':__t)+\n'";
+      } else if (evaluate) {
+        source += "';\n" + evaluate + "\n__p+='";
+      }
+
+      // Adobe VMs need the match returned to produce the correct offest.
+      return match;
+    });
+    source += "';\n";
+
+    // If a variable is not specified, place data values in local scope.
+    if (!settings.variable) source = 'with(obj||{}){\n' + source + '}\n';
+
+    source = "var __t,__p='',__j=Array.prototype.join," +
+      "print=function(){__p+=__j.call(arguments,'');};\n" +
+      source + 'return __p;\n';
+
+    try {
+      var render = new Function(settings.variable || 'obj', '_', source);
+    } catch (e) {
+      e.source = source;
+      throw e;
+    }
+
+    var template = function(data) {
+      return render.call(this, data, _);
+    };
+
+    // Provide the compiled source as a convenience for precompilation.
+    var argument = settings.variable || 'obj';
+    template.source = 'function(' + argument + '){\n' + source + '}';
+
+    return template;
+  };
+
+  // Add a "chain" function. Start chaining a wrapped Underscore object.
+  _.chain = function(obj) {
+    var instance = _(obj);
+    instance._chain = true;
+    return instance;
+  };
+
+  // OOP
+  // ---------------
+  // If Underscore is called as a function, it returns a wrapped object that
+  // can be used OO-style. This wrapper holds altered versions of all the
+  // underscore functions. Wrapped objects may be chained.
+
+  // Helper function to continue chaining intermediate results.
+  var result = function(instance, obj) {
+    return instance._chain ? _(obj).chain() : obj;
+  };
+
+  // Add your own custom functions to the Underscore object.
+  _.mixin = function(obj) {
+    _.each(_.functions(obj), function(name) {
+      var func = _[name] = obj[name];
+      _.prototype[name] = function() {
+        var args = [this._wrapped];
+        push.apply(args, arguments);
+        return result(this, func.apply(_, args));
+      };
+    });
+  };
+
+  // Add all of the Underscore functions to the wrapper object.
+  _.mixin(_);
+
+  // Add all mutator Array functions to the wrapper.
+  _.each(['pop', 'push', 'reverse', 'shift', 'sort', 'splice', 'unshift'], function(name) {
+    var method = ArrayProto[name];
+    _.prototype[name] = function() {
+      var obj = this._wrapped;
+      method.apply(obj, arguments);
+      if ((name === 'shift' || name === 'splice') && obj.length === 0) delete obj[0];
+      return result(this, obj);
+    };
+  });
+
+  // Add all accessor Array functions to the wrapper.
+  _.each(['concat', 'join', 'slice'], function(name) {
+    var method = ArrayProto[name];
+    _.prototype[name] = function() {
+      return result(this, method.apply(this._wrapped, arguments));
+    };
+  });
+
+  // Extracts the result from a wrapped and chained object.
+  _.prototype.value = function() {
+    return this._wrapped;
+  };
+
+  // Provide unwrapping proxy for some methods used in engine operations
+  // such as arithmetic and JSON stringification.
+  _.prototype.valueOf = _.prototype.toJSON = _.prototype.value;
+
+  _.prototype.toString = function() {
+    return '' + this._wrapped;
+  };
+
+  // AMD registration happens at the end for compatibility with AMD loaders
+  // that may not enforce next-turn semantics on modules. Even though general
+  // practice for AMD registration is to be anonymous, underscore registers
+  // as a named module because, like jQuery, it is a base library that is
+  // popular enough to be bundled in a third party lib, but not be part of
+  // an AMD load request. Those cases could generate an error when an
+  // anonymous define() is called outside of a loader request.
+  if (typeof define === 'function' && define.amd) {
+    define('underscore', [], function() {
+      return _;
+    });
+  }
+}.call(this));
+
+},{}],"appController":[function(require,module,exports){
+'use strict';
+
+/**
+ * The main controlling piece of the app. It composes the other modules.
+ */
+
+var chromeUdp = require('./dnssd/chromeUdp');
+
+var LISTENING_HTTP_INTERFACE = null;
+
+/**
+ * This port is hard-coded for now, as the web server requires that we pass a
+ * port. This will be amended and should be dynamically allocated.
+ */
+var HTTP_PORT = 9876;
+
+/**
+ * Get the interface on which the app is listening for incoming http
+ * connections.
+ *
+ * @return {object} an object of the form:
+ * {
+ *   name: string,
+ *   address: string,
+ *   prefixLength: integer,
+ *   port: integer
+ * }
+ */
+exports.getListeningHttpInterface = function() {
+  if (!LISTENING_HTTP_INTERFACE) {
+    console.warn('listening http interface not set, is app started?');
+  }
+  return LISTENING_HTTP_INTERFACE;
+};
+
+/**
+ * Start the app.
+ *
+ * @return {Promise} Promise that resolves when the app is started
+ */
+exports.start = function() {
+  return new Promise(function(resolve) {
+    chromeUdp.getNetworkInterfaces()
+      .then(interfaces => {
+        var ipv4Interfaces = [];
+        interfaces.forEach(iface => {
+          if (iface.address.indexOf(':') === -1) {
+            // ipv4
+            ipv4Interfaces.push(iface);
+          }
+        });
+        if (ipv4Interfaces.length === 0) {
+          console.log('Could not find ipv4 interface: ', interfaces);
+        } else {
+          var iface = ipv4Interfaces[0];
+          iface.port = HTTP_PORT;
+          LISTENING_HTTP_INTERFACE = iface;
+        }
+        resolve();
+      });
+  });
+};
+
+},{"./dnssd/chromeUdp":"chromeUdp"}],"binaryUtils":[function(require,module,exports){
+/*jshint esnext:true*/
+/*
+ * https://github.com/justindarc/dns-sd.js
+ *
+ * The MIT License (MIT)
+ *
+ * Copyright (c) 2015 Justin D'Arcangelo
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to
+ * deal in the Software without restriction, including without limitation the
+ * rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+ * sell copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+ * IN THE SOFTWARE.
+ */
+
+'use strict';
+
+exports.BinaryUtils = (function() {
+
+var BinaryUtils = {
+  stringToArrayBuffer: function(string) {
+    var length = (string || '').length;
+    var arrayBuffer = new ArrayBuffer(length);
+    var uint8Array = new Uint8Array(arrayBuffer);
+    for (var i = 0; i < length; i++) {
+      uint8Array[i] = string.charCodeAt(i);
+    }
+
+    return arrayBuffer;
+  },
+
+  arrayBufferToString: function(arrayBuffer) {
+    var results = [];
+    var uint8Array = new Uint8Array(arrayBuffer);
+
+    for (var i = 0, length = uint8Array.length; i < length; i += 200000) {
+      results.push(String.fromCharCode.apply(null, uint8Array.subarray(i, i + 200000)));
+    }
+
+    return results.join('');
+  },
+
+  blobToArrayBuffer: function(blob, callback) {
+    var fileReader = new FileReader();
+    fileReader.onload = function() {
+      if (typeof callback === 'function') {
+        callback(fileReader.result);
+      }
+    };
+    fileReader.readAsArrayBuffer(blob);
+
+    return fileReader.result;
+  },
+
+  mergeArrayBuffers: function(arrayBuffers, callback) {
+    return this.blobToArrayBuffer(new Blob(arrayBuffers), callback);
+  }
+};
+
+return BinaryUtils;
+
+})();
+
+},{}],"chromeUdp":[function(require,module,exports){
+/* globals Promise, chrome */
+'use strict';
+
+var DEBUG = true;
+
+exports.ChromeUdpSocket = function ChromeUdpSocket(socketInfo) {
+  if (!(this instanceof ChromeUdpSocket)) {
+    throw new Error('ChromeUdpSocket must be called with new');
+  }
+  this.socketInfo = socketInfo;
+  this.socketId = socketInfo.socketId;
+};
+
+/**
+ * Send data over the port and return a promise with the sendInfo result.
+ * Behaves as a thin wrapper around chromeUdp.send.
+ */
+exports.ChromeUdpSocket.prototype.send = function(arrayBuffer, address, port) {
+  return exports.send(this.socketId, arrayBuffer, address, port);
+};
+
+/**
+ * Add listener via call to chrome.sockets.udp.onReceive.addListener.
+ */
+exports.addOnReceiveListener = function(listener) {
+  chrome.sockets.udp.onReceive.addListener(listener);
+};
+
+/**
+ * Add listener via call to chrome.sockets.udp.onReceiveError.addListener.
+ */
+exports.addOnReceiveErrorListener = function(listener) {
+  chrome.sockets.udp.onReceiveError.addListener(listener);
+};
+
+exports.create = function(obj) {
+  return new Promise(function(resolve) {
+    chrome.sockets.udp.create(obj, function(socketInfo) {
+      resolve(socketInfo);
+    });
+  });
+};
+
+exports.bind = function(socketId, address, port) {
+  return new Promise(function(resolve, reject) {
+    chrome.sockets.udp.bind(socketId, address, port, function(result) {
+      if (result < 0) {
+        console.log('chromeUdp.bind: result < 0, rejecting');
+        console.log('    socketId: ', socketId);
+        console.log('    address: ', address);
+        console.log('    port: ', port);
+        reject(result);
+      } else {
+        resolve(result);
+      }
+    });
+  });
+};
+
+exports.send = function(socketId, arrayBuffer, address, port) {
+  if (!socketId || !arrayBuffer || !address || !port) {
+    console.warn(
+      'send received bad arg: ', socketId, arrayBuffer, address, port
+    );
+  }
+  return new Promise(function(resolve, reject) {
+    if (DEBUG) {
+      console.log('chromeUdp.send');
+      console.log('    socketId: ', socketId);
+      console.log('    address: ', address);
+      console.log('    port: ', port);
+      console.log('    arrayBuffer: ', arrayBuffer);
+    }
+    chrome.sockets.udp.send(
+      socketId,
+      arrayBuffer,
+      address,
+      port,
+      function(sendInfo) {
+        if (sendInfo.resultCode < 0) {
+          console.log('chromeUdp.send: result < 0, rejecting');
+          reject(sendInfo);
+        } else {
+          resolve(sendInfo);
+        }
+      }
+    );
+  });
+};
+
+exports.joinGroup = function(socketId, address) {
+  return new Promise(function(resolve, reject) {
+    chrome.sockets.udp.joinGroup(socketId, address, function(result) {
+      console.log('socketId: ', socketId);
+      console.log('address: ', address);
+      if (result < 0) {
+        console.log('chromeUdp.joinGroup: result < 0, reject');
+        reject(result);
+      } else {
+        resolve(result);
+      }
+    });
+  });
+};
+
+exports.getSockets = function() {
+  return new Promise(function(resolve) {
+    chrome.sockets.udp.getSockets(function(allSockets) {
+      resolve(allSockets);
+    });
+  });
+};
+
+exports.getInfo = function(socketId) {
+  return new Promise(function(resolve) {
+    chrome.sockets.udp.getInfo(socketId, function(socketInfo) {
+      resolve(socketInfo);
+    });
+  });
+};
+
+exports.closeAllSockets = function() {
+  exports.getSockets().then(function(allSockets) {
+    allSockets.forEach(function(socketInfo) {
+      console.log('Closing socket with id: ', socketInfo.socketId);
+      chrome.sockets.udp.close(socketInfo.socketId);
+    });
+  });
+};
+
+exports.listAllSockets = function() {
+  exports.getSockets().then(function(allSockets) {
+    allSockets.forEach(function(socketInfo) {
+      console.log(socketInfo);
+    });
+  });
+};
+
+exports.logSocketInfo = function(info) {
+  console.log('Received data via UDP on ', new Date());
+  console.log('    socketId: ', info.socketId);
+  console.log('    remoteAddress: ', info.remoteAddress);
+  console.log('    remotePort: ', info.remotePort);
+  console.log('    data: ', info.data);
+  console.log('    info: ', info);
+};
+
+/**
+ * Returns a Promise that resolves with a list of network interfaces.
+ */
+exports.getNetworkInterfaces = function() {
+  return new Promise(function(resolve) {
+    chrome.system.network.getNetworkInterfaces(function(interfaces) {
+      resolve(interfaces);
+    });
+  });
+};
+
+},{}],"dnsSem":[function(require,module,exports){
+/*jshint esnext:true*/
+'use strict';
+
+/**
+ * A SemCache-specific wrapper around the mDNS and DNSSD APIs. SemCache clients
+ * should use this module, as it handles things like service strings. More
+ * general clients--i.e. those not implementing a SemCache instance--should
+ * use the dns-sd module.
+ */
+
+var dnssd = require('./dns-sd');
+
+var SEMCACHE_SERVICE_STRING = '_semcache._tcp';
+
+/**
+ * Return the service string representing SemCache, e.g. "_semcache._tcp".
+ */
+exports.getSemCacheServiceString = function() {
+  return SEMCACHE_SERVICE_STRING;
+};
+
+/**
+ * Register a SemCache instance. Returns a Promise that resolves with an object
+ * like the following:
+ *
+ * {
+ *   serviceName: "Sam's SemCache",
+ *   type: "_http._local",
+ *   domain: "laptop.local"
+ * }
+ *
+ * name: the user-friendly name of the instance, e.g. "Sam's SemCache".
+ * port: the port on which the SemCache instance is running.
+ */
+exports.registerSemCache = function(host, name, port) {
+  var result = dnssd.register(host, name, SEMCACHE_SERVICE_STRING, port);
+  return result;
+};
+
+/**
+ * Browse for SemCache instances on the local network. Returns a Promise that
+ * resolves with a list of objects like the following:
+ *
+ * {
+ *   serviceName: "Sam's SemCache",
+ *   type: "_http._local",
+ *   domain: "laptop.local",
+ *   port: 8889
+ * }
+ *
+ * Resolves with an empty list if no instances are found.
+ */
+exports.browseForSemCacheInstances = function() {
+  var result = dnssd.browseServiceInstances(SEMCACHE_SERVICE_STRING);
+  return result;
+};
+
+},{"./dns-sd":"dnssd"}],"dnsc":[function(require,module,exports){
+/*jshint esnext:true*/
+/* globals Promise */
+'use strict';
+
+var chromeUdp = require('./chromeUdp');
+var dnsUtil = require('./dns-util');
+var dnsPacket = require('./dns-packet');
+var byteArray = require('./byte-array');
+var dnsCodes = require('./dns-codes');
+var qSection = require('./question-section');
+
+/**
+ * This module maintains DNS state and serves as the DNS server. It is
+ * responsible for issuing DNS requests.
+ */
+
+var DNSSD_MULTICAST_GROUP = '224.0.0.251';
+var DNSSD_PORT = 53531;
+var DNSSD_SERVICE_NAME = '_services._dns-sd._udp.local';
+
+/** True if the service has started. */
+var started = false;
+
+exports.DNSSD_MULTICAST_GROUP = DNSSD_MULTICAST_GROUP;
+exports.DNSSD_PORT = DNSSD_PORT;
+exports.DNSSD_SERVICE_NAME = DNSSD_SERVICE_NAME;
+
+/**
+ * These are the records owned by this module. They are maintained in an object
+ * of domain name to array of records, e.g. { 'www.example.com': [Object,
+ * Object, Object], 'www.foo.com': [Object] }.
+ */
+var records = {};
+
+var onReceiveCallbacks = [];
+
+/**
+ * The IPv4 interfaces for this machine, cached to provide synchronous calls.
+ */
+var ipv4Interfaces = [];
+
+/**
+ * Returns all records known to this module.
+ *
+ * @return {Array<resource record>} all the resource records known to this
+ * module
+ */
+exports.getRecords = function() {
+  return records;
+};
+
+/**
+ * Returns all the callbacks currently registered to be invoked with incoming
+ * packets.
+ *
+ * @return {Array<function>} all the onReceive callbacks that have been
+ * registered
+ */
+exports.getOnReceiveCallbacks = function() {
+  return onReceiveCallbacks;
+};
+
+/**
+ * The socket used for accessing the network. Object of type
+ * chromeUdp.ChromeUdpSocket.
+ */
+exports.socket = null;
+/** The information about the socket we are using. */
+exports.socketInfo = null;
+
+/**
+ * True if the service is started.
+ *
+ * @return {boolean} representing whether or not the service has started
+ */
+exports.isStarted = function() {
+  return started;
+};
+
+/**
+ * Return a cached array of IPv4 interfaces for this machine.
+ *
+ * @return {object} an array of all the IPv4 interfaces known to this machine.
+ * The objects have the form: 
+ * {
+ *   name: string,
+ *   address: string,
+ *   prefixLength: integer
+ * }
+ */
+exports.getIPv4Interfaces = function() {
+  if (!exports.isStarted()) {
+    console.log('Called getIPv4Interfaces when controller was not started');
+  }
+  if (!ipv4Interfaces) {
+    return [];
+  } else {
+    return ipv4Interfaces;
+  }
+};
+
+/**
+ * Add a callback to be invoked with received packets.
+ *
+ * @param {function} callback a callback to be invoked with received packets.
+ */
+exports.addOnReceiveCallback = function(callback) {
+  onReceiveCallbacks.push(callback);
+};
+
+/**
+ * Remove the callback.
+ *
+ * @param {function} callback the callback function to be removed. The callback
+ * should already have been added via a call to addOnReceiveCallback().
+ */
+exports.removeOnReceiveCallback = function(callback) {
+  var index = onReceiveCallbacks.indexOf(callback);
+  if (index >= 0) {
+    onReceiveCallbacks.splice(index, 1);
+  }
+};
+
+/**
+ * The listener that is attached to chrome.sockets.udp.onReceive.addListener
+ * when the service is started.
+ *
+ * @param {object} info the object that is called by the chrome.sockets.udp
+ * API. It is expected to look like:
+ * {
+ *   data: ArrayBuffer,
+ *   remoteAddress: string,
+ *   remotePort: integer
+ * }
+ */
+exports.onReceiveListener = function(info) {
+  if (dnsUtil.DEBUG) {
+    chromeUdp.logSocketInfo(info);
+  }
+
+  if (!exports.socket) {
+    // We don't have a socket with which to listen.
+    return;
+  }
+
+  if (exports.socket.socketId !== info.socketId) {
+    if (dnsUtil.DEBUG) {
+      console.log('Message is for this address but not this socket, ignoring');
+    }
+    return;
+  }
+
+  if (dnsUtil.DEBUG) {
+    console.log('Message is for us, parsing');
+  }
+  
+  // Create a DNS packet.
+  var byteArr = new byteArray.ByteArray(info.data);
+  var packet = dnsPacket.createPacketFromReader(byteArr.getReader());
+
+  exports.handleIncomingPacket(packet, info.remoteAddress, info.remotePort);
+};
+
+/**
+ * Respond to an incoming packet.
+ *
+ * @param {DnsPacket} packet the incoming packet
+ * @param {string} remoteAddress the remote address sending the packet
+ * @param {integer} remotePort the remote port sending the packet
+ */
+exports.handleIncomingPacket = function(packet, remoteAddress, remotePort) {
+  // For now, we are expecting callers to register and de-register their own
+  // onReceiveCallback to track responses. This means if it's a response we
+  // will just ignore invoke the callbacks and return. If it is a query, we
+  // need to respond to it.
+
+  // First, invoke all the callbacks.
+  for (var i = 0; i < onReceiveCallbacks.length; i++) {
+    var fn = onReceiveCallbacks[i];
+    fn(packet);
+  }
+
+  // Second, see if it's a query. If it is, get the requested records,
+  // construct a packet, and send the packet.
+  if (!packet.isQuery) {
+    return;
+  }
+
+  if (packet.questions.length === 0) {
+    console.log('Query packet has no questions: ', packet.questions);
+    return;
+  }
+
+  // According to the RFC, multiple questions in the same packet are an
+  // optimization and nothing more. We will respond to each question with its
+  // own packet while still being compliant.
+  packet.questions.forEach(question => {
+    var responsePacket = exports.createResponsePacket(packet);
+    var records = exports.getResourcesForQuery(
+      question.queryName,
+      question.queryType,
+      question.queryClass
+    );
+
+    // If we didn't get any records, don't send anything.
+    if (records.length === 0) {
+      return;
+    }
+
+    records.forEach(record => {
+      responsePacket.addAnswer(record);
+    });
+
+    // We may be multicasting, or we may be unicast responding.
+    var sendAddr = DNSSD_MULTICAST_GROUP;
+    var sendPort = DNSSD_PORT;
+    if (question.unicastResponseRequested()) {
+      sendAddr = remoteAddress;
+      sendPort = remotePort;
+    }
+    exports.sendPacket(responsePacket, sendAddr, sendPort);
+  });
+};
+
+/**
+ * Create a response packet with the appropriate parameters for the given
+ * query. It does not include any resource records (including questions).
+ *
+ * @param {DnsPacket} queryPacket the query packet to create a response to.
+ *
+ * @return {DnsPacket} the packet in response. No records are included.
+ */
+exports.createResponsePacket = function(queryPacket) {
+  // According to section 6 of the RFC we do not include the question we are
+  // answering in response packets:
+  // "Multicast DNS responses MUST NOT contain any questions in the Question
+  // Section.  Any questions in the Question Section of a received Multicast
+  // DNS response MUST be silently ignored.  Multicast DNS queriers receiving
+  // Multicast DNS responses do not care what question elicited the response;
+  // they care only that the information in the response is true and accurate."
+  if (queryPacket) {
+    // We aren't actually using the query packet yet, but we might be in the
+    // future, so the API includes it.
+    // no op.
+  }
+  var result = new dnsPacket.DnsPacket(
+    0,      // 18.1: IDs in responses MUST be set to 0
+    false,  // not a query.
+    0,      // 18.3: MUST be set to 0
+    true,   // 18.4: in response MUST be set to one
+    0,      // 18.5: might be non-0, but caller can adjust if truncated
+    0,      // 18.6: SHOULD be 0
+    0,      // 18.7 MUST be 0
+    0       // 18.11 MUST be 0
+  );
+  return result;
+};
+
+/**
+ * Return the resource records belonging to this server that are appropriate
+ * for this query. According to section 6 of the RFC, we only respond with
+ * records for which we are authoritative. Thus we also must omit records from
+ * any cache we are maintaining, unless those records originated from us and
+ * are thus considered authoritative.
+ *
+ * @param {String} qName the query name
+ * @param {number} qType the query type
+ * @param {number} qClass the query class
+ *
+ * @return {Array<resource record>} the array of resource records appropriate
+ * for this query
+ */
+exports.getResourcesForQuery = function(qName, qType, qClass) {
+  // According to RFC section 6: 
+  // "The determination of whether a given record answers a given question is
+  // made using the standard DNS rules: the record name must match the question
+  // name, the record rrtype must match the question qtype unless the qtype is
+  // "ANY" (255) or the rrtype is "CNAME" (5), and the record rrclass must
+  // match the question qclass unless the qclass is "ANY" (255).  As with
+  // Unicast DNS, generally only DNS class 1 ("Internet") is used, but should
+  // client software use classes other than 1, the matching rules described
+  // above MUST be used."
+
+  // records stored as {qName: [record, record, record] }
+  var namedRecords = records[qName];
+
+  // We need to special case the DNSSD service enumeration string, as specified
+  // in RFC 6763, Section 9.
+  if (qName === DNSSD_SERVICE_NAME) {
+    // This essentially is just a request for all PTR records, regardless of
+    // name. We will just get all the records and let the later machinery
+    // filter as necessary for class and type.
+    namedRecords = [];
+    Object.keys(records).forEach(key => {
+      var keyRecords = records[key];
+      keyRecords.forEach(record => {
+        if (record.recordType === dnsCodes.RECORD_TYPES.PTR) {
+          namedRecords.push(record);
+        }
+      });
+    });
+  }
+
+  if (!namedRecords) {
+    // Nothing at all--return an empty array
+    return [];
+  }
+
+  var result = exports.filterResourcesForQuery(
+    namedRecords, qName, qType, qClass
+  );
+
+  return result;
+};
+
+/**
+ * Return an Array with only the elements of resources that match the query
+ * terms.
+ * 
+ * @param {Array<resource record>} resources an Array of resource records that
+ * will be filtered
+ * @param {string} qName the name of the query
+ * @param {integer} qType the type of the query
+ * @param {integer} qClass the class of the query
+ *
+ * @return {Array<resource record>} the subset of resources that match the
+ * query terms
+ */
+exports.filterResourcesForQuery = function(resources, qName, qType, qClass) {
+  var result = [];
+
+  resources.forEach(record => {
+    var meetsName = false;
+    var meetsType = false;
+    var meetsClass = false;
+    if (qName === record.name || qName === DNSSD_SERVICE_NAME) {
+      meetsName = true;
+    }
+    if (qType === dnsCodes.RECORD_TYPES.ANY || record.recordType === qType) {
+      meetsType = true;
+    }
+    if (qClass === dnsCodes.CLASS_CODES.ANY || record.recordClass === qClass) {
+      meetsClass = true;
+    }
+
+    if (meetsName && meetsType && meetsClass) {
+      result.push(record);
+    }
+  });
+
+  return result;
+};
+
+/**
+ * Start the system. This must be called before any other calls to this module.
+ *
+ * Returns a promise that resolves with the socket.
+ *
+ * @return {Promise} that resolves with a ChromeUdpSocket
+ */
+exports.getSocket = function() {
+  if (exports.socket) {
+    // Already started, resolve immediately.
+    return new Promise(resolve => { resolve(exports.socket); });
+  }
+
+  // Attach our listeners.
+  chromeUdp.addOnReceiveListener(exports.onReceiveListener);
+
+  return new Promise((resolve, reject) => {
+    // We have two steps to do here: create a socket and bind that socket to
+    // the mDNS port.
+    var createPromise = chromeUdp.create({});
+    createPromise.then(info => {
+      exports.socketInfo = info;
+      return info;
+    })
+    .then(info => {
+      return chromeUdp.bind(info.socketId, '0.0.0.0', DNSSD_PORT);
+    })
+    .then(function success() {
+      // We've bound to the DNSSD port successfully.
+      return chromeUdp.joinGroup(
+        exports.socketInfo.socketId,
+        DNSSD_MULTICAST_GROUP
+      );
+    }, function err(error) {
+      chromeUdp.closeAllSockets();
+      reject(new Error('Error when binding DNSSD port:', error));
+    })
+    .then(function joinedGroup() {
+      exports.socket = new chromeUdp.ChromeUdpSocket(exports.socketInfo);
+      started = true;
+      resolve(exports.socket);
+    }, function failedToJoinGroup(result) {
+      chromeUdp.closeAllSockets();
+      reject(new Error('Error when joining DNSSD group: ', result));
+    });
+  });
+};
+
+/**
+ * Start the service.
+ *
+ * Returns a Promise that resolves when everything is up and running.
+ *
+ * @return {Promise}
+ */
+exports.start = function() {
+  if (exports.isStarted()) {
+    if (dnsUtil.DEBUG) {
+      console.log('start called when already started');
+    }
+    // Already started, resolve immediately.
+    return new Promise();
+  } else {
+    // All the initialization we need to do is create the socket (so that we
+    // can receive even if we aren't advertising ourselves) and retrieve our
+    // network interfaces.
+    return new Promise(function(resolve, reject) {
+      exports.getSocket()
+      .then(function startedSocket() {
+        exports.initializeNetworkInterfaceCache();
+      })
+      .then(function initializedInterfaces() {
+        resolve();
+      })
+      .catch(function startWhenWrong() {
+        reject();
+      });
+    });
+  }
+};
+
+/**
+ * Initialize the cache of network interfaces known to this machine.
+ *
+ * @return {Promise} resolves when the cache is initialized
+ */
+exports.initializeNetworkInterfaceCache = function() {
+  return new Promise(function(resolve) {
+    chromeUdp.getNetworkInterfaces().then(function success(interfaces) {
+      interfaces.forEach(iface => {
+        if (iface.address.indexOf(':') !== -1) {
+          console.log('Not yet supporting IPv6: ', iface);
+        } else {
+          ipv4Interfaces.push(iface);
+        }
+      });
+      resolve();
+    });
+  });
+};
+
+/**
+ * Shuts down the system.
+ */
+exports.stop = function() {
+  if (exports.socket) {
+    if (dnsUtil.DEBUG) {
+      console.log('Stopping: found socket, closing');
+    }
+    chromeUdp.closeAllSockets();
+    exports.socket = null;
+    started = false;
+  } else {
+    if (dnsUtil.DEBUG) {
+      console.log('Stopping: no socket found');
+    }
+  }
+};
+
+/**
+ * Send the packet to the given address and port.
+ *
+ * @param {DnsPacket} packet the packet to send
+ * @param {string} address the address to which to send the packet
+ * @param {number} port the port to sent the packet to
+ */
+exports.sendPacket = function(packet, address, port) {
+  var byteArr = packet.convertToByteArray();
+  // And now we need the underlying buffer of the byteArray, truncated to the
+  // correct size.
+  var uint8Arr = byteArray.getByteArrayAsUint8Array(byteArr);
+
+  exports.getSocket().then(socket => {
+    socket.send(uint8Arr.buffer, address, port);
+  });
+};
+
+/**
+ * Perform an mDNS query on the network.
+ *
+ * @param {string} queryName
+ * @param {integer} queryType
+ * @param {integer} queryClass
+ */
+exports.query = function(queryName, queryType, queryClass) {
+  // ID is zero, as mDNS ignores the id field.
+  var packet = new dnsPacket.DnsPacket(
+    0,
+    true,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+  );
+
+  var question = new qSection.QuestionSection(
+    queryName,
+    queryType,
+    queryClass
+  );
+  packet.addQuestion(question);
+
+  exports.sendPacket(packet, DNSSD_MULTICAST_GROUP, DNSSD_PORT);
+};
+
+/**
+ * Issue a query for an A Record with the given domain name. Returns a promise
+ * that resolves with a list of ARecords received in response. Resolves with an
+ * empty list if none are found.
+ *
+ * @param {string} domainName the domain name for which to return A Records
+ *
+ * @return {Array<resource record>} the A Records corresponding to this domain
+ * name
+ */
+exports.queryForARecord = function(domainName) {
+  return exports.getResourcesForQuery(
+    domainName,
+    dnsCodes.RECORD_TYPES.A,
+    dnsCodes.CLASS_CODES.IN
+  );
+};
+
+/**
+ * Issue a query for PTR Records advertising the given service name. Returns a
+ * promise that resolves with a list of PtrRecords received in response.
+ * Resolves with an empty list if none are found.
+ *
+ * @param {string} serviceName the serviceName for which to query for PTR
+ * Records
+ *
+ * @return {Array<resource record> the PTR Records for the service
+ */
+exports.queryForPtrRecord = function(serviceName) {
+  return exports.getResourcesForQuery(
+    serviceName,
+    dnsCodes.RECORD_TYPES.PTR,
+    dnsCodes.CLASS_CODES.IN
+  );
+};
+
+/**
+ * Issue a query for SRV Records corresponding to the given instance name.
+ * Returns a promise that resolves with a list of SrvRecords received in
+ * response. Resolves with an empty list if none are found.
+ *
+ * @param {string} instanceName the instance name for which you are querying
+ * for SRV Records
+ *
+ * @return {Array<resource record>} the SRV Records matching this query
+ */
+exports.queryForSrvRecord = function(instanceName) {
+  return exports.getResourcesForQuery(
+    instanceName,
+    dnsCodes.RECORD_TYPES.SRV,
+    dnsCodes.CLASS_CODES.IN
+  );
+};
+
+/**
+ * Add a record corresponding to name to the internal data structures.
+ *
+ * @param {string} name the name of the resource record to add
+ * @param {resource record} record the record to add
+ */
+exports.addRecord = function(name, record) {
+  var existingRecords = records[name];
+  if (!existingRecords) {
+    existingRecords = [];
+    records[name] = existingRecords;
+  }
+  existingRecords.push(record);
+};
+
+},{"./byte-array":1,"./chromeUdp":"chromeUdp","./dns-codes":2,"./dns-packet":3,"./dns-util":4,"./question-section":5}],"dnssd":[function(require,module,exports){
+/*jshint esnext:true*/
+/* globals Promise */
+'use strict';
+
+/**
+ * The client API for interacting with mDNS and DNS-SD.
+ *
+ * This is based in part on the Bonjour APIs outlined in 'Zero Configuration
+ * Networking: The Definitive Guide' by Cheshire and Steinberg in order to
+ * provide a familiar interface.
+ *
+ * 'RFC 6762: Multicast DNS' is the model for many of the decisions and actions
+ * take in this module. 'The RFC' in comments below refers to this RFC. It can
+ * be accessed here:
+ *
+ * https://tools.ietf.org/html/rfc6762#
+ *
+ * Since this is programming to a specification (or at least to an RFC), it is
+ * conforming to a standard. Actions are explained in comments, with direct
+ * references to RFC sections as much as is possible.
+ */
+
+
+var dnsUtil = require('./dns-util');
+var dnsController = require('./dns-controller');
+var dnsCodes = require('./dns-codes');
+var resRec = require('./resource-record');
+var dnsPacket = require('./dns-packet');
+
+var MAX_PROBE_WAIT = 250;
+var DEFAULT_QUERY_WAIT_TIME = 2000;
+
+exports.DEFAULT_QUERY_WAIT_TIME = DEFAULT_QUERY_WAIT_TIME;
+
+exports.LOCAL_SUFFIX = 'local';
+
+/**
+ * Returns a promise that resolves after the given time (in ms).
+ *
+ * @param {integer} ms the number of milliseconds to wait before resolving
+ */
+exports.wait = function(ms) {
+  return new Promise(resolve => {
+    setTimeout(() => resolve(), ms);
+  });
+};
+
+/**
+ * Returns a Promise that resolves after 0-250 ms (inclusive).
+ *
+ * @return {Promise}
+ */
+exports.waitForProbeTime = function() {
+  // +1 because randomInt is by default [min, max)
+  return exports.wait(dnsUtil.randomInt(0, MAX_PROBE_WAIT + 1));
+};
+
+/**
+ * Returns true if the DnsPacket is for this queryName.
+ *
+ * @param {DnsPacket} packet
+ * @param {string} qName
+ * @param {integer} qType
+ * @param {integer} qClass
+ *
+ * @return {boolean}
+ */
+exports.packetIsForQuery = function(packet, qName, qType, qClass) {
+  var filteredRecords = dnsController.filterResourcesForQuery(
+    packet.answers, qName, qType, qClass
+  );
+  return filteredRecords.length !== 0;
+};
+
+/**
+ * Generates a semi-random hostname ending with ".local". An example might be
+ * 'host123.local'.
+ *
+ * @param {string}
+ */
+exports.createHostName = function() {
+  var start = 'host';
+  // We'll return within the range 0, 1000.
+  var randomInt = dnsUtil.randomInt(0, 1001);
+  var result = start + randomInt + dnsUtil.getLocalSuffix();
+  return result;
+};
+
+/**
+ * Advertise the resource records.
+ *
+ * @param {Array<resource records>} resourceRecords the records to advertise
+ */
+exports.advertiseService = function(resourceRecords) {
+  var advertisePacket = new dnsPacket.DnsPacket(
+    0,      // id 0 for mDNS
+    false,  // not a query
+    0,      // opCode must be 0 on transmit (18.3)
+    false,  // authoritative must be false on transmit (18.4)
+    false,  // isTruncated must be false on transmit (18.5)
+    false,  // recursion desired should be 0 (18.6)
+    false,  // recursion available must be 0 (18.7)
+    false   // return code must be 0 (18.11)
+  );
+
+  // advertisements should be sent in the answer section
+  resourceRecords.forEach(record => {
+    advertisePacket.addAnswer(record);
+  });
+  dnsController.sendPacket(
+    advertisePacket,
+    dnsController.DNSSD_MULTICAST_GROUP,
+    dnsController.DNSSD_PORT
+  );
+};
+
+/**
+ * Register a service via mDNS. Returns a Promise that resolves with an object
+ * like the following:
+ *
+ * {
+ *   serviceName: "Sam's SemCache",
+ *   type: "_http._local",
+ *   domain: "laptop.local",
+ *   port: 1234
+ * }
+ *
+ * @param {string} host the host of the service, e.g. 'laptop.local'
+ * @param {string} name a user-friendly string to be the name of the instance,
+ * e.g. "Sam's SemCache".
+ * @param {string} type the service type string. This should be the protocol
+ * spoken and the transport protocol, eg "_http._tcp".
+ * @param {integer} port the port the service is available on
+ */
+exports.register = function(host, name, type, port) {
+  // Registration is a multi-step process. According to the RFC, section 8.
+  //
+  // 8.1 indicates that the first step is to send an mDNS query of type ANY
+  // (255) for a given domain name.
+  //
+  // 8.1 also indicates that the host should wait a random time between 0-250ms
+  // before issuing the query. This must be performed a total of three times
+  // before a lack of responses indicates that the name is free.
+  //
+  // The probes should be sent with QU questions with the unicast response bit
+  // set.
+  //
+  // 8.2 goes into tiebreaking. That is omitted here.
+  //
+  // 8.3 covers announcing. After probing, announcing is performed with all of
+  // the newly created resource records in the Answer Section. This must be
+  // performed twice, one second apart.
+
+  var result = new Promise(function(resolve, reject) {
+    var foundHostFree = null;
+    // We start by probing for messages of type ANY with the hostname.
+    exports.issueProbe(
+      host,
+      dnsCodes.RECORD_TYPES.ANY,
+      dnsCodes.CLASS_CODES.IN
+    ).then(function hostFree() {
+      foundHostFree = true;
+      // We need to probe for the name under which a SRV record would be, which
+      // is name.type.local
+      var srvName = exports.createSrvName(name, type, 'local');
+      return exports.issueProbe(
+        srvName,
+        dnsCodes.RECORD_TYPES.ANY,
+        dnsCodes.CLASS_CODES.IN
+      );
+    }, function hostTaken() {
+      foundHostFree = false;
+      reject(new Error('host taken: ' + host));
+    }).then(function instanceFree() {
+      if (foundHostFree) {
+        var hostRecords = exports.createHostRecords(host);
+        var serviceRecords = exports.createServiceRecords(
+          name,
+          type,
+          port,
+          host
+        );
+        var allRecords = hostRecords.concat(serviceRecords);
+        exports.advertiseService(allRecords);
+
+        resolve(
+          {
+            serviceName: name,
+            type: type,
+            domain: host,
+            port: port
+          }
+        );
+      }
+    }, function instanceTaken() {
+      console.log('INSTANCE TAKEN');
+      reject(new Error('instance taken: ' + name));
+    });
+  });
+
+  return result;
+};
+
+/**
+ * Register the host on the network. Assumes that a probe has occurred and the
+ * hostname is free.
+ *
+ * @param {string} host
+ *
+ * @return {Array<resource records>} an Array of the records that were added.
+ */
+exports.createHostRecords = function(host) {
+  // This just consists of an A Record. Make an entry for every IPv4 address.
+  var result = [];
+  dnsController.getIPv4Interfaces().forEach(iface => {
+    var aRecord = new resRec.ARecord(
+      host,
+      dnsUtil.DEFAULT_TTL,
+      iface.address,
+      dnsCodes.CLASS_CODES.IN
+    );
+    result.push(aRecord);
+    dnsController.addRecord(host, aRecord);
+  });
+  return result;
+};
+
+/**
+ * Create the complete name of the service as is appropriate for a SRV record,
+ * e.g. "Sam Cache._semcache._tcp.local".
+ *
+ * @param {string} userFriendlyName the friendly name of the instance, e.g.
+ * "Sam Cache"
+ * @param {string} type the type string of the service, e.g. "_semcache._tcp"
+ * @param {string} domain the domain in which to find the service, e.g. "local"
+ *
+ * @return {string}
+ */
+exports.createSrvName = function(userFriendlyName, type, domain) {
+  return [userFriendlyName, type, domain].join('.');
+};
+
+/**
+ * Register the service on the network. Assumes that a probe has occured and
+ * the service name is free.
+ *
+ * @param {string} name name of the instance, e.g. 'Sam Cache'
+ * @param {string} type type of the service, e.g. _semcache._tcp
+ * @param {integer} port port the service is running on, eg 7777
+ * @param {string} domain target domain/host the service is running on, e.g.
+ * 'blackhack.local'
+ *
+ * @return {Array<resource records>} an Array of the records that were added.
+ */
+exports.createServiceRecords = function(name, type, port, domain) {
+  // We need to add a PTR record and an SRV record.
+
+  // SRV Records are named according to name.type.domain, which we always
+  // assume to be local.
+  var srvName = exports.createSrvName(name, type, 'local');
+  var srvRecord = new resRec.SrvRecord(
+    srvName,
+    dnsUtil.DEFAULT_TTL,
+    dnsUtil.DEFAULT_PRIORITY,
+    dnsUtil.DEFAULT_WEIGHT,
+    port,
+    domain
+  );
+
+  var ptrRecord = new resRec.PtrRecord(
+    type,
+    dnsUtil.DEFAULT_TTL,
+    srvName,
+    dnsCodes.CLASS_CODES.IN
+  );
+
+  dnsController.addRecord(srvName, srvRecord);
+  dnsController.addRecord(type, ptrRecord);
+
+  var result = [srvRecord, ptrRecord];
+  return result;
+};
+
+exports.receivedResponsePacket = function(packets, qName, qType, qClass) {
+  for (var i = 0; i < packets.length; i++) {
+    var packet = packets[i];
+    if (
+      !packet.isQuery &&
+        exports.packetIsForQuery(packet, qName, qType, qClass)
+    ) {
+      return true;
+    }
+  }
+  return false;
+};
+
+/**
+ * Issue a probe compliant with the mDNS spec, which specifies that a probe
+ * happen three times at random intervals.
+ *
+ * @param {string} queryName
+ * @param {integer} queryType
+ * @param {integer} queryClass
+ *
+ * @return {Promise} Returns a promise that resolves if the probe returns
+ * nothing, meaning that the queryName is available, and rejects if it is
+ * taken.
+ */
+exports.issueProbe = function(queryName, queryType, queryClass) {
+  // Track the packets we receive whilst querying.
+  var packets = [];
+  var callback = function(packet) {
+    packets.push(packet);
+  };
+  dnsController.addOnReceiveCallback(callback);
+
+  // Now we kick off a series of queries. We wait a random time to issue a
+  // query. 250ms after that we issue another, then another.
+  var result = new Promise(function(resolve, reject) {
+    exports.waitForProbeTime()
+      .then(function success() {
+        dnsController.query(
+          queryName,
+          queryType,
+          queryClass
+        );
+        return exports.wait(MAX_PROBE_WAIT);
+      }).then(function success() {
+        if (exports.receivedResponsePacket(
+          packets, queryName, queryType, queryClass
+        )) {
+          throw new Error('received a packet, jump to catch');
+        } else {
+          dnsController.query(
+            queryName,
+            queryType,
+            queryClass
+          );
+          return exports.wait(MAX_PROBE_WAIT);
+        }
+      })
+      .then(function success() {
+        if (exports.receivedResponsePacket(
+          packets, queryName, queryType, queryClass
+        )) {
+          throw new Error('received a packet, jump to catch');
+        } else {
+          dnsController.query(
+            queryName,
+            queryType,
+            queryClass
+          );
+          return exports.wait(MAX_PROBE_WAIT);
+        }
+      })
+      .then(function success() {
+        if (exports.receivedResponsePacket(
+          packets, queryName, queryType, queryClass
+        )) {
+          throw new Error('received a packet, jump to catch');
+        } else {
+          resolve();
+          dnsController.removeOnReceiveCallback(callback);
+        }
+      })
+      .catch(function failured() {
+        dnsController.removeOnReceiveCallback(callback);
+        reject();
+      });
+  });
+
+  return result;
+};
+
+/**
+ * Get operational information on all services of a given type on the network.
+ *
+ * This is a convenience method for issuing a series of requests--for PTR
+ * records to find the specific instances providing a service, SRV records for
+ * finding the port and host name of those instances, and finally A records for
+ * determining the IP addresses of the hosts.
+ *
+ * @param {string} serviceType the type of the service to browse for
+ *
+ * @return {Promise} a Promise that resolves with operational information for
+ * all instances. This is an Array of objects like the following:
+ * {
+ *   serviceType: '_semcache._tcp',
+ *   instanceName: 'Sam Cache',
+ *   domainName: 'laptop.local',
+ *   ipAddress: '123.4.5.6',
+ *   port: 8888
+ * }
+ */
+exports.browseServiceInstances = function(serviceType) {
+  return new Promise(function(resolve, reject) {
+    var ptrResponses = [];
+    var srvResponses = [];
+    var aResponses = [];
+    exports.queryForServiceInstances(serviceType)
+      .then(function success(ptrInfos) {
+        var srvRequests = [];
+        ptrInfos.forEach(ptr => {
+          ptrResponses.push(ptr);
+          var instanceName = ptr.serviceName;
+          var req = exports.queryForInstanceInfo(
+            instanceName, exports.DEFAULT_QUERY_WAIT_TIME
+          );
+          srvRequests.push(req);
+        });
+        return Promise.all(srvRequests);
+      })
+      .then(function success(srvInfos) {
+        var aRequests = [];
+        srvInfos.forEach(srv => {
+          // the query methods return an Array of responses, even if only a
+          // single response is requested. This allows for for API similarity
+          // across calls and for an eventual implementation that permits both
+          // A and AAAA records when querying for IP addresses, e.g., but means
+          // that we are effectively iterating over an array of arrays. For
+          // simplicity, however, we will assume at this stage that we only
+          // ever expect a single response, which is correct in the vast
+          // majority of cases.
+          srv = srv[0];
+          srvResponses.push(srv);
+          var hostname = srv.domain;
+          var req = exports.queryForIpAddress(
+            hostname, exports.DEFAULT_QUERY_WAIT_TIME
+          );
+          aRequests.push(req);
+        });
+        return Promise.all(aRequests);
+      })
+      .then(function success(aInfos) {
+        aInfos.forEach(aInfo => {
+          aInfo = aInfo[0];
+          aResponses.push(aInfo);
+        });
+        
+        var result = [];
+        for (var i = 0; i < ptrResponses.length; i++) {
+          var ptr = ptrResponses[i];
+          var srv = srvResponses[i];
+          var aRec = aResponses[i];
+          result.push({
+            serviceType: serviceType,
+            instanceName: ptr.serviceName,
+            domainName: srv.domain,
+            ipAddress: aRec.ipAddress,
+            port: srv.port
+          });
+        }
+
+        resolve(result);
+      })
+      .catch(function failed(err) {
+        console.log(err);
+        reject('Caught error in browsing for service: ' + err);
+      });
+  });
+};
+
+/**
+ * Issue a query for instances of a particular service type. Tantamout to
+ * issueing PTR requests.
+ *
+ * @param {string} serviceType the service string to query for
+ * @param {number} waitTime the time to wait for responses. As multiple
+ * responses can be expected in response to a query for instances of a service
+ * (as multiple instances can exist on the same network), the Promise will
+ * always resolve after this many milliseconds.
+ *
+ * @return {Promise} Returns a Promise that resolves with a list of objects
+ * representing services, like the following:
+ * {
+ *   serviceType: '_semcache._tcp',
+ *   serviceName: 'Magic Cache'
+ * }
+ */
+exports.queryForServiceInstances = function(serviceType, timeout) {
+  timeout = timeout || exports.DEFAULT_QUERY_WAIT_TIME;
+  var rType = dnsCodes.RECORD_TYPES.PTR;
+  var rClass = dnsCodes.CLASS_CODES.IN;
+  return new Promise(function(resolve) {
+    exports.queryForResponses(
+      serviceType,
+      rType,
+      rClass,
+      true,
+      timeout
+    )
+    .then(function gotPackets(packets) {
+      var result = [];
+      packets.forEach(packet => {
+        packet.answers.forEach(answer => {
+          if (answer.recordType === rType && answer.recordClass === rClass) {
+            result.push(
+              {
+                serviceType: answer.serviceType,
+                serviceName: answer.instanceName
+              }
+            );
+          }
+        });
+      });
+      resolve(result);
+    });
+  });
+};
+
+/**
+ * Issue a query for an IP address mapping to a domain.
+ *
+ * @param {string} domainName the domain name to query for
+ * @param {number} timeout the number of ms after which to time out
+ *
+ * @return {Promise} Returns a Promise that resolves with a list of objects
+ * representing services, like the following:
+ * {
+ *   domainName: 'example.local',
+ *   ipAddress: '123.4.5.6'
+ * }
+ */
+exports.queryForIpAddress = function(domainName, timeout) {
+  // Note that this method ignores the fact that you could have multiple IP
+  // addresses per domain name. At a minimum, you could have IPv6 and IPv4
+  // addresses. For prototyping purposes, a single IP address is sufficient.
+  timeout = timeout || exports.DEFAULT_QUERY_WAIT_TIME;
+  var rType = dnsCodes.RECORD_TYPES.A;
+  var rClass = dnsCodes.CLASS_CODES.IN;
+  return new Promise(function(resolve) {
+    exports.queryForResponses(
+      domainName,
+      rType,
+      rClass,
+      false,
+      timeout
+    )
+    .then(function gotPackets(packets) {
+      var result = [];
+      packets.forEach(packet => {
+        packet.answers.forEach(answer => {
+          if (answer.recordType === rType && answer.recordClass === rClass) {
+            result.push(
+              {
+                domainName: answer.domainName,
+                ipAddress: answer.ipAddress
+              }
+            );
+          }
+        });
+      });
+      resolve(result);
+    });
+  });
+};
+
+/**
+ * Issue a query for information about a service instance name, including the
+ * port and domain name on which it is active.
+ *
+ * @param {string} instanceName the instance name to query for
+ * @param {number} timeout the number of ms after which to time out
+ *
+ * @return {Promise} Returns a Promise that resolves with a list of objects
+ * representing services, like the following:
+ * {
+ *   instanceName: 'Sam Cache',
+ *   domain: 'example.local',
+ *   port: 1234
+ * }
+ */
+exports.queryForInstanceInfo = function(instanceName, timeout) {
+  timeout = timeout || exports.DEFAULT_QUERY_WAIT_TIME;
+  var rType = dnsCodes.RECORD_TYPES.SRV;
+  var rClass = dnsCodes.CLASS_CODES.IN;
+  return new Promise(function(resolve) {
+    exports.queryForResponses(
+      instanceName,
+      rType,
+      rClass,
+      false,
+      timeout
+    )
+    .then(function gotPackets(packets) {
+      var result = [];
+      packets.forEach(packet => {
+        packet.answers.forEach(answer => {
+          if (answer.recordType === rType && answer.recordClass === rClass) {
+            result.push(
+              {
+                instanceName: answer.instanceTypeDomain,
+                domain: answer.targetDomain,
+                port: answer.port
+              }
+            );
+          }
+        });
+      });
+      resolve(result);
+    });
+  });
+};
+
+/**
+ * Issue a query and listen for responses. (As opposed to simply issuing a DNS
+ * query without being interested in the responses.)
+ * 
+ * @param {String} qName the name of the query to issue
+ * @param {number} qType the type of the query to issue
+ * @param {number} qClass the class of the query to issue
+ * @param {boolean} multipleResponses true if we can expect multiple or an open
+ * ended number of responses to this query
+ * @param {number} timeoutOrWait if multipleExpected is true, this is the
+ * amount of time we wait before returning results. If multipleExpected is
+ * false (e.g. querying for an A Record, which should have a single answer),
+ * this is the amount of time we wait before timing out and resolving with an
+ * empty list.
+ *
+ * @return {Promise} Returns a Promise that resolves with an Array of Packets
+ * received in response to the query. If multipleResponses is true, will not
+ * resolve until timeoutOrWait milliseconds. If multipleResponses is false,
+ * will resolve after the first packet is received or after timeoutOrWait is
+ * satifised. 
+ */
+exports.queryForResponses = function(
+  qName,
+  qType,
+  qClass,
+  multipleResponses,
+  timeoutOrWait
+) {
+  // Considerations for querying exist in RFC 6762 Section 5.2: Continuous
+  // Multicast DNS Querying. This scenario essentially allows for a standing
+  // request for notifications of instances of a particular type. This is
+  // useful for to automatically update a list of available printers, for
+  // example. For the current implementation, we are instead going to just
+  // issue a query for PTR records of the given type.
+  //
+  // Several considerations are made in the RFC for how to responsibly browse
+  // the network. First, queries should be delayed by a random value between
+  // 20 and 120ms, in order to not collide or flood in the event that a browse
+  // is triggered at the same time, e.g. by a common event. Second, the first
+  // two queries must take place 1 second apart. Third, the period between
+  // queries must increase by at least a factor of 2. Finally, known-answer
+  // suppression must be employed.
+  //
+  // For now, we are not implementing those more sophisticated features.
+  // Instead, this method provides a way to issue a query immediately. This can
+  // include a general standing query (if multipleResponses is true), or a
+  // query for the first response (if multipleResponses is false).
+
+  return new Promise(function(resolve) {
+    // Code executes even after a promise resolves, so we will use this flag to
+    // make sure we never try to resolve more than once.
+    var resolved = false;
+
+    // Track the packets we received while querying.
+    var packets = [];
+    var callback = function(packet) {
+      if (exports.packetIsForQuery(packet, qName, qType, qClass)) {
+        packets.push(packet);
+        if (!multipleResponses) {
+          // We can go ahead an resolve.
+          resolved = true;
+          dnsController.removeOnReceiveCallback(callback);
+          resolve(packets);
+        }
+      }
+    };
+    dnsController.addOnReceiveCallback(callback);
+
+    dnsController.query(
+      qName,
+      qType,
+      qClass
+    );
+    
+    exports.wait(timeoutOrWait)
+      .then(function waited() {
+        if (!resolved) {
+          dnsController.removeOnReceiveCallback(callback);
+          resolved = true;
+          resolve(packets);
+        }
+      })
+      .catch(function somethingWentWrong(err) {
+        console.log('Something went wrong in query: ', err);
+      });
+  });
+};
+
+},{"./dns-codes":2,"./dns-controller":"dnsc","./dns-packet":3,"./dns-util":4,"./resource-record":6}],"extBridge":[function(require,module,exports){
+'use strict';
+
+var chromeWrapper = require('./chromeRuntimeWrapper');
+var datastore = require('../persistence/datastore');
+var base64 = require('base-64');
+
+/**
+ * ID of the Semcache extension.
+ */
+exports.EXTENSION_ID = 'malgfdapbefeeidjfndgioclhfpfglhe';
+
+/**
+ * Send a message to the extension.
+ *
+ * @param {any} message
+ */
+exports.sendMessageToExtension = function(message) {
+  chromeWrapper.sendMessage(exports.EXTENSION_ID, message);
+};
+
+/**
+ * Function to handle messages coming from the SemCache extension.
+ *
+ * @param {object} message message sent by the extension. Expected to have the
+ * following format:
+ * {
+ *   type: 'write'
+ *   params: {captureUrl: 'url', captureDate: 'iso', dataUrl: 'string'}
+ * }
+ * @param {MessageSender}
+ * @param {function}
+ */
+exports.handleExternalMessage = function(message, sender, response) {
+  if (sender.id !== exports.EXTENSION_ID) {
+    console.log('ID not from SemCache extension: ', sender);
+    return;
+  }
+  if (message.type === 'write') {
+    var blob = exports.getBlobFromDataUrl(message.params.dataUrl);
+    var captureUrl = message.params.captureUrl;
+    var captureDate = message.params.captureDate;
+    datastore.addPageToCache(captureUrl, captureDate, blob);
+    if (response) {
+      response();
+    }
+  } else {
+    console.log('Unrecognized message type from extension: ', message.type);
+  }
+};
+
+/**
+ * @param {string} dataUrl a data url as encoded by FileReader.readAsDataURL
+ *
+ * @return {Blob}
+ */
+exports.getBlobFromDataUrl = function(dataUrl) {
+  // Decoding from data URL based on:
+  // https://gist.github.com/fupslot/5015897
+  var byteString = base64.decode(dataUrl.split(',')[1]);
+  var mime = dataUrl.split(',')[0].split(':')[1].split(';')[0];
+  // write the bytes of the string to an ArrayBuffer
+  var ab = new ArrayBuffer(byteString.length);
+  var ia = new Uint8Array(ab);
+  for (var i = 0; i < byteString.length; i++) {
+    ia[i] = byteString.charCodeAt(i);
+  }
+  // write the ArrayBuffer to a blob, and you're done
+  var result = new Blob([ab], {type: mime});
+  return result;
+};
+
+exports.attachListeners = function() {
+  chromeWrapper.addOnMessageExternalListener(exports.handleExternalMessage);
+};
+
+/**
+ * Send a message to the Extension instructing it to open the URL.
+ *
+ * @param {string} url
+ */
+exports.sendMessageToOpenUrl = function(url) {
+  var message = {
+    type: 'open',
+    params: {
+      url: url
+    }
+  };
+  exports.sendMessageToExtension(message);
+};
+
+},{"../persistence/datastore":11,"./chromeRuntimeWrapper":7,"base-64":14}],"fileSystem":[function(require,module,exports){
+/*jshint esnext:true*/
+/* globals Promise */
+'use strict';
+
+var chromefs = require('./chromeFileSystem');
+var chromeStorage = require('./chromeStorage');
+var fsUtil = require('./file-system-util');
+
+/** The local storage key for the entry ID of the base directory. */
+exports.KEY_BASE_DIR = 'baseDir';
+
+/** 
+ * The path of the directory storing the cache entries relative to the root of
+ * the storage directory. Begins with './'.
+ */
+exports.PATH_CACHE_DIR = 'cacheEntries';
+
+/**
+ * Get the directory where cache entries are stored.
+ *
+ * @return {Promise} Promise that resolves with a DirectoryEntry that is the
+ * base cache directory. Rejects if the base directory has not been set.
+ */
+exports.getDirectoryForCacheEntries = function() {
+  return new Promise(function(resolve, reject) {
+    exports.getPersistedBaseDir()
+    .then(baseDir => {
+      var dirName = exports.PATH_CACHE_DIR;
+      var options = {
+        create: true,
+        exclusive: false
+      };
+      return fsUtil.getDirectory(baseDir, options, dirName);
+    })
+    .then(cacheDir => {
+      resolve(cacheDir);
+    })
+    .catch(err => {
+      reject(err);
+    });
+  });
+
+};
+
+/**
+ * Return the base directory behaving as the root of the SemCache file system.
+ * This returns the "persisted" base directory in the sense that the directory
+ * must have already been chosen via a file chooser. If a base directory has
+ * not been chosen, it will return null.
+ *
+ * @return {DirectoryEntry} the directory that has been set as the root of the
+ * SemCache file system. Returns null if the directory has not been set.
+ */
+exports.getPersistedBaseDir = function() {
+  return new Promise(function(resolve) {
+    exports.baseDirIsSet()
+    .then(isSet => {
+      if (isSet) {
+        chromeStorage.get(exports.KEY_BASE_DIR)
+        .then(keyValue => {
+          var id = keyValue[exports.KEY_BASE_DIR];
+          return chromefs.restoreEntry(id);
+        })
+        .then(dirEntry => {
+          resolve(dirEntry);
+        });
+      } else {
+        // Null if not set.
+        resolve(null);
+      }
+    });
+  });
+};
+
+/**
+ * @return {Promise} Promise that resolves with a boolean
+ */
+exports.baseDirIsSet = function() {
+  return new Promise(function(resolve) {
+    chromeStorage.get(exports.KEY_BASE_DIR)
+    .then(keyValue => {
+      var isSet = false;
+      if (keyValue && keyValue[exports.KEY_BASE_DIR]) {
+        isSet = true;
+      }
+      resolve(isSet);
+    });
+  });
+};
+
+/**
+ * Set an entry as the base directory to be used for the SemCache file system.
+ *
+ * @param {DirectoryEntry} dirEntry the entry that will be set as the base
+ */
+exports.setBaseCacheDir = function(dirEntry) {
+  var keyObj = {};
+  var id = chromefs.retainEntrySync(dirEntry);
+  keyObj[exports.KEY_BASE_DIR] = id;
+  chromeStorage.set(keyObj);
+};
+
+/**
+ * Prompt the user to choose a directory.
+ *
+ * @return {Promise} a promise that resolves with a DirectoryEntry that has
+ * been chosen by the user.
+ */
+exports.promptForDir = function() {
+  return new Promise(function(resolve) {
+    chromefs.chooseEntry({type: 'openDirectory'})
+    .then(entry => {
+      resolve(entry);
+    });
+  });
+};
+
+},{"./chromeFileSystem":9,"./chromeStorage":10,"./file-system-util":"fsUtil"}],"fsUtil":[function(require,module,exports){
+/* globals Promise */
+'use strict';
+
+/**
+ * General file system operations on top of the web APIs.
+ */
+
+/*
+ * This code is based on the Mozilla and HTML5Rocks examples shown here:
+ * https://developer.mozilla.org/en/docs/Web/API/DirectoryReader
+ */
+function toArray(list) {
+  return Array.prototype.slice.call(list || [], 0);
+}
+
+/**
+ * @param {DirectoryEntry} dirEntry the directory to list
+ *
+ * @return {Promise} Promise that resolves with an Array of Entry objects
+ * that are the contents of the directory
+ */
+exports.listEntries = function(dirEntry) {
+  // This code is based on the Mozilla and HTML5Rocks examples shown here:
+  // https://developer.mozilla.org/en/docs/Web/API/DirectoryReader
+  var dirReader = dirEntry.createReader();
+  var entries = [];
+
+  return new Promise(function(resolve, reject) {
+
+    // Keep calling readEntries() until no more results are returned.
+    var readEntries = function() {
+      dirReader.readEntries (function(results) {
+        if (!results.length) {
+          resolve(entries.sort());
+        } else {
+          entries = entries.concat(toArray(results));
+          readEntries();
+        }
+      }, function(err) {
+        reject(err);
+      });
+    };
+
+    readEntries();
+  });
+};
+
+/**
+ * @param {FileEntry} fileEntry the file that will be written to
+ * @param {Blob} fileBlob the content to write
+ *
+ * @return {Promise} Promise that resolves when the write is complete or
+ * rejects with an error
+ */
+exports.writeToFile = function(fileEntry, fileBlob) {
+  return new Promise(function(resolve, reject) {
+    fileEntry.createWriter(function(fileWriter) {
+
+      fileWriter.onwriteend = function() {
+        resolve();
+      };
+
+      fileWriter.onerror = function(err) {
+        reject(err);
+      };
+
+      fileWriter.write(fileBlob);
+    });
+  });
+};
+
+/**
+ * A Promise-ified version of DirectoryEntry.getFile().
+ *
+ * @param {DirectoryEntry} dirEntry the parent directory
+ * @param {object} options object to pass to getFile function
+ * @param {string} name the file name in dirEntry
+ *
+ * @return {Promise} Promise that resolves with the FileEntry or rejects with
+ * an error
+ */
+exports.getFile = function(dirEntry, options, name) {
+  return new Promise(function(resolve, reject) {
+    dirEntry.getFile(name, options, function(fileEntry) {
+      resolve(fileEntry);
+    },
+    function(err) {
+      reject(err);
+    });
+  });
+};
+
+/**
+ * A Promise-ified version of DirectoryEntry.getDirectory().
+ *
+ * @param {DirectoryEntry} dirEntry the parent directory
+ * @param {object} options object to pass to getDirectory function
+ * @param {string} name the file name in dirEntry
+ *
+ * @return {Promise} Promise that resolves with the DirectoryEntry or rejects
+ * with an error
+ */
+exports.getDirectory = function(dirEntry, options, name) {
+  return new Promise(function(resolve, reject) {
+    dirEntry.getDirectory(name, options, function(dirEntry) {
+      resolve(dirEntry);
+    },
+    function(err) {
+      reject(err);
+    });
+  });
+};
+
+},{}],"serverController":[function(require,module,exports){
+/* global WSC, DummyHandler */
+'use strict';
+
+var api = require('./server-api');
+var handlers = require('./handlers');
+
+function startServer(host, port, endpointHandlers) {
+  window.httpServer = new WSC.WebApplication({
+    host: host,
+    port: port,
+    handlers: endpointHandlers,
+    renderIndex: false,
+    optCORS: true,
+    optAllInterfaces: true
+  });
+
+  window.httpServer.start();
+}
+
+/**
+ * Start the web server.
+ */
+exports.start = function(host, port) {
+  if (!WSC) {
+    console.log('Cannot start server, WSC not truthy: ', WSC);
+    return;
+  }
+
+  var endpoints = api.getApiEndpoints();
+
+  var endpointHandlers = [
+    [
+      endpoints.listPageCache,
+      handlers.ListCachedPagesHandler
+    ],
+    [
+      '/test.*',
+      DummyHandler
+    ],
+    [
+      endpoints.pageCache,
+      handlers.CachedPageHandler
+    ]
+  ];
+
+  startServer(host, port, endpointHandlers);
+};
+
+},{"./handlers":12,"./server-api":13}]},{},[8]);

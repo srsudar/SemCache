@@ -26,16 +26,6 @@ function clearContainer() {
 }
 
 function initUi() {
-  $('.button-collapse').sideNav();
-
-
-  var $settingsContainer = $('#settings-container');
-  var $settingsMenuItem = $('#settings');
-
-  $settingsMenuItem.on('click', function() {
-    clearContainer();
-    $settingsContainer.show();
-  });
 
 }
 
