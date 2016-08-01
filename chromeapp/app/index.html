@@ -3018,6 +3018,93 @@ The complete set of authors may be found at http://polymer.github.io/AUTHORS.txt
 The complete set of contributors may be found at http://polymer.github.io/CONTRIBUTORS.txt
 Code distributed by Google as part of the polymer project is also
 subject to an additional IP rights grant found at http://polymer.github.io/PATENTS.txt
+--><!--
+iron-request can be used to perform XMLHttpRequests.
+
+    <iron-request id="xhr"></iron-request>
+    ...
+    this.$.xhr.send({url: url, body: params});
+-->
+
+<!--
+@license
+Copyright (c) 2015 The Polymer Project Authors. All rights reserved.
+This code may only be used under the BSD style license found at http://polymer.github.io/LICENSE.txt
+The complete set of authors may be found at http://polymer.github.io/AUTHORS.txt
+The complete set of contributors may be found at http://polymer.github.io/CONTRIBUTORS.txt
+Code distributed by Google as part of the polymer project is also
+subject to an additional IP rights grant found at http://polymer.github.io/PATENTS.txt
+--><!--
+The `iron-ajax` element exposes network request functionality.
+
+    <iron-ajax
+        auto
+        url="https://www.googleapis.com/youtube/v3/search"
+        params='{"part":"snippet", "q":"polymer", "key": "YOUTUBE_API_KEY", "type": "video"}'
+        handle-as="json"
+        on-response="handleResponse"
+        debounce-duration="300"></iron-ajax>
+
+With `auto` set to `true`, the element performs a request whenever
+its `url`, `params` or `body` properties are changed. Automatically generated
+requests will be debounced in the case that multiple attributes are changed
+sequentially.
+
+Note: The `params` attribute must be double quoted JSON.
+
+You can trigger a request explicitly by calling `generateRequest` on the
+element.
+
+@demo demo/index.html
+@hero hero.svg
+-->
+
+
+<!--
+@license
+Copyright (c) 2015 The Polymer Project Authors. All rights reserved.
+This code may only be used under the BSD style license found at http://polymer.github.io/LICENSE.txt
+The complete set of authors may be found at http://polymer.github.io/AUTHORS.txt
+The complete set of contributors may be found at http://polymer.github.io/CONTRIBUTORS.txt
+Code distributed by Google as part of the polymer project is also
+subject to an additional IP rights grant found at http://polymer.github.io/PATENTS.txt
+--><!--
+An element for fetching GitHub issues
+Example:
+    <gh-issues></gh-issues>
+@group Seed Elements
+@element gh-issues
+@demo demo/index.html
+@hero hero.svg
+-->
+<dom-module id="gh-issues" assetpath="elements/">
+
+  <template>
+    <style>
+      :host {
+        display: block;
+        box-sizing: border-box;
+      }
+    </style>
+    <iron-ajax auto="" url="{{url}}" handle-as="json" params="{{options}}" last-response="{{response}}"></iron-ajax>
+
+      <template is="dom-repeat" items="{{response}}">
+        <div>
+          <a href="{{item.html_url}}">{{item.title}}</a>
+        </div>
+      </template>
+  </template>
+
+</dom-module>
+
+<!--
+@license
+Copyright (c) 2015 The Polymer Project Authors. All rights reserved.
+This code may only be used under the BSD style license found at http://polymer.github.io/LICENSE.txt
+The complete set of authors may be found at http://polymer.github.io/AUTHORS.txt
+The complete set of contributors may be found at http://polymer.github.io/CONTRIBUTORS.txt
+Code distributed by Google as part of the polymer project is also
+subject to an additional IP rights grant found at http://polymer.github.io/PATENTS.txt
 --><dom-module id="cache-page-list" assetpath="elements/">
   <template>
     <style>
@@ -3025,12 +3112,24 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
         display: block;
       }
     </style>
-    <iron-ajax auto="" url="http://jsonplaceholder.typicode.com/posts/" lastresponse="{{data}}" handleas="json">
-    </iron-ajax>
+    <gh-issues></gh-issues>
+    <iron-ajax auto="" url="{{url}}" handle-as="json" params="{{options}}" last-response="{{response}}"></iron-ajax>
 
-    <template is="dom-repeat" items="{{data}}">
-        <div><span>{{item.id}}</span></div>
-    </template>
+      <template is="dom-repeat" items="{{response}}">
+        <div>{{item.userId}}</div>
+        <div>{{item.title}}</div>
+        <div>{{item.body}}</div>
+      </template>
+    <!-- <iron-ajax -->
+    <!--   auto -->
+    <!--   url="http://jsonplaceholder.typicode.com/posts/" -->
+    <!--   last-response="{{data}}" -->
+    <!--   handle-as="json"> -->
+    <!-- </iron-ajax> -->
+
+    <!-- <template is="dom-repeat" items="{{data}}"> -->
+    <!--     <div><span>{{item.id}}</span></div> -->
+    <!-- </template> -->
 
     <!-- <iron-ajax auto url="http://jsonplaceholder.typicode.com/posts/" handle-as="json" last-response="{{response}}"> -->
     <!-- </iron-ajax> -->

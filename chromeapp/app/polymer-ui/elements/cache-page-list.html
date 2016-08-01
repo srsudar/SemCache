@@ -10,6 +10,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 
 <link rel="import" href="../../../bower_components/polymer/polymer.html">
 <link rel="import" href="cached-page-summary.html">
+<link rel="import" href="gh-issues.html">
 
 <dom-module id="cache-page-list">
   <template>
@@ -18,16 +19,29 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
         display: block;
       }
     </style>
+    <gh-issues></gh-issues>
     <iron-ajax
-            auto
-            url="http://jsonplaceholder.typicode.com/posts/"
-            lastResponse="{{data}}"
-            handleAs="json">
-    </iron-ajax>
+      auto
+      url="{{url}}"
+      handle-as="json"
+      params="{{options}}"
+      last-response="{{response}}"></iron-ajax>
 
-    <template is="dom-repeat" items="{{data}}">
-        <div><span>{{item.id}}</span></div>
-    </template>
+      <template is="dom-repeat" items="{{response}}">
+        <div>{{item.userId}}</div>
+        <div>{{item.title}}</div>
+        <div>{{item.body}}</div>
+      </template>
+    <!-- <iron-ajax -->
+    <!--   auto -->
+    <!--   url="http://jsonplaceholder.typicode.com/posts/" -->
+    <!--   last-response="{{data}}" -->
+    <!--   handle-as="json"> -->
+    <!-- </iron-ajax> -->
+
+    <!-- <template is="dom-repeat" items="{{data}}"> -->
+    <!--     <div><span>{{item.id}}</span></div> -->
+    <!-- </template> -->
 
     <!-- <iron-ajax auto url="http://jsonplaceholder.typicode.com/posts/" handle-as="json" last-response="{{response}}"> -->
     <!-- </iron-ajax> -->
@@ -60,7 +74,35 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
           type: String,
           value: 'cache-page-list',
           notify: true
+        },
+        owner: {
+          value: 'polymer',
+          notify: true
+        },
+        repo: {
+          value: 'polymer',
+          notify: true
+        },
+        state: {
+          value: 'open',
+          notify: true
+        },
+        page: {
+          value: 1,
+          notify: true
+        },
+        url: {
+          value: "http://jsonplaceholder.typicode.com/posts/" 
+        },
+        options: {
+          computed: 'computeOptions(state, page)'
         }
+      },
+      computeUrl: function(owner, repo) {
+        return ['https://api.github.com/repos', owner, repo, 'issues'].join('/');
+      },
+      computeOptions: function(state, page) {
+        return {state: state, page: page};
       }
     });
   })();
