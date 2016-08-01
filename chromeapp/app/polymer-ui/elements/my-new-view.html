@@ -1,0 +1,24 @@
+<link rel="import" href="../bower_components/polymer/polymer.html">
+
+<dom-module id="my-new-view">
+
+<template>
+  <style>
+    :host {
+      display: block;
+      padding: 16px;
+    }
+  </style>
+  <h1>New View</h1>
+</template>
+
+<script>
+  Polymer({
+    is: 'my-new-view',
+    properties: {
+      route: Object
+    }
+  });
+</script>
+
+</dom-module>
