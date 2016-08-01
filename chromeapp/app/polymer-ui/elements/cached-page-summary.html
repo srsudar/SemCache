@@ -9,7 +9,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 -->
 
 <link rel="import" href="../../../bower_components/polymer/polymer.html">
-<!-- <link rel="import" href="../../../bower_components/paper-card/paper-card.html"> -->
+<link rel="import" href="../../../bower_components/paper-button/paper-button.html">
 
 <!--
 An element providing a solution to no problem in particular.
@@ -36,6 +36,12 @@ Example:
         box-sizing: border-box;
       }
 
+      h1 {
+        font-size: 22px;
+        margin: 16px 0;
+        color: #212121;
+      }
+
       .card {
         box-shadow: 0 2px 2px 0 rgba(0, 0, 0, 0.14), 0 1px 5px 0 rgba(0, 0, 0, 0.12), 0 3px 1px -2px rgba(0, 0, 0, 0.2);
         padding: 16px;
@@ -46,22 +52,13 @@ Example:
       }
     </style>
 
-    <h1>&lt;seed-element&gt;</h1>
-    <!-- <paper-card heading="{{captureUrl}}"> -->
-      <div id="txt-url" class="card-content">{{captureurl}}</div>
+    <div class="card">
+      <h1>{{captureUrl}}</h1>
       <div class="card-content">{{captureDate}}</div>
-      <!-- <div class="card-actions"> -->
-      <!--   <paper-button>Open</paper-button> -->
-      <!-- </div> -->
-    <!-- </paper-card> -->
-    <!-- <h1 id="txt-capture-url">{{captureUrl}}</h1> -->
-    <!-- <h2 id="txt-capture-date">Captured on: {{captureDate}}</h2> -->
-    <!-- <a href="{{item.html_url}}">{{item.title}}</a> -->
-    <p class="author">
-      <img src$="{{author.image}}">
-      Cheers,<br/>
-      <span class="name">{{author.name}}</span>
-    </p>
+      <div class="card-actions">
+        <paper-button>Open</paper-button>
+      </div>
+    </div>
   </template>
 
   <script>
@@ -75,7 +72,9 @@ Example:
          */
         fancy: Boolean,
 
-        captureurl: String,
+        captureUrl: String,
+        captureDate: String,
+        accessPath: String,
 
         /**
          * Describes the author of the element, but is really just an excuse to

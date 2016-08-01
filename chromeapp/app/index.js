@@ -14040,6 +14040,255 @@ Polymer({
     }
 
   });
+/** @polymerBehavior Polymer.PaperButtonBehavior */
+  Polymer.PaperButtonBehaviorImpl = {
+    properties: {
+      /**
+       * The z-depth of this element, from 0-5. Setting to 0 will remove the
+       * shadow, and each increasing number greater than 0 will be "deeper"
+       * than the last.
+       *
+       * @attribute elevation
+       * @type number
+       * @default 1
+       */
+      elevation: {
+        type: Number,
+        reflectToAttribute: true,
+        readOnly: true
+      }
+    },
+
+    observers: [
+      '_calculateElevation(focused, disabled, active, pressed, receivedFocusFromKeyboard)',
+      '_computeKeyboardClass(receivedFocusFromKeyboard)'
+    ],
+
+    hostAttributes: {
+      role: 'button',
+      tabindex: '0',
+      animated: true
+    },
+
+    _calculateElevation: function() {
+      var e = 1;
+      if (this.disabled) {
+        e = 0;
+      } else if (this.active || this.pressed) {
+        e = 4;
+      } else if (this.receivedFocusFromKeyboard) {
+        e = 3;
+      }
+      this._setElevation(e);
+    },
+
+    _computeKeyboardClass: function(receivedFocusFromKeyboard) {
+      this.toggleClass('keyboard-focus', receivedFocusFromKeyboard);
+    },
+
+    /**
+     * In addition to `IronButtonState` behavior, when space key goes down,
+     * create a ripple down effect.
+     *
+     * @param {!KeyboardEvent} event .
+     */
+    _spaceKeyDownHandler: function(event) {
+      Polymer.IronButtonStateImpl._spaceKeyDownHandler.call(this, event);
+      // Ensure that there is at most one ripple when the space key is held down.
+      if (this.hasRipple() && this.getRipple().ripples.length < 1) {
+        this._ripple.uiDownAction();
+      }
+    },
+
+    /**
+     * In addition to `IronButtonState` behavior, when space key goes up,
+     * create a ripple up effect.
+     *
+     * @param {!KeyboardEvent} event .
+     */
+    _spaceKeyUpHandler: function(event) {
+      Polymer.IronButtonStateImpl._spaceKeyUpHandler.call(this, event);
+      if (this.hasRipple()) {
+        this._ripple.uiUpAction();
+      }
+    }
+  };
+
+  /** @polymerBehavior */
+  Polymer.PaperButtonBehavior = [
+    Polymer.IronButtonState,
+    Polymer.IronControlState,
+    Polymer.PaperRippleBehavior,
+    Polymer.PaperButtonBehaviorImpl
+  ];
+Polymer({
+    is: 'paper-material',
+
+    properties: {
+      /**
+       * The z-depth of this element, from 0-5. Setting to 0 will remove the
+       * shadow, and each increasing number greater than 0 will be "deeper"
+       * than the last.
+       *
+       * @attribute elevation
+       * @type number
+       * @default 1
+       */
+      elevation: {
+        type: Number,
+        reflectToAttribute: true,
+        value: 1
+      },
+
+      /**
+       * Set this to true to animate the shadow when setting a new
+       * `elevation` value.
+       *
+       * @attribute animated
+       * @type boolean
+       * @default false
+       */
+      animated: {
+        type: Boolean,
+        reflectToAttribute: true,
+        value: false
+      }
+    }
+  });
+Polymer({
+      is: 'paper-button',
+
+      behaviors: [
+        Polymer.PaperButtonBehavior
+      ],
+
+      properties: {
+        /**
+         * If true, the button should be styled with a shadow.
+         */
+        raised: {
+          type: Boolean,
+          reflectToAttribute: true,
+          value: false,
+          observer: '_calculateElevation'
+        }
+      },
+
+      _calculateElevation: function() {
+        if (!this.raised) {
+          this._setElevation(0);
+        } else {
+          Polymer.PaperButtonBehaviorImpl._calculateElevation.apply(this);
+        }
+      }
+
+      /**
+      Fired when the animation finishes.
+      This is useful if you want to wait until
+      the ripple animation finishes to perform some action.
+
+      @event transitionend
+      Event param: {{node: Object}} detail Contains the animated node.
+      */
+    });
+Polymer({
+      is: 'cached-page-summary',
+
+      properties: {
+        /**
+         * `fancy` indicates that the element should don a monocle and tophat,
+         * while checking its pocket watch.
+         */
+        fancy: Boolean,
+
+        captureUrl: String,
+        captureDate: String,
+        accessPath: String,
+
+        /**
+         * Describes the author of the element, but is really just an excuse to
+         * show off JSDoc annotations.
+         *
+         * @type {{name: string, image: string}}
+         */
+        author: {
+          type: Object,
+          // Use `value` to provide a default value for a property, by setting it
+          // on your element's prototype.
+          //
+          // If you provide a function, as we do here, Polymer will call that
+          // _per element instance_.
+          //
+          // We do that to ensure that each element gets its own copy of the
+          // value, rather than having it shared across all instances (via the
+          // prototype).
+          value: function() {
+            return {
+              name:  'Dimitri Glazkov',
+              image: 'http://addyosmani.com/blog/wp-content/uploads/2013/04/unicorn.jpg',
+            };
+          }
+        },
+      },
+
+
+      // Element Lifecycle
+
+      ready: function() {
+        // `ready` is called after all elements have been configured, but
+        // propagates bottom-up. This element's children are ready, but parents
+        // are not.
+        //
+        // This is the point where you should make modifications to the DOM (when
+        // necessary), or kick off any processes the element wants to perform.
+      },
+
+      attached: function() {
+        // `attached` fires once the element and its parents have been inserted
+        // into a document.
+        //
+        // This is a good place to perform any work related to your element's
+        // visual state or active behavior (measuring sizes, beginning animations,
+        // loading resources, etc).
+      },
+
+      detached: function() {
+        // The analog to `attached`, `detached` fires when the element has been
+        // removed from a document.
+        //
+        // Use this to clean up anything you did in `attached`.
+      },
+
+      // Element Behavior
+
+      /**
+       * Sometimes it's just nice to say hi.
+       *
+       * @param {string} greeting A positive greeting.
+       * @return {string} The full greeting.
+       */
+      sayHello: function(greeting) {
+        var response = greeting || 'Hello World!';
+        return 'seed-element says, ' + response;
+      },
+
+      /**
+       * The `seed-element-lasers` event is fired whenever `fireLasers` is called.
+       *
+       * @event seed-element-lasers
+       * @detail {{sound: String}}
+       */
+
+      /**
+       * Attempt to destroy this element's enemies with a beam of light!
+       *
+       * Or, at least, dispatch an event in the vain hope that someone else will
+       * do the zapping.
+       */
+      fireLasers: function() {
+        this.fire('seed-element-lasers', {sound: 'Pew pew!'});
+      }
+    });
 Polymer({
 
       is: 'my-view1'
