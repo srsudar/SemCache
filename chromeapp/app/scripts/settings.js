@@ -1,3 +1,4 @@
+/* global Promise */
 'use strict';
 
 var storage = require('./chrome-apis/storage');
@@ -14,14 +15,14 @@ var storage = require('./chrome-apis/storage');
 /** The prefix that we use to namespace setting keys. */
 var SETTING_NAMESPACE_PREFIX = 'setting_';
 
-var SETTINGS_KEYS = {
-  absPath: 'setting_absPath',
-  instanceName: 'setting_instanceName',
-  baseDir: 'setting_baseDir',
-  serverPort: 'setting_serverPort'
-};
-
 exports.SETTINGS_OBJ = null;
+
+var userFriendlyKeys = {
+  absPath: 'absPath',
+  instanceName: 'instanceName',
+  baseDirId: 'baseDirId',
+  serverPort: 'serverPort'
+};
 
 /**
  * Returns an array with all of the keys known to store settings.
@@ -29,7 +30,12 @@ exports.SETTINGS_OBJ = null;
  * @return {Array<String>}
  */
 exports.getAllSettingKeys = function() {
-  return [SETTINGS_KEYS];
+  return [
+    exports.createNameSpacedKey(userFriendlyKeys.absPath),
+    exports.createNameSpacedKey(userFriendlyKeys.instanceName),
+    exports.createNameSpacedKey(userFriendlyKeys.baseDirId),
+    exports.createNameSpacedKey(userFriendlyKeys.serverPort)
+  ];
 };
 
 /**
@@ -60,10 +66,15 @@ exports.init = function() {
   return new Promise(function(resolve) {
     storage.get(exports.getAllSettingKeys())
       .then(allKvPairs => {
-        // TODO: finish implementing
-        // only those kv pairs prefixed with settings_ are valid.
-        console.log(allKvPairs);
-        resolve(null);
+        var processedSettings = {};
+        Object.keys(allKvPairs).forEach(rawKey => {
+          // we're dealing with the raw keys here, e.g. setting_absPath
+          var processedKey = exports.removeNameSpaceFromKey(rawKey);
+          var value = allKvPairs[rawKey];
+          processedSettings[processedKey] = value;
+        });
+        exports.SETTINGS_OBJ = processedSettings;
+        resolve(processedSettings);
       });
   });
 
@@ -85,7 +96,7 @@ exports.set = function(key, value) {
   return new Promise(function(resolve) {
     storage.set(kvPair, useSync)
       .then(() => {
-        exports.SETTINGS_OBJ[key] = value;        
+        exports.SETTINGS_OBJ[key] = value;
         // Now that the set has succeeded, update the cache of settings.
         resolve(exports.getSettingsObj());
       });
@@ -137,4 +148,67 @@ exports.get = function(key) {
     var result = settings[key];
     return result;
   }
+};
+
+/**
+ * @return {string} the absolute path to the base directory.
+ */
+exports.getAbsPath = function() {
+  return exports.get(userFriendlyKeys.absPath);
+};
+
+/**
+ * @return {string} the user-defined name of the cache instance
+ */
+exports.getInstanceName = function() {
+  return exports.get(userFriendlyKeys.instanceName);
+};
+
+/**
+ * @return {string} the string used to retain the base directory as returned by
+ * chrome.fileSystem.retainEntry
+ */
+exports.getBaseDirId = function() {
+  return exports.get(userFriendlyKeys.baseDirId);
+};
+
+/**
+ * @return {interger} the value the user has specified for the server port
+ * (temporary)
+ */
+exports.getServerPort = function() {
+  return exports.get(userFriendlyKeys.serverPort);
+};
+
+/**
+ * @param {string} path the absolute path to the base directory of SemCache,
+ * which unfortunately cannot be determined via an API
+ */
+exports.setAbsPath = function(path) {
+  return exports.set(userFriendlyKeys.absPath, path);
+};
+
+/**
+ * @param {string} instanceName the user-friendly name for the SemCache
+ * instance
+ */
+exports.setInstanceName = function(instanceName) {
+  return exports.set(userFriendlyKeys.instanceName, instanceName);
+};
+
+/**
+ * @param {string} retainedId the String ID that can be used to restore the
+ * DirectoryEntry where SemCache is mounted, as returned by
+ * chrome.fileSystem.retainEntry
+ */
+exports.setBaseDirId = function(baseDirId) {
+  return exports.set(userFriendlyKeys.baseDirId, baseDirId);
+};
+
+/**
+ * @param {integer} port the port where the server listens for HTTP connections
+ * (temporary)
+ */
+exports.setServerPort = function(port) {
+  return exports.set(userFriendlyKeys.serverPort, port);
 };

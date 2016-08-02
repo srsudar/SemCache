@@ -16,6 +16,46 @@ function resetSettings() {
   ];
 }
 
+/**
+ * Asserts that the internal get machinery is called for the given key.
+ *
+ * @param {settings} settings the settings module
+ * @param {function} getFn the getter function
+ * @param {key} key the key expected to be passed to the get machinery
+ * @param {t} t the test param
+ */
+function helperGetCallsInternalsForKey(settings, getFn, key, t) {
+  var expected = 'value for call to get';
+  var getStub = sinon.stub().returns(expected);
+  settings.get = getStub;
+  
+  var actual = getFn();
+  t.true(getStub.calledOnce);
+  t.equal(actual, expected);
+}
+
+/**
+ * Asserts that the internal set machinery is called for the given key.
+ *
+ * @param {settings} settings the settings module
+ * @param {function} getFn the setter function
+ * @param {key} key the key expected to be passed to the get machinery
+ * @param {any} value the value to set
+ * @param {t} t the test param
+ */
+function helperSetCallsInternalsForKey(settings, setFn, key, value, t) {
+  var expected = {the: 'settings resolved'};
+  var setStub = sinon.stub().resolves(expected);
+  settings.set = setStub;
+
+  setFn(value)
+  .then(returnedObj => {
+    t.deepEqual(returnedObj, expected);
+    t.true(setStub.calledOnce);
+    t.deepEqual(setStub.args[0], [key, value]);
+  });
+}
+
 test('createNameSpacedKey returns correct value', function(t) {
   var settings = require('../../app/scripts/settings');
   var key = 'someKey';
@@ -105,38 +145,124 @@ test('get returns null if not present', function(t) {
   resetSettings();
 });
 
-test('init initializes cache', function(t) {
-  var keyPort = 'setting_port';
-  var keyPath = 'setting_absPath';
-  var allKvPairs = {};
-  // This mixing of [] and dot notation is to appease jslint
-  allKvPairs[keyPort] = 1782;
-  allKvPairs[keyPath] = '/path/to/dir';
-  allKvPairs.notASetting = 'some other thing';
+test('getAllSettingsKeys has all keys', function(t) {
+  var settings = require('../../app/scripts/settings');
+  var actual = settings.getAllSettingKeys();
 
-  var expected = {
-    port: allKvPairs[keyPort],
-    absPath: allKvPairs[keyPath]
+  var contains = function(arr, val) {
+    var index = arr.indexOf(val);
+    t.notEqual(index, -1);
   };
 
-  var getSpy = sinon.stub().resolves(allKvPairs);
+  // For now we are manually checking each key, duplicating each key here and
+  // in the original source.
+  contains(actual, 'setting_absPath');
+  contains(actual, 'setting_instanceName');
+  contains(actual, 'setting_baseDirId');
+  contains(actual, 'setting_serverPort');
+  t.end();
+});
+
+test('init initializes cache', function(t) {
+  var settingKeys = ['setting_foo', 'setting_bar'];
+  var rawSettings = {
+    'setting_foo': 'foo_value',
+    'setting_bar': 1234
+  };
+  var processedSettings = {
+    'foo': 'foo_value',
+    'bar': 1234
+  };
+  var getStub = sinon.stub().resolves(rawSettings);
+  var getAllKeysStub = sinon.stub().returns(settingKeys);
 
   var settings = proxyquire(
     '../../app/scripts/settings',
     {
       './chrome-apis/storage':
       {
-        get: getSpy
+        get: getStub
       }
     }
   );
+  settings.getAllSettingKeys = getAllKeysStub;
 
   settings.init()
-    .then(cachedObj => {
-      t.deepEqual(cachedObj, expected);
+    .then(returnedObj => {
+      t.true(getStub.calledOnce);
+      t.deepEqual(getStub.args[0][0], settingKeys);
+      t.deepEqual(returnedObj, processedSettings);
       // We should also be returning the cache to callers now
-      t.deepEqual(settings.getSettingsObj(), expected);
+      t.deepEqual(settings.getSettingsObj(), processedSettings);
       t.end();
       resetSettings();
     });
+});
+
+test('custom getters call internals', function(t) {
+  var settings = require('../../app/scripts/settings');
+  // Using the hard-coded strings avoid initialization errors. Not ideal but
+  // not terrible.
+  helperGetCallsInternalsForKey(
+    settings,
+    settings.getAbsPath,
+    'absPath',
+    t
+  );
+  helperGetCallsInternalsForKey(
+    settings,
+    settings.getInstanceName,
+    'instanceName',
+    t
+  );
+  helperGetCallsInternalsForKey(
+    settings,
+    settings.getBaseDirId,
+    'baseDirId',
+    t
+  );
+  helperGetCallsInternalsForKey(
+    settings,
+    settings.getServerPort,
+    'serverPort',
+    t
+  );
+  t.end();
+  resetSettings();
+});
+
+test('custom setters call internals', function(t) {
+  var settings = require('../../app/scripts/settings');
+  // Using the hard-coded strings avoid initialization errors. Not ideal but
+  // not terrible.
+  helperSetCallsInternalsForKey(
+    settings,
+    settings.setAbsPath,
+    'absPath',
+    'some/path',
+    t
+  );
+  helperSetCallsInternalsForKey(
+    settings,
+    settings.setInstanceName,
+    'instanceName',
+    'my awesome cache',
+    t
+  );
+  helperSetCallsInternalsForKey(
+    settings,
+    settings.setBaseDirId,
+    'baseDirId',
+    'abc123',
+    t
+  );
+  helperSetCallsInternalsForKey(
+    settings,
+    settings.setServerPort,
+    'serverPort',
+    9876,
+    t
+  );
+  t.end();
+  resetSettings();
 });
