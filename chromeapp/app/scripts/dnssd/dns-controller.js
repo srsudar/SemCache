@@ -2,7 +2,7 @@
 /* globals Promise */
 'use strict';
 
-var chromeUdp = require('./chromeUdp');
+var chromeUdp = require('../chrome-apis/udp');
 var dnsUtil = require('./dns-util');
 var dnsPacket = require('./dns-packet');
 var byteArray = require('./byte-array');

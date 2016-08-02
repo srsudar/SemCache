@@ -4,7 +4,7 @@
  * The main controlling piece of the app. It composes the other modules.
  */
 
-var chromeUdp = require('./dnssd/chromeUdp');
+var chromeUdp = require('./chrome-apis/udp');
 var datastore = require('./persistence/datastore');
 var extBridge = require('./extension-bridge/messaging');
 var fileSystem = require('./persistence/file-system');

@@ -1,6 +1,6 @@
 'use strict';
 
-var chromeWrapper = require('./chromeRuntimeWrapper');
+var chromeRuntime = require('../chrome-apis/runtime');
 var datastore = require('../persistence/datastore');
 var base64 = require('base-64');
 
@@ -15,7 +15,7 @@ exports.EXTENSION_ID = 'malgfdapbefeeidjfndgioclhfpfglhe';
  * @param {any} message
  */
 exports.sendMessageToExtension = function(message) {
-  chromeWrapper.sendMessage(exports.EXTENSION_ID, message);
+  chromeRuntime.sendMessage(exports.EXTENSION_ID, message);
 };
 
 /**
@@ -70,7 +70,7 @@ exports.getBlobFromDataUrl = function(dataUrl) {
 };
 
 exports.attachListeners = function() {
-  chromeWrapper.addOnMessageExternalListener(exports.handleExternalMessage);
+  chromeRuntime.addOnMessageExternalListener(exports.handleExternalMessage);
 };
 
 /**

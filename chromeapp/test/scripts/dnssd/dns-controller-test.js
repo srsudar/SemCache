@@ -7,7 +7,7 @@ var sinon = require('sinon');
 require('sinon-as-promised');
 
 var dnsController = require('../../../app/scripts/dnssd/dns-controller');
-var chromeUdp = require('../../../app/scripts/dnssd/chromeUdp');
+var chromeUdp = require('../../../app/scripts/chrome-apis/udp');
 var dnsCodes = require('../../../app/scripts/dnssd/dns-codes');
 var dnsPacket = require('../../../app/scripts/dnssd/dns-packet');
 var qSection = require('../../../app/scripts/dnssd/question-section');
@@ -119,7 +119,7 @@ test('getSocket follows success chain and resolves with socket', function(t) {
   var mockedController = proxyquire(
     '../../../app/scripts/dnssd/dns-controller.js',
     {
-      './chromeUdp': chromeUdpStub
+      '../chrome-apis/udp': chromeUdpStub
     }
   );
 
@@ -154,7 +154,7 @@ test('getSocket fails if bind fails', function(t) {
   var mockedController = proxyquire(
     '../../../app/scripts/dnssd/dns-controller.js',
     {
-      './chromeUdp': chromeUdpStub
+      '../chrome-apis/udp': chromeUdpStub
     }
   );
 
@@ -193,7 +193,7 @@ test('getSocket fails if join group fails', function(t) {
   var mockedController = proxyquire(
     '../../../app/scripts/dnssd/dns-controller.js',
     {
-      './chromeUdp': chromeUdpStub
+      '../chrome-apis/udp': chromeUdpStub
     }
   );
 
@@ -498,7 +498,7 @@ test('initializeNetworkInterfaceCache initializes cache', function(t) {
   var mockedController = proxyquire(
     '../../../app/scripts/dnssd/dns-controller.js',
     {
-      './chromeUdp': {
+      '../chrome-apis/udp': {
         getNetworkInterfaces: getInterfacesStub
       }
     }

@@ -29,7 +29,7 @@ test('promptForDir calls chrome API and returns Entry', function(t) {
   var fileSystem = proxyquire(
     '../../../app/scripts/persistence/file-system',
     {
-      './chromeFileSystem': {
+      '../chrome-apis/file-system': {
         chooseEntry: chooseEntrySpy
       }
     }
@@ -61,10 +61,10 @@ test('setBaseCacheDir calls persist functions', function(t) {
   var fileSystem = proxyquire(
     '../../../app/scripts/persistence/file-system',
     {
-      './chromeFileSystem': {
+      '../chrome-apis/file-system': {
         retainEntrySync: retainEntrySyncSpy
       },
-      './chromeStorage': {
+      '../chrome-apis/storage': {
         set: setSpy
       }
     }
@@ -94,7 +94,7 @@ test('baseDirIsSet true correctly', function(t) {
   var fileSystem = proxyquire(
     '../../../app/scripts/persistence/file-system',
     {
-      './chromeStorage': {
+      '../chrome-apis/storage': {
         get: getSpy
       }
     }
@@ -118,7 +118,7 @@ test('baseDirIsSet true correctly', function(t) {
   var fileSystem = proxyquire(
     '../../../app/scripts/persistence/file-system',
     {
-      './chromeStorage': {
+      '../chrome-apis/storage': {
         get: getSpy
       }
     }
@@ -158,10 +158,10 @@ test('getPersistedBaseDir retrieves from storage', function(t) {
   var fileSystem = proxyquire(
     '../../../app/scripts/persistence/file-system',
     {
-      './chromeStorage': {
+      '../chrome-apis/storage': {
         get: getSpy
       },
-      './chromeFileSystem': {
+      '../chrome-apis/file-system': {
         restoreEntry: restoreEntrySpy
       }
     }

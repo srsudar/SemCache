@@ -69,7 +69,7 @@ test('sendMessageToExtension calls sendMessage', function(t) {
   var sendMessageSpy = sinon.spy();
   var messaging = proxyquire('../../../app/scripts/extension-bridge/messaging',
     {
-      './chromeRuntimeWrapper': {
+      '../chrome-apis/runtime': {
         sendMessage: sendMessageSpy
       }
     }

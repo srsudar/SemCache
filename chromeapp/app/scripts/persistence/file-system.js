@@ -2,8 +2,8 @@
 /* globals Promise */
 'use strict';
 
-var chromefs = require('./chromeFileSystem');
-var chromeStorage = require('./chromeStorage');
+var chromefs = require('../chrome-apis/file-system');
+var chromeStorage = require('../chrome-apis/storage');
 var fsUtil = require('./file-system-util');
 
 /** The local storage key for the entry ID of the base directory. */
