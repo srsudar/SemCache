@@ -154,7 +154,8 @@ exports.get = function(key) {
  * @return {string} the absolute path to the base directory.
  */
 exports.getAbsPath = function() {
-  return exports.get(userFriendlyKeys.absPath);
+  return 'returned abspath';
+  // return exports.get(userFriendlyKeys.absPath);
 };
 
 /**

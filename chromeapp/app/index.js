@@ -14122,40 +14122,6 @@ Polymer({
     Polymer.PaperButtonBehaviorImpl
   ];
 Polymer({
-    is: 'paper-material',
-
-    properties: {
-      /**
-       * The z-depth of this element, from 0-5. Setting to 0 will remove the
-       * shadow, and each increasing number greater than 0 will be "deeper"
-       * than the last.
-       *
-       * @attribute elevation
-       * @type number
-       * @default 1
-       */
-      elevation: {
-        type: Number,
-        reflectToAttribute: true,
-        value: 1
-      },
-
-      /**
-       * Set this to true to animate the shadow when setting a new
-       * `elevation` value.
-       *
-       * @attribute animated
-       * @type boolean
-       * @default false
-       */
-      animated: {
-        type: Boolean,
-        reflectToAttribute: true,
-        value: false
-      }
-    }
-  });
-Polymer({
       is: 'paper-button',
 
       behaviors: [
@@ -17054,6 +17020,2033 @@ var cachedPages = [];
       }
     }
   });
+Polymer({
+      is: 'iron-image',
+
+      properties: {
+        /**
+         * The URL of an image.
+         */
+        src: {
+          observer: '_srcChanged',
+          type: String,
+          value: ''
+        },
+
+        /**
+         * A short text alternative for the image.
+         */
+        alt: {
+          type: String,
+          value: null
+        },
+
+        /**
+         * When true, the image is prevented from loading and any placeholder is
+         * shown.  This may be useful when a binding to the src property is known to
+         * be invalid, to prevent 404 requests.
+         */
+        preventLoad: {
+          type: Boolean,
+          value: false,
+          observer: '_preventLoadChanged'
+        },
+
+        /**
+         * Sets a sizing option for the image.  Valid values are `contain` (full
+         * aspect ratio of the image is contained within the element and
+         * letterboxed) or `cover` (image is cropped in order to fully cover the
+         * bounds of the element), or `null` (default: image takes natural size).
+         */
+        sizing: {
+          type: String,
+          value: null,
+          reflectToAttribute: true
+        },
+
+        /**
+         * When a sizing option is used (`cover` or `contain`), this determines
+         * how the image is aligned within the element bounds.
+         */
+        position: {
+          type: String,
+          value: 'center'
+        },
+
+        /**
+         * When `true`, any change to the `src` property will cause the `placeholder`
+         * image to be shown until the new image has loaded.
+         */
+        preload: {
+          type: Boolean,
+          value: false
+        },
+
+        /**
+         * This image will be used as a background/placeholder until the src image has
+         * loaded.  Use of a data-URI for placeholder is encouraged for instant rendering.
+         */
+        placeholder: {
+          type: String,
+          value: null,
+          observer: '_placeholderChanged'
+        },
+
+        /**
+         * When `preload` is true, setting `fade` to true will cause the image to
+         * fade into place.
+         */
+        fade: {
+          type: Boolean,
+          value: false
+        },
+
+        /**
+         * Read-only value that is true when the image is loaded.
+         */
+        loaded: {
+          notify: true,
+          readOnly: true,
+          type: Boolean,
+          value: false
+        },
+
+        /**
+         * Read-only value that tracks the loading state of the image when the `preload`
+         * option is used.
+         */
+        loading: {
+          notify: true,
+          readOnly: true,
+          type: Boolean,
+          value: false
+        },
+
+        /**
+         * Read-only value that indicates that the last set `src` failed to load.
+         */
+        error: {
+          notify: true,
+          readOnly: true,
+          type: Boolean,
+          value: false
+        },
+
+        /**
+         * Can be used to set the width of image (e.g. via binding); size may also be
+         * set via CSS.
+         */
+        width: {
+          observer: '_widthChanged',
+          type: Number,
+          value: null
+        },
+
+        /**
+         * Can be used to set the height of image (e.g. via binding); size may also be
+         * set via CSS.
+         *
+         * @attribute height
+         * @type number
+         * @default null
+         */
+        height: {
+          observer: '_heightChanged',
+          type: Number,
+          value: null
+        },
+      },
+
+      observers: [
+        '_transformChanged(sizing, position)'
+      ],
+
+      ready: function() {
+        var img = this.$.img;
+
+        img.onload = function() {
+          if (this.$.img.src !== this._resolveSrc(this.src)) return;
+
+          this._setLoading(false);
+          this._setLoaded(true);
+          this._setError(false);
+        }.bind(this);
+
+        img.onerror = function() {
+          if (this.$.img.src !== this._resolveSrc(this.src)) return;
+
+          this._reset();
+
+          this._setLoading(false);
+          this._setLoaded(false);
+          this._setError(true);
+        }.bind(this);
+
+        this._resolvedSrc = '';
+      },
+
+      _load: function(src) {
+        if (src) {
+          this.$.img.src = src;
+        } else {
+          this.$.img.removeAttribute('src');
+        }
+        this.$.sizedImgDiv.style.backgroundImage = src ? 'url("' + src + '")' : '';
+
+        this._setLoading(!!src);
+        this._setLoaded(false);
+        this._setError(false);
+      },
+
+      _reset: function() {
+        this.$.img.removeAttribute('src');
+        this.$.sizedImgDiv.style.backgroundImage = '';
+
+        this._setLoading(false);
+        this._setLoaded(false);
+        this._setError(false);
+      },
+
+      _computePlaceholderHidden: function() {
+        return !this.preload || (!this.fade && !this.loading && this.loaded);
+      },
+
+      _computePlaceholderClassName: function() {
+        return (this.preload && this.fade && !this.loading && this.loaded) ? 'faded-out' : '';
+      },
+
+      _computeImgDivHidden: function() {
+        return !this.sizing;
+      },
+
+      _computeImgDivARIAHidden: function() {
+        return this.alt === '' ? 'true' : undefined;
+      },
+
+      _computeImgDivARIALabel: function() {
+        if (this.alt !== null) {
+          return this.alt;
+        }
+
+        // Polymer.ResolveUrl.resolveUrl will resolve '' relative to a URL x to
+        // that URL x, but '' is the default for src.
+        if (this.src === '') {
+          return '';
+        }
+
+        var pathComponents = (new URL(this._resolveSrc(this.src))).pathname.split("/");
+        return pathComponents[pathComponents.length - 1];
+      },
+
+      _computeImgHidden: function() {
+        return !!this.sizing;
+      },
+
+      _widthChanged: function() {
+        this.style.width = isNaN(this.width) ? this.width : this.width + 'px';
+      },
+
+      _heightChanged: function() {
+        this.style.height = isNaN(this.height) ? this.height : this.height + 'px';
+      },
+
+      _preventLoadChanged: function() {
+        if (this.preventLoad || this.loaded) return;
+
+        this._reset();
+        this._load(this.src);
+      },
+
+      _srcChanged: function(newSrc, oldSrc) {
+        var newResolvedSrc = this._resolveSrc(newSrc);
+        if (newResolvedSrc === this._resolvedSrc) return;
+        this._resolvedSrc = newResolvedSrc;
+
+        this._reset();
+        if (!this.preventLoad) {
+          this._load(newSrc);
+        }
+      },
+
+      _placeholderChanged: function() {
+        this.$.placeholder.style.backgroundImage =
+          this.placeholder ? 'url("' + this.placeholder + '")' : '';
+      },
+
+      _transformChanged: function() {
+        var sizedImgDivStyle = this.$.sizedImgDiv.style;
+        var placeholderStyle = this.$.placeholder.style;
+
+        sizedImgDivStyle.backgroundSize =
+        placeholderStyle.backgroundSize =
+          this.sizing;
+
+        sizedImgDivStyle.backgroundPosition =
+        placeholderStyle.backgroundPosition =
+          this.sizing ? this.position : '';
+
+        sizedImgDivStyle.backgroundRepeat =
+        placeholderStyle.backgroundRepeat =
+          this.sizing ? 'no-repeat' : '';
+      },
+
+      _resolveSrc: function(testSrc) {
+        return Polymer.ResolveUrl.resolveUrl(testSrc, this.ownerDocument.baseURI);
+      }
+    });
+Polymer({
+    is: 'paper-material',
+
+    properties: {
+      /**
+       * The z-depth of this element, from 0-5. Setting to 0 will remove the
+       * shadow, and each increasing number greater than 0 will be "deeper"
+       * than the last.
+       *
+       * @attribute elevation
+       * @type number
+       * @default 1
+       */
+      elevation: {
+        type: Number,
+        reflectToAttribute: true,
+        value: 1
+      },
+
+      /**
+       * Set this to true to animate the shadow when setting a new
+       * `elevation` value.
+       *
+       * @attribute animated
+       * @type boolean
+       * @default false
+       */
+      animated: {
+        type: Boolean,
+        reflectToAttribute: true,
+        value: false
+      }
+    }
+  });
+Polymer({
+      is: 'paper-card',
+
+      properties: {
+        /**
+         * The title of the card.
+         */
+        heading: {
+          type: String,
+          value: '',
+          observer: '_headingChanged'
+        },
+
+        /**
+         * The url of the title image of the card.
+         */
+        image: {
+          type: String,
+          value: ''
+        },
+
+        /**
+         * When `true`, any change to the image url property will cause the
+         * `placeholder` image to be shown until the image is fully rendered.
+         */
+        preloadImage: {
+          type: Boolean,
+          value: false
+        },
+
+        /**
+         * When `preloadImage` is true, setting `fadeImage` to true will cause the
+         * image to fade into place.
+         */
+        fadeImage: {
+          type: Boolean,
+          value: false
+        },
+
+        /**
+         * The z-depth of the card, from 0-5.
+         */
+        elevation: {
+          type: Number,
+          value: 1,
+          reflectToAttribute: true
+        },
+
+        /**
+         * Set this to true to animate the card shadow when setting a new
+         * `z` value.
+         */
+        animatedShadow: {
+          type: Boolean,
+          value: false
+        },
+
+        /**
+         * Read-only property used to pass down the `animatedShadow` value to
+         * the underlying paper-material style (since they have different names).
+         */
+        animated: {
+          type: Boolean,
+          reflectToAttribute: true,
+          readOnly: true,
+          computed: '_computeAnimated(animatedShadow)'
+        }
+      },
+
+      _headingChanged: function(heading) {
+        var label = this.getAttribute('aria-label');
+        this.setAttribute('aria-label', heading);
+      },
+
+      _computeHeadingClass: function(image) {
+        var cls = 'title-text';
+        if (image)
+          cls += ' over-image';
+        return cls;
+      },
+
+      _computeAnimated: function(animatedShadow) {
+        return animatedShadow;
+      }
+    });
+/**
+  Polymer.IronFormElementBehavior enables a custom element to be included
+  in an `iron-form`.
+
+  @demo demo/index.html
+  @polymerBehavior
+  */
+  Polymer.IronFormElementBehavior = {
+
+    properties: {
+      /**
+       * Fired when the element is added to an `iron-form`.
+       *
+       * @event iron-form-element-register
+       */
+
+      /**
+       * Fired when the element is removed from an `iron-form`.
+       *
+       * @event iron-form-element-unregister
+       */
+
+      /**
+       * The name of this element.
+       */
+      name: {
+        type: String
+      },
+
+      /**
+       * The value for this element.
+       */
+      value: {
+        notify: true,
+        type: String
+      },
+
+      /**
+       * Set to true to mark the input as required. If used in a form, a
+       * custom element that uses this behavior should also use
+       * Polymer.IronValidatableBehavior and define a custom validation method.
+       * Otherwise, a `required` element will always be considered valid.
+       * It's also strongly recommended to provide a visual style for the element
+       * when its value is invalid.
+       */
+      required: {
+        type: Boolean,
+        value: false
+      },
+
+      /**
+       * The form that the element is registered to.
+       */
+      _parentForm: {
+        type: Object
+      }
+    },
+
+    attached: function() {
+      // Note: the iron-form that this element belongs to will set this
+      // element's _parentForm property when handling this event.
+      this.fire('iron-form-element-register');
+    },
+
+    detached: function() {
+      if (this._parentForm) {
+        this._parentForm.fire('iron-form-element-unregister', {target: this});
+      }
+    }
+
+  };
+(function() {
+      'use strict';
+
+      Polymer.IronA11yAnnouncer = Polymer({
+        is: 'iron-a11y-announcer',
+
+        properties: {
+
+          /**
+           * The value of mode is used to set the `aria-live` attribute
+           * for the element that will be announced. Valid values are: `off`,
+           * `polite` and `assertive`.
+           */
+          mode: {
+            type: String,
+            value: 'polite'
+          },
+
+          _text: {
+            type: String,
+            value: ''
+          }
+        },
+
+        created: function() {
+          if (!Polymer.IronA11yAnnouncer.instance) {
+            Polymer.IronA11yAnnouncer.instance = this;
+          }
+
+          document.body.addEventListener('iron-announce', this._onIronAnnounce.bind(this));
+        },
+
+        /**
+         * Cause a text string to be announced by screen readers.
+         *
+         * @param {string} text The text that should be announced.
+         */
+        announce: function(text) {
+          this._text = '';
+          this.async(function() {
+            this._text = text;
+          }, 100);
+        },
+
+        _onIronAnnounce: function(event) {
+          if (event.detail && event.detail.text) {
+            this.announce(event.detail.text);
+          }
+        }
+      });
+
+      Polymer.IronA11yAnnouncer.instance = null;
+
+      Polymer.IronA11yAnnouncer.requestAvailability = function() {
+        if (!Polymer.IronA11yAnnouncer.instance) {
+          Polymer.IronA11yAnnouncer.instance = document.createElement('iron-a11y-announcer');
+        }
+
+        document.body.appendChild(Polymer.IronA11yAnnouncer.instance);
+      };
+    })();
+/**
+   * Singleton IronMeta instance.
+   */
+  Polymer.IronValidatableBehaviorMeta = null;
+
+  /**
+   * `Use Polymer.IronValidatableBehavior` to implement an element that validates user input.
+   * Use the related `Polymer.IronValidatorBehavior` to add custom validation logic to an iron-input.
+   *
+   * By default, an `<iron-form>` element validates its fields when the user presses the submit button.
+   * To validate a form imperatively, call the form's `validate()` method, which in turn will
+   * call `validate()` on all its children. By using `Polymer.IronValidatableBehavior`, your
+   * custom element will get a public `validate()`, which
+   * will return the validity of the element, and a corresponding `invalid` attribute,
+   * which can be used for styling.
+   *
+   * To implement the custom validation logic of your element, you must override
+   * the protected `_getValidity()` method of this behaviour, rather than `validate()`.
+   * See [this](https://github.com/PolymerElements/iron-form/blob/master/demo/simple-element.html)
+   * for an example.
+   *
+   * ### Accessibility
+   *
+   * Changing the `invalid` property, either manually or by calling `validate()` will update the
+   * `aria-invalid` attribute.
+   *
+   * @demo demo/index.html
+   * @polymerBehavior
+   */
+  Polymer.IronValidatableBehavior = {
+
+    properties: {
+
+      /**
+       * Name of the validator to use.
+       */
+      validator: {
+        type: String
+      },
+
+      /**
+       * True if the last call to `validate` is invalid.
+       */
+      invalid: {
+        notify: true,
+        reflectToAttribute: true,
+        type: Boolean,
+        value: false
+      },
+
+      /**
+       * This property is deprecated and should not be used. Use the global
+       * validator meta singleton, `Polymer.IronValidatableBehaviorMeta` instead.
+       */
+      _validatorMeta: {
+        type: Object
+      },
+
+      /**
+       * Namespace for this validator. This property is deprecated and should
+       * not be used. For all intents and purposes, please consider it a
+       * read-only, config-time property.
+       */
+      validatorType: {
+        type: String,
+        value: 'validator'
+      },
+
+      _validator: {
+        type: Object,
+        computed: '__computeValidator(validator)'
+      }
+    },
+
+    observers: [
+      '_invalidChanged(invalid)'
+    ],
+
+    registered: function() {
+      Polymer.IronValidatableBehaviorMeta = new Polymer.IronMeta({type: 'validator'});
+    },
+
+    _invalidChanged: function() {
+      if (this.invalid) {
+        this.setAttribute('aria-invalid', 'true');
+      } else {
+        this.removeAttribute('aria-invalid');
+      }
+    },
+
+    /**
+     * @return {boolean} True if the validator `validator` exists.
+     */
+    hasValidator: function() {
+      return this._validator != null;
+    },
+
+    /**
+     * Returns true if the `value` is valid, and updates `invalid`. If you want
+     * your element to have custom validation logic, do not override this method;
+     * override `_getValidity(value)` instead.
+
+     * @param {Object} value The value to be validated. By default, it is passed
+     * to the validator's `validate()` function, if a validator is set.
+     * @return {boolean} True if `value` is valid.
+     */
+    validate: function(value) {
+      this.invalid = !this._getValidity(value);
+      return !this.invalid;
+    },
+
+    /**
+     * Returns true if `value` is valid.  By default, it is passed
+     * to the validator's `validate()` function, if a validator is set. You
+     * should override this method if you want to implement custom validity
+     * logic for your element.
+     *
+     * @param {Object} value The value to be validated.
+     * @return {boolean} True if `value` is valid.
+     */
+
+    _getValidity: function(value) {
+      if (this.hasValidator()) {
+        return this._validator.validate(value);
+      }
+      return true;
+    },
+
+    __computeValidator: function() {
+      return Polymer.IronValidatableBehaviorMeta &&
+          Polymer.IronValidatableBehaviorMeta.byKey(this.validator);
+    }
+  };
+/*
+`<iron-input>` adds two-way binding and custom validators using `Polymer.IronValidatorBehavior`
+to `<input>`.
+
+### Two-way binding
+
+By default you can only get notified of changes to an `input`'s `value` due to user input:
+
+    <input value="{{myValue::input}}">
+
+`iron-input` adds the `bind-value` property that mirrors the `value` property, and can be used
+for two-way data binding. `bind-value` will notify if it is changed either by user input or by script.
+
+    <input is="iron-input" bind-value="{{myValue}}">
+
+### Custom validators
+
+You can use custom validators that implement `Polymer.IronValidatorBehavior` with `<iron-input>`.
+
+    <input is="iron-input" validator="my-custom-validator">
+
+### Stopping invalid input
+
+It may be desirable to only allow users to enter certain characters. You can use the
+`prevent-invalid-input` and `allowed-pattern` attributes together to accomplish this. This feature
+is separate from validation, and `allowed-pattern` does not affect how the input is validated.
+
+    <!-- only allow characters that match [0-9] -->
+    <input is="iron-input" prevent-invalid-input allowed-pattern="[0-9]">
+
+@hero hero.svg
+@demo demo/index.html
+*/
+
+  Polymer({
+
+    is: 'iron-input',
+
+    extends: 'input',
+
+    behaviors: [
+      Polymer.IronValidatableBehavior
+    ],
+
+    properties: {
+
+      /**
+       * Use this property instead of `value` for two-way data binding.
+       */
+      bindValue: {
+        observer: '_bindValueChanged',
+        type: String
+      },
+
+      /**
+       * Set to true to prevent the user from entering invalid input. If `allowedPattern` is set,
+       * any character typed by the user will be matched against that pattern, and rejected if it's not a match.
+       * Pasted input will have each character checked individually; if any character
+       * doesn't match `allowedPattern`, the entire pasted string will be rejected.
+       * If `allowedPattern` is not set, it will use the `type` attribute (only supported for `type=number`).
+       */
+      preventInvalidInput: {
+        type: Boolean
+      },
+
+      /**
+       * Regular expression that list the characters allowed as input.
+       * This pattern represents the allowed characters for the field; as the user inputs text,
+       * each individual character will be checked against the pattern (rather than checking
+       * the entire value as a whole). The recommended format should be a list of allowed characters;
+       * for example, `[a-zA-Z0-9.+-!;:]`
+       */
+      allowedPattern: {
+        type: String,
+        observer: "_allowedPatternChanged"
+      },
+
+      _previousValidInput: {
+        type: String,
+        value: ''
+      },
+
+      _patternAlreadyChecked: {
+        type: Boolean,
+        value: false
+      }
+
+    },
+
+    listeners: {
+      'input': '_onInput',
+      'keypress': '_onKeypress'
+    },
+
+    /** @suppress {checkTypes} */
+    registered: function() {
+      // Feature detect whether we need to patch dispatchEvent (i.e. on FF and IE).
+      if (!this._canDispatchEventOnDisabled()) {
+        this._origDispatchEvent = this.dispatchEvent;
+        this.dispatchEvent = this._dispatchEventFirefoxIE;
+      }
+    },
+
+    created: function() {
+      Polymer.IronA11yAnnouncer.requestAvailability();
+    },
+
+    _canDispatchEventOnDisabled: function() {
+      var input = document.createElement('input');
+      var canDispatch = false;
+      input.disabled = true;
+
+      input.addEventListener('feature-check-dispatch-event', function() {
+        canDispatch = true;
+      });
+
+      try {
+        input.dispatchEvent(new Event('feature-check-dispatch-event'));
+      } catch(e) {}
+
+      return canDispatch;
+    },
+
+    _dispatchEventFirefoxIE: function() {
+      // Due to Firefox bug, events fired on disabled form controls can throw
+      // errors; furthermore, neither IE nor Firefox will actually dispatch
+      // events from disabled form controls; as such, we toggle disable around
+      // the dispatch to allow notifying properties to notify
+      // See issue #47 for details
+      var disabled = this.disabled;
+      this.disabled = false;
+      this._origDispatchEvent.apply(this, arguments);
+      this.disabled = disabled;
+    },
+
+    get _patternRegExp() {
+      var pattern;
+      if (this.allowedPattern) {
+        pattern = new RegExp(this.allowedPattern);
+      } else {
+        switch (this.type) {
+          case 'number':
+            pattern = /[0-9.,e-]/;
+            break;
+        }
+      }
+      return pattern;
+    },
+
+    ready: function() {
+      this.bindValue = this.value;
+    },
+
+    /**
+     * @suppress {checkTypes}
+     */
+    _bindValueChanged: function() {
+      if (this.value !== this.bindValue) {
+        this.value = !(this.bindValue || this.bindValue === 0 || this.bindValue === false) ? '' : this.bindValue;
+      }
+      // manually notify because we don't want to notify until after setting value
+      this.fire('bind-value-changed', {value: this.bindValue});
+    },
+
+    _allowedPatternChanged: function() {
+      // Force to prevent invalid input when an `allowed-pattern` is set
+      this.preventInvalidInput = this.allowedPattern ? true : false;
+    },
+
+    _onInput: function() {
+      // Need to validate each of the characters pasted if they haven't
+      // been validated inside `_onKeypress` already.
+      if (this.preventInvalidInput && !this._patternAlreadyChecked) {
+        var valid = this._checkPatternValidity();
+        if (!valid) {
+          this._announceInvalidCharacter('Invalid string of characters not entered.');
+          this.value = this._previousValidInput;
+        }
+      }
+
+      this.bindValue = this.value;
+      this._previousValidInput = this.value;
+      this._patternAlreadyChecked = false;
+    },
+
+    _isPrintable: function(event) {
+      // What a control/printable character is varies wildly based on the browser.
+      // - most control characters (arrows, backspace) do not send a `keypress` event
+      //   in Chrome, but the *do* on Firefox
+      // - in Firefox, when they do send a `keypress` event, control chars have
+      //   a charCode = 0, keyCode = xx (for ex. 40 for down arrow)
+      // - printable characters always send a keypress event.
+      // - in Firefox, printable chars always have a keyCode = 0. In Chrome, the keyCode
+      //   always matches the charCode.
+      // None of this makes any sense.
+
+      // For these keys, ASCII code == browser keycode.
+      var anyNonPrintable =
+        (event.keyCode == 8)   ||  // backspace
+        (event.keyCode == 9)   ||  // tab
+        (event.keyCode == 13)  ||  // enter
+        (event.keyCode == 27);     // escape
+
+      // For these keys, make sure it's a browser keycode and not an ASCII code.
+      var mozNonPrintable =
+        (event.keyCode == 19)  ||  // pause
+        (event.keyCode == 20)  ||  // caps lock
+        (event.keyCode == 45)  ||  // insert
+        (event.keyCode == 46)  ||  // delete
+        (event.keyCode == 144) ||  // num lock
+        (event.keyCode == 145) ||  // scroll lock
+        (event.keyCode > 32 && event.keyCode < 41)   || // page up/down, end, home, arrows
+        (event.keyCode > 111 && event.keyCode < 124); // fn keys
+
+      return !anyNonPrintable && !(event.charCode == 0 && mozNonPrintable);
+    },
+
+    _onKeypress: function(event) {
+      if (!this.preventInvalidInput && this.type !== 'number') {
+        return;
+      }
+      var regexp = this._patternRegExp;
+      if (!regexp) {
+        return;
+      }
+
+      // Handle special keys and backspace
+      if (event.metaKey || event.ctrlKey || event.altKey)
+        return;
+
+      // Check the pattern either here or in `_onInput`, but not in both.
+      this._patternAlreadyChecked = true;
+
+      var thisChar = String.fromCharCode(event.charCode);
+      if (this._isPrintable(event) && !regexp.test(thisChar)) {
+        event.preventDefault();
+        this._announceInvalidCharacter('Invalid character ' + thisChar + ' not entered.');
+      }
+    },
+
+    _checkPatternValidity: function() {
+      var regexp = this._patternRegExp;
+      if (!regexp) {
+        return true;
+      }
+      for (var i = 0; i < this.value.length; i++) {
+        if (!regexp.test(this.value[i])) {
+          return false;
+        }
+      }
+      return true;
+    },
+
+    /**
+     * Returns true if `value` is valid. The validator provided in `validator` will be used first,
+     * then any constraints.
+     * @return {boolean} True if the value is valid.
+     */
+    validate: function() {
+      // First, check what the browser thinks. Some inputs (like type=number)
+      // behave weirdly and will set the value to "" if something invalid is
+      // entered, but will set the validity correctly.
+      var valid =  this.checkValidity();
+
+      // Only do extra checking if the browser thought this was valid.
+      if (valid) {
+        // Empty, required input is invalid
+        if (this.required && this.value === '') {
+          valid = false;
+        } else if (this.hasValidator()) {
+          valid = Polymer.IronValidatableBehavior.validate.call(this, this.value);
+        }
+      }
+
+      this.invalid = !valid;
+      this.fire('iron-input-validate');
+      return valid;
+    },
+
+    _announceInvalidCharacter: function(message) {
+      this.fire('iron-announce', { text: message });
+    }
+  });
+
+  /*
+  The `iron-input-validate` event is fired whenever `validate()` is called.
+  @event iron-input-validate
+  */
+// Generate unique, monotonically increasing IDs for labels (needed by
+  // aria-labelledby) and add-ons.
+  Polymer.PaperInputHelper = {};
+  Polymer.PaperInputHelper.NextLabelID = 1;
+  Polymer.PaperInputHelper.NextAddonID = 1;
+
+  /**
+   * Use `Polymer.PaperInputBehavior` to implement inputs with `<paper-input-container>`. This
+   * behavior is implemented by `<paper-input>`. It exposes a number of properties from
+   * `<paper-input-container>` and `<input is="iron-input">` and they should be bound in your
+   * template.
+   *
+   * The input element can be accessed by the `inputElement` property if you need to access
+   * properties or methods that are not exposed.
+   * @polymerBehavior Polymer.PaperInputBehavior
+   */
+  Polymer.PaperInputBehaviorImpl = {
+
+    properties: {
+      /**
+       * Fired when the input changes due to user interaction.
+       *
+       * @event change
+       */
+
+      /**
+       * The label for this input. If you're using PaperInputBehavior to
+       * implement your own paper-input-like element, bind this to
+       * `<label>`'s content and `hidden` property, e.g.
+       * `<label hidden$="[[!label]]">[[label]]</label>` in your `template`
+       */
+      label: {
+        type: String
+      },
+
+      /**
+       * The value for this input. If you're using PaperInputBehavior to
+       * implement your own paper-input-like element, bind this to
+       * the `<input is="iron-input">`'s `bindValue`
+       * property, or the value property of your input that is `notify:true`.
+       */
+      value: {
+        notify: true,
+        type: String
+      },
+
+      /**
+       * Set to true to disable this input. If you're using PaperInputBehavior to
+       * implement your own paper-input-like element, bind this to
+       * both the `<paper-input-container>`'s and the input's `disabled` property.
+       */
+      disabled: {
+        type: Boolean,
+        value: false
+      },
+
+      /**
+       * Returns true if the value is invalid. If you're using PaperInputBehavior to
+       * implement your own paper-input-like element, bind this to both the
+       * `<paper-input-container>`'s and the input's `invalid` property.
+       *
+       * If `autoValidate` is true, the `invalid` attribute is managed automatically,
+       * which can clobber attempts to manage it manually.
+       */
+      invalid: {
+        type: Boolean,
+        value: false,
+        notify: true
+      },
+
+      /**
+       * Set to true to prevent the user from entering invalid input. If you're
+       * using PaperInputBehavior to  implement your own paper-input-like element,
+       * bind this to `<input is="iron-input">`'s `preventInvalidInput` property.
+       */
+      preventInvalidInput: {
+        type: Boolean
+      },
+
+      /**
+       * Set this to specify the pattern allowed by `preventInvalidInput`. If
+       * you're using PaperInputBehavior to implement your own paper-input-like
+       * element, bind this to the `<input is="iron-input">`'s `allowedPattern`
+       * property.
+       */
+      allowedPattern: {
+        type: String
+      },
+
+      /**
+       * The type of the input. The supported types are `text`, `number` and `password`.
+       * If you're using PaperInputBehavior to implement your own paper-input-like element,
+       * bind this to the `<input is="iron-input">`'s `type` property.
+       */
+      type: {
+        type: String
+      },
+
+      /**
+       * The datalist of the input (if any). This should match the id of an existing `<datalist>`.
+       * If you're using PaperInputBehavior to implement your own paper-input-like
+       * element, bind this to the `<input is="iron-input">`'s `list` property.
+       */
+      list: {
+        type: String
+      },
+
+      /**
+       * A pattern to validate the `input` with. If you're using PaperInputBehavior to
+       * implement your own paper-input-like element, bind this to
+       * the `<input is="iron-input">`'s `pattern` property.
+       */
+      pattern: {
+        type: String
+      },
+
+      /**
+       * Set to true to mark the input as required. If you're using PaperInputBehavior to
+       * implement your own paper-input-like element, bind this to
+       * the `<input is="iron-input">`'s `required` property.
+       */
+      required: {
+        type: Boolean,
+        value: false
+      },
+
+      /**
+       * The error message to display when the input is invalid. If you're using
+       * PaperInputBehavior to implement your own paper-input-like element,
+       * bind this to the `<paper-input-error>`'s content, if using.
+       */
+      errorMessage: {
+        type: String
+      },
+
+      /**
+       * Set to true to show a character counter.
+       */
+      charCounter: {
+        type: Boolean,
+        value: false
+      },
+
+      /**
+       * Set to true to disable the floating label. If you're using PaperInputBehavior to
+       * implement your own paper-input-like element, bind this to
+       * the `<paper-input-container>`'s `noLabelFloat` property.
+       */
+      noLabelFloat: {
+        type: Boolean,
+        value: false
+      },
+
+      /**
+       * Set to true to always float the label. If you're using PaperInputBehavior to
+       * implement your own paper-input-like element, bind this to
+       * the `<paper-input-container>`'s `alwaysFloatLabel` property.
+       */
+      alwaysFloatLabel: {
+        type: Boolean,
+        value: false
+      },
+
+      /**
+       * Set to true to auto-validate the input value. If you're using PaperInputBehavior to
+       * implement your own paper-input-like element, bind this to
+       * the `<paper-input-container>`'s `autoValidate` property.
+       */
+      autoValidate: {
+        type: Boolean,
+        value: false
+      },
+
+      /**
+       * Name of the validator to use. If you're using PaperInputBehavior to
+       * implement your own paper-input-like element, bind this to
+       * the `<input is="iron-input">`'s `validator` property.
+       */
+      validator: {
+        type: String
+      },
+
+      // HTMLInputElement attributes for binding if needed
+
+      /**
+       * If you're using PaperInputBehavior to implement your own paper-input-like
+       * element, bind this to the `<input is="iron-input">`'s `autocomplete` property.
+       */
+      autocomplete: {
+        type: String,
+        value: 'off'
+      },
+
+      /**
+       * If you're using PaperInputBehavior to implement your own paper-input-like
+       * element, bind this to the `<input is="iron-input">`'s `autofocus` property.
+       */
+      autofocus: {
+        type: Boolean,
+        observer: '_autofocusChanged'
+      },
+
+      /**
+       * If you're using PaperInputBehavior to implement your own paper-input-like
+       * element, bind this to the `<input is="iron-input">`'s `inputmode` property.
+       */
+      inputmode: {
+        type: String
+      },
+
+      /**
+       * The minimum length of the input value.
+       * If you're using PaperInputBehavior to implement your own paper-input-like
+       * element, bind this to the `<input is="iron-input">`'s `minlength` property.
+       */
+      minlength: {
+        type: Number
+      },
+
+      /**
+       * The maximum length of the input value.
+       * If you're using PaperInputBehavior to implement your own paper-input-like
+       * element, bind this to the `<input is="iron-input">`'s `maxlength` property.
+       */
+      maxlength: {
+        type: Number
+      },
+
+      /**
+       * The minimum (numeric or date-time) input value.
+       * If you're using PaperInputBehavior to implement your own paper-input-like
+       * element, bind this to the `<input is="iron-input">`'s `min` property.
+       */
+      min: {
+        type: String
+      },
+
+      /**
+       * The maximum (numeric or date-time) input value.
+       * Can be a String (e.g. `"2000-1-1"`) or a Number (e.g. `2`).
+       * If you're using PaperInputBehavior to implement your own paper-input-like
+       * element, bind this to the `<input is="iron-input">`'s `max` property.
+       */
+      max: {
+        type: String
+      },
+
+      /**
+       * Limits the numeric or date-time increments.
+       * If you're using PaperInputBehavior to implement your own paper-input-like
+       * element, bind this to the `<input is="iron-input">`'s `step` property.
+       */
+      step: {
+        type: String
+      },
+
+      /**
+       * If you're using PaperInputBehavior to implement your own paper-input-like
+       * element, bind this to the `<input is="iron-input">`'s `name` property.
+       */
+      name: {
+        type: String
+      },
+
+      /**
+       * A placeholder string in addition to the label. If this is set, the label will always float.
+       */
+      placeholder: {
+        type: String,
+        // need to set a default so _computeAlwaysFloatLabel is run
+        value: ''
+      },
+
+      /**
+       * If you're using PaperInputBehavior to implement your own paper-input-like
+       * element, bind this to the `<input is="iron-input">`'s `readonly` property.
+       */
+      readonly: {
+        type: Boolean,
+        value: false
+      },
+
+      /**
+       * If you're using PaperInputBehavior to implement your own paper-input-like
+       * element, bind this to the `<input is="iron-input">`'s `size` property.
+       */
+      size: {
+        type: Number
+      },
+
+      // Nonstandard attributes for binding if needed
+
+      /**
+       * If you're using PaperInputBehavior to implement your own paper-input-like
+       * element, bind this to the `<input is="iron-input">`'s `autocapitalize` property.
+       */
+      autocapitalize: {
+        type: String,
+        value: 'none'
+      },
+
+      /**
+       * If you're using PaperInputBehavior to implement your own paper-input-like
+       * element, bind this to the `<input is="iron-input">`'s `autocorrect` property.
+       */
+      autocorrect: {
+        type: String,
+        value: 'off'
+      },
+
+      /**
+       * If you're using PaperInputBehavior to implement your own paper-input-like
+       * element, bind this to the `<input is="iron-input">`'s `autosave` property,
+       * used with type=search.
+       */
+      autosave: {
+        type: String
+      },
+
+      /**
+       * If you're using PaperInputBehavior to implement your own paper-input-like
+       * element, bind this to the `<input is="iron-input">`'s `results` property,
+       * used with type=search.
+       */
+      results: {
+        type: Number
+      },
+
+      /**
+       * If you're using PaperInputBehavior to implement your own paper-input-like
+       * element, bind this to the `<input is="iron-input">`'s `accept` property,
+       * used with type=file.
+       */
+      accept: {
+        type: String
+      },
+
+      /**
+       * If you're using PaperInputBehavior to implement your own paper-input-like
+       * element, bind this to the`<input is="iron-input">`'s `multiple` property,
+       * used with type=file.
+       */
+      multiple: {
+        type: Boolean
+      },
+
+      _ariaDescribedBy: {
+        type: String,
+        value: ''
+      },
+
+      _ariaLabelledBy: {
+        type: String,
+        value: ''
+      }
+
+    },
+
+    listeners: {
+      'addon-attached': '_onAddonAttached',
+    },
+
+    keyBindings: {
+      'shift+tab:keydown': '_onShiftTabDown'
+    },
+
+    hostAttributes: {
+      tabindex: 0
+    },
+
+    /**
+     * Returns a reference to the input element.
+     */
+    get inputElement() {
+      return this.$.input;
+    },
+
+    /**
+     * Returns a reference to the focusable element.
+     */
+    get _focusableElement() {
+      return this.inputElement;
+    },
+
+    registered: function() {
+      // These types have some default placeholder text; overlapping
+      // the label on top of it looks terrible. Auto-float the label in this case.
+      this._typesThatHaveText = ["date", "datetime", "datetime-local", "month",
+          "time", "week", "file"];
+    },
+
+    attached: function() {
+      this._updateAriaLabelledBy();
+
+      if (this.inputElement &&
+          this._typesThatHaveText.indexOf(this.inputElement.type) !== -1) {
+        this.alwaysFloatLabel = true;
+      }
+    },
+
+    _appendStringWithSpace: function(str, more) {
+      if (str) {
+        str = str + ' ' + more;
+      } else {
+        str = more;
+      }
+      return str;
+    },
+
+    _onAddonAttached: function(event) {
+      var target = event.path ? event.path[0] : event.target;
+      if (target.id) {
+        this._ariaDescribedBy = this._appendStringWithSpace(this._ariaDescribedBy, target.id);
+      } else {
+        var id = 'paper-input-add-on-' + Polymer.PaperInputHelper.NextAddonID++;
+        target.id = id;
+        this._ariaDescribedBy = this._appendStringWithSpace(this._ariaDescribedBy, id);
+      }
+    },
+
+    /**
+     * Validates the input element and sets an error style if needed.
+     *
+     * @return {boolean}
+     */
+    validate: function() {
+      return this.inputElement.validate();
+    },
+
+    /**
+     * Forward focus to inputElement. Overriden from IronControlState.
+     */
+    _focusBlurHandler: function(event) {
+      Polymer.IronControlState._focusBlurHandler.call(this, event);
+
+      // Forward the focus to the nested input.
+      if (this.focused && !this._shiftTabPressed)
+        this._focusableElement.focus();
+    },
+
+    /**
+     * Handler that is called when a shift+tab keypress is detected by the menu.
+     *
+     * @param {CustomEvent} event A key combination event.
+     */
+    _onShiftTabDown: function(event) {
+      var oldTabIndex = this.getAttribute('tabindex');
+      this._shiftTabPressed = true;
+      this.setAttribute('tabindex', '-1');
+      this.async(function() {
+        this.setAttribute('tabindex', oldTabIndex);
+        this._shiftTabPressed = false;
+      }, 1);
+    },
+
+    /**
+     * If `autoValidate` is true, then validates the element.
+     */
+    _handleAutoValidate: function() {
+      if (this.autoValidate)
+        this.validate();
+    },
+
+    /**
+     * Restores the cursor to its original position after updating the value.
+     * @param {string} newValue The value that should be saved.
+     */
+    updateValueAndPreserveCaret: function(newValue) {
+      // Not all elements might have selection, and even if they have the
+      // right properties, accessing them might throw an exception (like for
+      // <input type=number>)
+      try {
+        var start = this.inputElement.selectionStart;
+        this.value = newValue;
+
+        // The cursor automatically jumps to the end after re-setting the value,
+        // so restore it to its original position.
+        this.inputElement.selectionStart = start;
+        this.inputElement.selectionEnd = start;
+      } catch (e) {
+        // Just set the value and give up on the caret.
+        this.value = newValue;
+      }
+    },
+
+    _computeAlwaysFloatLabel: function(alwaysFloatLabel, placeholder) {
+      return placeholder || alwaysFloatLabel;
+    },
+
+    _updateAriaLabelledBy: function() {
+      var label = Polymer.dom(this.root).querySelector('label');
+      if (!label) {
+        this._ariaLabelledBy = '';
+        return;
+      }
+      var labelledBy;
+      if (label.id) {
+        labelledBy = label.id;
+      } else {
+        labelledBy = 'paper-input-label-' + Polymer.PaperInputHelper.NextLabelID++;
+        label.id = labelledBy;
+      }
+      this._ariaLabelledBy = labelledBy;
+    },
+
+    _onChange:function(event) {
+      // In the Shadow DOM, the `change` event is not leaked into the
+      // ancestor tree, so we must do this manually.
+      // See https://w3c.github.io/webcomponents/spec/shadow/#events-that-are-not-leaked-into-ancestor-trees.
+      if (this.shadowRoot) {
+        this.fire(event.type, {sourceEvent: event}, {
+          node: this,
+          bubbles: event.bubbles,
+          cancelable: event.cancelable
+        });
+      }
+    },
+
+    _autofocusChanged: function() {
+      // Firefox doesn't respect the autofocus attribute if it's applied after
+      // the page is loaded (Chrome/WebKit do respect it), preventing an
+      // autofocus attribute specified in markup from taking effect when the
+      // element is upgraded. As a workaround, if the autofocus property is set,
+      // and the focus hasn't already been moved elsewhere, we take focus.
+      if (this.autofocus && this._focusableElement) {
+
+        // In IE 11, the default document.activeElement can be the page's
+        // outermost html element, but there are also cases (under the
+        // polyfill?) in which the activeElement is not a real HTMLElement, but
+        // just a plain object. We identify the latter case as having no valid
+        // activeElement.
+        var activeElement = document.activeElement;
+        var isActiveElementValid = activeElement instanceof HTMLElement;
+
+        // Has some other element has already taken the focus?
+        var isSomeElementActive = isActiveElementValid &&
+            activeElement !== document.body &&
+            activeElement !== document.documentElement; /* IE 11 */
+        if (!isSomeElementActive) {
+          // No specific element has taken the focus yet, so we can take it.
+          this._focusableElement.focus();
+        }
+      }
+    }
+  }
+
+  /** @polymerBehavior */
+  Polymer.PaperInputBehavior = [
+    Polymer.IronControlState,
+    Polymer.IronA11yKeysBehavior,
+    Polymer.PaperInputBehaviorImpl
+  ];
+/**
+   * Use `Polymer.PaperInputAddonBehavior` to implement an add-on for `<paper-input-container>`. A
+   * add-on appears below the input, and may display information based on the input value and
+   * validity such as a character counter or an error message.
+   * @polymerBehavior
+   */
+  Polymer.PaperInputAddonBehavior = {
+
+    hostAttributes: {
+      'add-on': ''
+    },
+
+    attached: function() {
+      this.fire('addon-attached');
+    },
+
+    /**
+     * The function called by `<paper-input-container>` when the input value or validity changes.
+     * @param {{
+     *   inputElement: (Element|undefined),
+     *   value: (string|undefined),
+     *   invalid: boolean
+     * }} state -
+     *     inputElement: The input element.
+     *     value: The input value.
+     *     invalid: True if the input value is invalid.
+     */
+    update: function(state) {
+    }
+
+  };
+Polymer({
+    is: 'paper-input-char-counter',
+
+    behaviors: [
+      Polymer.PaperInputAddonBehavior
+    ],
+
+    properties: {
+      _charCounterStr: {
+        type: String,
+        value: '0'
+      }
+    },
+
+    /**
+     * This overrides the update function in PaperInputAddonBehavior.
+     * @param {{
+     *   inputElement: (Element|undefined),
+     *   value: (string|undefined),
+     *   invalid: boolean
+     * }} state -
+     *     inputElement: The input element.
+     *     value: The input value.
+     *     invalid: True if the input value is invalid.
+     */
+    update: function(state) {
+      if (!state.inputElement) {
+        return;
+      }
+
+      state.value = state.value || '';
+
+      var counter = state.value.toString().length.toString();
+
+      if (state.inputElement.hasAttribute('maxlength')) {
+        counter += '/' + state.inputElement.getAttribute('maxlength');
+      }
+
+      this._charCounterStr = counter;
+    }
+  });
+Polymer({
+    is: 'paper-input-container',
+
+    properties: {
+      /**
+       * Set to true to disable the floating label. The label disappears when the input value is
+       * not null.
+       */
+      noLabelFloat: {
+        type: Boolean,
+        value: false
+      },
+
+      /**
+       * Set to true to always float the floating label.
+       */
+      alwaysFloatLabel: {
+        type: Boolean,
+        value: false
+      },
+
+      /**
+       * The attribute to listen for value changes on.
+       */
+      attrForValue: {
+        type: String,
+        value: 'bind-value'
+      },
+
+      /**
+       * Set to true to auto-validate the input value when it changes.
+       */
+      autoValidate: {
+        type: Boolean,
+        value: false
+      },
+
+      /**
+       * True if the input is invalid. This property is set automatically when the input value
+       * changes if auto-validating, or when the `iron-input-validate` event is heard from a child.
+       */
+      invalid: {
+        observer: '_invalidChanged',
+        type: Boolean,
+        value: false
+      },
+
+      /**
+       * True if the input has focus.
+       */
+      focused: {
+        readOnly: true,
+        type: Boolean,
+        value: false,
+        notify: true
+      },
+
+      _addons: {
+        type: Array
+        // do not set a default value here intentionally - it will be initialized lazily when a
+        // distributed child is attached, which may occur before configuration for this element
+        // in polyfill.
+      },
+
+      _inputHasContent: {
+        type: Boolean,
+        value: false
+      },
+
+      _inputSelector: {
+        type: String,
+        value: 'input,textarea,.paper-input-input'
+      },
+
+      _boundOnFocus: {
+        type: Function,
+        value: function() {
+          return this._onFocus.bind(this);
+        }
+      },
+
+      _boundOnBlur: {
+        type: Function,
+        value: function() {
+          return this._onBlur.bind(this);
+        }
+      },
+
+      _boundOnInput: {
+        type: Function,
+        value: function() {
+          return this._onInput.bind(this);
+        }
+      },
+
+      _boundValueChanged: {
+        type: Function,
+        value: function() {
+          return this._onValueChanged.bind(this);
+        }
+      }
+    },
+
+    listeners: {
+      'addon-attached': '_onAddonAttached',
+      'iron-input-validate': '_onIronInputValidate'
+    },
+
+    get _valueChangedEvent() {
+      return this.attrForValue + '-changed';
+    },
+
+    get _propertyForValue() {
+      return Polymer.CaseMap.dashToCamelCase(this.attrForValue);
+    },
+
+    get _inputElement() {
+      return Polymer.dom(this).querySelector(this._inputSelector);
+    },
+
+    get _inputElementValue() {
+      return this._inputElement[this._propertyForValue] || this._inputElement.value;
+    },
+
+    ready: function() {
+      if (!this._addons) {
+        this._addons = [];
+      }
+      this.addEventListener('focus', this._boundOnFocus, true);
+      this.addEventListener('blur', this._boundOnBlur, true);
+    },
+
+    attached: function() {
+      if (this.attrForValue) {
+        this._inputElement.addEventListener(this._valueChangedEvent, this._boundValueChanged);
+      } else {
+        this.addEventListener('input', this._onInput);
+      }
+
+      // Only validate when attached if the input already has a value.
+      if (this._inputElementValue != '') {
+        this._handleValueAndAutoValidate(this._inputElement);
+      } else {
+        this._handleValue(this._inputElement);
+      }
+    },
+
+    _onAddonAttached: function(event) {
+      if (!this._addons) {
+        this._addons = [];
+      }
+      var target = event.target;
+      if (this._addons.indexOf(target) === -1) {
+        this._addons.push(target);
+        if (this.isAttached) {
+          this._handleValue(this._inputElement);
+        }
+      }
+    },
+
+    _onFocus: function() {
+      this._setFocused(true);
+    },
+
+    _onBlur: function() {
+      this._setFocused(false);
+      this._handleValueAndAutoValidate(this._inputElement);
+    },
+
+    _onInput: function(event) {
+      this._handleValueAndAutoValidate(event.target);
+    },
+
+    _onValueChanged: function(event) {
+      this._handleValueAndAutoValidate(event.target);
+    },
+
+    _handleValue: function(inputElement) {
+      var value = this._inputElementValue;
+
+      // type="number" hack needed because this.value is empty until it's valid
+      if (value || value === 0 || (inputElement.type === 'number' && !inputElement.checkValidity())) {
+        this._inputHasContent = true;
+      } else {
+        this._inputHasContent = false;
+      }
+
+      this.updateAddons({
+        inputElement: inputElement,
+        value: value,
+        invalid: this.invalid
+      });
+    },
+
+    _handleValueAndAutoValidate: function(inputElement) {
+      if (this.autoValidate) {
+        var valid;
+        if (inputElement.validate) {
+          valid = inputElement.validate(this._inputElementValue);
+        } else {
+          valid = inputElement.checkValidity();
+        }
+        this.invalid = !valid;
+      }
+
+      // Call this last to notify the add-ons.
+      this._handleValue(inputElement);
+    },
+
+    _onIronInputValidate: function(event) {
+      this.invalid = this._inputElement.invalid;
+    },
+
+    _invalidChanged: function() {
+      if (this._addons) {
+        this.updateAddons({invalid: this.invalid});
+      }
+    },
+
+    /**
+     * Call this to update the state of add-ons.
+     * @param {Object} state Add-on state.
+     */
+    updateAddons: function(state) {
+      for (var addon, index = 0; addon = this._addons[index]; index++) {
+        addon.update(state);
+      }
+    },
+
+    _computeInputContentClass: function(noLabelFloat, alwaysFloatLabel, focused, invalid, _inputHasContent) {
+      var cls = 'input-content';
+      if (!noLabelFloat) {
+        var label = this.querySelector('label');
+
+        if (alwaysFloatLabel || _inputHasContent) {
+          cls += ' label-is-floating';
+          // If the label is floating, ignore any offsets that may have been
+          // applied from a prefix element.
+          this.$.labelAndInputContainer.style.position = 'static';
+
+          if (invalid) {
+            cls += ' is-invalid';
+          } else if (focused) {
+            cls += " label-is-highlighted";
+          }
+        } else {
+          // When the label is not floating, it should overlap the input element.
+          if (label) {
+            this.$.labelAndInputContainer.style.position = 'relative';
+          }
+        }
+      } else {
+        if (_inputHasContent) {
+          cls += ' label-is-hidden';
+        }
+      }
+      return cls;
+    },
+
+    _computeUnderlineClass: function(focused, invalid) {
+      var cls = 'underline';
+      if (invalid) {
+        cls += ' is-invalid';
+      } else if (focused) {
+        cls += ' is-highlighted'
+      }
+      return cls;
+    },
+
+    _computeAddOnContentClass: function(focused, invalid) {
+      var cls = 'add-on-content';
+      if (invalid) {
+        cls += ' is-invalid';
+      } else if (focused) {
+        cls += ' is-highlighted'
+      }
+      return cls;
+    }
+  });
+Polymer({
+    is: 'paper-input-error',
+
+    behaviors: [
+      Polymer.PaperInputAddonBehavior
+    ],
+
+    properties: {
+      /**
+       * True if the error is showing.
+       */
+      invalid: {
+        readOnly: true,
+        reflectToAttribute: true,
+        type: Boolean
+      }
+    },
+
+    /**
+     * This overrides the update function in PaperInputAddonBehavior.
+     * @param {{
+     *   inputElement: (Element|undefined),
+     *   value: (string|undefined),
+     *   invalid: boolean
+     * }} state -
+     *     inputElement: The input element.
+     *     value: The input value.
+     *     invalid: True if the input value is invalid.
+     */
+    update: function(state) {
+      this._setInvalid(state.invalid);
+    }
+  });
+Polymer({
+    is: 'paper-input',
+
+    behaviors: [
+      Polymer.IronFormElementBehavior,
+      Polymer.PaperInputBehavior
+    ]
+  });
+Polymer({
+      is: 'settings-view',
+
+      properties: {
+        absPath: {
+          type: String,
+          value: '_getAbsPath'
+        },
+        instanceName: {
+          type: String,
+          value: function() {
+            console.log('CALLING instanceName value function');
+            return this._getInstanceName();
+          }
+        },
+        baseDirId: {
+          type: String,
+          value: '_getBaseDirId'
+        },
+        serverPort: {
+          type: Number,
+          value: '_getServerPort'
+        },
+
+        /**
+         * Describes the author of the element, but is really just an excuse to
+         * show off JSDoc annotations.
+         *
+         * @type {{name: string, image: string}}
+         */
+        author: {
+          type: Object,
+          // Use `value` to provide a default value for a property, by setting it
+          // on your element's prototype.
+          //
+          // If you provide a function, as we do here, Polymer will call that
+          // _per element instance_.
+          //
+          // We do that to ensure that each element gets its own copy of the
+          // value, rather than having it shared across all instances (via the
+          // prototype).
+          value: function() {
+            return {
+              name:  'Dimitri Glazkov',
+              image: 'http://addyosmani.com/blog/wp-content/uploads/2013/04/unicorn.jpg',
+            };
+          }
+        },
+      },
+      _getAbsPath: function() {
+        var settingsModule = this.getSettingsModule();
+        var result = settingsModule.getAbsPath();
+        return result;
+      },
+
+      _getInstanceName: function() {
+        // var settingsModule = this.getSettingsModule();
+        // var result = settingsModule.getInstanceName();
+        console.log('CALLING _getInstanceName');
+        return 'return value of _getInstanceName';
+        // return result;
+      },
+
+      _getBaseDirId: function() {
+        var settingsModule = this.getSettingsModule();
+        var result = settingsModule.getBaseDirId();
+        return result;
+      },
+
+      _getServerPort: function() {
+        var settingsModule = this.getSettingsModule();
+        var result = settingsModule.getServerPort();
+        return result;
+      },
+
+      getSettingsModule: function() {
+        var result = require('settings');
+        return result;
+      },
+
+      // Element Lifecycle
+
+      ready: function() {
+        // `ready` is called after all elements have been configured, but
+        // propagates bottom-up. This element's children are ready, but parents
+        // are not.
+        //
+        // This is the point where you should make modifications to the DOM (when
+        // necessary), or kick off any processes the element wants to perform.
+      },
+
+      attached: function() {
+        // `attached` fires once the element and its parents have been inserted
+        // into a document.
+        //
+        // This is a good place to perform any work related to your element's
+        // visual state or active behavior (measuring sizes, beginning animations,
+        // loading resources, etc).
+      },
+
+      detached: function() {
+        // The analog to `attached`, `detached` fires when the element has been
+        // removed from a document.
+        //
+        // Use this to clean up anything you did in `attached`.
+      },
+
+      // Element Behavior
+
+      /**
+       * Sometimes it's just nice to say hi.
+       *
+       * @param {string} greeting A positive greeting.
+       * @return {string} The full greeting.
+       */
+      sayHello: function(greeting) {
+        var response = greeting || 'Hello World!';
+        return 'seed-element says, ' + response;
+      },
+
+      /**
+       * The `seed-element-lasers` event is fired whenever `fireLasers` is called.
+       *
+       * @event seed-element-lasers
+       * @detail {{sound: String}}
+       */
+
+      /**
+       * Attempt to destroy this element's enemies with a beam of light!
+       *
+       * Or, at least, dispatch an event in the vain hope that someone else will
+       * do the zapping.
+       */
+      fireLasers: function() {
+        this.fire('seed-element-lasers', {sound: 'Pew pew!'});
+      }
+    });
 Polymer({
 
       is: 'my-app',
@@ -34148,6 +36141,301 @@ _.extend(DummyHandler.prototype, {
   }
 }, WSC.BaseHandler.prototype);
 require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
+/* globals chrome */
+'use strict';
+
+// Listens for the app launching then creates the window
+chrome.app.runtime.onLaunched.addListener(function() {
+  var width = 500;
+  var height = 300;
+
+  chrome.app.window.create('index.html', {
+    id: 'main',
+    bounds: {
+      width: width,
+      height: height,
+      left: Math.round((screen.availWidth - width) / 2),
+      top: Math.round((screen.availHeight - height)/2)
+    }
+  });
+});
+
+window.dnssd = require('dnssd');
+window.dnsc = require('dnsc');
+window.dnsSem = require('dnsSem');
+
+},{"dnsSem":"dnsSem","dnsc":"dnsc","dnssd":"dnssd"}],2:[function(require,module,exports){
+/* globals Promise, chrome */
+'use strict';
+
+/**
+ * This module provides a wrapper around the callback-heavy chrome.fileSystem
+ * API and provides an alternative based on Promises.
+ */
+
+/**
+ * @param {Entry} entry
+ *
+ * @return {Promise} Promise that resolves with the display path
+ */
+exports.getDisplayPath = function(entry) {
+  return new Promise(function(resolve) {
+    chrome.fileSystem.getDisplayPath(entry, function(displayPath) {
+      resolve(displayPath);
+    });
+  });
+};
+
+/**
+ * @param {Entry} entry the starting entry that will serve as the base for a
+ * writable entry
+ *
+ * @return {Promise} Promise that resolves with a writable entry
+ */
+exports.getWritableEntry = function(entry) {
+  return new Promise(function(resolve) {
+    chrome.fileSystem.getWritableEntry(entry, function(writableEntry) {
+      resolve(writableEntry);
+    });
+  });
+};
+
+/**
+ * @param {Entry} entry
+ *
+ * @return {Promise} Promise that resolves with a boolean
+ */
+exports.isWritableEntry = function(entry) {
+  return new Promise(function(resolve) {
+    chrome.fileSystem.isWritableEntry(entry, function(isWritable) {
+      resolve(isWritable);
+    });
+  });
+};
+
+/**
+ * The original Chrome callback takes two parameters: an entry and an array of
+ * FileEntries. No examples appear to make use of this second parameter,
+ * however, nor is it documented what the second parameter is for. For this
+ * reason we return only the first parameter, but callers should be aware of
+ * this difference compared to the original API.
+ *
+ * @param {object} options
+ *
+ * @return {Promise} Promise that resolves with an Entry
+ */
+exports.chooseEntry = function(options) {
+  return new Promise(function(resolve) {
+    chrome.fileSystem.chooseEntry(options, function(entry, arr) {
+      if (arr) {
+        console.warn(
+          'chrome.fileSystem.chooseEntry callback invoked with a 2nd ' +
+            'parameter that is being ignored: ',
+            arr);
+      }
+      resolve(entry);
+    });
+  });
+};
+
+/**
+ * @param {string} id id of a previous entry
+ *
+ * @return {Promise} Promise that resolves with an Entry
+ */
+exports.restoreEntry = function(id) {
+  return new Promise(function(resolve) {
+    chrome.fileSystem.restoreEntry(id, function(entry) {
+      resolve(entry);
+    });
+  });
+};
+
+/**
+ * @param {string} id
+ *
+ * @return {Promise} Promise that resolves with a boolean
+ */
+exports.isRestorable = function(id) {
+  return new Promise(function(resolve) {
+    chrome.fileSystem.isRestorable(id, function(isRestorable) {
+      resolve(isRestorable);
+    });
+  });
+};
+
+/**
+ * @param {Entry} entry
+ *
+ * @return {Promise} Promise that resolves with a string id that can be used to
+ * restore the Entry in the future. The underlying Chrome API is a synchronous
+ * call, but this is provided as a Promise to keep API parity with the rest of
+ * the module. A synchronous version is provided via retainEntrySync.
+ */
+exports.retainEntry = function(entry) {
+  var id = chrome.fileSystem.retainEntry(entry);
+  return Promise.resolve(id);
+};
+
+/**
+ * @param {Entry} entry
+ *
+ * @return {string} id that can be used to restore the Entry
+ */
+exports.retainEntrySync = function(entry) {
+  return chrome.fileSystem.retainEntry(entry);
+};
+
+/**
+ * @param {object} options
+ *
+ * @return {Promise} Promise that resolves with a FileSystem
+ */
+exports.requestFileSystem = function(options) {
+  return new Promise(function(resolve) {
+    chrome.fileSystem.requestFileSystem(options, function(fileSystem) {
+      resolve(fileSystem);
+    });
+  });
+};
+
+/**
+ * @return {Promise} Promise that resolves with a FileSystem
+ */
+exports.getVolumeList = function() {
+  return new Promise(function(resolve) {
+    chrome.fileSystem.getVolumeList(function(fileSystem) {
+      resolve(fileSystem);
+    });
+  });
+};
+
+},{}],3:[function(require,module,exports){
+/* globals chrome */
+'use strict';
+
+/**
+ * Add a callback function via chrome.runtime.onMessageExternal.addListener.
+ * @param {Function} fn
+ */
+exports.addOnMessageExternalListener = function(fn) {
+  chrome.runtime.onMessageExternal.addListener(fn);
+};
+
+/**
+ * Send a message using the chrome.runtime.sendMessage API.
+ *
+ * @param {string} id
+ * @param {any} message must be JSON-serializable
+ */
+exports.sendMessage = function(id, message) {
+  chrome.runtime.sendMessage(id, message);
+};
+
+},{}],4:[function(require,module,exports){
+/* globals Promise, chrome */
+'use strict';
+
+/**
+ * This module provides a wrapper around the chrome.storage.local API and
+ * provides an alternative based on Promises.
+ */
+
+/**
+ * @param {boolean} useSync
+ *
+ * @return {StorageArea} chrome.storage.sync or chrome.storage.local depending
+ * on the value of useSync
+ */
+function getStorageArea(useSync) {
+  if (useSync) {
+    return chrome.storage.sync;
+  } else {
+    return chrome.storage.local;
+  }
+}
+
+/**
+ * @param {string|Array<string>} keyOrKeys
+ * @param {boolean} useSync true to use chrome.storage.sync, otherwise will use
+ * chrome.storage.local
+ *
+ * @return {Promise} Promise that resolves with an object of key value mappings
+ */
+exports.get = function(keyOrKeys, useSync) {
+  var storageArea = getStorageArea(useSync);
+  return new Promise(function(resolve) {
+    storageArea.get(keyOrKeys, function(items) {
+      resolve(items);
+    });
+  });
+};
+
+/**
+ * @param {string|Array<string>} keyOrKeys
+ * @param {boolean} useSync true to use chrome.storage.sync, otherwise will use
+ * chrome.storage.local
+ *
+ * @return {Promise} Promise that resolves with an integer of the number of
+ * bytes in use for the given key or keys
+ */
+exports.getBytesInUse = function(keyOrKeys, useSync) {
+  var storageArea = getStorageArea(useSync);
+  return new Promise(function(resolve) {
+    storageArea.getBytesInUse(keyOrKeys, function(numBytes) {
+      resolve(numBytes);
+    });
+  });
+};
+
+/**
+ * @param {object} items an object of key value mappings
+ * @param {boolean} useSync true to use chrome.storage.sync, otherwise will use
+ * chrome.storage.local
+ *
+ * @return {Promise} Promise that resolves when the operation completes
+ */
+exports.set = function(items, useSync) {
+  var storageArea = getStorageArea(useSync);
+  return new Promise(function(resolve) {
+    storageArea.set(items, function() {
+      resolve();
+    });
+  });
+};
+
+/**
+ * @param {string|Array<string>} keyOrKeys
+ * @param {boolean} useSync true to use chrome.storage.sync, otherwise will use
+ * chrome.storage.local
+ *
+ * @return {Promise} Promise that resolves when the operation completes
+ */
+exports.remove = function(keyOrKeys, useSync) {
+  var storageArea = getStorageArea(useSync);
+  return new Promise(function(resolve) {
+    storageArea.remove(keyOrKeys, function() {
+      resolve();
+    });
+  });
+};
+
+/**
+ * @param {boolean} useSync true to use chrome.storage.sync, otherwise will use
+ * chrome.storage.local
+ *
+ * @return {Promise} Promise that resolves when the operation completes
+ */
+exports.clear = function(useSync) {
+  var storageArea = getStorageArea(useSync);
+  return new Promise(function(resolve) {
+    storageArea.clear(function() {
+      resolve();
+    });
+  });
+};
+
+},{}],5:[function(require,module,exports){
 /*jshint esnext:true, bitwise: false */
 'use strict';
 
@@ -34364,7 +36652,7 @@ exports.getByteArrayAsUint8Array = function(byteArr) {
   return new Uint8Array(byteArr._buffer, 0, byteArr._cursor);
 };
 
-},{"./binary-utils":"binaryUtils"}],2:[function(require,module,exports){
+},{"./binary-utils":"binaryUtils"}],6:[function(require,module,exports){
 /*jshint esnext:true*/
 /*
  * https://github.com/justindarc/dns-sd.js
@@ -34553,7 +36841,7 @@ function defineType(values) {
   return T;
 }
 
-},{}],3:[function(require,module,exports){
+},{}],7:[function(require,module,exports){
 /*jshint esnext:true, bitwise:false */
 
 /**
@@ -34956,7 +37244,7 @@ exports.getFlagsAsValue = function(qr, opcode, aa, tc, rd, ra, rcode) {
   return value;
 };
 
-},{"./byte-array":1,"./dns-codes":2,"./question-section":5,"./resource-record":6}],4:[function(require,module,exports){
+},{"./byte-array":5,"./dns-codes":6,"./question-section":9,"./resource-record":10}],8:[function(require,module,exports){
 'use strict';
 
 var byteArray = require('./byte-array');
@@ -35178,7 +37466,7 @@ exports.getIpStringFromByteArrayReader = function(reader) {
   return result;
 };
 
-},{"./byte-array":1}],5:[function(require,module,exports){
+},{"./byte-array":5}],9:[function(require,module,exports){
 /* global exports, require */
 'use strict';
 
@@ -35284,7 +37572,7 @@ exports.createQuestionFromReader = function(reader) {
   return result;
 };
 
-},{"./byte-array":1,"./dns-util":4}],6:[function(require,module,exports){
+},{"./byte-array":5,"./dns-util":8}],10:[function(require,module,exports){
 /* global exports, require */
 'use strict';
 
@@ -35805,316 +38093,7 @@ exports.peekTypeInReader = function(reader) {
   return result;
 };
 
-},{"./byte-array":1,"./dns-codes":2,"./dns-util":4}],7:[function(require,module,exports){
-/* globals chrome */
-'use strict';
-
-/**
- * Add a callback function via chrome.runtime.onMessageExternal.addListener.
- * @param {Function} fn
- */
-exports.addOnMessageExternalListener = function(fn) {
-  chrome.runtime.onMessageExternal.addListener(fn);
-};
-
-/**
- * Send a message using the chrome.runtime.sendMessage API.
- *
- * @param {string} id
- * @param {any} message must be JSON-serializable
- */
-exports.sendMessage = function(id, message) {
-  chrome.runtime.sendMessage(id, message);
-};
-
-},{}],8:[function(require,module,exports){
-/* globals $ */
-'use strict';
-
-var fileSystem = require('fileSystem');
-var extensionBridge = require('extBridge');
-
-extensionBridge.attachListeners();
-
-document.addEventListener('DOMContentLoaded', function() {
-  var h1 = document.getElementsByTagName('h1');
-  if (h1.length > 0) {
-    h1[0].innerText = h1[0].innerText + ' \'Allo';
-  }
-  var chooseDirButton = document.getElementById('choose_dir');
-  chooseDirButton.addEventListener('click', function() {
-    fileSystem.promptForDir().then(function(entry) {
-      console.log('GOT NEW BASE DIR: ', entry);
-      fileSystem.setBaseCacheDir(entry);
-    });
-  });
-}, false);
-
-function clearContainer() {
-  var $container = $('#content-container');
-  $container.children().hide();
-}
-
-function initUi() {
-
-}
-
-$(function() {
-  console.log('SETTING UP READY BUSINESS');
-
-  initUi();
-});
-
-},{"extBridge":"extBridge","fileSystem":"fileSystem"}],9:[function(require,module,exports){
-/* globals Promise, chrome */
-'use strict';
-
-/**
- * This module provides a wrapper around the callback-heavy chrome.fileSystem
- * API and provides an alternative based on Promises.
- */
-
-/**
- * @param {Entry} entry
- *
- * @return {Promise} Promise that resolves with the display path
- */
-exports.getDisplayPath = function(entry) {
-  return new Promise(function(resolve) {
-    chrome.fileSystem.getDisplayPath(entry, function(displayPath) {
-      resolve(displayPath);
-    });
-  });
-};
-
-/**
- * @param {Entry} entry the starting entry that will serve as the base for a
- * writable entry
- *
- * @return {Promise} Promise that resolves with a writable entry
- */
-exports.getWritableEntry = function(entry) {
-  return new Promise(function(resolve) {
-    chrome.fileSystem.getWritableEntry(entry, function(writableEntry) {
-      resolve(writableEntry);
-    });
-  });
-};
-
-/**
- * @param {Entry} entry
- *
- * @return {Promise} Promise that resolves with a boolean
- */
-exports.isWritableEntry = function(entry) {
-  return new Promise(function(resolve) {
-    chrome.fileSystem.isWritableEntry(entry, function(isWritable) {
-      resolve(isWritable);
-    });
-  });
-};
-
-/**
- * The original Chrome callback takes two parameters: an entry and an array of
- * FileEntries. No examples appear to make use of this second parameter,
- * however, nor is it documented what the second parameter is for. For this
- * reason we return only the first parameter, but callers should be aware of
- * this difference compared to the original API.
- *
- * @param {object} options
- *
- * @return {Promise} Promise that resolves with an Entry
- */
-exports.chooseEntry = function(options) {
-  return new Promise(function(resolve) {
-    chrome.fileSystem.chooseEntry(options, function(entry, arr) {
-      if (arr) {
-        console.warn(
-          'chrome.fileSystem.chooseEntry callback invoked with a 2nd ' +
-            'parameter that is being ignored: ',
-            arr);
-      }
-      resolve(entry);
-    });
-  });
-};
-
-/**
- * @param {string} id id of a previous entry
- *
- * @return {Promise} Promise that resolves with an Entry
- */
-exports.restoreEntry = function(id) {
-  return new Promise(function(resolve) {
-    chrome.fileSystem.restoreEntry(id, function(entry) {
-      resolve(entry);
-    });
-  });
-};
-
-/**
- * @param {string} id
- *
- * @return {Promise} Promise that resolves with a boolean
- */
-exports.isRestorable = function(id) {
-  return new Promise(function(resolve) {
-    chrome.fileSystem.isRestorable(id, function(isRestorable) {
-      resolve(isRestorable);
-    });
-  });
-};
-
-/**
- * @param {Entry} entry
- *
- * @return {Promise} Promise that resolves with a string id that can be used to
- * restore the Entry in the future. The underlying Chrome API is a synchronous
- * call, but this is provided as a Promise to keep API parity with the rest of
- * the module. A synchronous version is provided via retainEntrySync.
- */
-exports.retainEntry = function(entry) {
-  var id = chrome.fileSystem.retainEntry(entry);
-  return Promise.resolve(id);
-};
-
-/**
- * @param {Entry} entry
- *
- * @return {string} id that can be used to restore the Entry
- */
-exports.retainEntrySync = function(entry) {
-  return chrome.fileSystem.retainEntry(entry);
-};
-
-/**
- * @param {object} options
- *
- * @return {Promise} Promise that resolves with a FileSystem
- */
-exports.requestFileSystem = function(options) {
-  return new Promise(function(resolve) {
-    chrome.fileSystem.requestFileSystem(options, function(fileSystem) {
-      resolve(fileSystem);
-    });
-  });
-};
-
-/**
- * @return {Promise} Promise that resolves with a FileSystem
- */
-exports.getVolumeList = function() {
-  return new Promise(function(resolve) {
-    chrome.fileSystem.getVolumeList(function(fileSystem) {
-      resolve(fileSystem);
-    });
-  });
-};
-
-},{}],10:[function(require,module,exports){
-/* globals Promise, chrome */
-'use strict';
-
-/**
- * This module provides a wrapper around the chrome.storage.local API and
- * provides an alternative based on Promises.
- */
-
-/**
- * @param {boolean} useSync
- *
- * @return {StorageArea} chrome.storage.sync or chrome.storage.local depending
- * on the value of useSync
- */
-function getStorageArea(useSync) {
-  if (useSync) {
-    return chrome.storage.sync;
-  } else {
-    return chrome.storage.local;
-  }
-}
-
-/**
- * @param {string|Array<string>} keyOrKeys
- * @param {boolean} useSync true to use chrome.storage.sync, otherwise will use
- * chrome.storage.local
- *
- * @return {Promise} Promise that resolves with an object of key value mappings
- */
-exports.get = function(keyOrKeys, useSync) {
-  var storageArea = getStorageArea(useSync);
-  return new Promise(function(resolve) {
-    storageArea.get(keyOrKeys, function(items) {
-      resolve(items);
-    });
-  });
-};
-
-/**
- * @param {string|Array<string>} keyOrKeys
- * @param {boolean} useSync true to use chrome.storage.sync, otherwise will use
- * chrome.storage.local
- *
- * @return {Promise} Promise that resolves with an integer of the number of
- * bytes in use for the given key or keys
- */
-exports.getBytesInUse = function(keyOrKeys, useSync) {
-  var storageArea = getStorageArea(useSync);
-  return new Promise(function(resolve) {
-    storageArea.getBytesInUse(keyOrKeys, function(numBytes) {
-      resolve(numBytes);
-    });
-  });
-};
-
-/**
- * @param {object} items an object of key value mappings
- * @param {boolean} useSync true to use chrome.storage.sync, otherwise will use
- * chrome.storage.local
- *
- * @return {Promise} Promise that resolves when the operation completes
- */
-exports.set = function(items, useSync) {
-  var storageArea = getStorageArea(useSync);
-  return new Promise(function(resolve) {
-    storageArea.set(items, function() {
-      resolve();
-    });
-  });
-};
-
-/**
- * @param {string|Array<string>} keyOrKeys
- * @param {boolean} useSync true to use chrome.storage.sync, otherwise will use
- * chrome.storage.local
- *
- * @return {Promise} Promise that resolves when the operation completes
- */
-exports.remove = function(keyOrKeys, useSync) {
-  var storageArea = getStorageArea(useSync);
-  return new Promise(function(resolve) {
-    storageArea.remove(keyOrKeys, function() {
-      resolve();
-    });
-  });
-};
-
-/**
- * @param {boolean} useSync true to use chrome.storage.sync, otherwise will use
- * chrome.storage.local
- *
- * @return {Promise} Promise that resolves when the operation completes
- */
-exports.clear = function(useSync) {
-  var storageArea = getStorageArea(useSync);
-  return new Promise(function(resolve) {
-    storageArea.clear(function() {
-      resolve();
-    });
-  });
-};
-
-},{}],11:[function(require,module,exports){
+},{"./byte-array":5,"./dns-codes":6,"./dns-util":8}],11:[function(require,module,exports){
 /* globals Promise */
 'use strict';
 
@@ -38250,7 +40229,7 @@ exports.getCachedFileNameFromPath = function(path) {
  * The main controlling piece of the app. It composes the other modules.
  */
 
-var chromeUdp = require('./dnssd/chromeUdp');
+var chromeUdp = require('./chrome-apis/udp');
 var datastore = require('./persistence/datastore');
 var extBridge = require('./extension-bridge/messaging');
 var fileSystem = require('./persistence/file-system');
@@ -38386,7 +40365,7 @@ exports.saveMhtmlAndOpen = function(captureUrl, captureDate, mhtmlUrl) {
   });
 };
 
-},{"./dnssd/chromeUdp":"chromeUdp","./extension-bridge/messaging":"extBridge","./persistence/datastore":11,"./persistence/file-system":"fileSystem"}],"binaryUtils":[function(require,module,exports){
+},{"./chrome-apis/udp":"chromeUdp","./extension-bridge/messaging":"extBridge","./persistence/datastore":11,"./persistence/file-system":"fileSystem"}],"binaryUtils":[function(require,module,exports){
 /*jshint esnext:true*/
 /*
  * https://github.com/justindarc/dns-sd.js
@@ -38684,7 +40663,7 @@ exports.browseForSemCacheInstances = function() {
 /* globals Promise */
 'use strict';
 
-var chromeUdp = require('./chromeUdp');
+var chromeUdp = require('../chrome-apis/udp');
 var dnsUtil = require('./dns-util');
 var dnsPacket = require('./dns-packet');
 var byteArray = require('./byte-array');
@@ -39269,7 +41248,7 @@ exports.addRecord = function(name, record) {
   existingRecords.push(record);
 };
 
-},{"./byte-array":1,"./chromeUdp":"chromeUdp","./dns-codes":2,"./dns-packet":3,"./dns-util":4,"./question-section":5}],"dnssd":[function(require,module,exports){
+},{"../chrome-apis/udp":"chromeUdp","./byte-array":5,"./dns-codes":6,"./dns-packet":7,"./dns-util":8,"./question-section":9}],"dnssd":[function(require,module,exports){
 /*jshint esnext:true*/
 /* globals Promise */
 'use strict';
@@ -39962,10 +41941,10 @@ exports.queryForResponses = function(
   });
 };
 
-},{"./dns-codes":2,"./dns-controller":"dnsc","./dns-packet":3,"./dns-util":4,"./resource-record":6}],"extBridge":[function(require,module,exports){
+},{"./dns-codes":6,"./dns-controller":"dnsc","./dns-packet":7,"./dns-util":8,"./resource-record":10}],"extBridge":[function(require,module,exports){
 'use strict';
 
-var chromeWrapper = require('./chromeRuntimeWrapper');
+var chromeRuntime = require('../chrome-apis/runtime');
 var datastore = require('../persistence/datastore');
 var base64 = require('base-64');
 
@@ -39980,7 +41959,7 @@ exports.EXTENSION_ID = 'malgfdapbefeeidjfndgioclhfpfglhe';
  * @param {any} message
  */
 exports.sendMessageToExtension = function(message) {
-  chromeWrapper.sendMessage(exports.EXTENSION_ID, message);
+  chromeRuntime.sendMessage(exports.EXTENSION_ID, message);
 };
 
 /**
@@ -40035,7 +42014,7 @@ exports.getBlobFromDataUrl = function(dataUrl) {
 };
 
 exports.attachListeners = function() {
-  chromeWrapper.addOnMessageExternalListener(exports.handleExternalMessage);
+  chromeRuntime.addOnMessageExternalListener(exports.handleExternalMessage);
 };
 
 /**
@@ -40053,13 +42032,13 @@ exports.sendMessageToOpenUrl = function(url) {
   exports.sendMessageToExtension(message);
 };
 
-},{"../persistence/datastore":11,"./chromeRuntimeWrapper":7,"base-64":14}],"fileSystem":[function(require,module,exports){
+},{"../chrome-apis/runtime":3,"../persistence/datastore":11,"base-64":14}],"fileSystem":[function(require,module,exports){
 /*jshint esnext:true*/
 /* globals Promise */
 'use strict';
 
-var chromefs = require('./chromeFileSystem');
-var chromeStorage = require('./chromeStorage');
+var chromefs = require('../chrome-apis/file-system');
+var chromeStorage = require('../chrome-apis/storage');
 var fsUtil = require('./file-system-util');
 
 /** The local storage key for the entry ID of the base directory. */
@@ -40195,7 +42174,7 @@ exports.promptForDir = function() {
   });
 };
 
-},{"./chromeFileSystem":9,"./chromeStorage":10,"./file-system-util":"fsUtil"}],"fsUtil":[function(require,module,exports){
+},{"../chrome-apis/file-system":2,"../chrome-apis/storage":4,"./file-system-util":"fsUtil"}],"fsUtil":[function(require,module,exports){
 /* globals Promise */
 'use strict';
 
@@ -40358,4 +42337,221 @@ exports.start = function(host, port) {
   startServer(host, port, endpointHandlers);
 };
 
-},{"./handlers":12,"./server-api":13}]},{},[8]);
+},{"./handlers":12,"./server-api":13}],"settings":[function(require,module,exports){
+/* global Promise */
+'use strict';
+
+var storage = require('./chrome-apis/storage');
+
+/**
+ * Settings for the application as a whole.
+ */
+
+// These are stored in chrome.storage. We could store a number of things in
+// chrome.storage, not just settings. For this reason we are going to
+// name-space our keys. E.g. callers will interact with settings like
+// 'absPath', while the underlying key is stored as setting_absPath.
+
+/** The prefix that we use to namespace setting keys. */
+var SETTING_NAMESPACE_PREFIX = 'setting_';
+
+exports.SETTINGS_OBJ = null;
+
+var userFriendlyKeys = {
+  absPath: 'absPath',
+  instanceName: 'instanceName',
+  baseDirId: 'baseDirId',
+  serverPort: 'serverPort'
+};
+
+/**
+ * Returns an array with all of the keys known to store settings.
+ *
+ * @return {Array<String>}
+ */
+exports.getAllSettingKeys = function() {
+  return [
+    exports.createNameSpacedKey(userFriendlyKeys.absPath),
+    exports.createNameSpacedKey(userFriendlyKeys.instanceName),
+    exports.createNameSpacedKey(userFriendlyKeys.baseDirId),
+    exports.createNameSpacedKey(userFriendlyKeys.serverPort)
+  ];
+};
+
+/**
+ * The prefix we use for keys that belong to settings in chrome.storage.
+ * Callers will not need to consume this API.
+ *
+ * @return {string}
+ */
+exports.getNameSpacePrefix = function() {
+  return SETTING_NAMESPACE_PREFIX;
+};
+
+/**
+ * Return an object that is a cache of the system-wide settings.
+ */
+exports.getSettingsObj = function() {
+  return exports.SETTINGS_OBJ;
+};
+
+/**
+ * Initialize the cache of settings objects. After this call, getSettingsObj()
+ * will return with the cached value.
+ *
+ * @return {Promise} Promise that resolves with the newly-initialized cache
+ */
+exports.init = function() {
+  // Get all the known settings
+  return new Promise(function(resolve) {
+    storage.get(exports.getAllSettingKeys())
+      .then(allKvPairs => {
+        var processedSettings = {};
+        Object.keys(allKvPairs).forEach(rawKey => {
+          // we're dealing with the raw keys here, e.g. setting_absPath
+          var processedKey = exports.removeNameSpaceFromKey(rawKey);
+          var value = allKvPairs[rawKey];
+          processedSettings[processedKey] = value;
+        });
+        exports.SETTINGS_OBJ = processedSettings;
+        resolve(processedSettings);
+      });
+  });
+
+};
+
+/**
+ * Set the value in local storage and in the settings cache maintained by this
+ * object.
+ *
+ * @return {Promise} Promise that resolves with the current settings object
+ * after the set completes
+ */
+exports.set = function(key, value) {
+  var namespacedKey = exports.createNameSpacedKey(key);
+  var kvPair = {};
+  kvPair[namespacedKey] = value;
+  var useSync = false;
+
+  return new Promise(function(resolve) {
+    storage.set(kvPair, useSync)
+      .then(() => {
+        exports.SETTINGS_OBJ[key] = value;
+        // Now that the set has succeeded, update the cache of settings.
+        resolve(exports.getSettingsObj());
+      });
+  });
+};
+
+/**
+ * Return the name-spaced key that is the value stored in chrome.storage.
+ *
+ * @return {string}
+ */
+exports.createNameSpacedKey = function(key) {
+  var result = exports.getNameSpacePrefix() + key;
+  return result;
+};
+
+/**
+ * Remove the namespacing from the key. Undoes the work done by
+ * exports.createNameSpacedKey.
+ *
+ * @param {string} key a key as namespaced by createNameSpacedKey()
+ *
+ * @return {string} the de-namespaced key ready to be user-facing
+ */
+exports.removeNameSpaceFromKey = function(key) {
+  if (!key.startsWith(exports.getNameSpacePrefix())) {
+    throw new Error('key was not namespaced: ', key);
+  }
+  return key.substr(exports.getNameSpacePrefix().length);
+};
+
+/**
+ * Return the current value of the key. This is retrieved from the cache, and
+ * thus is synchronous. It requires that init() has been called to populate the
+ * cache.
+ *
+ * @return {any} the value in the settings obj, or null if it hasn't been set
+ */
+exports.get = function(key) {
+  var settingsObj = exports.getSettingsObj();
+  if (!settingsObj) {
+    console.warn('Settings object not initialized, returning null');
+    return null;
+  }
+  var settings = exports.getSettingsObj();
+  if (!settings.hasOwnProperty(key)) {
+    return null;
+  } else {
+    var result = settings[key];
+    return result;
+  }
+};
+
+/**
+ * @return {string} the absolute path to the base directory.
+ */
+exports.getAbsPath = function() {
+  return 'returned abspath';
+  // return exports.get(userFriendlyKeys.absPath);
+};
+
+/**
+ * @return {string} the user-defined name of the cache instance
+ */
+exports.getInstanceName = function() {
+  return exports.get(userFriendlyKeys.instanceName);
+};
+
+/**
+ * @return {string} the string used to retain the base directory as returned by
+ * chrome.fileSystem.retainEntry
+ */
+exports.getBaseDirId = function() {
+  return exports.get(userFriendlyKeys.baseDirId);
+};
+
+/**
+ * @return {interger} the value the user has specified for the server port
+ * (temporary)
+ */
+exports.getServerPort = function() {
+  return exports.get(userFriendlyKeys.serverPort);
+};
+
+/**
+ * @param {string} path the absolute path to the base directory of SemCache,
+ * which unfortunately cannot be determined via an API
+ */
+exports.setAbsPath = function(path) {
+  return exports.set(userFriendlyKeys.absPath, path);
+};
+
+/**
+ * @param {string} instanceName the user-friendly name for the SemCache
+ * instance
+ */
+exports.setInstanceName = function(instanceName) {
+  return exports.set(userFriendlyKeys.instanceName, instanceName);
+};
+
+/**
+ * @param {string} retainedId the String ID that can be used to restore the
+ * DirectoryEntry where SemCache is mounted, as returned by
+ * chrome.fileSystem.retainEntry
+ */
+exports.setBaseDirId = function(baseDirId) {
+  return exports.set(userFriendlyKeys.baseDirId, baseDirId);
+};
+
+/**
+ * @param {integer} port the port where the server listens for HTTP connections
+ * (temporary)
+ */
+exports.setServerPort = function(port) {
+  return exports.set(userFriendlyKeys.serverPort, port);
+};
+
+},{"./chrome-apis/storage":4}]},{},[1]);

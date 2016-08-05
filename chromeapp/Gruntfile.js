@@ -31,7 +31,7 @@ module.exports = function (grunt) {
     browserify: {
       options: {
         require: [
-          './app/scripts/dnssd/chromeUdp:chromeUdp',
+          './app/scripts/chrome-apis/udp:chromeUdp',
           './app/scripts/dnssd/binary-utils:binaryUtils',
           './app/scripts/dnssd/dns-sd:dnssd',
           './app/scripts/dnssd/dns-sd-semcache:dnsSem',
@@ -41,6 +41,7 @@ module.exports = function (grunt) {
           './app/scripts/extension-bridge/messaging:extBridge',
           './app/scripts/server/server-controller:serverController',
           './app/scripts/app-controller:appController',
+          './app/scripts/settings:settings',
         ],
       },
       js: {
@@ -49,8 +50,8 @@ module.exports = function (grunt) {
         dest: 'app/scripts/bundle.js'
       },
       frontEnd: {
-        src: 'app/scripts/index.js',
-        dest: 'app/scripts/indexBundle.js'
+        src: 'app/polymer-ui/main.js',
+        dest: 'app/polymer-ui/mainBundle.js'
       }
     },
 

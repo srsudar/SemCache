@@ -1,4 +1,28 @@
 require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
+/* globals chrome */
+'use strict';
+
+// Listens for the app launching then creates the window
+chrome.app.runtime.onLaunched.addListener(function() {
+  var width = 500;
+  var height = 300;
+
+  chrome.app.window.create('index.html', {
+    id: 'main',
+    bounds: {
+      width: width,
+      height: height,
+      left: Math.round((screen.availWidth - width) / 2),
+      top: Math.round((screen.availHeight - height)/2)
+    }
+  });
+});
+
+window.dnssd = require('dnssd');
+window.dnsc = require('dnsc');
+window.dnsSem = require('dnsSem');
+
+},{"dnsSem":"dnsSem","dnsc":"dnsc","dnssd":"dnssd"}],2:[function(require,module,exports){
 /* globals Promise, chrome */
 'use strict';
 
@@ -144,7 +168,7 @@ exports.getVolumeList = function() {
   });
 };
 
-},{}],2:[function(require,module,exports){
+},{}],3:[function(require,module,exports){
 /* globals chrome */
 'use strict';
 
@@ -166,7 +190,7 @@ exports.sendMessage = function(id, message) {
   chrome.runtime.sendMessage(id, message);
 };
 
-},{}],3:[function(require,module,exports){
+},{}],4:[function(require,module,exports){
 /* globals Promise, chrome */
 'use strict';
 
@@ -269,7 +293,7 @@ exports.clear = function(useSync) {
   });
 };
 
-},{}],4:[function(require,module,exports){
+},{}],5:[function(require,module,exports){
 /*jshint esnext:true, bitwise: false */
 'use strict';
 
@@ -486,7 +510,7 @@ exports.getByteArrayAsUint8Array = function(byteArr) {
   return new Uint8Array(byteArr._buffer, 0, byteArr._cursor);
 };
 
-},{"./binary-utils":"binaryUtils"}],5:[function(require,module,exports){
+},{"./binary-utils":"binaryUtils"}],6:[function(require,module,exports){
 /*jshint esnext:true*/
 /*
  * https://github.com/justindarc/dns-sd.js
@@ -675,7 +699,7 @@ function defineType(values) {
   return T;
 }
 
-},{}],6:[function(require,module,exports){
+},{}],7:[function(require,module,exports){
 /*jshint esnext:true, bitwise:false */
 
 /**
@@ -1078,7 +1102,7 @@ exports.getFlagsAsValue = function(qr, opcode, aa, tc, rd, ra, rcode) {
   return value;
 };
 
-},{"./byte-array":4,"./dns-codes":5,"./question-section":8,"./resource-record":9}],7:[function(require,module,exports){
+},{"./byte-array":5,"./dns-codes":6,"./question-section":9,"./resource-record":10}],8:[function(require,module,exports){
 'use strict';
 
 var byteArray = require('./byte-array');
@@ -1300,7 +1324,7 @@ exports.getIpStringFromByteArrayReader = function(reader) {
   return result;
 };
 
-},{"./byte-array":4}],8:[function(require,module,exports){
+},{"./byte-array":5}],9:[function(require,module,exports){
 /* global exports, require */
 'use strict';
 
@@ -1406,7 +1430,7 @@ exports.createQuestionFromReader = function(reader) {
   return result;
 };
 
-},{"./byte-array":4,"./dns-util":7}],9:[function(require,module,exports){
+},{"./byte-array":5,"./dns-util":8}],10:[function(require,module,exports){
 /* global exports, require */
 'use strict';
 
@@ -1927,31 +1951,7 @@ exports.peekTypeInReader = function(reader) {
   return result;
 };
 
-},{"./byte-array":4,"./dns-codes":5,"./dns-util":7}],10:[function(require,module,exports){
-/* globals chrome */
-'use strict';
-
-// Listens for the app launching then creates the window
-chrome.app.runtime.onLaunched.addListener(function() {
-  var width = 500;
-  var height = 300;
-
-  chrome.app.window.create('index.html', {
-    id: 'main',
-    bounds: {
-      width: width,
-      height: height,
-      left: Math.round((screen.availWidth - width) / 2),
-      top: Math.round((screen.availHeight - height)/2)
-    }
-  });
-});
-
-window.dnssd = require('dnssd');
-window.dnsc = require('dnsc');
-window.dnsSem = require('dnsSem');
-
-},{"dnsSem":"dnsSem","dnsc":"dnsc","dnssd":"dnssd"}],11:[function(require,module,exports){
+},{"./byte-array":5,"./dns-codes":6,"./dns-util":8}],11:[function(require,module,exports){
 /* globals Promise */
 'use strict';
 
@@ -5106,7 +5106,7 @@ exports.addRecord = function(name, record) {
   existingRecords.push(record);
 };
 
-},{"../chrome-apis/udp":"chromeUdp","./byte-array":4,"./dns-codes":5,"./dns-packet":6,"./dns-util":7,"./question-section":8}],"dnssd":[function(require,module,exports){
+},{"../chrome-apis/udp":"chromeUdp","./byte-array":5,"./dns-codes":6,"./dns-packet":7,"./dns-util":8,"./question-section":9}],"dnssd":[function(require,module,exports){
 /*jshint esnext:true*/
 /* globals Promise */
 'use strict';
@@ -5799,7 +5799,7 @@ exports.queryForResponses = function(
   });
 };
 
-},{"./dns-codes":5,"./dns-controller":"dnsc","./dns-packet":6,"./dns-util":7,"./resource-record":9}],"extBridge":[function(require,module,exports){
+},{"./dns-codes":6,"./dns-controller":"dnsc","./dns-packet":7,"./dns-util":8,"./resource-record":10}],"extBridge":[function(require,module,exports){
 'use strict';
 
 var chromeRuntime = require('../chrome-apis/runtime');
@@ -5890,7 +5890,7 @@ exports.sendMessageToOpenUrl = function(url) {
   exports.sendMessageToExtension(message);
 };
 
-},{"../chrome-apis/runtime":2,"../persistence/datastore":11,"base-64":14}],"fileSystem":[function(require,module,exports){
+},{"../chrome-apis/runtime":3,"../persistence/datastore":11,"base-64":14}],"fileSystem":[function(require,module,exports){
 /*jshint esnext:true*/
 /* globals Promise */
 'use strict';
@@ -6032,7 +6032,7 @@ exports.promptForDir = function() {
   });
 };
 
-},{"../chrome-apis/file-system":1,"../chrome-apis/storage":3,"./file-system-util":"fsUtil"}],"fsUtil":[function(require,module,exports){
+},{"../chrome-apis/file-system":2,"../chrome-apis/storage":4,"./file-system-util":"fsUtil"}],"fsUtil":[function(require,module,exports){
 /* globals Promise */
 'use strict';
 
@@ -6412,4 +6412,4 @@ exports.setServerPort = function(port) {
   return exports.set(userFriendlyKeys.serverPort, port);
 };
 
-},{"./chrome-apis/storage":3}]},{},[10]);
+},{"./chrome-apis/storage":4}]},{},[1]);
