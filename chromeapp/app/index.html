@@ -4957,6 +4957,11 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
         font-size: 22px;
         margin: 16px 0;
         color: #212121;
+        display: inline;
+      }
+
+      h2 {
+        margin-bottom: 0px;
       }
 
       .card {
@@ -4967,37 +4972,69 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
         background-color: #fff;
         color: #757575;
       }
+      #save-changes {
+        float: right;
+      }
+
+      paper-input {
+        padding-bottom: 10px;
+      }
+
+      paper-button.indigo {
+        background-color: var(--paper-indigo-500);
+        color: white;
+        --paper-button-raised-keyboard-focus: {
+          background-color: var(--paper-pink-a200) !important;
+          color: white !important;
+        };
+      }
+
+      paper-button.green {
+        background-color: var(--paper-green-500);
+        color: white;
+      }
+
     </style>
 
     <div class="card">
 
     <h1>Settings</h1>
-    <paper-button id="base-dir-choose" raised="">
+
+    <paper-button id="save-changes" class="green" raised="">Save Changes</paper-button>
+
+    <br>
+    <br>
+
+    <h2 id="base-dir-label">SemCache Base Directory</h2>
+    <iron-label id="base-dir-label">{{baseDirId}}</iron-label>
+    <br>
+    <br>
+    <paper-button id="base-dir-choose" class="indigo" raised="">
       <iron-icon icon="folder-open"></iron-icon>
         Choose Base Directory
     </paper-button>
     <br>
     <br>
-    <iron-label id="base-dir-label">{{baseDirId}}</iron-label>
+    <iron-label id="base-dir-hint">Choose a directory for SemCache to use as
+      the base of its file structure. It should be a directory with no other
+      content, like 'Desktop/SemCache'.</iron-label>
 
-    <paper-input id="abs-path-input" label="Absolute Path to Base Directory">
+    <h2>Absolute Path to Base Directory</h2>
+    <paper-input id="abs-path-input" label="Absolute Path">
     </paper-input>
     <iron-label id="abs-path-hint">Due to a limitation of the Chrome Apps API,
     you must enter the absolute path to the <b>PARENT</b> of the base directory
     you have chosen above.</iron-label>
 
-  <br>
-  <br>
-
-  <paper-input id="instance-name-input" label="SemCache Instance Name" value="{{instanceName}}">
+  <h2>SemCache Instance Name</h2>
+  <paper-input id="instance-name-input" label="Instance Name" value="{{instanceName}}">
     </paper-input>
     <iron-label id="instance-name-hint">This is the name of your instance that
     others will see.</iron-label>
 
-  <br>
-  <br>
+  <h2>Server Port (Temporary)</h2>
 
-    <paper-input id="server-port-input" label="Server Port (temporary)">
+  <paper-input type="number" id="server-port-input" label="Port" max="65535" min="1024" auto-validate="" allowed-pattern="[0-9]" error-message="Port must be between 1024 and 65535">
     </paper-input>
     <iron-label id="server-port-hint">We temporarily need to manually select a
       port for the HTTP server to listen on.</iron-label>
