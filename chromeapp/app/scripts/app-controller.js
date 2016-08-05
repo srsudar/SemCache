@@ -1,3 +1,4 @@
+/* globals Promise, fetch */
 'use strict';
 
 /**
@@ -8,6 +9,7 @@ var chromeUdp = require('./chrome-apis/udp');
 var datastore = require('./persistence/datastore');
 var extBridge = require('./extension-bridge/messaging');
 var fileSystem = require('./persistence/file-system');
+var settings = require('./settings');
 
 var LISTENING_HTTP_INTERFACE = null;
 
@@ -69,10 +71,10 @@ exports.start = function(absPath) {
     chromeUdp.getNetworkInterfaces()
       .then(interfaces => {
         var ipv4Interfaces = [];
-        interfaces.forEach(iface => {
-          if (iface.address.indexOf(':') === -1) {
+        interfaces.forEach(nwIface => {
+          if (nwIface.address.indexOf(':') === -1) {
             // ipv4
-            ipv4Interfaces.push(iface);
+            ipv4Interfaces.push(nwIface);
           }
         });
         if (ipv4Interfaces.length === 0) {
@@ -82,6 +84,12 @@ exports.start = function(absPath) {
           iface.port = HTTP_PORT;
           LISTENING_HTTP_INTERFACE = iface;
         }
+      })
+      .then(() => {
+        return settings.init();
+      })
+      .then(settingsObj => {
+        console.log('initialized settings: ', settingsObj);
         resolve();
       });
   });

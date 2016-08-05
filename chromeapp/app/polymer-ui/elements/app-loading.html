@@ -1,0 +1,72 @@
+<!--
+@license
+Copyright (c) 2015 The Polymer Project Authors. All rights reserved.
+This code may only be used under the BSD style license found at http://polymer.github.io/LICENSE.txt
+The complete set of authors may be found at http://polymer.github.io/AUTHORS.txt
+The complete set of contributors may be found at http://polymer.github.io/CONTRIBUTORS.txt
+Code distributed by Google as part of the polymer project is also
+subject to an additional IP rights grant found at http://polymer.github.io/PATENTS.txt
+-->
+
+<link rel="import" href="../../../bower_components/polymer/polymer.html">
+<link rel="import" href="../../../bower_components/paper-card/paper-card.html">
+<link rel="import" href="../../../bower_components/paper-progress/paper-progress.html">
+
+<!--
+An element providing a solution to no problem in particular.
+
+Example:
+
+    <seed-element></seed-element>
+
+Example:
+
+    <seed-element>
+      <h2>Hello seed-element</h2>
+    </seed-element>
+
+@demo demo/index.html
+@hero hero.svg
+-->
+
+<dom-module id="app-loading">
+  <template>
+    <style>
+      :host {
+        display: block;
+        box-sizing: border-box;
+        width: 50%;
+        margin: 0 auto;
+        /* 700px b/c vertical centering to 100% isn't working */
+        height: 700px;
+      }
+      .flex-body {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 100%;
+      }
+      .center-item {
+        max-width: 50%;
+      }
+    </style>
+
+    <div class="flex-body">
+      <div class="center-item">
+        <paper-card heading="Loading...">
+          <div class="card-content">
+            <paper-progress id="loading-splash"
+              indeterminate value="800" min="100" max="1000">
+            </paper-progress>
+          </div>
+        </paper-card>
+      </div>
+  </div>
+  </template>
+
+  <script>
+    Polymer({
+      is: 'app-loading',
+    });
+  </script>
+</dom-module>

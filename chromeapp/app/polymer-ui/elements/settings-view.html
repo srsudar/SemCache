@@ -132,11 +132,10 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
       },
 
       _getInstanceName: function() {
-        // var settingsModule = this.getSettingsModule();
-        // var result = settingsModule.getInstanceName();
+        var settingsModule = this.getSettingsModule();
+        var result = settingsModule.getInstanceName();
         console.log('CALLING _getInstanceName');
-        return 'return value of _getInstanceName';
-        // return result;
+        return result;
       },
 
       _getBaseDirId: function() {

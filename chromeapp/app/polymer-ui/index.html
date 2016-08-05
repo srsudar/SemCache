@@ -42,6 +42,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
   </script>
 
   <link rel="import" href="./elements/my-app.html">
+  <link rel="import" href="./elements/app-loading.html">
 
   <style>
 
@@ -62,7 +63,10 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
   <script src="../scripts/server/dummy-handler.js"></script>
   <script src="../polymer-ui/mainBundle.js"></script>
 
-  <my-app></my-app>
+  <!-- We start with a loading splash screen as we initialize the JS
+  components. Add a <my-app> element with JS after it is loaded. -->
+  <app-loading id="loading-element"></app-loading>
+  <!-- <my-app id="app-element"></my-app> -->
 
 </body>
 </html>

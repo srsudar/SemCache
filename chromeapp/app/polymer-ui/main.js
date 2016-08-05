@@ -1,4 +1,4 @@
-/* globals chrome */
+/* globals chrome, $ */
 'use strict';
 
 // Listens for the app launching then creates the window
@@ -20,3 +20,17 @@ chrome.app.runtime.onLaunched.addListener(function() {
 window.dnssd = require('dnssd');
 window.dnsc = require('dnsc');
 window.dnsSem = require('dnsSem');
+
+function onReady() {
+  var $loading = $('#loading-element');
+  var appc = require('appController');
+  appc.start('/some/abs/path').
+    then(() => {
+      var $body = $('body');
+      var $app = $('<my-app id="app-element">');
+      $loading.remove();
+      $body.append($app);
+    });
+}
+
+$(onReady);

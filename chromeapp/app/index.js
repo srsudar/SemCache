@@ -18966,11 +18966,10 @@ Polymer({
       },
 
       _getInstanceName: function() {
-        // var settingsModule = this.getSettingsModule();
-        // var result = settingsModule.getInstanceName();
+        var settingsModule = this.getSettingsModule();
+        var result = settingsModule.getInstanceName();
         console.log('CALLING _getInstanceName');
-        return 'return value of _getInstanceName';
-        // return result;
+        return result;
       },
 
       _getBaseDirId: function() {
@@ -19068,6 +19067,209 @@ Polymer({
         this.page = page || 'view1';
       }
 
+    });
+/**
+ * `iron-range-behavior` provides the behavior for something with a minimum to maximum range.
+ *
+ * @demo demo/index.html
+ * @polymerBehavior
+ */
+ Polymer.IronRangeBehavior = {
+
+  properties: {
+
+    /**
+     * The number that represents the current value.
+     */
+    value: {
+      type: Number,
+      value: 0,
+      notify: true,
+      reflectToAttribute: true
+    },
+
+    /**
+     * The number that indicates the minimum value of the range.
+     */
+    min: {
+      type: Number,
+      value: 0,
+      notify: true
+    },
+
+    /**
+     * The number that indicates the maximum value of the range.
+     */
+    max: {
+      type: Number,
+      value: 100,
+      notify: true
+    },
+
+    /**
+     * Specifies the value granularity of the range's value.
+     */
+    step: {
+      type: Number,
+      value: 1,
+      notify: true
+    },
+
+    /**
+     * Returns the ratio of the value.
+     */
+    ratio: {
+      type: Number,
+      value: 0,
+      readOnly: true,
+      notify: true
+    },
+  },
+
+  observers: [
+    '_update(value, min, max, step)'
+  ],
+
+  _calcRatio: function(value) {
+    return (this._clampValue(value) - this.min) / (this.max - this.min);
+  },
+
+  _clampValue: function(value) {
+    return Math.min(this.max, Math.max(this.min, this._calcStep(value)));
+  },
+
+  _calcStep: function(value) {
+    // polymer/issues/2493
+    value = parseFloat(value);
+
+    if (!this.step) {
+      return value;
+    }
+
+    var numSteps = Math.round((value - this.min) / this.step);
+    if (this.step < 1) {
+     /**
+      * For small values of this.step, if we calculate the step using
+      * `Math.round(value / step) * step` we may hit a precision point issue
+      * eg. 0.1 * 0.2 =  0.020000000000000004
+      * http://docs.oracle.com/cd/E19957-01/806-3568/ncg_goldberg.html
+      *
+      * as a work around we can divide by the reciprocal of `step`
+      */
+      return numSteps / (1 / this.step) + this.min;
+    } else {
+      return numSteps * this.step + this.min;
+    }
+  },
+
+  _validateValue: function() {
+    var v = this._clampValue(this.value);
+    this.value = this.oldValue = isNaN(v) ? this.oldValue : v;
+    return this.value !== v;
+  },
+
+  _update: function() {
+    this._validateValue();
+    this._setRatio(this._calcRatio(this.value) * 100);
+  }
+
+};
+Polymer({
+    is: 'paper-progress',
+
+    behaviors: [
+      Polymer.IronRangeBehavior
+    ],
+
+    properties: {
+      /**
+       * The number that represents the current secondary progress.
+       */
+      secondaryProgress: {
+        type: Number,
+        value: 0
+      },
+
+      /**
+       * The secondary ratio
+       */
+      secondaryRatio: {
+        type: Number,
+        value: 0,
+        readOnly: true
+      },
+
+      /**
+       * Use an indeterminate progress indicator.
+       */
+      indeterminate: {
+        type: Boolean,
+        value: false,
+        observer: '_toggleIndeterminate'
+      },
+
+      /**
+       * True if the progress is disabled.
+       */
+      disabled: {
+        type: Boolean,
+        value: false,
+        reflectToAttribute: true,
+        observer: '_disabledChanged'
+      }
+    },
+
+    observers: [
+      '_progressChanged(secondaryProgress, value, min, max)'
+    ],
+
+    hostAttributes: {
+      role: 'progressbar'
+    },
+
+    _toggleIndeterminate: function(indeterminate) {
+      // If we use attribute/class binding, the animation sometimes doesn't translate properly
+      // on Safari 7.1. So instead, we toggle the class here in the update method.
+      this.toggleClass('indeterminate', indeterminate, this.$.primaryProgress);
+    },
+
+    _transformProgress: function(progress, ratio) {
+      var transform = 'scaleX(' + (ratio / 100) + ')';
+      progress.style.transform = progress.style.webkitTransform = transform;
+    },
+
+    _mainRatioChanged: function(ratio) {
+      this._transformProgress(this.$.primaryProgress, ratio);
+    },
+
+    _progressChanged: function(secondaryProgress, value, min, max) {
+      secondaryProgress = this._clampValue(secondaryProgress);
+      value = this._clampValue(value);
+
+      var secondaryRatio = this._calcRatio(secondaryProgress) * 100;
+      var mainRatio = this._calcRatio(value) * 100;
+
+      this._setSecondaryRatio(secondaryRatio);
+      this._transformProgress(this.$.secondaryProgress, secondaryRatio);
+      this._transformProgress(this.$.primaryProgress, mainRatio);
+
+      this.secondaryProgress = secondaryProgress;
+
+      this.setAttribute('aria-valuenow', value);
+      this.setAttribute('aria-valuemin', min);
+      this.setAttribute('aria-valuemax', max);
+    },
+
+    _disabledChanged: function(disabled) {
+      this.setAttribute('aria-disabled', disabled ? 'true' : 'false');
+    },
+
+    _hideSecondaryProgress: function(secondaryRatio) {
+      return secondaryRatio === 0;
+    }
+  });
+Polymer({
+      is: 'app-loading',
     });
 /*eslint-disable no-unused-vars*/
 /*!
@@ -36141,7 +36343,7 @@ _.extend(DummyHandler.prototype, {
   }
 }, WSC.BaseHandler.prototype);
 require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
-/* globals chrome */
+/* globals chrome, $ */
 'use strict';
 
 // Listens for the app launching then creates the window
@@ -36164,7 +36366,21 @@ window.dnssd = require('dnssd');
 window.dnsc = require('dnsc');
 window.dnsSem = require('dnsSem');
 
-},{"dnsSem":"dnsSem","dnsc":"dnsc","dnssd":"dnssd"}],2:[function(require,module,exports){
+function onReady() {
+  var $loading = $('#loading-element');
+  var appc = require('appController');
+  appc.start('/some/abs/path').
+    then(() => {
+      var $body = $('body');
+      var $app = $('<my-app id="app-element">');
+      $loading.remove();
+      $body.append($app);
+    });
+}
+
+$(onReady);
+
+},{"appController":"appController","dnsSem":"dnsSem","dnsc":"dnsc","dnssd":"dnssd"}],2:[function(require,module,exports){
 /* globals Promise, chrome */
 'use strict';
 
@@ -40223,6 +40439,7 @@ exports.getCachedFileNameFromPath = function(path) {
 }.call(this));
 
 },{}],"appController":[function(require,module,exports){
+/* globals Promise, fetch */
 'use strict';
 
 /**
@@ -40233,6 +40450,7 @@ var chromeUdp = require('./chrome-apis/udp');
 var datastore = require('./persistence/datastore');
 var extBridge = require('./extension-bridge/messaging');
 var fileSystem = require('./persistence/file-system');
+var settings = require('./settings');
 
 var LISTENING_HTTP_INTERFACE = null;
 
@@ -40294,10 +40512,10 @@ exports.start = function(absPath) {
     chromeUdp.getNetworkInterfaces()
       .then(interfaces => {
         var ipv4Interfaces = [];
-        interfaces.forEach(iface => {
-          if (iface.address.indexOf(':') === -1) {
+        interfaces.forEach(nwIface => {
+          if (nwIface.address.indexOf(':') === -1) {
             // ipv4
-            ipv4Interfaces.push(iface);
+            ipv4Interfaces.push(nwIface);
           }
         });
         if (ipv4Interfaces.length === 0) {
@@ -40307,6 +40525,12 @@ exports.start = function(absPath) {
           iface.port = HTTP_PORT;
           LISTENING_HTTP_INTERFACE = iface;
         }
+      })
+      .then(() => {
+        return settings.init();
+      })
+      .then(settingsObj => {
+        console.log('initialized settings: ', settingsObj);
         resolve();
       });
   });
@@ -40365,7 +40589,7 @@ exports.saveMhtmlAndOpen = function(captureUrl, captureDate, mhtmlUrl) {
   });
 };
 
-},{"./chrome-apis/udp":"chromeUdp","./extension-bridge/messaging":"extBridge","./persistence/datastore":11,"./persistence/file-system":"fileSystem"}],"binaryUtils":[function(require,module,exports){
+},{"./chrome-apis/udp":"chromeUdp","./extension-bridge/messaging":"extBridge","./persistence/datastore":11,"./persistence/file-system":"fileSystem","./settings":"settings"}],"binaryUtils":[function(require,module,exports){
 /*jshint esnext:true*/
 /*
  * https://github.com/justindarc/dns-sd.js
