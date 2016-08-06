@@ -1,0 +1,111 @@
+<!doctype html>
+<!--
+@license
+Copyright (c) 2015 The Polymer Project Authors. All rights reserved.
+This code may only be used under the BSD style license found at http://polymer.github.io/LICENSE.txt
+The complete set of authors may be found at http://polymer.github.io/AUTHORS.txt
+The complete set of contributors may be found at http://polymer.github.io/CONTRIBUTORS.txt
+Code distributed by Google as part of the polymer project is also
+subject to an additional IP rights grant found at http://polymer.github.io/PATENTS.txt
+-->
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, minimum-scale=1.0, initial-scale=1.0, user-scalable=yes">
+
+    <script src="../../../../webcomponentsjs/webcomponents-lite.js"></script>
+    <script src="../../../../web-component-tester/browser.js"></script>
+
+    <!-- Step 1: import the element to test -->
+    <link rel="import" href="../../../app/polymer-ui/elements/settings-view.html">
+  </head>
+  <body>
+
+    <!-- You can use the document as a place to set up your fixtures. -->
+    <test-fixture id="my-fixture">
+      <template is="dom-template">
+        <settings-view></settings-view>
+      </template>
+    </test-fixture>
+
+    <script>
+      suite('<settings-view> test', function() {
+
+
+        var myEl;
+        // In the app require() is provided by the browser-ified script. In the
+        // tests we are stubbing out its functionality using the
+        // getSettingsModule().
+        window.require = function() {
+          console.log('require() no-op in setup');
+        };
+
+//        setup(function() {
+//          stub('settings-view', {
+//            getSettingsModule: function() {
+//              return sinon.stub();
+//            }
+//          });
+//        });
+
+        test('save settings calls save functions with values', function() {
+          myEl = fixture('my-fixture');
+          var saveEl = myEl.$.saveChanges;
+
+          var path = 'some path';
+          var dirId = 'abc123';
+          var port = 9876;
+          var instanceName = 'my awesome cache';
+
+          // stamp them somehow.
+          var setPathSpy = sinon.spy();
+          var setDirSpy = sinon.spy();
+          var setPortSpy = sinon.spy();
+          var setNameSpy = sinon.spy();
+
+          var settingsModuleSpy = {
+            setAbsPath: setPathSpy,
+            setInstanceName: setNameSpy,
+            setBaseDirId: setDirSpy,
+            setServerPort: setPortSpy
+          };
+
+          myEl.getSettingsModule = sinon.stub().returns(settingsModuleSpy);
+          saveEl.click();
+
+          assert.equal(setPathSpy.args[0][0], path);
+          assert.equal(setDirSpy.args[0][0], dirId);
+          assert.equal(setPortSpy.args[0][0], port);
+          assert.equal(setNameSpy.args[0][0], instanceName);
+        });
+
+        test('starts initialized with values from settings', function() {
+          var path = 'fancy abs path';
+          var dirId = '987zyx';
+          var port = 1234;
+          var instanceName = 'Matt\'s Cache';
+
+          var getPathSpy = sinon.stub().returns(path);
+          var getDirSpy = sinon.stub().returns(dirId);
+          var getPortSpy = sinon.stub().returns(port);
+          var getNameSpy = sinon.stub().returns(instanceName);
+
+          var settingsModuleSpy = {
+            getAbsPath: getPathSpy,
+            getInstanceName: getNameSpy,
+            getBaseDirId: getDirSpy,
+            getServerPort: getPortSpy
+          };
+
+          myEl = fixture('my-fixture');
+
+          // TODO: result of pretty print of settings base dir id
+          assert.equal(myEl.$.instanceNameInput.textContent, instanceName);
+          assert.equal(myEl.$.serverPortInput.textContent, '' + port);
+          assert.equal(myEl.$.absPathInput.textContent, path);
+        });
+      });
+    </script>
+
+  </body>
+</html>
