@@ -266,3 +266,52 @@ test('custom setters call internals', function(t) {
   t.end();
   resetSettings();
 });
+
+test('promptAndSetNewBaseDir calls storage APIs', function(t) {
+  var chosenDir = 'chosen dir';
+  var dirId = 'retained id';
+  var displayPath = 'the path of the chosend dir';
+
+  var setBaseCacheDirSpy = sinon.spy();
+  var promptForDirSpy = sinon.stub().resolves(chosenDir);
+  var retainEntrySyncSpy = sinon.stub().returns(dirId);
+  var getDisplayPathSpy = sinon.stub().resolves(displayPath);
+  var setBaseDirIdSpy = sinon.spy();
+  var setBaseDirPathSpy = sinon.spy();
+
+  var settings = proxyquire(
+    '../../app/scripts/settings', {
+      './chrome-apis/file-system':
+        {
+          retainEntrySync: retainEntrySyncSpy,
+          getDisplayPath: getDisplayPathSpy
+        },
+        './persistence/file-system':
+          {
+            promptForDir: promptForDirSpy,
+            setBaseCacheDir: setBaseCacheDirSpy,
+          }
+        }
+  );
+  settings.setBaseDirId = setBaseDirIdSpy;
+  settings.setBaseDirPath = setBaseDirPathSpy;
+
+  var expected = {
+    baseDirId: dirId,
+    baseDirPath: displayPath
+  };
+
+  settings.promptAndSetNewBaseDir()
+  .then(returnedObj => {
+    t.equal(setBaseCacheDirSpy.args[0][0], chosenDir);
+    t.equal(retainEntrySyncSpy.args[0][0], chosenDir);
+    t.equal(getDisplayPathSpy.args[0][0], chosenDir);
+    t.deepEqual(returnedObj, expected);
+    t.equal(setBaseDirIdSpy.args[0][0], dirId);
+    t.equal(setBaseDirPathSpy.args[0][0], displayPath);
+    t.end();
+    resetSettings();
+  });
+
+
+});

@@ -72,8 +72,9 @@ exports.getDirectoryForCacheEntries = function() {
  * must have already been chosen via a file chooser. If a base directory has
  * not been chosen, it will return null.
  *
- * @return {DirectoryEntry} the directory that has been set as the root of the
- * SemCache file system. Returns null if the directory has not been set.
+ * @return {Promise} Promise that resolves with the DirectoryEntry that has
+ * been set as the root of the SemCache file system. Resolves null if the
+ * directory has not been set.
  */
 exports.getPersistedBaseDir = function() {
   return new Promise(function(resolve) {
