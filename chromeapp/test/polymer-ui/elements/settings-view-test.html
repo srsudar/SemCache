@@ -32,7 +32,6 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
       // This is ugly, but it's unclear how to inject functionality the way we
       // want without different suites
       suite('<settings-view> 1', function() {
-
         var path = 'some path';
         var dirId = 'abc123';
         var port = 9876;
@@ -52,7 +51,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
           getAbsPath: sinon.stub(),
           getInstanceName: sinon.stub(),
           getBaseDirId: sinon.stub(),
-          getServerPort: sinon.stub()
+          getServerPort: sinon.stub(),
         };
 
         var myEl;
@@ -60,26 +59,25 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
         // tests we are stubbing out its functionality using the
         // getSettingsModule().
         window.require = function() {
-          console.log('require() no-op in setup');
           return settingsModuleSpy;
         };
 
         test('save settings calls save functions with values', function() {
           myEl = fixture('my-fixture');
+          myEl.getSettingsModule = sinon.stub().returns(settingsModuleSpy)
+
           var saveEl = myEl.$.savebutton;
 
-          myEl.$$('#abs-path-input').textContent = path;
-          myEl.$$('#instance-name-input').textContent = instanceName;
-          myEl.$$('#server-port-input').textContent = port;
+          myEl.$$('#abs-path-input').value = path;
+          myEl.$$('#instance-name-input').value = instanceName;
+          myEl.$$('#server-port-input').value = port;
 
           saveEl.click();
 
           assert.equal(setPathSpy.calledOnce, true);
-          assert.equal(setDirSpy.calledOnce, true);
           assert.equal(setPortSpy.calledOnce, true);
           assert.equal(setNameSpy.calledOnce, true);
           assert.equal(setPathSpy.args[0][0], path);
-          assert.equal(setDirSpy.args[0][0], dirId);
           assert.equal(setPortSpy.args[0][0], port);
           assert.equal(setNameSpy.args[0][0], instanceName);
         });
@@ -106,6 +104,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 
         test('starts initialized with values from settings', function() {
           myEl = fixture('my-fixture');
+          myEl.getSettingsModule = sinon.stub.returns(settingsModuleSpy);
 
           // TODO: result of pretty print of settings base dir id
           assert.equal(
