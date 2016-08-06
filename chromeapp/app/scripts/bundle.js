@@ -5973,8 +5973,9 @@ exports.getDirectoryForCacheEntries = function() {
  * must have already been chosen via a file chooser. If a base directory has
  * not been chosen, it will return null.
  *
- * @return {DirectoryEntry} the directory that has been set as the root of the
- * SemCache file system. Returns null if the directory has not been set.
+ * @return {Promise} Promise that resolves with the DirectoryEntry that has
+ * been set as the root of the SemCache file system. Resolves null if the
+ * directory has not been set.
  */
 exports.getPersistedBaseDir = function() {
   return new Promise(function(resolve) {
@@ -6208,6 +6209,8 @@ exports.start = function(host, port) {
 'use strict';
 
 var storage = require('./chrome-apis/storage');
+var fileSystem = require('./persistence/file-system');
+var chromefs = require('./chrome-apis/file-system');
 
 /**
  * Settings for the application as a whole.
@@ -6227,6 +6230,7 @@ var userFriendlyKeys = {
   absPath: 'absPath',
   instanceName: 'instanceName',
   baseDirId: 'baseDirId',
+  baseDirPath: 'baseDirPath',
   serverPort: 'serverPort'
 };
 
@@ -6240,6 +6244,7 @@ exports.getAllSettingKeys = function() {
     exports.createNameSpacedKey(userFriendlyKeys.absPath),
     exports.createNameSpacedKey(userFriendlyKeys.instanceName),
     exports.createNameSpacedKey(userFriendlyKeys.baseDirId),
+    exports.createNameSpacedKey(userFriendlyKeys.baseDirPath),
     exports.createNameSpacedKey(userFriendlyKeys.serverPort)
   ];
 };
@@ -6360,8 +6365,7 @@ exports.get = function(key) {
  * @return {string} the absolute path to the base directory.
  */
 exports.getAbsPath = function() {
-  return 'returned abspath';
-  // return exports.get(userFriendlyKeys.absPath);
+  return exports.get(userFriendlyKeys.absPath);
 };
 
 /**
@@ -6377,6 +6381,14 @@ exports.getInstanceName = function() {
  */
 exports.getBaseDirId = function() {
   return exports.get(userFriendlyKeys.baseDirId);
+};
+
+/**
+ * @return {string} the cached path of the DirectoryEntry. Note that this is
+ * NOT the absolute path, which must be entered separately by the user.
+ */
+exports.getBaseDirPath = function() {
+  return exports.get(userFriendlyKeys.baseDirPath);
 };
 
 /**
@@ -6413,6 +6425,14 @@ exports.setBaseDirId = function(baseDirId) {
 };
 
 /**
+ * @param {string} baseDirPath the path of the base directory as returned by
+ * the entry itself, used to give a user-friendly path
+ */
+exports.setBaseDirPath = function(baseDirPath) {
+  return exports.set(userFriendlyKeys.baseDirPath, baseDirPath);
+};
+
+/**
  * @param {integer} port the port where the server listens for HTTP connections
  * (temporary)
  */
@@ -6420,4 +6440,44 @@ exports.setServerPort = function(port) {
   return exports.set(userFriendlyKeys.serverPort, port);
 };
 
-},{"./chrome-apis/storage":3}]},{},[10]);
+/**
+ * Prompt for and set a new base directory of the SemCache file system. It
+ * persists both the ID and path.
+ *
+ * @return {Promise} Promise that resolves with an object like the following:
+ * {
+ *   baseDirId: '',
+ *   baseDirPath: ''
+ * }
+ */
+exports.promptAndSetNewBaseDir = function() {
+  return new Promise(function(resolve) {
+    var dirId;
+    fileSystem.promptForDir()
+    .then(dirEntry => {
+      if (!dirEntry) {
+        // Likely canceled
+        console.log('No dir entry chosen');
+        return;
+      }
+      console.log('FULL PATH: ', dirEntry.fullPath);
+      fileSystem.setBaseCacheDir(dirEntry);
+      dirId = chromefs.retainEntrySync(dirEntry);
+      exports.setBaseDirId(dirId);
+      // Set the ID
+      return chromefs.getDisplayPath(dirEntry);
+    })
+    .then(displayPath => {
+      // Set display path
+      exports.setBaseDirPath(displayPath);
+      resolve(
+        {
+          baseDirId: dirId,
+          baseDirPath: displayPath
+        }
+      );
+    });
+  });
+};
+
+},{"./chrome-apis/file-system":1,"./chrome-apis/storage":3,"./persistence/file-system":"fileSystem"}]},{},[10]);

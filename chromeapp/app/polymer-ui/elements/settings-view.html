@@ -78,11 +78,15 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
     <br>
     <br>
 
-    <h2 id="base-dir-label">SemCache Base Directory</h2>
-    <iron-label id="base-dir-label">{{baseDirId}}</iron-label>
+    <h2 id="base-dir-heading">SemCache Base Directory</h2>
+    <iron-label id="base-dir-label">{{baseDirPath}}</iron-label>
     <br>
     <br>
-    <paper-button id="base-dir-choose" class="indigo" raised>
+    <paper-button
+      id="base-dir-choose"
+      class="indigo"
+      raised
+      on-tap="chooseBaseDir">
       <iron-icon icon="folder-open"></iron-icon>
         Choose Base Directory
     </paper-button>
@@ -147,10 +151,10 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
             return this._getInstanceName();
           }
         },
-        baseDirId: {
+        baseDirPath: {
           type: String,
           value: function() {
-            return this._getBaseDirId();
+            return this._getBaseDirPath();
           }
         },
         serverPort: {
@@ -197,9 +201,9 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
         return result;
       },
 
-      _getBaseDirId: function() {
+      _getBaseDirPath: function() {
         var settingsModule = this.getSettingsModule();
-        var result = settingsModule.getBaseDirId();
+        var result = settingsModule.getBaseDirPath();
         return result;
       },
 
@@ -223,6 +227,14 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
         settings.setAbsPath(enteredPath);
         settings.setInstanceName(enteredName);
         settings.setServerPort(enteredPort);
+      },
+
+      chooseBaseDir: function() {
+        var settings = this.getSettingsModule();
+        settings.promptAndSetNewBaseDir()
+        .then(idAndPath => {
+          this.$$('#base-dir-label').textContent = idAndPath.baseDirPath;
+        });
       },
 
       // Element Lifecycle

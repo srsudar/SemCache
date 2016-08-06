@@ -86,6 +86,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 
       suite('<settings-view> 2', function() {
         var path = 'a nice path';
+        var entryPath = 'the entry path';
         var dirId = '987zyx';
         var port = 1234;
         var instanceName = 'Matt\'s cache';
@@ -93,7 +94,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
         var settingsModuleSpy = {
           getAbsPath: sinon.stub().returns(path),
           getInstanceName: sinon.stub().returns(instanceName),
-          getBaseDirId: sinon.stub().returns('implement me plz'),
+          getBaseDirPath: sinon.stub().returns(entryPath),
           getServerPort: sinon.stub().returns(port)
         };
 
@@ -106,7 +107,10 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
           myEl = fixture('my-fixture');
           myEl.getSettingsModule = sinon.stub.returns(settingsModuleSpy);
 
-          // TODO: result of pretty print of settings base dir id
+          assert.equal(
+            myEl.$$('#base-dir-label').textContent,
+            entryPath
+          );
           assert.equal(
             myEl.$$('#instance-name-input').value,
             instanceName
