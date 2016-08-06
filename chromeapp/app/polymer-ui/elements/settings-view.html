@@ -66,7 +66,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 
     <h1>Settings</h1>
 
-    <paper-button id="save-changes" class="green" raised>Save Changes</paper-button>
+    <paper-button id="savebutton" class="green" raised>Save Changes</paper-button>
 
     <br>
     <br>
@@ -86,7 +86,10 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
       content, like 'Desktop/SemCache'.</iron-label>
 
     <h2>Absolute Path to Base Directory</h2>
-    <paper-input id="abs-path-input" label="Absolute Path">
+    <paper-input
+      id="abs-path-input" 
+      label="Absolute Path"
+      value="{{absPath}}">
     </paper-input>
     <iron-label id="abs-path-hint">Due to a limitation of the Chrome Apps API,
     you must enter the absolute path to the <b>PARENT</b> of the base directory
@@ -97,7 +100,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
     id="instance-name-input"
     label="Instance Name"
     value="{{instanceName}}">
-    </paper-input>
+  </paper-input>
     <iron-label id="instance-name-hint">This is the name of your instance that
     others will see.</iron-label>
 
@@ -109,6 +112,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
     label="Port"
     max="65535"
     min="1024"
+    value="{{serverPort}}"
     auto-validate allowed-pattern="[0-9]"
     error-message="Port must be between 1024 and 65535">
     </paper-input>
@@ -126,22 +130,27 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
       properties: {
         absPath: {
           type: String,
-          value: '_getAbsPath'
+          value: function() {
+            return this._getAbsPath();
+          }
         },
         instanceName: {
           type: String,
           value: function() {
-            console.log('CALLING instanceName value function');
             return this._getInstanceName();
           }
         },
         baseDirId: {
           type: String,
-          value: '_getBaseDirId'
+          value: function() {
+            return this._getBaseDirId();
+          }
         },
         serverPort: {
           type: Number,
-          value: '_getServerPort'
+          value: function() {
+            return this._getServerPort();
+          }
         },
 
         /**
@@ -178,7 +187,6 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
       _getInstanceName: function() {
         var settingsModule = this.getSettingsModule();
         var result = settingsModule.getInstanceName();
-        console.log('CALLING _getInstanceName');
         return result;
       },
 

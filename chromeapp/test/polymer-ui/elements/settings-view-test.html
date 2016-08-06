@@ -29,8 +29,31 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
     </test-fixture>
 
     <script>
-      suite('<settings-view> test', function() {
+      // This is ugly, but it's unclear how to inject functionality the way we
+      // want without different suites
+      suite('<settings-view> 1', function() {
 
+        var path = 'some path';
+        var dirId = 'abc123';
+        var port = 9876;
+        var instanceName = 'my awesome cache';
+
+        // stamp them somehow.
+        var setPathSpy = sinon.spy();
+        var setDirSpy = sinon.spy();
+        var setPortSpy = sinon.spy();
+        var setNameSpy = sinon.spy();
+
+        var settingsModuleSpy = {
+          setAbsPath: setPathSpy,
+          setInstanceName: setNameSpy,
+          setBaseDirId: setDirSpy,
+          setServerPort: setPortSpy,
+          getAbsPath: sinon.stub(),
+          getInstanceName: sinon.stub(),
+          getBaseDirId: sinon.stub(),
+          getServerPort: sinon.stub()
+        };
 
         var myEl;
         // In the app require() is provided by the browser-ified script. In the
@@ -38,72 +61,67 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
         // getSettingsModule().
         window.require = function() {
           console.log('require() no-op in setup');
+          return settingsModuleSpy;
         };
-
-//        setup(function() {
-//          stub('settings-view', {
-//            getSettingsModule: function() {
-//              return sinon.stub();
-//            }
-//          });
-//        });
 
         test('save settings calls save functions with values', function() {
           myEl = fixture('my-fixture');
-          var saveEl = myEl.$.saveChanges;
+          var saveEl = myEl.$.savebutton;
 
-          var path = 'some path';
-          var dirId = 'abc123';
-          var port = 9876;
-          var instanceName = 'my awesome cache';
+          myEl.$$('#abs-path-input').textContent = path;
+          myEl.$$('#instance-name-input').textContent = instanceName;
+          myEl.$$('#server-port-input').textContent = port;
 
-          // stamp them somehow.
-          var setPathSpy = sinon.spy();
-          var setDirSpy = sinon.spy();
-          var setPortSpy = sinon.spy();
-          var setNameSpy = sinon.spy();
-
-          var settingsModuleSpy = {
-            setAbsPath: setPathSpy,
-            setInstanceName: setNameSpy,
-            setBaseDirId: setDirSpy,
-            setServerPort: setPortSpy
-          };
-
-          myEl.getSettingsModule = sinon.stub().returns(settingsModuleSpy);
           saveEl.click();
 
+          assert.equal(setPathSpy.calledOnce, true);
+          assert.equal(setDirSpy.calledOnce, true);
+          assert.equal(setPortSpy.calledOnce, true);
+          assert.equal(setNameSpy.calledOnce, true);
           assert.equal(setPathSpy.args[0][0], path);
           assert.equal(setDirSpy.args[0][0], dirId);
           assert.equal(setPortSpy.args[0][0], port);
           assert.equal(setNameSpy.args[0][0], instanceName);
         });
 
+      });
+
+      suite('<settings-view> 2', function() {
+        var path = 'a nice path';
+        var dirId = '987zyx';
+        var port = 1234;
+        var instanceName = 'Matt\'s cache';
+
+        var settingsModuleSpy = {
+          getAbsPath: sinon.stub().returns(path),
+          getInstanceName: sinon.stub().returns(instanceName),
+          getBaseDirId: sinon.stub().returns('implement me plz'),
+          getServerPort: sinon.stub().returns(port)
+        };
+
+        window.require = function() {
+          console.log('require() no-op in setup');
+          return settingsModuleSpy;
+        };
+
         test('starts initialized with values from settings', function() {
-          var path = 'fancy abs path';
-          var dirId = '987zyx';
-          var port = 1234;
-          var instanceName = 'Matt\'s Cache';
-
-          var getPathSpy = sinon.stub().returns(path);
-          var getDirSpy = sinon.stub().returns(dirId);
-          var getPortSpy = sinon.stub().returns(port);
-          var getNameSpy = sinon.stub().returns(instanceName);
-
-          var settingsModuleSpy = {
-            getAbsPath: getPathSpy,
-            getInstanceName: getNameSpy,
-            getBaseDirId: getDirSpy,
-            getServerPort: getPortSpy
-          };
-
           myEl = fixture('my-fixture');
 
           // TODO: result of pretty print of settings base dir id
-          assert.equal(myEl.$.instanceNameInput.textContent, instanceName);
-          assert.equal(myEl.$.serverPortInput.textContent, '' + port);
-          assert.equal(myEl.$.absPathInput.textContent, path);
+          assert.equal(
+            myEl.$$('#instance-name-input').value,
+            instanceName
+          );
+          assert.equal(
+            myEl.$$('#server-port-input').value,
+            port
+          );
+          assert.equal(
+            myEl.$$('#abs-path-input').value,
+            path
+          );
         });
+
       });
     </script>
 
