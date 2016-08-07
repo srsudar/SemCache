@@ -24,7 +24,7 @@ window.dnsSem = require('dnsSem');
 function onReady() {
   var $loading = $('#loading-element');
   var appc = require('appController');
-  appc.start('/some/abs/path').
+  appc.start().
     then(() => {
       var $body = $('body');
       var $app = $('<my-app id="app-element">');

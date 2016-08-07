@@ -64,8 +64,9 @@ exports.setAbsPathToBaseDir = function(absPath) {
  */
 exports.getListUrlForSelf = function() {
   var scheme = 'http://';
-  var host = exports.getListeningHttpInterface().address;
-  var port = settings.getServerPort();
+  var iface = exports.getListeningHttpInterface();
+  var host = iface.address;
+  var port = iface.port;
   var endpoint = serverApi.getApiEndpoints().listPageCache;
   
   var result = scheme + host + ':' + port + '/' + endpoint;
@@ -109,12 +110,9 @@ exports.startServersAndRegister = function() {
  *
  * @return {Promise} Promise that resolves when the app is started
  */
-exports.start = function(absPath) {
-  if (!absPath) {
-    console.warn('not starting, must start with absolute path to dir');
-    return;
-  }
-  exports.setAbsPathToBaseDir(absPath);
+exports.start = function() {
+  extBridge.attachListeners();
+
   return new Promise(function(resolve) {
     chromeUdp.getNetworkInterfaces()
       .then(interfaces => {
@@ -137,6 +135,8 @@ exports.start = function(absPath) {
       })
       .then(settingsObj => {
         console.log('initialized settings: ', settingsObj);
+        exports.setAbsPathToBaseDir(settings.getAbsPath());
+        LISTENING_HTTP_INTERFACE.port = settings.getServerPort();
         resolve();
       });
   });

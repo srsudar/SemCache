@@ -5025,8 +5025,10 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
     <paper-input id="abs-path-input" label="Absolute Path" value="{{absPath}}">
     </paper-input>
     <iron-label id="abs-path-hint">Due to a limitation of the Chrome Apps API,
-    you must enter the absolute path to the <b>PARENT</b> of the base directory
-    you have chosen above.</iron-label>
+    you must enter the absolute path to the base directory
+    you have chosen above. E.g. if you chose ~/Desktop/semcache, the path you
+    enter here should be something like /Users/tyrion/Desktop/semcache.
+    </iron-label>
 
   <h2>SemCache Instance Name</h2>
   <paper-input id="instance-name-input" label="Instance Name" value="{{instanceName}}">

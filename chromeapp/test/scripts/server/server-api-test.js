@@ -19,7 +19,7 @@ test('getAccessUrlForCachedPage outputs correct url', function(t) {
   var fullPath = 'www.example.com_somedate';
   var iface = {
     address: '172.9.18.145',
-    port: 1456
+    port: 1234
   };
 
   var expected = 'http://' +

@@ -165,17 +165,15 @@ test('startServersAndRegister resolves if register resolves', function(t) {
 });
 
 test('getListUrlForSelf is sensible', function(t) {
-  var iface = '123.4.5.67';
-  var port = 9999;
+  var iface = {
+    address: '123.4.5.67',
+    port: 7161
+  };
   
-  var appc = proxyquire('../../app/scripts/app-controller', {
-    './settings': {
-      getServerPort: sinon.stub().returns(port),
-    }
-  });
+  var appc = require('../../app/scripts/app-controller');
   appc.getListeningHttpInterface = sinon.stub().returns(iface);
 
-  var expected = 'http://123.4.5.67:9999/list_pages';
+  var expected = 'http://123.4.5.67:7161/list_pages';
   var actual = appc.getListUrlForSelf();
   t.equal(actual, expected);
   t.end();
