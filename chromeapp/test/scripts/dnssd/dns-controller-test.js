@@ -1011,3 +1011,21 @@ test('filterResourcesForQuery returns empty array if no records', function(t) {
   t.end();
   resetDnsController();
 });
+
+test('clearAllRecords removes all records', function(t) {
+  t.deepEqual(dnsController.getRecords(), {});
+
+  var aName = 'www.example.com';
+  var aRecord1 = new resRec.ARecord(aName, 10, '123.42.61.123', 2);
+
+  var expectedRecords = {};
+  expectedRecords[aName] = [aRecord1];
+  dnsController.addRecord(aName, aRecord1);
+
+  t.deepEqual(dnsController.getRecords(), expectedRecords);
+
+  dnsController.clearAllRecords();
+
+  t.deepEqual(dnsController.getRecords(), {});
+  t.end();
+});

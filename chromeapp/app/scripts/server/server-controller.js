@@ -18,6 +18,16 @@ function startServer(host, port, endpointHandlers) {
 }
 
 /**
+ * Stop the web server.
+ */
+exports.stop = function() {
+  if (!WSC) {
+    console.log('cannot stop server, WSC not truthy: ', WSC);
+  }
+  window.httpServer.stop();
+};
+
+/**
  * Start the web server.
  */
 exports.start = function(host, port) {

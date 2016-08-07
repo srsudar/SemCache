@@ -82,12 +82,12 @@ Example:
           .catch(err => {
             console.log('Start failed: ', err);
             thisEl.checked = false;
-            this.$$('#failed-content').textContent = err.msg;
+            this.$$('#failed-content').textContent = err.message;
             this.$$('#failed-dialog').open();
           });
         } else {
           // shut it down.
-          throw new Error('UH OH');
+          appController.stopServers();
         }
       }
     });

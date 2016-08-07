@@ -21483,12 +21483,12 @@ Polymer({
           .catch(err => {
             console.log('Start failed: ', err);
             thisEl.checked = false;
-            this.$$('#failed-content').textContent = err.msg;
+            this.$$('#failed-content').textContent = err.message;
             this.$$('#failed-dialog').open();
           });
         } else {
           // shut it down.
-          throw new Error('UH OH');
+          appController.stopServers();
         }
       }
     });
@@ -42899,6 +42899,7 @@ var fileSystem = require('./persistence/file-system');
 var settings = require('./settings');
 var dnssdSem = require('./dnssd/dns-sd-semcache');
 var serverApi = require('./server/server-api');
+var dnsController = require('./dnssd/dns-controller');
 
 var LISTENING_HTTP_INTERFACE = null;
 
@@ -42979,6 +42980,8 @@ exports.startServersAndRegister = function() {
       return;
     }
 
+    exports.updateCachesForSettings();
+
     dnssdSem.registerSemCache(hostName, instanceName, serverPort)
     .then(registerResult => {
       console.log('REGISTERED: ', registerResult);
@@ -42990,6 +42993,14 @@ exports.startServersAndRegister = function() {
       reject(rejected);
     });
   });
+};
+
+/**
+ * The counterpart method to startServersAndRegister().
+ */
+exports.stopServers = function() {
+  exports.getServerController().stop();
+  dnsController.clearAllRecords();
 };
 
 /**
@@ -43022,11 +43033,18 @@ exports.start = function() {
       })
       .then(settingsObj => {
         console.log('initialized settings: ', settingsObj);
-        exports.setAbsPathToBaseDir(settings.getAbsPath());
-        LISTENING_HTTP_INTERFACE.port = settings.getServerPort();
+        exports.updateCachesForSettings();
         resolve();
       });
   });
+};
+
+/**
+ * Update the local state of the controller with the current settings.
+ */
+exports.updateCachesForSettings = function() {
+  exports.setAbsPathToBaseDir(settings.getAbsPath());
+  LISTENING_HTTP_INTERFACE.port = settings.getServerPort();
 };
 
 /**
@@ -43082,7 +43100,7 @@ exports.saveMhtmlAndOpen = function(captureUrl, captureDate, mhtmlUrl) {
   });
 };
 
-},{"./chrome-apis/udp":"chromeUdp","./dnssd/dns-sd-semcache":"dnsSem","./extension-bridge/messaging":"extBridge","./persistence/datastore":11,"./persistence/file-system":"fileSystem","./server/server-api":13,"./server/server-controller":"serverController","./settings":"settings"}],"binaryUtils":[function(require,module,exports){
+},{"./chrome-apis/udp":"chromeUdp","./dnssd/dns-controller":"dnsc","./dnssd/dns-sd-semcache":"dnsSem","./extension-bridge/messaging":"extBridge","./persistence/datastore":11,"./persistence/file-system":"fileSystem","./server/server-api":13,"./server/server-controller":"serverController","./settings":"settings"}],"binaryUtils":[function(require,module,exports){
 /*jshint esnext:true*/
 /*
  * https://github.com/justindarc/dns-sd.js
@@ -43828,6 +43846,13 @@ exports.initializeNetworkInterfaceCache = function() {
       resolve();
     });
   });
+};
+
+/**
+ * Remove all records known to the controller.
+ */
+exports.clearAllRecords = function() {
+  records = {};
 };
 
 /**
@@ -45025,6 +45050,16 @@ function startServer(host, port, endpointHandlers) {
 
   window.httpServer.start();
 }
+
+/**
+ * Stop the web server.
+ */
+exports.stop = function() {
+  if (!WSC) {
+    console.log('cannot stop server, WSC not truthy: ', WSC);
+  }
+  window.httpServer.stop();
+};
 
 /**
  * Start the web server.

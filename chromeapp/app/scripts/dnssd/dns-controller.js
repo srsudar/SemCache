@@ -453,6 +453,13 @@ exports.initializeNetworkInterfaceCache = function() {
 };
 
 /**
+ * Remove all records known to the controller.
+ */
+exports.clearAllRecords = function() {
+  records = {};
+};
+
+/**
  * Shuts down the system.
  */
 exports.stop = function() {

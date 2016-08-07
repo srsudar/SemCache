@@ -98,7 +98,7 @@ test('startServersAndRegisters rejects if missing host', function(t) {
 });
 
 test('startServersAndRegister rejects if register rejects', function(t) {
-  var expectedErr = {msg: 'reject in test plz'};
+  var expectedErr = {message: 'reject in test plz'};
   var registerSemCacheSpy = sinon.stub().rejects(expectedErr);
 
   var instanceName = 'my instance';
@@ -117,6 +117,10 @@ test('startServersAndRegister rejects if register rejects', function(t) {
       registerSemCache: registerSemCacheSpy
     },
   });
+  appc.getServerController = sinon.stub().returns({
+    start: sinon.stub()
+  });
+  appc.updateCachesForSettings = sinon.stub();
 
   appc.startServersAndRegister()
   .catch(actualErr => {
@@ -152,6 +156,7 @@ test('startServersAndRegister resolves if register resolves', function(t) {
   appc.getServerController = sinon.stub().returns({
     start: httpStartSpy
   });
+  appc.updateCachesForSettings = sinon.stub();
 
   appc.startServersAndRegister()
   .then(actualResult => {
