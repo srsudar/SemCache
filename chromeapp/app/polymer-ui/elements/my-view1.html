@@ -46,7 +46,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
       }
     </style>
 
-    <cache-page-list url="http://172.31.71.182:9876/list_pages">
+    <cache-page-list url="{{listUrl}}">
     </cache-page-list>
 
   </template>
@@ -55,7 +55,22 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 
     Polymer({
 
-      is: 'my-view1'
+      is: 'my-view1',
+
+      properties: {
+        listUrl: {
+          type: String,
+          value: function() {
+            var appController = this.getAppControllerModule();
+            var result = appController.getListUrlForSelf();
+            return result;
+          }
+        }
+      },
+
+      getAppControllerModule: function() {
+        return require('appController');
+      },
 
     });
 

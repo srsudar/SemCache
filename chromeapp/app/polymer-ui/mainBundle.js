@@ -4108,17 +4108,19 @@ var extBridge = require('./extension-bridge/messaging');
 var fileSystem = require('./persistence/file-system');
 var settings = require('./settings');
 var dnssdSem = require('./dnssd/dns-sd-semcache');
-var httpServer = require('./server/server-controller');
+var serverApi = require('./server/server-api');
 
 var LISTENING_HTTP_INTERFACE = null;
 
-/**
- * This port is hard-coded for now, as the web server requires that we pass a
- * port. This will be amended and should be dynamically allocated.
- */
-var HTTP_PORT = 9876;
-
 var ABS_PATH_TO_BASE_DIR = null;
+
+/**
+ * Struggling to mock this during testing with proxyquire, so use this as a
+ * level of redirection.
+ */
+exports.getServerController = function() {
+  return require('./server/server-controller');
+};
 
 /**
  * Get the interface on which the app is listening for incoming http
@@ -4129,7 +4131,6 @@ var ABS_PATH_TO_BASE_DIR = null;
  *   name: string,
  *   address: string,
  *   prefixLength: integer,
- *   port: integer
  * }
  */
 exports.getListeningHttpInterface = function() {
@@ -4156,6 +4157,19 @@ exports.setAbsPathToBaseDir = function(absPath) {
 };
 
 /**
+ * @return {string} the URL for the list of pages in this device's own cache
+ */
+exports.getListUrlForSelf = function() {
+  var scheme = 'http://';
+  var host = exports.getListeningHttpInterface().address;
+  var port = settings.getServerPort();
+  var endpoint = serverApi.getApiEndpoints().listPageCache;
+  
+  var result = scheme + host + ':' + port + '/' + endpoint;
+  return result;
+};
+
+/**
  * Start the mDNS, DNS-SD, and HTTP servers and register the local instance on
  * the network.
  *
@@ -4177,7 +4191,7 @@ exports.startServersAndRegister = function() {
     dnssdSem.registerSemCache(hostName, instanceName, serverPort)
     .then(registerResult => {
       console.log('REGISTERED: ', registerResult);
-      httpServer.start(httpIface, serverPort);
+      exports.getServerController().start(httpIface, serverPort);
       resolve(registerResult);
     })
     .catch(rejected => {
@@ -4212,7 +4226,6 @@ exports.start = function(absPath) {
           console.log('Could not find ipv4 interface: ', interfaces);
         } else {
           var iface = ipv4Interfaces[0];
-          iface.port = HTTP_PORT;
           LISTENING_HTTP_INTERFACE = iface;
         }
       })
@@ -4279,7 +4292,7 @@ exports.saveMhtmlAndOpen = function(captureUrl, captureDate, mhtmlUrl) {
   });
 };
 
-},{"./chrome-apis/udp":"chromeUdp","./dnssd/dns-sd-semcache":"dnsSem","./extension-bridge/messaging":"extBridge","./persistence/datastore":11,"./persistence/file-system":"fileSystem","./server/server-controller":"serverController","./settings":"settings"}],"binaryUtils":[function(require,module,exports){
+},{"./chrome-apis/udp":"chromeUdp","./dnssd/dns-sd-semcache":"dnsSem","./extension-bridge/messaging":"extBridge","./persistence/datastore":11,"./persistence/file-system":"fileSystem","./server/server-api":13,"./server/server-controller":"serverController","./settings":"settings"}],"binaryUtils":[function(require,module,exports){
 /*jshint esnext:true*/
 /*
  * https://github.com/justindarc/dns-sd.js

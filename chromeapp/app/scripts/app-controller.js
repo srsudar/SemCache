@@ -11,14 +11,9 @@ var extBridge = require('./extension-bridge/messaging');
 var fileSystem = require('./persistence/file-system');
 var settings = require('./settings');
 var dnssdSem = require('./dnssd/dns-sd-semcache');
+var serverApi = require('./server/server-api');
 
 var LISTENING_HTTP_INTERFACE = null;
-
-/**
- * This port is hard-coded for now, as the web server requires that we pass a
- * port. This will be amended and should be dynamically allocated.
- */
-var HTTP_PORT = 9876;
 
 var ABS_PATH_TO_BASE_DIR = null;
 
@@ -39,7 +34,6 @@ exports.getServerController = function() {
  *   name: string,
  *   address: string,
  *   prefixLength: integer,
- *   port: integer
  * }
  */
 exports.getListeningHttpInterface = function() {
@@ -63,6 +57,19 @@ exports.getListeningHttpInterface = function() {
  */
 exports.setAbsPathToBaseDir = function(absPath) {
   ABS_PATH_TO_BASE_DIR = absPath;
+};
+
+/**
+ * @return {string} the URL for the list of pages in this device's own cache
+ */
+exports.getListUrlForSelf = function() {
+  var scheme = 'http://';
+  var host = exports.getListeningHttpInterface().address;
+  var port = settings.getServerPort();
+  var endpoint = serverApi.getApiEndpoints().listPageCache;
+  
+  var result = scheme + host + ':' + port + '/' + endpoint;
+  return result;
 };
 
 /**
@@ -122,7 +129,6 @@ exports.start = function(absPath) {
           console.log('Could not find ipv4 interface: ', interfaces);
         } else {
           var iface = ipv4Interfaces[0];
-          iface.port = HTTP_PORT;
           LISTENING_HTTP_INTERFACE = iface;
         }
       })

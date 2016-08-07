@@ -163,3 +163,21 @@ test('startServersAndRegister resolves if register resolves', function(t) {
   });
 
 });
+
+test('getListUrlForSelf is sensible', function(t) {
+  var iface = '123.4.5.67';
+  var port = 9999;
+  
+  var appc = proxyquire('../../app/scripts/app-controller', {
+    './settings': {
+      getServerPort: sinon.stub().returns(port),
+    }
+  });
+  appc.getListeningHttpInterface = sinon.stub().returns(iface);
+
+  var expected = 'http://123.4.5.67:9999/list_pages';
+  var actual = appc.getListUrlForSelf();
+  t.equal(actual, expected);
+  t.end();
+  resetAppController();
+});
