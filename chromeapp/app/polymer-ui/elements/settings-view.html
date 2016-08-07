@@ -115,6 +115,16 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
     <iron-label id="instance-name-hint">This is the name of your instance that
     others will see.</iron-label>
 
+    <h2>Domain Name</h2>
+    <paper-input
+      id="domain-name-input" 
+      label=".local Domain Name"
+      value="{{domainName}}">
+    </paper-input>
+    <iron-label id="domain-name-hint">The .local domain name by which you want
+    your machine to be known on the network. It must be URL-safe, without
+    spaces. E.g. 'samlaptop.local'</iron-label>
+
   <h2>Server Port (Temporary)</h2>
 
   <paper-input
@@ -161,6 +171,12 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
           type: Number,
           value: function() {
             return this._getServerPort();
+          }
+        },
+        domainName: {
+          type: String,
+          value: function() {
+            return this._getDomainName();
           }
         },
 
@@ -213,6 +229,12 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
         return result;
       },
 
+      _getDomainName: function() {
+        var settingsModule = this.getSettingsModule();
+        var result = settingsModule.getHostName();
+        return result;
+      },
+
       getSettingsModule: function() {
         var result = require('settings');
         return result;
@@ -222,11 +244,13 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
         var enteredPath = this.$$('#abs-path-input').value;
         var enteredName = this.$$('#instance-name-input').value;
         var enteredPort = this.$$('#server-port-input').value;
+        var enteredDomain = this.$$('#domain-name-input').value;
 
         var settings = this.getSettingsModule();
         settings.setAbsPath(enteredPath);
         settings.setInstanceName(enteredName);
         settings.setServerPort(enteredPort);
+        settings.setHostName(enteredDomain);
       },
 
       chooseBaseDir: function() {

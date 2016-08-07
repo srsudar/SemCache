@@ -115,7 +115,7 @@ test('startServersAndRegister rejects if register rejects', function(t) {
     },
     './dnssd/dns-sd-semcache': {
       registerSemCache: registerSemCacheSpy
-    }
+    },
   });
 
   appc.startServersAndRegister()
@@ -131,6 +131,7 @@ test('startServersAndRegister rejects if register rejects', function(t) {
 test('startServersAndRegister resolves if register resolves', function(t) {
   var expectedRegisterResult = {foo: 'foo'};
   var registerSemCacheSpy = sinon.stub().resolves(expectedRegisterResult);
+  var httpStartSpy = sinon.spy();
 
   var instanceName = 'my instance';
   var port = '1234';
@@ -148,11 +149,15 @@ test('startServersAndRegister resolves if register resolves', function(t) {
       registerSemCache: registerSemCacheSpy
     }
   });
+  appc.getServerController = sinon.stub().returns({
+    start: httpStartSpy
+  });
 
   appc.startServersAndRegister()
   .then(actualResult => {
     t.deepEqual(registerSemCacheSpy.args[0], [hostName, instanceName, port]);
     t.deepEqual(actualResult, expectedRegisterResult);
+    t.deepEqual(httpStartSpy.args[0], ['0.0.0.0', port]);
     t.end();
     resetAppController();
   });

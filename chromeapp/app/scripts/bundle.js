@@ -4094,6 +4094,7 @@ var extBridge = require('./extension-bridge/messaging');
 var fileSystem = require('./persistence/file-system');
 var settings = require('./settings');
 var dnssdSem = require('./dnssd/dns-sd-semcache');
+var httpServer = require('./server/server-controller');
 
 var LISTENING_HTTP_INTERFACE = null;
 
@@ -4153,6 +4154,7 @@ exports.startServersAndRegister = function() {
     var serverPort = settings.getServerPort();
     var baseDirId = settings.getBaseDirId();
     var hostName = settings.getHostName();
+    var httpIface = '0.0.0.0';
     if (!instanceName || !serverPort || !baseDirId || !hostName) {
       reject('Complete and save settings before starting');
       return;
@@ -4161,6 +4163,7 @@ exports.startServersAndRegister = function() {
     dnssdSem.registerSemCache(hostName, instanceName, serverPort)
     .then(registerResult => {
       console.log('REGISTERED: ', registerResult);
+      httpServer.start(httpIface, serverPort);
       resolve(registerResult);
     })
     .catch(rejected => {
@@ -4262,7 +4265,7 @@ exports.saveMhtmlAndOpen = function(captureUrl, captureDate, mhtmlUrl) {
   });
 };
 
-},{"./chrome-apis/udp":"chromeUdp","./dnssd/dns-sd-semcache":"dnsSem","./extension-bridge/messaging":"extBridge","./persistence/datastore":11,"./persistence/file-system":"fileSystem","./settings":"settings"}],"binaryUtils":[function(require,module,exports){
+},{"./chrome-apis/udp":"chromeUdp","./dnssd/dns-sd-semcache":"dnsSem","./extension-bridge/messaging":"extBridge","./persistence/datastore":11,"./persistence/file-system":"fileSystem","./server/server-controller":"serverController","./settings":"settings"}],"binaryUtils":[function(require,module,exports){
 /*jshint esnext:true*/
 /*
  * https://github.com/justindarc/dns-sd.js
@@ -6262,7 +6265,8 @@ var userFriendlyKeys = {
   instanceName: 'instanceName',
   baseDirId: 'baseDirId',
   baseDirPath: 'baseDirPath',
-  serverPort: 'serverPort'
+  serverPort: 'serverPort',
+  hostName: 'hostName'
 };
 
 /**
@@ -6276,7 +6280,8 @@ exports.getAllSettingKeys = function() {
     exports.createNameSpacedKey(userFriendlyKeys.instanceName),
     exports.createNameSpacedKey(userFriendlyKeys.baseDirId),
     exports.createNameSpacedKey(userFriendlyKeys.baseDirPath),
-    exports.createNameSpacedKey(userFriendlyKeys.serverPort)
+    exports.createNameSpacedKey(userFriendlyKeys.serverPort),
+    exports.createNameSpacedKey(userFriendlyKeys.hostName)
   ];
 };
 
@@ -6423,11 +6428,18 @@ exports.getBaseDirPath = function() {
 };
 
 /**
- * @return {interger} the value the user has specified for the server port
+ * @return {integer} the value the user has specified for the server port
  * (temporary)
  */
 exports.getServerPort = function() {
   return exports.get(userFriendlyKeys.serverPort);
+};
+
+/**
+ * @return {string} the .local domain name the user has specified
+ */
+exports.getHostName = function() {
+  return exports.get(userFriendlyKeys.hostName);
 };
 
 /**
@@ -6469,6 +6481,13 @@ exports.setBaseDirPath = function(baseDirPath) {
  */
 exports.setServerPort = function(port) {
   return exports.set(userFriendlyKeys.serverPort, port);
+};
+
+/**
+ * @param {string} hostName the .local domain name for the device
+ */
+exports.setHostName = function(hostName) {
+  return exports.set(userFriendlyKeys.hostName, hostName);
 };
 
 /**

@@ -223,8 +223,20 @@ test('custom getters call internals', function(t) {
   );
   helperGetCallsInternalsForKey(
     settings,
+    settings.getBaseDirPath,
+    'baseDirPath',
+    t
+  );
+  helperGetCallsInternalsForKey(
+    settings,
     settings.getServerPort,
     'serverPort',
+    t
+  );
+  helperGetCallsInternalsForKey(
+    settings,
+    settings.getHostName,
+    'hostName',
     t
   );
   t.end();
@@ -258,9 +270,23 @@ test('custom setters call internals', function(t) {
   );
   helperSetCallsInternalsForKey(
     settings,
+    settings.setBaseDirPath,
+    'baseDirPath',
+    '~/Desktop/magicfolder',
+    t
+  );
+  helperSetCallsInternalsForKey(
+    settings,
     settings.setServerPort,
     'serverPort',
     9876,
+    t
+  );
+  helperSetCallsInternalsForKey(
+    settings,
+    settings.setHostName,
+    'hostName',
+    'laptop.local',
     t
   );
   t.end();

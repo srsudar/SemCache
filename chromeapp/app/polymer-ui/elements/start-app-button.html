@@ -70,34 +70,25 @@ Example:
         return appController;
       },
 
-      isChecked: function() {
+      onChange: function() {
         var thisEl = this.$$('#start-app');
         var isStart = thisEl.checked;
-        return isStart;
-      },
-
-      onChange: function() {
-        return new Promise(function(resolve, reject) {
-          var isStart = this.isChecked();
-          var appController = this.getAppControllerModule();
-          if (isStart) {
-            appController.startServersAndRegister()
-            .then(result => {
-              console.log('Started: ', result);
-              resolve(result);
-            })
-            .catch(err => {
-              console.log('Start failed: ', err);
-              thisEl.checked = false;
-              this.$$('#failed-content').textContent = err.msg;
-              this.$$('#failed-dialog').open();
-              reject(err);
-            });
-          } else {
-            // shut it down.
-            throw new Error('UH OH');
-          }
-        });
+        var appController = this.getAppControllerModule();
+        if (isStart) {
+          appController.startServersAndRegister()
+          .then(result => {
+            console.log('Started: ', result);
+          })
+          .catch(err => {
+            console.log('Start failed: ', err);
+            thisEl.checked = false;
+            this.$$('#failed-content').textContent = err.msg;
+            this.$$('#failed-dialog').open();
+          });
+        } else {
+          // shut it down.
+          throw new Error('UH OH');
+        }
       }
     });
   </script>

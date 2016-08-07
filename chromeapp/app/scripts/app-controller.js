@@ -23,6 +23,14 @@ var HTTP_PORT = 9876;
 var ABS_PATH_TO_BASE_DIR = null;
 
 /**
+ * Struggling to mock this during testing with proxyquire, so use this as a
+ * level of redirection.
+ */
+exports.getServerController = function() {
+  return require('./server/server-controller');
+};
+
+/**
  * Get the interface on which the app is listening for incoming http
  * connections.
  *
@@ -70,6 +78,7 @@ exports.startServersAndRegister = function() {
     var serverPort = settings.getServerPort();
     var baseDirId = settings.getBaseDirId();
     var hostName = settings.getHostName();
+    var httpIface = '0.0.0.0';
     if (!instanceName || !serverPort || !baseDirId || !hostName) {
       reject('Complete and save settings before starting');
       return;
@@ -78,6 +87,7 @@ exports.startServersAndRegister = function() {
     dnssdSem.registerSemCache(hostName, instanceName, serverPort)
     .then(registerResult => {
       console.log('REGISTERED: ', registerResult);
+      exports.getServerController().start(httpIface, serverPort);
       resolve(registerResult);
     })
     .catch(rejected => {

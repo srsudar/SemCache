@@ -24,7 +24,8 @@ var userFriendlyKeys = {
   instanceName: 'instanceName',
   baseDirId: 'baseDirId',
   baseDirPath: 'baseDirPath',
-  serverPort: 'serverPort'
+  serverPort: 'serverPort',
+  hostName: 'hostName'
 };
 
 /**
@@ -38,7 +39,8 @@ exports.getAllSettingKeys = function() {
     exports.createNameSpacedKey(userFriendlyKeys.instanceName),
     exports.createNameSpacedKey(userFriendlyKeys.baseDirId),
     exports.createNameSpacedKey(userFriendlyKeys.baseDirPath),
-    exports.createNameSpacedKey(userFriendlyKeys.serverPort)
+    exports.createNameSpacedKey(userFriendlyKeys.serverPort),
+    exports.createNameSpacedKey(userFriendlyKeys.hostName)
   ];
 };
 
@@ -185,11 +187,18 @@ exports.getBaseDirPath = function() {
 };
 
 /**
- * @return {interger} the value the user has specified for the server port
+ * @return {integer} the value the user has specified for the server port
  * (temporary)
  */
 exports.getServerPort = function() {
   return exports.get(userFriendlyKeys.serverPort);
+};
+
+/**
+ * @return {string} the .local domain name the user has specified
+ */
+exports.getHostName = function() {
+  return exports.get(userFriendlyKeys.hostName);
 };
 
 /**
@@ -231,6 +240,13 @@ exports.setBaseDirPath = function(baseDirPath) {
  */
 exports.setServerPort = function(port) {
   return exports.set(userFriendlyKeys.serverPort, port);
+};
+
+/**
+ * @param {string} hostName the .local domain name for the device
+ */
+exports.setHostName = function(hostName) {
+  return exports.set(userFriendlyKeys.hostName, hostName);
 };
 
 /**
