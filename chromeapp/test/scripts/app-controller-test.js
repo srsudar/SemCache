@@ -16,6 +16,24 @@ function resetAppController() {
   ];
 }
 
+function rejectIfMissingSettingHelper(instanceName, port, dirId, host, t) {
+  var appc = proxyquire('../../app/scripts/app-controller', {
+    './settings': {
+      getInstanceName: sinon.stub().returns(instanceName),
+      getServerPort: sinon.stub().returns(port),
+      getBaseDirId: sinon.stub().returns(dirId),
+      getHostName: sinon.stub().returns(host)
+    }
+  });
+
+  appc.startServersAndRegister()
+  .catch(err => {
+    t.equal(err, 'Complete and save settings before starting');
+    t.end();
+    resetAppController();
+  });
+}
+
 test('saveMhtmlAndOpen persists and opens', function(t) {
   var fakeEntry = {
     fullPath: 'a full path'
@@ -57,8 +75,86 @@ test('saveMhtmlAndOpen persists and opens', function(t) {
   var accessPath = 'the url to download the mhtml';
   appc.saveMhtmlAndOpen(captureUrl, captureDate, accessPath)
     .then(() => {
-      t.equal(sendMessageToOpenSpy.args[0][0], fileUrl); 
+      t.equal(sendMessageToOpenSpy.args[0][0], fileUrl);
       t.end();
       resetAppController();
     });
+});
+
+test('startServersAndRegisters rejects if missing instance name', function(t) {
+  rejectIfMissingSettingHelper(undefined, 1234, 'abc', 'host', t);
+});
+
+test('startServersAndRegisters rejects if missing port', function(t) {
+  rejectIfMissingSettingHelper('instance', undefined, 'abc', 'host', t);
+});
+
+test('startServersAndRegisters rejects if missing dir id', function(t) {
+  rejectIfMissingSettingHelper('instance', 1234, undefined, 'host', t);
+});
+
+test('startServersAndRegisters rejects if missing host', function(t) {
+  rejectIfMissingSettingHelper('instance', 1234, 'abc', undefined, t);
+});
+
+test('startServersAndRegister rejects if register rejects', function(t) {
+  var expectedErr = {msg: 'reject in test plz'};
+  var registerSemCacheSpy = sinon.stub().rejects(expectedErr);
+
+  var instanceName = 'my instance';
+  var port = '1234';
+  var baseDirId = 'zyx';
+  var hostName = 'laptop.local';
+
+  var appc = proxyquire('../../app/scripts/app-controller', {
+    './settings': {
+      getInstanceName: sinon.stub().returns(instanceName),
+      getServerPort: sinon.stub().returns(port),
+      getBaseDirId: sinon.stub().returns(baseDirId),
+      getHostName: sinon.stub().returns(hostName)
+    },
+    './dnssd/dns-sd-semcache': {
+      registerSemCache: registerSemCacheSpy
+    }
+  });
+
+  appc.startServersAndRegister()
+  .catch(actualErr => {
+    t.deepEqual(registerSemCacheSpy.args[0], [hostName, instanceName, port]);
+    t.equal(actualErr, expectedErr);
+    t.end();
+    resetAppController();
+  });
+
+});
+
+test('startServersAndRegister resolves if register resolves', function(t) {
+  var expectedRegisterResult = {foo: 'foo'};
+  var registerSemCacheSpy = sinon.stub().resolves(expectedRegisterResult);
+
+  var instanceName = 'my instance';
+  var port = '1234';
+  var baseDirId = 'zyx';
+  var hostName = 'laptop.local';
+
+  var appc = proxyquire('../../app/scripts/app-controller', {
+    './settings': {
+      getInstanceName: sinon.stub().returns(instanceName),
+      getServerPort: sinon.stub().returns(port),
+      getBaseDirId: sinon.stub().returns(baseDirId),
+      getHostName: sinon.stub().returns(hostName)
+    },
+    './dnssd/dns-sd-semcache': {
+      registerSemCache: registerSemCacheSpy
+    }
+  });
+
+  appc.startServersAndRegister()
+  .then(actualResult => {
+    t.deepEqual(registerSemCacheSpy.args[0], [hostName, instanceName, port]);
+    t.deepEqual(actualResult, expectedRegisterResult);
+    t.end();
+    resetAppController();
+  });
+
 });

@@ -19289,6 +19289,11 @@ Polymer({
     });
 Polymer({
       is: 'start-app-button',
+      onChange: function() {
+        console.log('ON CHANGE, args: ', arguments);
+        console.log('ON CHANGE, this$$.checked: ',
+                    this.$$('#start-app').checked);
+      }
     });
 Polymer({
 

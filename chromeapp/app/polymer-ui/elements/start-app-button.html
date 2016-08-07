@@ -38,12 +38,34 @@ Example:
       }
     </style>
 
-    <paper-toggle-button id="start-app">Start</paper-toggle-button>
+    <paper-toggle-button
+      id="start-app"
+      on-change="onChange">Start</paper-toggle-button>
   </template>
 
   <script>
     Polymer({
       is: 'start-app-button',
+
+      getSettingsModule: function() {
+        var result = require('settings');
+        return result;
+      },
+
+      onChange: function() {
+        var isStart = this.$$('#start-app').checked;
+        if (isStart) {
+          var port = settings.getServerPort();
+          var instanceName = settings.getInstanceName();
+
+        } else {
+          // shut it down.
+
+        }
+        console.log('ON CHANGE, args: ', arguments);
+        console.log('ON CHANGE, this$$.checked: ',
+                    this.$$('#start-app').checked);
+      }
     });
   </script>
 </dom-module>

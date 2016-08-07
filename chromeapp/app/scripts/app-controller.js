@@ -10,6 +10,7 @@ var datastore = require('./persistence/datastore');
 var extBridge = require('./extension-bridge/messaging');
 var fileSystem = require('./persistence/file-system');
 var settings = require('./settings');
+var dnssdSem = require('./dnssd/dns-sd-semcache');
 
 var LISTENING_HTTP_INTERFACE = null;
 
@@ -54,6 +55,36 @@ exports.getListeningHttpInterface = function() {
  */
 exports.setAbsPathToBaseDir = function(absPath) {
   ABS_PATH_TO_BASE_DIR = absPath;
+};
+
+/**
+ * Start the mDNS, DNS-SD, and HTTP servers and register the local instance on
+ * the network.
+ *
+ * @return {Promise} Promise that resolves if the service starts successfully,
+ * else rejects with a message as to why.
+ */
+exports.startServersAndRegister = function() {
+  return new Promise(function(resolve, reject) {
+    var instanceName = settings.getInstanceName();
+    var serverPort = settings.getServerPort();
+    var baseDirId = settings.getBaseDirId();
+    var hostName = settings.getHostName();
+    if (!instanceName || !serverPort || !baseDirId || !hostName) {
+      reject('Complete and save settings before starting');
+      return;
+    }
+
+    dnssdSem.registerSemCache(hostName, instanceName, serverPort)
+    .then(registerResult => {
+      console.log('REGISTERED: ', registerResult);
+      resolve(registerResult);
+    })
+    .catch(rejected => {
+      console.log('REJECTED: ', rejected);
+      reject(rejected);
+    });
+  });
 };
 
 /**
