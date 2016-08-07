@@ -21,7 +21,9 @@
     "iron-label": "PolymerElements/iron-label#^1.0.2",
     "paper-spinner": "PolymerElements/paper-spinner#^1.2.0",
     "paper-progress": "PolymerElements/paper-progress#^1.0.10",
-    "paper-toggle-button": "PolymerElements/paper-toggle-button#^1.1.2"
+    "paper-toggle-button": "PolymerElements/paper-toggle-button#^1.1.2",
+    "paper-dialog": "PolymerElements/paper-dialog#^1.1.0",
+    "paper-dialog-scrollable": "PolymerElements/paper-dialog-scrollable#^1.1.5"
   },
   "devDependencies": {
     "chai": "^3.5.0",

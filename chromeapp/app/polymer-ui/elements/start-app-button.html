@@ -10,6 +10,8 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 
 <link rel="import" href="../../../bower_components/polymer/polymer.html">
 <link rel="import" href="../../../bower_components/paper-toggle-button/paper-toggle-button.html">
+<link rel="import" href="../../../bower_components/paper-dialog/paper-dialog.html">
+<link rel="import" href="../../../bower_components/paper-dialog-scrollable/paper-dialog-scrollable.html">
 
 <!--
 An element providing a solution to no problem in particular.
@@ -41,6 +43,17 @@ Example:
     <paper-toggle-button
       id="start-app"
       on-change="onChange">Start</paper-toggle-button>
+
+    <paper-dialog id="failed-dialog">
+      <h2>Failed to Start</h2>
+      <paper-dialog-scrollable id="failed-content">
+      </paper-dialog-scrollable>
+      <div class="buttons">
+        <paper-button dialog-dismiss>ok</paper-button>
+      </div>
+    </paper-dialog>
+
+
   </template>
 
   <script>
@@ -52,19 +65,39 @@ Example:
         return result;
       },
 
+      getAppControllerModule: function() {
+        var appController = require('appController');
+        return appController;
+      },
+
+      isChecked: function() {
+        var thisEl = this.$$('#start-app');
+        var isStart = thisEl.checked;
+        return isStart;
+      },
+
       onChange: function() {
-        var isStart = this.$$('#start-app').checked;
-        if (isStart) {
-          var port = settings.getServerPort();
-          var instanceName = settings.getInstanceName();
-
-        } else {
-          // shut it down.
-
-        }
-        console.log('ON CHANGE, args: ', arguments);
-        console.log('ON CHANGE, this$$.checked: ',
-                    this.$$('#start-app').checked);
+        return new Promise(function(resolve, reject) {
+          var isStart = this.isChecked();
+          var appController = this.getAppControllerModule();
+          if (isStart) {
+            appController.startServersAndRegister()
+            .then(result => {
+              console.log('Started: ', result);
+              resolve(result);
+            })
+            .catch(err => {
+              console.log('Start failed: ', err);
+              thisEl.checked = false;
+              this.$$('#failed-content').textContent = err.msg;
+              this.$$('#failed-dialog').open();
+              reject(err);
+            });
+          } else {
+            // shut it down.
+            throw new Error('UH OH');
+          }
+        });
       }
     });
   </script>
