@@ -43156,8 +43156,10 @@ exports.startServersAndRegister = function() {
     }
 
     exports.updateCachesForSettings();
-
-    dnssdSem.registerSemCache(hostName, instanceName, serverPort)
+    dnsController.start()
+    .then(() => {
+      return dnssdSem.registerSemCache(hostName, instanceName, serverPort);
+    })
     .then(registerResult => {
       console.log('REGISTERED: ', registerResult);
       exports.getServerController().start(httpIface, serverPort);
