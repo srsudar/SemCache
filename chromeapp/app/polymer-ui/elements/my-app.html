@@ -27,6 +27,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 <link rel="import" href="display-cache-entries.html">
 <link rel="import" href="settings-view.html">
 <link rel="import" href="start-app-button.html">
+<link rel="import" href="cache-selector.html">
 
 <dom-module id="my-app">
 
@@ -81,14 +82,8 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
       <app-drawer>
         <app-toolbar>SemCache</app-toolbar>
         <start-app-button></start-app-button>
-        <iron-selector selected="{{page}}" attr-for-selected="name" class="drawer-list" role="navigation">
-          <a name="view1" >My Cache</a>
-          <a name="view2" >Matt's Cache</a>
-          <a name="view3" >Cache Money</a>
-          <a name="settings">Settings</a>
-            <a name="view4">Cache in a div</a>
-            <a name="view5">2nd div cache</a>
-        </iron-selector>
+        <cache-selector incoming="{{page}}">
+        </cache-selector>
       </app-drawer>
 
       <!-- Main content -->
