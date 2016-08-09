@@ -5734,13 +5734,112 @@ Example:
     </style>
 
     <iron-selector selected="{{incoming}}" attr-for-selected="name" class="drawer-list" role="navigation">
-      <a name="view1">My Cache</a>
-      <a name="view2">Matt's Cache</a>
-      <a name="view3">Cache Money</a>
+      <!-- <a name="view1" >My Cache</a> -->
+      <!-- <a name="view2" >Matt's Cache</a> -->
+      <!-- <a name="view3" >Cache Money</a> -->
+      <!--   <a name="view4">Cache in a div</a> -->
+      <!--   <a name="view5">2nd div cache</a> -->
+
+      <template is="dom-repeat" items="{{pages}}">
+        <a name="view{{index}}">{{item.instanceName}}</a>
+      </template>
       <a name="settings">Settings</a>
-        <a name="view4">Cache in a div</a>
-        <a name="view5">2nd div cache</a>
+
     </iron-selector>
+
+  </template>
+
+  </dom-module>
+<!--
+@license
+Copyright (c) 2015 The Polymer Project Authors. All rights reserved.
+This code may only be used under the BSD style license found at http://polymer.github.io/LICENSE.txt
+The complete set of authors may be found at http://polymer.github.io/AUTHORS.txt
+The complete set of contributors may be found at http://polymer.github.io/CONTRIBUTORS.txt
+Code distributed by Google as part of the polymer project is also
+subject to an additional IP rights grant found at http://polymer.github.io/PATENTS.txt
+--><!--
+An element providing a solution to no problem in particular.
+
+Example:
+
+    <seed-element></seed-element>
+
+Example:
+
+    <seed-element>
+      <h2>Hello seed-element</h2>
+    </seed-element>
+
+@demo demo/index.html
+@hero hero.svg
+-->
+
+<dom-module id="cache-provider" assetpath="elements/">
+  <template>
+    <style>
+      :host {
+        display: block;
+        box-sizing: border-box;
+      }
+    </style>
+    <paper-fab icon="refresh" on-tap="refresh"></paper-fab>
+
+  </template>
+
+  </dom-module>
+<!--
+@license
+Copyright (c) 2015 The Polymer Project Authors. All rights reserved.
+This code may only be used under the BSD style license found at http://polymer.github.io/LICENSE.txt
+The complete set of authors may be found at http://polymer.github.io/AUTHORS.txt
+The complete set of contributors may be found at http://polymer.github.io/CONTRIBUTORS.txt
+Code distributed by Google as part of the polymer project is also
+subject to an additional IP rights grant found at http://polymer.github.io/PATENTS.txt
+--><!--
+An element providing a solution to no problem in particular.
+
+Example:
+
+    <seed-element></seed-element>
+
+Example:
+
+    <seed-element>
+      <h2>Hello seed-element</h2>
+    </seed-element>
+
+@demo demo/index.html
+@hero hero.svg
+-->
+
+<dom-module id="cache-display" assetpath="elements/">
+  <template>
+    <style>
+      :host {
+        display: block;
+        box-sizing: border-box;
+      }
+
+      .author img {
+        display: block;
+        float: left;
+        margin-right: 5px;
+        max-height: 100px;
+        max-width: 100px;
+      }
+    </style>
+
+    <iron-pages role="main" selected="{{incoming}}" attr-for-selected="name">
+
+      <template is="dom-repeat" items="{{caches}}">
+        <cache-page-list name="view{{index}}" url="{{item.listUrl}}">
+        
+      </cache-page-list></template>
+
+      <settings-view name="settings"></settings-view>
+
+    </iron-pages>
 
   </template>
 
@@ -5803,7 +5902,8 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
       <app-drawer>
         <app-toolbar>SemCache</app-toolbar>
         <start-app-button></start-app-button>
-        <cache-selector incoming="{{page}}">
+        <cache-provider caches="{{retrievedCaches}}"></cache-provider>
+        <cache-selector incoming="{{page}}" pages="{{retrievedCaches}}">
         </cache-selector>
       </app-drawer>
 
@@ -5817,15 +5917,18 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
           </app-toolbar>
         </app-header>
 
-        <iron-pages role="main" selected="{{page}}" attr-for-selected="name">
-          <my-view1 name="view1"></my-view1>
-          <my-view2 name="view2"></my-view2>
-          <my-view3 name="view3"></my-view3>
-          <settings-view name="settings"></settings-view>
-          <my-view1 name="view4"></my-view1>
-          <my-view2 name="view5"></my-view2>
-          
-        </iron-pages>
+        <cache-display incoming="{{page}}" caches="{{retrievedCaches}}">
+        </cache-display>
+
+<!--         <iron-pages role="main" selected="{{page}}" attr-for-selected="name"> -->
+<!--           <my-view1 name="view1"></my-view1> -->
+<!--           <my-view2 name="view2"></my-view2> -->
+<!--           <my-view3 name="view3"></my-view3> -->
+<!--           <settings-view name="settings"></settings-view> -->
+<!--           <my-view1 name="view4"></my-view1> -->
+<!--           <my-view2 name="view5"></my-view2> -->
+<!--           </div> -->
+<!--         </iron-pages> -->
 
       </app-header-layout>
 

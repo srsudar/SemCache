@@ -412,7 +412,7 @@ exports.start = function() {
       console.log('start called when already started');
     }
     // Already started, resolve immediately.
-    return new Promise();
+    return Promise.resolve();
   } else {
     // All the initialization we need to do is create the socket (so that we
     // can receive even if we aren't advertising ourselves) and retrieve our

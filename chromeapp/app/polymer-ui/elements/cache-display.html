@@ -9,7 +9,8 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 -->
 
 <link rel="import" href="../../../bower_components/polymer/polymer.html">
-<link rel="import" href="../../../bower_components/iron-selector/iron-selector.html">
+<link rel="import" href="../../../bower_components/iron-pages/iron-pages.html">
+<link rel="import" href="cache-page-list.html">
 
 <!--
 An element providing a solution to no problem in particular.
@@ -28,71 +29,48 @@ Example:
 @hero hero.svg
 -->
 
-<dom-module id="cache-selector">
+<dom-module id="cache-display">
   <template>
     <style>
       :host {
         display: block;
-        --app-primary-color: #4285f4;
-        --app-secondary-color: black;
+        box-sizing: border-box;
       }
 
-      app-header {
-        background-color: var(--app-primary-color);
-        color: #fff;
-      }
-      app-header paper-icon-button {
-        --paper-icon-button-ink-color: white;
-      }
-
-      .drawer-list {
-        margin: 0 20px;
-      }
-      .drawer-list a {
+      .author img {
         display: block;
-        padding: 0 16px;
-        line-height: 40px;
-        text-decoration: none;
-        color: var(--app-secondary-color);
-      }
-      .drawer-list a.iron-selected {
-        color: black;
-        font-weight: bold;
-      }
-      .drawer-list a.subroute {
-        padding-left: 32px;
+        float: left;
+        margin-right: 5px;
+        max-height: 100px;
+        max-width: 100px;
       }
     </style>
 
-    <iron-selector selected="{{incoming}}" attr-for-selected="name" class="drawer-list" role="navigation">
-      <!-- <a name="view1" >My Cache</a> -->
-      <!-- <a name="view2" >Matt's Cache</a> -->
-      <!-- <a name="view3" >Cache Money</a> -->
-      <!--   <a name="view4">Cache in a div</a> -->
-      <!--   <a name="view5">2nd div cache</a> -->
+    <iron-pages role="main" selected="{{incoming}}" attr-for-selected="name">
 
-      <template is="dom-repeat" items="{{pages}}">
-        <a name="view{{index}}">{{item.instanceName}}</a>
+      <template is="dom-repeat" items="{{caches}}">
+        <cache-page-list
+          name="view{{index}}" 
+          url="{{item.listUrl}}">
+        </my-view1>
       </template>
-      <a name="settings">Settings</a>
 
-    </iron-selector>
+      <settings-view name="settings"></settings-view>
+
+    </iron-pages>
 
   </template>
 
   <script>
     Polymer({
-      is: 'cache-selector',
+      is: 'cache-display',
 
       properties: {
+        caches: Array,
         incoming: {
           type: String,
           reflectToAttribute: true,
           notify: true
-        },
-        pages: {
-          type: Array,
-          reflectToAttribute: true
         },
         /**
          * `fancy` indicates that the element should don a monocle and tophat,

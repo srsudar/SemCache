@@ -28,6 +28,8 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 <link rel="import" href="settings-view.html">
 <link rel="import" href="start-app-button.html">
 <link rel="import" href="cache-selector.html">
+<link rel="import" href="cache-provider.html">
+<link rel="import" href="cache-display.html">
 
 <dom-module id="my-app">
 
@@ -82,7 +84,8 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
       <app-drawer>
         <app-toolbar>SemCache</app-toolbar>
         <start-app-button></start-app-button>
-        <cache-selector incoming="{{page}}">
+        <cache-provider caches="{{retrievedCaches}}"></cache-provider>
+        <cache-selector incoming="{{page}}" pages="{{retrievedCaches}}">
         </cache-selector>
       </app-drawer>
 
@@ -96,15 +99,20 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
           </app-toolbar>
         </app-header>
 
-        <iron-pages role="main" selected="{{page}}" attr-for-selected="name">
-          <my-view1 name="view1"></my-view1>
-          <my-view2 name="view2"></my-view2>
-          <my-view3 name="view3"></my-view3>
-          <settings-view name="settings"></settings-view>
-          <my-view1 name="view4"></my-view1>
-          <my-view2 name="view5"></my-view2>
-          </div>
-        </iron-pages>
+        <cache-display
+          incoming="{{page}}" 
+          caches="{{retrievedCaches}}">
+        </cache-display>
+
+<!--         <iron-pages role="main" selected="{{page}}" attr-for-selected="name"> -->
+<!--           <my-view1 name="view1"></my-view1> -->
+<!--           <my-view2 name="view2"></my-view2> -->
+<!--           <my-view3 name="view3"></my-view3> -->
+<!--           <settings-view name="settings"></settings-view> -->
+<!--           <my-view1 name="view4"></my-view1> -->
+<!--           <my-view2 name="view5"></my-view2> -->
+<!--           </div> -->
+<!--         </iron-pages> -->
 
       </app-header-layout>
 
