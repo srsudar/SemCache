@@ -2308,6 +2308,20 @@ exports.getApiEndpoints = function() {
 };
 
 /**
+ * Return the URL where the list of cached pages can be accessed.
+ *
+ * @param {string} ipAddress the IP address of the cache
+ * @param {number} port the port where the server is listening at ipAddress
+ */
+exports.getListPageUrlForCache = function(ipAddress, port) {
+  var scheme = HTTP_SCHEME;
+  var endpoint = exports.getApiEndpoints().listPageCache;
+  
+  var result = scheme + ipAddress + ':' + port + '/' + endpoint;
+  return result;
+};
+
+/**
  * Create the full access path that can be used to access the cached page.
  *
  * @param {string} fullPath the full path of the file that is to be accessed
@@ -4147,13 +4161,10 @@ exports.setAbsPathToBaseDir = function(absPath) {
  * @return {string} the URL for the list of pages in this device's own cache
  */
 exports.getListUrlForSelf = function() {
-  var scheme = 'http://';
   var iface = exports.getListeningHttpInterface();
   var host = iface.address;
   var port = iface.port;
-  var endpoint = serverApi.getApiEndpoints().listPageCache;
-  
-  var result = scheme + host + ':' + port + '/' + endpoint;
+  var result = serverApi.getListPageUrlForCache(host, port);
   return result;
 };
 

@@ -47,6 +47,20 @@ exports.getApiEndpoints = function() {
 };
 
 /**
+ * Return the URL where the list of cached pages can be accessed.
+ *
+ * @param {string} ipAddress the IP address of the cache
+ * @param {number} port the port where the server is listening at ipAddress
+ */
+exports.getListPageUrlForCache = function(ipAddress, port) {
+  var scheme = HTTP_SCHEME;
+  var endpoint = exports.getApiEndpoints().listPageCache;
+  
+  var result = scheme + ipAddress + ':' + port + '/' + endpoint;
+  return result;
+};
+
+/**
  * Create the full access path that can be used to access the cached page.
  *
  * @param {string} fullPath the full path of the file that is to be accessed

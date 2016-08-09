@@ -105,3 +105,15 @@ test('getCachedFileNameFromPath parses path correct', function(t) {
   t.equal(actual, expected);
   t.end();
 });
+
+test('getListPageUrlForCache returns correct URL', function(t) {
+  var ipAddress = '123.4.56.7';
+  var port = 3333;
+
+  var api = require('../../../app/scripts/server/server-api');
+
+  var expected = 'http://123.4.56.7:3333/list_pages';
+  var actual = api.getListPageUrlForCache(ipAddress, port);
+  t.equal(actual, expected);
+  t.end();
+});

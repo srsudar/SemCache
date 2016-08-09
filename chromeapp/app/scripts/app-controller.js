@@ -64,13 +64,10 @@ exports.setAbsPathToBaseDir = function(absPath) {
  * @return {string} the URL for the list of pages in this device's own cache
  */
 exports.getListUrlForSelf = function() {
-  var scheme = 'http://';
   var iface = exports.getListeningHttpInterface();
   var host = iface.address;
   var port = iface.port;
-  var endpoint = serverApi.getApiEndpoints().listPageCache;
-  
-  var result = scheme + host + ':' + port + '/' + endpoint;
+  var result = serverApi.getListPageUrlForCache(host, port);
   return result;
 };
 
