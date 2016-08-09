@@ -16,6 +16,20 @@ function resetAppController() {
   ];
 }
 
+/**
+ * Create an object as is returned by getBrowseableCaches.
+ */
+function createCacheObj(domainName, instanceName, ipAddress, port, listUrl) {
+  var result = {
+    domainName: domainName,
+    instanceName: instanceName,
+    ipAddress: ipAddress,
+    port: port,
+    listUrl: listUrl
+  };
+  return result;
+}
+
 function rejectIfMissingSettingHelper(instanceName, port, dirId, host, t) {
   var appc = proxyquire('../../app/scripts/app-controller', {
     './settings': {
@@ -191,4 +205,63 @@ test('getListUrlForSelf is sensible', function(t) {
   t.equal(actual, expected);
   t.end();
   resetAppController();
+});
+
+test('getBrowseableCaches dedupes and returns correct list', function(t) {
+  var hostName = 'myself.local';
+  var serverPort = 4444;
+  var instanceName = 'My Cache';
+  var ipAddress = '4.3.2.1';
+
+  var listUrl = 'list url';
+
+  var ownCache = createCacheObj(
+    hostName, instanceName, ipAddress, serverPort, listUrl
+  );
+  var firstCache = createCacheObj(
+    'someone.local', 'aaa cache', '5.5.5.5', 1234, listUrl
+  );
+  var lastCache = createCacheObj(
+    'elseone.local', 'zzz cache', '8.8.8.8', 9999, listUrl
+  );
+
+  // Order such that we have to sort them and most ourself to the front.
+  var foundCaches = [lastCache, ownCache, firstCache];
+  
+  var getInstanceNameSpy = sinon.stub().returns(instanceName);
+  var getServerPortSpy = sinon.stub().returns(serverPort);
+  var getHostNameSpy = sinon.stub().returns(hostName);
+  var getHttpIfaceSpy = sinon.stub().returns({ address: ipAddress });
+  var getListUrlSpy = sinon.stub().returns(listUrl);
+  var browseSpy = sinon.stub().resolves(foundCaches);
+
+  var appc = proxyquire('../../app/scripts/app-controller', {
+    './settings': {
+      getInstanceName: getInstanceNameSpy,
+      getServerPort: getServerPortSpy,
+      getHostName: getHostNameSpy
+    },
+    './server/server-api': {
+      getListPageUrlForCache: getListUrlSpy
+    },
+    './dnssd/dns-sd-semcache': {
+      browseForSemCacheInstances: browseSpy
+    }
+  });
+  appc.getListeningHttpInterface = getHttpIfaceSpy;
+
+  // We should always be first, followed by the other caches sorted by instance
+  // name.
+  var expected = [ownCache, firstCache, lastCache];
+  appc.getBrowseableCaches()
+    .then(actual => {
+      t.deepEqual(actual, expected);
+      t.true(getListUrlSpy.calledWith(ownCache.ipAddress, ownCache.port));
+      t.true(getListUrlSpy.calledWith(firstCache.ipAddress, firstCache.port));
+      t.true(getListUrlSpy.calledWith(lastCache.ipAddress, lastCache.port));
+      t.end();
+      resetAppController();
+    });
+
+
 });

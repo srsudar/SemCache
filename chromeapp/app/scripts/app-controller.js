@@ -72,6 +72,66 @@ exports.getListUrlForSelf = function() {
 };
 
 /**
+ * Obtain an Array of all the caches that can be browsed on the current local
+ * network.
+ *
+ * The current machine's cache is always returned, and is always the first
+ * element in the array.
+ *
+ * @return {Promise} Promise that resolves with an Array of object representing
+ * operational info for each cache. An example element:
+ * {
+ *   domainName: 'laptop.local',
+ *   instanceName: 'My Cache._semcache._tcp.local',
+ *   ipAddress: '1.2.3.4',
+ *   port: 1111,
+ *   listUrl: 'http://1.2.3.4:1111/list_pages'
+ * }
+ */
+exports.getBrowseableCaches = function() {
+  // First we'll construct our own cache info. Some of these variables may not
+  // be set if we are initializing for the first time and settings haven't been
+  // created.
+  var instanceName = settings.getInstanceName();
+  var serverPort = settings.getServerPort();
+  var hostName = settings.getHostName();
+  var ipAddress = exports.getListeningHttpInterface().address;
+  var listUrl = serverApi.getListPageUrlForCache(ipAddress, serverPort);
+
+  var thisCache = {
+    domainName: hostName,
+    instanceName: instanceName,
+    port: serverPort,
+    ipAddress: ipAddress,
+    listUrl: listUrl
+  };
+
+  var result = [thisCache];
+
+  return new Promise(function(resolve) {
+    dnssdSem.browseForSemCacheInstances()
+      .then(instances => {
+        // sort by instance name.
+        instances.sort(function(a, b) {
+          return a.instanceName.localeCompare(b.instanceName);
+        });
+        instances.forEach(instance => {
+          if (instance.ipAddress === ipAddress) {
+            // We've found ourselves. Don't add it.
+            return;
+          }
+          instance.listUrl = serverApi.getListPageUrlForCache(
+            instance.ipAddress,
+            instance.port
+          );
+          result.push(instance);
+        });
+        resolve(result);
+      });
+  });
+};
+
+/**
  * Start the mDNS, DNS-SD, and HTTP servers and register the local instance on
  * the network.
  *
