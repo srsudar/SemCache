@@ -21831,36 +21831,6 @@ Polymer({
         //
         // Use this to clean up anything you did in `attached`.
       },
-
-      // Element Behavior
-
-      /**
-       * Sometimes it's just nice to say hi.
-       *
-       * @param {string} greeting A positive greeting.
-       * @return {string} The full greeting.
-       */
-      sayHello: function(greeting) {
-        var response = greeting || 'Hello World!';
-        return 'seed-element says, ' + response;
-      },
-
-      /**
-       * The `seed-element-lasers` event is fired whenever `fireLasers` is called.
-       *
-       * @event seed-element-lasers
-       * @detail {{sound: String}}
-       */
-
-      /**
-       * Attempt to destroy this element's enemies with a beam of light!
-       *
-       * Or, at least, dispatch an event in the vain hope that someone else will
-       * do the zapping.
-       */
-      fireLasers: function() {
-        this.fire('seed-element-lasers', {sound: 'Pew pew!'});
-      }
     });
 Polymer({
       is: 'cache-display',

@@ -13,20 +13,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 <link rel="import" href="../../../bower_components/iron-icons/iron-icons.html">
 
 <!--
-An element providing a solution to no problem in particular.
-
-Example:
-
-    <seed-element></seed-element>
-
-Example:
-
-    <seed-element>
-      <h2>Hello seed-element</h2>
-    </seed-element>
-
-@demo demo/index.html
-@hero hero.svg
+Provide the list of caches for other elements to consume.
 -->
 
 <dom-module id="cache-provider">
@@ -35,6 +22,10 @@ Example:
       :host {
         display: block;
         box-sizing: border-box;
+      }
+
+      paper-fab {
+        margin: 16px;
       }
     </style>
     <paper-fab icon="refresh" on-tap="refresh"></paper-fab>
@@ -104,36 +95,6 @@ Example:
         //
         // Use this to clean up anything you did in `attached`.
       },
-
-      // Element Behavior
-
-      /**
-       * Sometimes it's just nice to say hi.
-       *
-       * @param {string} greeting A positive greeting.
-       * @return {string} The full greeting.
-       */
-      sayHello: function(greeting) {
-        var response = greeting || 'Hello World!';
-        return 'seed-element says, ' + response;
-      },
-
-      /**
-       * The `seed-element-lasers` event is fired whenever `fireLasers` is called.
-       *
-       * @event seed-element-lasers
-       * @detail {{sound: String}}
-       */
-
-      /**
-       * Attempt to destroy this element's enemies with a beam of light!
-       *
-       * Or, at least, dispatch an event in the vain hope that someone else will
-       * do the zapping.
-       */
-      fireLasers: function() {
-        this.fire('seed-element-lasers', {sound: 'Pew pew!'});
-      }
     });
   </script>
 </dom-module>

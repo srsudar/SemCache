@@ -64,16 +64,16 @@ Example:
       }
     </style>
 
-    <iron-selector selected="{{incoming}}" attr-for-selected="name" class="drawer-list" role="navigation">
-      <!-- <a name="view1" >My Cache</a> -->
-      <!-- <a name="view2" >Matt's Cache</a> -->
-      <!-- <a name="view3" >Cache Money</a> -->
-      <!--   <a name="view4">Cache in a div</a> -->
-      <!--   <a name="view5">2nd div cache</a> -->
+    <iron-selector
+      selected="{{incoming}}" 
+      attr-for-selected="name" 
+      class="drawer-list" 
+      role="navigation">
 
       <template is="dom-repeat" items="{{pages}}">
         <a name="view{{index}}">{{item.instanceName}}</a>
       </template>
+
       <a name="settings">Settings</a>
 
     </iron-selector>

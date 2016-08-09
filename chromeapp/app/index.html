@@ -3456,6 +3456,11 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
       :host {
         display: block;
       }
+
+      paper-fab {
+        margin: 16px;
+      }
+
     </style>
     <paper-fab icon="refresh" on-tap="refresh"></paper-fab>
 
@@ -5734,15 +5739,11 @@ Example:
     </style>
 
     <iron-selector selected="{{incoming}}" attr-for-selected="name" class="drawer-list" role="navigation">
-      <!-- <a name="view1" >My Cache</a> -->
-      <!-- <a name="view2" >Matt's Cache</a> -->
-      <!-- <a name="view3" >Cache Money</a> -->
-      <!--   <a name="view4">Cache in a div</a> -->
-      <!--   <a name="view5">2nd div cache</a> -->
 
       <template is="dom-repeat" items="{{pages}}">
         <a name="view{{index}}">{{item.instanceName}}</a>
       </template>
+
       <a name="settings">Settings</a>
 
     </iron-selector>
@@ -5759,20 +5760,7 @@ The complete set of contributors may be found at http://polymer.github.io/CONTRI
 Code distributed by Google as part of the polymer project is also
 subject to an additional IP rights grant found at http://polymer.github.io/PATENTS.txt
 --><!--
-An element providing a solution to no problem in particular.
-
-Example:
-
-    <seed-element></seed-element>
-
-Example:
-
-    <seed-element>
-      <h2>Hello seed-element</h2>
-    </seed-element>
-
-@demo demo/index.html
-@hero hero.svg
+Provide the list of caches for other elements to consume.
 -->
 
 <dom-module id="cache-provider" assetpath="elements/">
@@ -5781,6 +5769,10 @@ Example:
       :host {
         display: block;
         box-sizing: border-box;
+      }
+
+      paper-fab {
+        margin: 16px;
       }
     </style>
     <paper-fab icon="refresh" on-tap="refresh"></paper-fab>
