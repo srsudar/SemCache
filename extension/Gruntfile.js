@@ -43,6 +43,14 @@ module.exports = function (grunt) {
       }
     },
 
+    tape: {
+      options: {
+        pretty: true,
+        output: 'console',
+      },
+      files: ['test/scripts/**/*.js'],
+    },
+
     // Watches files for changes and runs tasks based on the changed files
     watch: {
       bower: {
@@ -169,6 +177,7 @@ module.exports = function (grunt) {
             '{,*/}*.{ico,png,txt}',
             'images/{,*/}*.{webp,gif}',
             'manifest.json',
+            'scripts/options.js',
             '{,*/}*.html',
             'styles/fonts/{,*/}*.*',
             '_locales/{,*/}*.json',
@@ -227,31 +236,21 @@ module.exports = function (grunt) {
     ]);
   });
 
-  // TODO: update when we switch from mocha
-  // grunt.registerTask('test', [
-  //   'connect:test',
-  //   'mocha'
-  // ]);
+  grunt.registerTask('test', [
+    'tape',
+  ]);
 
   grunt.loadNpmTasks('grunt-browserify');
+  grunt.loadNpmTasks('grunt-tape');
 
   grunt.registerTask('build', [
     'clean:dist',
     'browserify',
-    // 'chromeManifest:dist',
-    // 'useminPrepare',
     'concurrent:dist',
-    // 'concat',
-    // 'cssmin',
-    // 'uglify',
     'copy',
-    // 'usemin',
-    // 'htmlmin',
-    // 'compress'
   ]);
 
   grunt.registerTask('default', [
-    // 'newer:jshint',
     'build'
   ]);
 };
