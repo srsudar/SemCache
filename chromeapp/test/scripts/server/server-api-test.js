@@ -68,7 +68,7 @@ test('getResponseForAllCachedPages rejects if read fails', function(t) {
 
 test('getResponseForAllCachedPages resolves with pages', function(t) {
   var pages = ['alpha', 2, 'gamma'];
-  var metadataObj = {foo: 'bar'};
+  var metadataObj = { foo: 'bar' };
   var getAllCachedPagesSpy = sinon.stub().resolves(pages);
 
   var mockedApi = proxyquire(

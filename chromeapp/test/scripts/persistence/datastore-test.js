@@ -66,7 +66,7 @@ test('getAllCachedPages resolves all pages', function(t) {
   var getAllFileEntriesSpy = sinon.stub().resolves(entries);
 
   var getMockCachedPage = function(param) {
-    return {cachedPage: param};
+    return { cachedPage: param };
   };
   var expectedCachedPages = [];
   entries.forEach(entry => {
@@ -110,16 +110,15 @@ test('getAllFileEntriesForPages resolves all pages', function(t) {
   var expectedEntries = ['a', 'b', 54321, 'foobar', {}];
   var listEntriesSpy = sinon.stub().resolves(expectedEntries);
 
-  var fileSystemStub = {};
-  fileSystemStub.getDirectoryForCacheEntries = getDirectoryForCacheEntriesSpy;
-  var fsUtilStub = {};
-  fsUtilStub.listEntries = listEntriesSpy;
-
   datastore = proxyquire(
     '../../../app/scripts/persistence/datastore',
     {
-      './file-system': fileSystemStub,
-      './file-system-util': fsUtilStub
+      './file-system': {
+        getDirectoryForCacheEntries: getDirectoryForCacheEntriesSpy
+      },
+      './file-system-util': {
+        listEntries: listEntriesSpy
+      }
     }
   );
 
@@ -132,13 +131,11 @@ test('getAllFileEntriesForPages resolves all pages', function(t) {
 });
 
 test('getAllFileEntriesForPages rejects if base dir not set', function(t) {
-  var getDirectoryForCacheEntriesSpy = sinon.stub().resolves(null);
-
   datastore = proxyquire(
     '../../../app/scripts/persistence/datastore',
     {
       './file-system': {
-        getDirectoryForCacheEntries: getDirectoryForCacheEntriesSpy
+        getDirectoryForCacheEntries: sinon.stub().resolves(null)
       }
     }
   );
@@ -161,13 +158,13 @@ test('getEntryAsCachedPage returns CachedPage', function(t) {
 
   var accessUrl = 'the url with the file';
   var getAccessUrlStub = sinon.stub().returns(accessUrl);
-  var serverApiStub = {};
-  serverApiStub.getAccessUrlForCachedPage = getAccessUrlStub;
 
   datastore = proxyquire(
     '../../../app/scripts/persistence/datastore',
     {
-      '../server/server-api': serverApiStub
+      '../server/server-api': {
+        getAccessUrlForCachedPage: getAccessUrlStub
+      }
     }
   );
 
@@ -187,16 +184,15 @@ test('getEntryAsCachedPage returns CachedPage', function(t) {
 test(
   'addPageToCache rejects if getDirectoryForCacheEntries rejects',
   function(t) {
-    var errObj = {msg: 'no base dir'};
+    var errObj = { msg: 'no base dir' };
     var getDirectoryForCacheEntriesSpy = sinon.stub().rejects(errObj);
-    var fileSystemStub = {};
-    fileSystemStub.getDirectoryForCacheEntries =
-      getDirectoryForCacheEntriesSpy;
 
     datastore = proxyquire(
       '../../../app/scripts/persistence/datastore',
       {
-        './file-system': fileSystemStub
+        './file-system': {
+          getDirectoryForCacheEntries: getDirectoryForCacheEntriesSpy
+        }
       }
     );
 
@@ -210,21 +206,19 @@ test(
 );
 
 test('addPageToCache rejects if getFile rejects', function(t) {
-  var errObj = {msg: 'no base dir'};
+  var errObj = { msg: 'no base dir' };
   var getDirectoryForCacheEntriesSpy = sinon.stub().rejects(errObj);
-  var fileSystemStub = {};
-  fileSystemStub.getDirectoryForCacheEntries =
-    getDirectoryForCacheEntriesSpy;
-
   var getFileSpy = sinon.stub().rejects(errObj);
-  var fsUtilStub = {};
-  fsUtilStub.getFile = getFileSpy;
 
   datastore = proxyquire(
     '../../../app/scripts/persistence/datastore',
     {
-      './file-system': fileSystemStub,
-      './file-system-util': fsUtilStub
+      './file-system': {
+        getDirectoryForCacheEntries: getDirectoryForCacheEntriesSpy
+      },
+      './file-system-util': {
+        getFile: getFileSpy
+      }
     }
   );
 
@@ -237,23 +231,21 @@ test('addPageToCache rejects if getFile rejects', function(t) {
 });
 
 test('addPageToCache rejects if writeToFile rejects', function(t) {
-  var errObj = {msg: 'no base dir'};
+  var errObj = { msg: 'no base dir' };
   var getDirectoryForCacheEntriesSpy = sinon.stub().rejects(errObj);
-  var fileSystemStub = {};
-  fileSystemStub.getDirectoryForCacheEntries =
-    getDirectoryForCacheEntriesSpy;
-
   var getFileSpy = sinon.stub().resolves();
   var writeToFileSpy = sinon.stub().rejects(errObj);
-  var fsUtilStub = {};
-  fsUtilStub.getFile = getFileSpy;
-  fsUtilStub.writeToFile = writeToFileSpy;
 
   datastore = proxyquire(
     '../../../app/scripts/persistence/datastore',
     {
-      './file-system': fileSystemStub,
-      './file-system-util': fsUtilStub
+      './file-system': {
+        getDirectoryForCacheEntries: getDirectoryForCacheEntriesSpy
+      },
+      './file-system-util': {
+        getFile: getFileSpy,
+        writeToFile: writeToFileSpy
+      }
     }
   );
 
@@ -272,28 +264,24 @@ test('addPageToCache resolves if all others succeed', function(t) {
   var fileName = 'file_entry_name.mhtml';
   var dirEntryStub = {cacheDir: 'someDir'};
   var fileEntryStub = {fileName: 'sofancy'};
-
   var getDirectoryForCacheEntriesSpy = sinon.stub().resolves(dirEntryStub);
-  var fileSystemStub = {};
-  fileSystemStub.getDirectoryForCacheEntries =
-    getDirectoryForCacheEntriesSpy;
-
   var getFileSpy = sinon.stub().resolves(fileEntryStub);
   var writeToFileSpy = sinon.stub().resolves();
-  var fsUtilStub = {};
-  fsUtilStub.getFile = getFileSpy;
-  fsUtilStub.writeToFile = writeToFileSpy;
 
   datastore = proxyquire(
     '../../../app/scripts/persistence/datastore',
     {
-      './file-system': fileSystemStub,
-      './file-system-util': fsUtilStub
+      './file-system': {
+        getDirectoryForCacheEntries: getDirectoryForCacheEntriesSpy
+      },
+      './file-system-util': {
+        getFile: getFileSpy,
+        writeToFile: writeToFileSpy
+      }
     }
   );
   var createFileNameSpy = sinon.stub().returns(fileName);
   datastore.createFileNameForPage = createFileNameSpy;
-
 
   datastore.addPageToCache(captureUrl, captureDate, blob)
   .then(returnedFile => {

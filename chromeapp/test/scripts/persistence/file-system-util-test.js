@@ -135,7 +135,10 @@ test('getFile resolves with entry', function(t) {
 
   getFileStub.callsArgWith(2, fileEntry);
 
-  var options = {foo: 1, bar: '2'};
+  var options = {
+    foo: 1,
+    bar: '2'
+  };
   var name = 'fileName.txt';
 
   util.getFile(dirEntry, options, name)
@@ -203,7 +206,10 @@ test('getDirectory rejects with error', function(t) {
 
   getDirectoryStub.callsArgWith(3, error);
 
-  var options = {foo: 1, bar: '2'};
+  var options = {
+    foo: 1,
+    bar: '2'
+  };
   var name = 'erroneousDirName';
 
   util.getDirectory(dirEntry, options, name)

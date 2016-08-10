@@ -24,7 +24,7 @@ function getSender() {
   delete require.cache[
     require.resolve('../../../app/scripts/extension-bridge/messaging')
   ];
-  return {id: extensionId};
+  return { id: extensionId };
 
 }
 

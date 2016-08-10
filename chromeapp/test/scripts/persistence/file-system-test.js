@@ -1,5 +1,4 @@
 /*jshint esnext:true*/
-/* globals Promise */
 'use strict';
 var test = require('tape');
 var proxyquire = require('proxyquire');
@@ -19,12 +18,8 @@ function resetFileSystem() {
 
 test('promptForDir calls chrome API and returns Entry', function(t) {
   // Make the module think it has started.
-  var chooseEntryArg = null;
   var expectedEntry = 'foo baz bar';
-  var chooseEntrySpy = function(chooseEntryParam) {
-    chooseEntryArg = chooseEntryParam;
-    return Promise.resolve(expectedEntry);
-  };
+  var chooseEntrySpy = sinon.stub().resolves(expectedEntry);
 
   var fileSystem = proxyquire(
     '../../../app/scripts/persistence/file-system',
@@ -38,18 +33,11 @@ test('promptForDir calls chrome API and returns Entry', function(t) {
   fileSystem.promptForDir()
   .then(actualEntry => {
     // we must choose a directory
-    t.deepEqual(chooseEntryArg, {type: 'openDirectory'});
+    t.deepEqual(chooseEntrySpy.args[0][0], { type: 'openDirectory' });
     t.equal(actualEntry, expectedEntry);
     t.end();
     resetFileSystem();
-  })
-  .catch(function(errObj) {
-    t.fail('should not have reached catch');
-    console.log(errObj);
-    t.end();
-    resetFileSystem();
   });
-
 });
 
 test('setBaseCacheDir calls persist functions', function(t) {
@@ -87,7 +75,7 @@ test('setBaseCacheDir calls persist functions', function(t) {
 
 test('baseDirIsSet true correctly', function(t) {
   // Make the module think it has started.
-  var keyValue = {baseDir: 'identifier'};
+  var keyValue = { baseDir: 'identifier' };
 
   var getSpy = sinon.stub().resolves(keyValue);
 
@@ -152,7 +140,7 @@ test('getPersistedBaseDir retrieves from storage', function(t) {
   var savedId = 'persisted identifier';
   var expectedDirEntry = 'expected directory';
 
-  var getSpy = sinon.stub().resolves({baseDir: savedId});
+  var getSpy = sinon.stub().resolves({ baseDir: savedId });
   var restoreEntrySpy = sinon.stub().resolves(expectedDirEntry);
 
   var fileSystem = proxyquire(
@@ -177,7 +165,7 @@ test('getPersistedBaseDir retrieves from storage', function(t) {
 });
 
 test('getDirectoryForCacheEntries rejects if no base dir', function(t) {
-  var errObj = {msg: 'no base dir'};
+  var errObj = { msg: 'no base dir' };
   var getPersistedBaseDirSpy = sinon.stub().rejects(errObj);
 
   var fileSystem = require('../../../app/scripts/persistence/file-system');
@@ -194,7 +182,7 @@ test('getDirectoryForCacheEntries rejects if no base dir', function(t) {
 test(
   'getDirectoryForCacheEntries rejects if getDirectory rejects',
   function(t) {
-    var errObj = {msg: 'getDirectory failed'};
+    var errObj = { msg: 'getDirectory failed' };
     var getPersistedBaseDirSpy = sinon.stub().resolves();
     var getDirectoryStub = sinon.stub().rejects(errObj);
 
