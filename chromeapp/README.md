@@ -83,11 +83,28 @@ bower install
 To build the JS code we use browserify, which is specified in a Grunt task so
 we only need to use grunt:
 
+
 ```
 grunt
 ```
 
 The code will be built and ready to deploy in the `dist/` directory.
+
+### Temporary Caveat
+
+CAVEAT: Due to the Chrome App Content Security Policy, after running `bower
+install` we need to manually edit a dependency file. Open
+`bower_components/app-layout/app-scroll-effects/app-scroll-effects-behavior.html`
+and find the line that says `var noop: Function();`. Unfortunately, this is
+rejected by the CSP and won't let you load the code. Change this line to say
+`var noop: function() {};`. Then re-build and the code should load.
+
+I've [opened an
+issue](https://github.com/PolymerElements/app-layout/issues/286) with this bug
+and [landed a pull
+request](https://github.com/PolymerElements/app-layout/pull/287) fixing it, but
+until it drops in the release we need to keep this manual step.
+
 
 ## Manually Building the UI
 
