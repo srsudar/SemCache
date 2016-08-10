@@ -59,6 +59,9 @@ module.exports = function (grunt) {
           './<%= config.app %>/scripts/settings:settings',
         ],
       },
+      // Note that these targets build to the app/ directory, NOT to the dist/
+      // directory. This is to allow vulcanize to find them. The clean task
+      // then is responsible for removing the bundles.
       js: {
         // A single entry point for the app.
         src: '<%= config.app %>/scripts/main.js',
@@ -182,6 +185,15 @@ module.exports = function (grunt) {
             '!<%= config.dist %>/.git*'
           ]
         }]
+      },
+      bundles: {
+        files: [{
+          dot: true,
+          src: [
+            '<%= config.app %>/scripts/bundle.js',
+            '<%= config.app %>/polymer-ui/mainBundle.js',
+          ],
+        }],
       }
     },
 
@@ -376,6 +388,7 @@ module.exports = function (grunt) {
     'vulcanize',
     // 'chromeManifest:dist',
     'concurrent:dist',
+    'clean:bundles',
     // 'concat',
     // 'compress'
   ]);
