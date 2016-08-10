@@ -6,6 +6,20 @@ This is the code for the Chrome App portion of SemCache. The app is responsible
 for interacting with the file system and sockets--permissions that are
 available to Chrome Apps but not to Chrome extensions.
 
+# TL;DR
+
+Build the code:
+```
+grunt
+```
+
+Run the tests:
+```
+grunt test
+```
+
+Load the unpacked app from `dist/`.
+
 # Running
 
 The built code is checked into git and is located in the `dist/` directory.
