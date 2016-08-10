@@ -116,24 +116,21 @@ test('getSocket resolves immediately if socket is present', function(t) {
 });
 
 test('getSocket follows success chain and resolves with socket', function(t) {
-  var chromeUdpStub = {};
-
-  chromeUdpStub.addOnReceiveListener = sinon.stub();
-
   var fakeInfo = {
     socketId: 12,
     localPort: 8887
   };
   var expected = new chromeUdp.ChromeUdpSocket(fakeInfo);
 
-  chromeUdpStub.create = sinon.stub().resolves(fakeInfo);
-  chromeUdpStub.bind = sinon.stub().resolves();
-  chromeUdpStub.joinGroup = sinon.stub().resolves();
-
   var mockedController = proxyquire(
     '../../../app/scripts/dnssd/dns-controller.js',
     {
-      '../chrome-apis/udp': chromeUdpStub
+      '../chrome-apis/udp': {
+        addOnReceiveListener: sinon.stub(),
+        create: sinon.stub().resolves(fakeInfo),
+        bind: sinon.stub().resolves(),
+        joinGroup: sinon.stub().resolves()
+      }
     }
   );
 
@@ -181,24 +178,22 @@ test('getSocket fails if bind fails', function(t) {
 });
 
 test('getSocket fails if join group fails', function(t) {
-  var chromeUdpStub = {};
-
   var fakeInfo = {
     socketId: 12,
     localPort: 8887
   };
   var closeAllSocketsSpy = sinon.spy();
 
-  chromeUdpStub.addOnReceiveListener = sinon.stub();
-  chromeUdpStub.closeAllSockets = closeAllSocketsSpy;
-  chromeUdpStub.create = sinon.stub().resolves(fakeInfo);
-  chromeUdpStub.bind = sinon.stub().resolves();
-  chromeUdpStub.joinGroup = sinon.stub().rejects('auto reject');
-
   var mockedController = proxyquire(
     '../../../app/scripts/dnssd/dns-controller.js',
     {
-      '../chrome-apis/udp': chromeUdpStub
+      '../chrome-apis/udp': {
+        addOnReceiveListener: sinon.stub(),
+        closeAllSockets: closeAllSocketsSpy,
+        create: sinon.stub().resolves(fakeInfo),
+        bind: sinon.stub().resolves(),
+        joinGroup: sinon.stub().rejects('auto reject')
+      }
     }
   );
 
@@ -629,7 +624,6 @@ test('handleIncomingPacket sends packet for each question', function(t) {
 });
 
 test('handleIncomingPacket does not send if no records found', function(t) {
-  // TODO: update here down
   var queryPacket = new dnsPacket.DnsPacket(
     0,
     true,
@@ -828,7 +822,11 @@ test('getResourcesForQuery performs service type enumeration', function(t) {
 
 test('onReceiveListener calls to send', function(t) {
   var handleIncomingPacketSpy = sinon.spy();
-  var byteArrayConstructorStub = sinon.stub().returns({getReader: () => {} });
+  var byteArrayConstructorStub = sinon.stub().returns(
+    {
+      getReader: sinon.stub()
+    }
+  );
   var packetMock = 'fake packet';
   var createPacketStub = sinon.stub().returns(packetMock);
 
