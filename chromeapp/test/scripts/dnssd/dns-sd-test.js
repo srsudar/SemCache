@@ -39,28 +39,18 @@ function callsQueryForResponsesHelper(
   method,
   t
 ) {
-  var qNameArg = null;
-  var qTypeArg = null;
-  var qClassArg = null;
-  var multipleArg = null;
-  var timeoutArg = null;
-  var queryCallCount = 0;
-  var querySpy = function(
-    nameParam, typeParam, classParam, multParam, timeParam
-  ) {
-    queryCallCount += 1;
-    qNameArg = nameParam;
-    qTypeArg = typeParam;
-    qClassArg = classParam;
-    multipleArg = multParam;
-    timeoutArg = timeParam;
-    return Promise.resolve(packets);
-  };
+  var querySpy = sinon.stub().resolves(packets);
   dnssdSem.queryForResponses = querySpy;
 
   method(qName, timeout)
     .then(function resolved(services) {
-      t.equal(queryCallCount, 1);
+      var qNameArg = querySpy.args[0][0];
+      var qTypeArg = querySpy.args[0][1];
+      var qClassArg = querySpy.args[0][2];
+      var multipleArg = querySpy.args[0][3];
+      var timeoutArg = querySpy.args[0][4];
+
+      t.true(querySpy.calledOnce, 1);
       t.equal(qNameArg, qName);
       t.equal(qTypeArg, qType);
       t.equal(qClassArg, qClass);
@@ -68,6 +58,7 @@ function callsQueryForResponsesHelper(
       t.equal(timeoutArg, timeout);
       t.deepEqual(services, result);
       t.end();
+
       resetDnsSdSem();
     });
 }
@@ -100,22 +91,16 @@ function probeRejectsHelper(returnTrueAfterCall, t) {
       {
         addOnReceiveCallback: addOnReceiveCallbackSpy,
         removeOnReceiveCallback: removeOnReceiveCallbackSpy,
-        query: function() {}
+        query: sinon.stub()
       }
     }
   );
 
   dnssdSem.receivedResponsePacket = receivedResponsePacketSpy;
-  dnssdSem.wait = () => Promise.resolve();
+  dnssdSem.wait = sinon.stub().resolves();
 
   var issuePromise = dnssdSem.issueProbe('queryname', 4, 5);
-  issuePromise.then(function success() {
-    // We should never succeed in this case.
-    resetDnsSdSem();
-    t.fail();
-    t.end();
-  })
-  .catch(function failure() {
+  issuePromise.catch(function failure() {
     // our promise didn't resolve, meaning we failed.
     // We should have been called one more than we were permitting (i.e. a call
     // on the 0th call leads to a single call
@@ -130,12 +115,7 @@ function probeRejectsHelper(returnTrueAfterCall, t) {
 test('issueProbe succeeds correctly', function(t) {
   var addOnReceiveCallbackSpy = sinon.spy();
   var removeOnReceiveCallbackSpy = sinon.spy();
-
-  var receivedResponsePacketCallCount = 0;
-  var receivedResponsePacketSpy = function() {
-    receivedResponsePacketCallCount += 1;
-    return false;
-  };
+  var receivedResponsePacketSpy = sinon.stub().returns(false);
 
   var dnssdSem = proxyquire(
     '../../../app/scripts/dnssd/dns-sd',
@@ -144,26 +124,20 @@ test('issueProbe succeeds correctly', function(t) {
       {
         addOnReceiveCallback: addOnReceiveCallbackSpy,
         removeOnReceiveCallback: removeOnReceiveCallbackSpy,
-        query: function() {}
+        query: sinon.stub()
       }
     }
   );
 
   dnssdSem.receivedResponsePacket = receivedResponsePacketSpy;
-  dnssdSem.wait = () => Promise.resolve();
+  dnssdSem.wait = sinon.stub().resolves();
 
   var issuePromise = dnssdSem.issueProbe('queryname', 4, 5);
   issuePromise.then(function success() {
-    t.equal(receivedResponsePacketCallCount, 3);
+    t.equal(receivedResponsePacketSpy.callCount, 3);
     t.true(addOnReceiveCallbackSpy.calledOnce);
     t.true(removeOnReceiveCallbackSpy.calledOnce);
     resetDnsSdSem();
-    t.end();
-  })
-  .catch(function failure() {
-    // our promise didn't resolve, meaning we failed.
-    resetDnsSdSem();
-    t.fail();
     t.end();
   });
 });
@@ -189,19 +163,9 @@ test('packetIsForQuery true if appropriate resource', function(t) {
   var aRecord = new resRec.ARecord(qName, 15, '15.14.13.12', qClass);
   packet.addAnswer(aRecord);
 
-  var resourceArg = null;
-  var qNameArg = null;
-  var qTypeArg = null;
-  var qClassArg = null;
-  var filterSpy = function(
-    resourceParam, qNameParam, qTypeParam, qClassParam
-  ) {
-    resourceArg = resourceParam;
-    qNameArg = qNameParam;
-    qTypeArg = qTypeParam;
-    qClassArg = qClassParam;
-    return [aRecord];
-  };
+
+  var filterSpy = sinon.stub().returns([aRecord]);
+
   var dnssdSem = proxyquire(
     '../../../app/scripts/dnssd/dns-sd',
     {
@@ -217,10 +181,10 @@ test('packetIsForQuery true if appropriate resource', function(t) {
   );
 
   t.true(actual);
-  t.deepEqual(resourceArg, [aRecord]);
-  t.equal(qNameArg, qName);
-  t.equal(qTypeArg, aRecord.recordType);
-  t.equal(qClassArg, qClass);
+  t.deepEqual(filterSpy.args[0][0], [aRecord]);
+  t.equal(filterSpy.args[0][1], qName);
+  t.equal(filterSpy.args[0][2], aRecord.recordType);
+  t.equal(filterSpy.args[0][3], qClass);
   t.end();
 });
 
@@ -233,19 +197,8 @@ test('packetIsForQuery false if resource does not match query', function(t) {
   var aRecord = new resRec.ARecord(qName, 15, '15.14.13.12', qClass);
   packet.addAnswer(aRecord);
 
-  var resourceArg = null;
-  var qNameArg = null;
-  var qTypeArg = null;
-  var qClassArg = null;
-  var filterSpy = function(
-    resourceParam, qNameParam, qTypeParam, qClassParam
-  ) {
-    resourceArg = resourceParam;
-    qNameArg = qNameParam;
-    qTypeArg = qTypeParam;
-    qClassArg = qClassParam;
-    return [];
-  };
+  var filterSpy = sinon.stub().returns([]);
+
   var dnssdSem = proxyquire(
     '../../../app/scripts/dnssd/dns-sd',
     {
@@ -261,10 +214,10 @@ test('packetIsForQuery false if resource does not match query', function(t) {
   );
 
   t.false(actual);
-  t.deepEqual(resourceArg, [aRecord]);
-  t.equal(qNameArg, qName);
-  t.equal(qTypeArg, aRecord.recordType);
-  t.equal(qClassArg, qClass);
+  t.deepEqual(filterSpy.args[0][0], [aRecord]);
+  t.equal(filterSpy.args[0][1], qName);
+  t.equal(filterSpy.args[0][2], aRecord.recordType);
+  t.equal(filterSpy.args[0][3], qClass);
   t.end();
 });
 
@@ -299,19 +252,7 @@ test('receivedPacket calls packetIsForQuery on each packet', function(t) {
 test('receivedResponsePacket true based on resources', function(t) {
   var dnssdSem = require('../../../app/scripts/dnssd/dns-sd');
 
-  var packetArg = null;
-  var qNameArg = null;
-  var qTypeArg = null;
-  var qClassArg = null;
-  var packetIsForQuerySpy = function(
-    packetParam, qNameParam, qTypeParam, qClassParam
-  ) {
-    packetArg = packetParam;
-    qNameArg = qNameParam;
-    qTypeArg = qTypeParam;
-    qClassArg = qClassParam;
-    return true;
-  };
+  var packetIsForQuerySpy = sinon.stub().returns(true);
 
   dnssdSem.packetIsForQuery = packetIsForQuerySpy;
 
@@ -335,10 +276,10 @@ test('receivedResponsePacket true based on resources', function(t) {
 
   var actual = dnssdSem.receivedResponsePacket(packets, qName, qType, qClass);
   t.true(actual);
-  t.deepEqual(packetArg, isResponsePacket);
-  t.equal(qNameArg, qName);
-  t.equal(qTypeArg, qType);
-  t.equal(qClassArg, qClass);
+  t.deepEqual(packetIsForQuerySpy.args[0][0], isResponsePacket);
+  t.equal(packetIsForQuerySpy.args[0][1], qName);
+  t.equal(packetIsForQuerySpy.args[0][2], qType);
+  t.equal(packetIsForQuerySpy.args[0][3], qClass);
   t.end();
 
   resetDnsSdSem();
@@ -425,17 +366,9 @@ test('register rejects if host taken', function(t) {
   var type = '_semcache._tcp';
   var port = 1234;
 
-  var calledHost;
-  var issueProbeCallCount = 0;
-  var issueProbeSpy = function(
-    hostParam
-  ) {
-    issueProbeCallCount += 1;
-    calledHost = hostParam;
-    return Promise.reject('auto reject of probe');
-  };
+  var issueProbeSpy = sinon.stub().rejects('auto reject of probe');
   dnssdSem.issueProbe = issueProbeSpy;
-  dnssdSem.wait = () => Promise.resolve();
+  dnssdSem.wait = sinon.stub().resolves();
 
   var createHostRecordsSpy = sinon.spy();
   var createServiceRecordsSpy = sinon.spy();
@@ -443,19 +376,13 @@ test('register rejects if host taken', function(t) {
   dnssdSem.createServiceRecords = createServiceRecordsSpy;
 
   var resultPromise = dnssdSem.register(host, instanceName, type, port);
-
-  resultPromise.then(function succeeded() {
-    // We are expecting to fail if the host is taken, so we should never
-    // resolve.
-    resetDnsSdSem();
-    t.fail();
-  }, function failed(failObj) {
+  resultPromise.catch(failObj => {
     // We rejected, as expected because the host was taken.
     // Make sure we called issueProbe with the host
-    t.equal(calledHost, host);
+    t.equal(issueProbeSpy.args[0][0], host);
     t.equal(failObj.message, 'host taken: ' + host);
     // We should only ever issue a single probe.
-    t.equal(issueProbeCallCount, 1);
+    t.equal(issueProbeSpy.callCount, 1);
     // We should not have registered any services
     t.equal(createHostRecordsSpy.callCount, 0);
     t.equal(createServiceRecordsSpy.callCount, 0);
@@ -473,42 +400,21 @@ test('register rejects if instance taken', function(t) {
   var type = '_semcache._tcp';
   var port = 1234;
 
-  var calledHost;
-  var calledName;
-
-  var issueProbeCallCount = 0;
-  var issueProbeSpy = function(
-    hostParam
-  ) {
-    issueProbeCallCount += 1;
-    calledHost = hostParam;
-    if (issueProbeCallCount === 1 ) {
-      // We want to fulfill the first call, which is for the host
-      calledHost = hostParam;
-      return Promise.resolve('auto resolve of probe');
-    } else if (issueProbeCallCount === 2) {
-      calledName = hostParam;
-      return Promise.reject('auto reject of probe');
-    } else {
-      t.fail('called probe more than twice');
-    }
-  };
+  var issueProbeSpy = sinon.stub();
+  issueProbeSpy.onCall(0).resolves('auto resolve of probe');
+  issueProbeSpy.onCall(1).rejects('auto reject of probe');
   dnssdSem.issueProbe = issueProbeSpy;
 
   var resultPromise = dnssdSem.register(host, instanceName, type, port);
 
-  resultPromise.then(function succeeded() {
-    // We are expecting to fail if the instance is taken, so we should never
-    // resolve.
-    resetDnsSdSem();
-    t.fail();
-  }, function failed(failObj) {
+  resultPromise.catch(failObj => {
     // We rejected, as expected because the instance was taken.
     // Make sure we called issueProbe with the instance
-    t.equal(calledHost, 'my instance._semcache._tcp.local');
+    t.equal(issueProbeSpy.args[0][0], host);
+    t.equal(issueProbeSpy.args[1][0], 'my instance._semcache._tcp.local');
     t.equal(failObj.message, 'instance taken: ' + instanceName);
     // We should issue two probes.
-    t.equal(issueProbeCallCount, 2);
+    t.equal(issueProbeSpy.callCount, 2);
     t.true(true);
     t.end();
     resetDnsSdSem();
@@ -595,7 +501,7 @@ test('createHostRecords calls to create records correctly', function(t) {
       './dns-controller':
       {
         addRecord: addRecordSpy,
-        getIPv4Interfaces: () => [iface]
+        getIPv4Interfaces: sinon.stub().returns([iface])
       }
     }
   );
@@ -615,40 +521,14 @@ test('register resolves if name and host probe succeed', function(t) {
   var type = '_semcache._tcp';
   var port = 1234;
 
-  var issueProbeCallCount = 0;
-  var issueProbeSpy = function() {
-    issueProbeCallCount += 1;
-    // Make both promises succeed
-    return Promise.resolve('auto succeed in spy');
-  };
+  var issueProbeSpy = sinon.stub().resolves('auto succeed in spy');
   dnssdSem.issueProbe = issueProbeSpy;
 
-  // Create host record should have been called with the correct host, and it
-  // should have return some known records.
-  var calledHostForCreateHost;
   var hostRecord = ['a'];
-  var createHostRecordsSpy = function(hostParam) {
-    calledHostForCreateHost = hostParam;
-    return hostRecord;
-  };
+  var createHostRecordsSpy = sinon.stub().returns(hostRecord);
 
-  var calledName;
-  var calledType;
-  var calledPort;
-  var calledHostForCreateService;
   var serviceRecords = ['b', 'c'];
-  var createServiceRecordsSpy = function(
-    nameParam,
-    typeParam,
-    portParam,
-    hostParam
-  ) {
-    calledName = nameParam;
-    calledType = typeParam;
-    calledPort = portParam;
-    calledHostForCreateService = hostParam;
-    return serviceRecords;
-  };
+  var createServiceRecordsSpy = sinon.stub().returns(serviceRecords);
 
   var allRecords = hostRecord.concat(serviceRecords);
 
@@ -673,16 +553,16 @@ test('register resolves if name and host probe succeed', function(t) {
     t.deepEqual(resolveObj, expected);
 
     // We should have issued 2 probes
-    t.equal(issueProbeCallCount, 2);
+    t.equal(issueProbeSpy.callCount, 2);
 
     // We should have called createServiceRecords with the correct params.
-    t.equal(calledName, instanceName);
-    t.equal(calledType, type);
-    t.equal(calledPort, port);
-    t.equal(calledHostForCreateService, host);
+    t.equal(createServiceRecordsSpy.args[0][0], instanceName);
+    t.equal(createServiceRecordsSpy.args[0][1], type);
+    t.equal(createServiceRecordsSpy.args[0][2], port);
+    t.equal(createServiceRecordsSpy.args[0][3], host);
 
     // We should have called createHostRecords with the correct params.
-    t.equal(calledHostForCreateHost, host);
+    t.equal(createHostRecordsSpy.args[0][0], host);
     
     // And finally, we should have called advertiseService with all the records
     // we created.
@@ -691,10 +571,6 @@ test('register resolves if name and host probe succeed', function(t) {
 
     resetDnsSdSem();
     t.end();
-  }, function failed() {
-    // We rejected, which should never happen.
-    t.fail('we should not reject in this case');
-    resetDnsSdSem();
   });
 });
 
@@ -761,18 +637,13 @@ test('queryForResponses times out for if no responses', function(t) {
   var qClass = 2;
   var qTime = 4000;
   // we want no packets.
-
   var expectedPackets = [];
 
   var addOnReceiveCallbackSpy = sinon.spy();
   var removeOnReceiveCallbackSpy = sinon.spy();
   var querySpy = sinon.spy();
-  var waitArg = null;
-  var waitSpy = function(waitParam) {
-    waitArg = waitParam;
-    // Don't actually wait during tests.
-    return Promise.resolve();
-  };
+  var packetIsForQuerySpy = sinon.stub().returns(true);
+  var waitSpy = sinon.stub().resolves();
 
   var dnssdSem = proxyquire(
     '../../../app/scripts/dnssd/dns-sd',
@@ -786,11 +657,7 @@ test('queryForResponses times out for if no responses', function(t) {
     }
   );
   dnssdSem.wait = waitSpy;
-  var packetIsForQueryCallCount = 0;
-  dnssdSem.packetIsForQuery = function() {
-    packetIsForQueryCallCount += 1;
-    return true;
-  };
+  dnssdSem.packetIsForQuery = packetIsForQuerySpy;
 
   dnssdSem.queryForResponses(qName, qType, qClass, true, qTime)
   .then(function success(records) {
@@ -799,15 +666,11 @@ test('queryForResponses times out for if no responses', function(t) {
     t.equal(removeOnReceiveCallbackSpy.callCount, 1);
     t.true(querySpy.calledWith(qName, qType, qClass));
     // We expect to wait for 2 seconds.
-    t.equal(waitArg, qTime);
-    t.equal(packetIsForQueryCallCount, 0);
+    t.equal(waitSpy.args[0][0], qTime);
+    t.equal(packetIsForQuerySpy.callCount, 0);
     t.deepEqual(records, expectedPackets);
     t.end();
     resetDnsSdSem();
-  })
-  .catch(function failed(err) {
-    t.fail('should not have caught error: ' + err);
-    t.end();
   });
 });
 
@@ -839,12 +702,8 @@ test('queryForResponses returns immediately for single response', function(t) {
   };
   var removeOnReceiveCallbackSpy = sinon.spy();
   var querySpy = sinon.spy();
-  var waitArg = null;
-  var waitSpy = function(waitParam) {
-    waitArg = waitParam;
-    // Don't actually wait during tests.
-    return Promise.resolve();
-  };
+  var waitSpy = sinon.stub().resolves();
+  var packetIsForQuerySpy = sinon.stub().returns(true);
 
   var dnssdSem = proxyquire(
     '../../../app/scripts/dnssd/dns-sd',
@@ -858,11 +717,7 @@ test('queryForResponses returns immediately for single response', function(t) {
     }
   );
   dnssdSem.wait = waitSpy;
-  var packetIsForQueryCallCount = 0;
-  dnssdSem.packetIsForQuery = function() {
-    packetIsForQueryCallCount += 1;
-    return true;
-  };
+  dnssdSem.packetIsForQuery = packetIsForQuerySpy;
 
   dnssdSem.queryForResponses(qName, qType, qClass, false, qTime)
   .then(function success(records) {
@@ -871,15 +726,11 @@ test('queryForResponses returns immediately for single response', function(t) {
     t.equal(removeOnReceiveCallbackSpy.callCount, 1);
     t.true(querySpy.calledWith(qName, qType, qClass));
     // We expect to wait for 2 seconds.
-    t.equal(waitArg, qTime);
-    t.equal(packetIsForQueryCallCount, 1);
+    t.equal(waitSpy.args[0][0], qTime);
+    t.equal(packetIsForQuerySpy.callCount, 1);
     t.deepEqual(records, expectedPackets);
     t.end();
     resetDnsSdSem();
-  })
-  .catch(function failed(err) {
-    t.fail('should not have caught error: ' + err);
-    t.end();
   });
 });
 
@@ -912,12 +763,8 @@ test('queryForResponses correct for multiple', function(t) {
   };
   var removeOnReceiveCallbackSpy = sinon.spy();
   var querySpy = sinon.spy();
-  var waitArg = null;
-  var waitSpy = function(waitParam) {
-    waitArg = waitParam;
-    // Don't actually wait during tests.
-    return Promise.resolve();
-  };
+  var waitSpy = sinon.stub().resolves();
+  var packetIsForQuerySpy = sinon.stub().resolves(true);
 
   var dnssdSem = proxyquire(
     '../../../app/scripts/dnssd/dns-sd',
@@ -931,11 +778,7 @@ test('queryForResponses correct for multiple', function(t) {
     }
   );
   dnssdSem.wait = waitSpy;
-  var packetIsForQueryCallCount = 0;
-  dnssdSem.packetIsForQuery = function() {
-    packetIsForQueryCallCount += 1;
-    return true;
-  };
+  dnssdSem.packetIsForQuery = packetIsForQuerySpy;
 
   dnssdSem.queryForResponses(qName, qType, qClass, true, qTime)
   .then(function success(records) {
@@ -944,15 +787,11 @@ test('queryForResponses correct for multiple', function(t) {
     t.equal(removeOnReceiveCallbackSpy.callCount, 1);
     t.true(querySpy.calledWith(qName, qType, qClass));
     // We expect to wait for 2 seconds.
-    t.equal(waitArg, qTime);
-    t.equal(packetIsForQueryCallCount, 2);
+    t.equal(waitSpy.args[0][0], qTime);
+    t.equal(packetIsForQuerySpy.callCount, 2);
     t.deepEqual(records, expectedPackets);
     t.end();
     resetDnsSdSem();
-  })
-  .catch(function failed(err) {
-    t.fail('should not have caught error: ' + err);
-    t.end();
   });
 });
 
@@ -1215,12 +1054,6 @@ test('browseServiceInstances queries all types and returns', function(t) {
 
     // Result promise resolves with the correct objects.
     t.deepEqual(instances, [expected1, expected2]);
-    resetDnsSdSem();
-    t.end();
-  });
-  
-  resultPromise.catch(function failed(errObj) {
-    t.fail('unexpected catch: ' + errObj);
     resetDnsSdSem();
     t.end();
   });
