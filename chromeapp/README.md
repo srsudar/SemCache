@@ -2,7 +2,7 @@
 
 # Overview
 
-This is the code for the Chrome App portion of SemCache. The app is responsible
+This is the code for the Chrome App portion of SemCache. The App is responsible
 for interacting with the file system and sockets--permissions that are
 available to Chrome Apps but not to Chrome extensions.
 
@@ -18,7 +18,7 @@ Run the tests:
 grunt test
 ```
 
-Load the unpacked app from `dist/`.
+Load the unpacked App from `dist/`.
 
 # Running
 
