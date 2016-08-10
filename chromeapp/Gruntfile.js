@@ -28,6 +28,19 @@ module.exports = function (grunt) {
     // Project settings
     config: config,
 
+    vulcanize: {
+      default: {
+        options: {
+          inlineScripts: true,
+          inlineCss: true,
+          csp: 'index.js'
+        },
+        files: {
+          './app/index.html': './app/polymer-ui/index.html'
+        },
+      },
+    },
+
     browserify: {
       options: {
         require: [
