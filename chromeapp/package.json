@@ -25,6 +25,7 @@
     "grunt-mocha": "~0.4.10",
     "grunt-newer": "~0.6.0",
     "grunt-svgmin": "~0.4.0",
+    "grunt-tape": "^0.1.0",
     "grunt-usemin": "~2.1.0",
     "grunt-vulcanize": "^1.0.0",
     "jshint-stylish": "~0.1.5",
@@ -33,7 +34,8 @@
     "sinon": "~1.17.4",
     "sinon-as-promised": "~3.0.1",
     "tape": "~4.6.0",
-    "time-grunt": "~0.3.1"
+    "time-grunt": "~0.3.1",
+    "web-component-tester": "^4.3.1"
   },
   "engines": {
     "node": ">=0.8.0"

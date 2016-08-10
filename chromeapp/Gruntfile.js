@@ -70,6 +70,30 @@ module.exports = function (grunt) {
       }
     },
 
+    tape: {
+      options: {
+        pretty: true,
+        output: 'console',
+      },
+      files: ['test/scripts/**/*.js'],
+    },
+
+    'wct-test': {
+      local: {
+        options: {
+          remote: false,
+          suites: ['test/polymer-ui/index.html'],
+          // activeBrowsers: [{
+          //   browserName: 'chrome',
+          // }],
+        },
+        plugins: {
+          local: { browsers: ['chrome'] },
+        },
+        files: 'test/polymer-ui/index.html',
+      },
+    },
+
     // Watches files for changes and runs tasks based on the changed files
     watch: {
       bower: {
@@ -392,13 +416,14 @@ module.exports = function (grunt) {
     ]);
   });
 
-  // TODO: update when we switch from mocha
-  // grunt.registerTask('test', [
-  //   'connect:test',
-  //   'mocha'
-  // ]);
+  grunt.registerTask('test', [
+    'tape',
+    'wct-test:local',
+  ]);
 
   grunt.loadNpmTasks('grunt-browserify');
+  grunt.loadNpmTasks('grunt-tape');
+  grunt.loadNpmTasks('web-component-tester');
 
   grunt.registerTask('build', [
     'clean:dist',
