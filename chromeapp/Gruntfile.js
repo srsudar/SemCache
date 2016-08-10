@@ -36,6 +36,8 @@ module.exports = function (grunt) {
           csp: 'index.js'
         },
         files: {
+          // Despite this odd dest: src syntax, ./app/index.html is the built
+          // output file
           './app/index.html': './app/polymer-ui/index.html'
         },
       },
@@ -399,6 +401,7 @@ module.exports = function (grunt) {
   grunt.registerTask('build', [
     'clean:dist',
     'browserify',
+    'vulcanize',
     // 'chromeManifest:dist',
     // 'useminPrepare',
     'concurrent:dist',
