@@ -1,5 +1,4 @@
 /*jshint esnext:true*/
-/* globals Promise */
 'use strict';
 var test = require('tape');
 var proxyquire = require('proxyquire');
@@ -61,12 +60,12 @@ function helperTestForSendAddress(t, isUnicast, address, port) {
     0
   );
   // We will return a response packet regardless of the other parameters.
-  question1.unicastResponseRequested = () => isUnicast;
-  dnsController.createResponsePacket = () => responsePacket;
+  question1.unicastResponseRequested = sinon.stub().returns(isUnicast);
+  dnsController.createResponsePacket = sinon.stub().returns(responsePacket);
 
   // Return a single item to indicate that we should respond to the query.
   var aRecord = new resRec.ARecord('domainname', 10, '123.42.61.123', 2);
-  dnsController.getResourcesForQuery = () => [aRecord];
+  dnsController.getResourcesForQuery = sinon.stub().returns([aRecord]);
 
   var sendSpy = sinon.spy();
   dnsController.sendPacket = sendSpy;
@@ -82,6 +81,21 @@ function helperTestForSendAddress(t, isUnicast, address, port) {
 
   resetDnsController();
   t.end();
+}
+
+function helperQueryForType(t, name, type, clazz, controller, fn, argsArray) {
+  var returnArg = 'foo';
+  var querySpy = sinon.stub().returns(returnArg);
+
+  controller.getResourcesForQuery = querySpy;
+
+  var actual = fn.apply(null, argsArray);
+
+  t.deepEqual(querySpy.args[0], [name, type, clazz]);
+  t.equal(actual, returnArg);
+  t.end();
+
+  resetDnsController();
 }
 
 test('getSocket resolves immediately if socket is present', function(t) {
@@ -104,7 +118,7 @@ test('getSocket resolves immediately if socket is present', function(t) {
 test('getSocket follows success chain and resolves with socket', function(t) {
   var chromeUdpStub = {};
 
-  chromeUdpStub.addOnReceiveListener = function() {};
+  chromeUdpStub.addOnReceiveListener = sinon.stub();
 
   var fakeInfo = {
     socketId: 12,
@@ -128,12 +142,8 @@ test('getSocket follows success chain and resolves with socket', function(t) {
     t.deepEqual(actual, expected);
     t.true(mockedController.isStarted());
     t.end();
-  }, function error() {
-    t.fail();
-    t.end();
+    resetDnsController();
   });
-
-  resetDnsController();
 });
 
 test('getSocket fails if bind fails', function(t) {
@@ -146,7 +156,7 @@ test('getSocket fails if bind fails', function(t) {
 
   var closeAllSocketsSpy = sinon.spy();
 
-  chromeUdpStub.addOnReceiveListener = function() {};
+  chromeUdpStub.addOnReceiveListener = sinon.stub();
   chromeUdpStub.closeAllSockets = closeAllSocketsSpy;
   chromeUdpStub.create = sinon.stub().resolves(fakeInfo);
   chromeUdpStub.bind = sinon.stub().rejects('auto reject');
@@ -159,20 +169,15 @@ test('getSocket fails if bind fails', function(t) {
   );
 
   var result = mockedController.getSocket();
-  result.then(function success() {
-    t.fail('should not succeed');
-    t.end();
-    resetDnsController();
-  }, function error(errorObj) {
+  result.catch(errorObj => {
     var startsWithMessage = errorObj.message.startsWith(
       'Error when binding DNSSD port'
     );
     t.true(startsWithMessage);
     t.equal(closeAllSocketsSpy.callCount, 1);
     t.end();
+    resetDnsController();
   });
-
-  resetDnsController();
 });
 
 test('getSocket fails if join group fails', function(t) {
@@ -184,7 +189,7 @@ test('getSocket fails if join group fails', function(t) {
   };
   var closeAllSocketsSpy = sinon.spy();
 
-  chromeUdpStub.addOnReceiveListener = function() {};
+  chromeUdpStub.addOnReceiveListener = sinon.stub();
   chromeUdpStub.closeAllSockets = closeAllSocketsSpy;
   chromeUdpStub.create = sinon.stub().resolves(fakeInfo);
   chromeUdpStub.bind = sinon.stub().resolves();
@@ -198,105 +203,67 @@ test('getSocket fails if join group fails', function(t) {
   );
 
   var result = mockedController.getSocket();
-  result.then(function success() {
-    t.fail('should not succeed');
-    t.end();
-    resetDnsController();
-  }, function error(errorObj) {
+  result.catch(errorObj => {
     var startsWithMessage = errorObj.message.startsWith(
       'Error when joining DNSSD group'
     );
     t.true(startsWithMessage);
     t.equal(closeAllSocketsSpy.callCount, 1);
     t.end();
+    resetDnsController();
   });
-
-  resetDnsController();
 });
 
 test('queryForARecord calls query with correct args', function(t) {
-  var args = [];
-  var returnArg = 'foo';
-  var querySpy = function(name, type, clazz) {
-    args.push(name);
-    args.push(type);
-    args.push(clazz);
-    return returnArg;
-  };
-  var mockedController = require(
+  var controller = require(
     '../../../app/scripts/dnssd/dns-controller'
   );
 
-  mockedController.getResourcesForQuery = querySpy;
-
   var domainName = 'www.example.com';
-
-  var actual = mockedController.queryForARecord(domainName);
-
-  t.equal(args[0], domainName);
-  t.equal(args[1], dnsCodes.RECORD_TYPES.A);
-  t.equal(args[2], dnsCodes.CLASS_CODES.IN);
-  console.log('actual: ', actual);
-  t.equal(actual, returnArg);
-  t.end();
-
-  resetDnsController();
+  helperQueryForType(
+    t,
+    domainName,
+    dnsCodes.RECORD_TYPES.A,
+    dnsCodes.CLASS_CODES.IN,
+    controller,
+    controller.queryForARecord,
+    [domainName]
+  );
 });
 
 test('queryForPtrRecord calls query with correct args', function(t) {
-  var args = [];
-  var returnArg = 'foo';
-  var querySpy = function(name, type, clazz) {
-    args.push(name);
-    args.push(type);
-    args.push(clazz);
-    return returnArg;
-  };
-  var mockedController = require(
+  var controller = require(
     '../../../app/scripts/dnssd/dns-controller'
   );
 
-  mockedController.getResourcesForQuery = querySpy;
-
   var serviceName = '_semcache._tcp';
-
-  var actual = mockedController.queryForPtrRecord(serviceName);
-
-  t.equal(args[0], serviceName);
-  t.equal(args[1], dnsCodes.RECORD_TYPES.PTR);
-  t.equal(args[2], dnsCodes.CLASS_CODES.IN);
-  t.equal(actual, returnArg);
-  t.end();
-
-  resetDnsController();
+  helperQueryForType(
+    t,
+    serviceName,
+    dnsCodes.RECORD_TYPES.PTR,
+    dnsCodes.CLASS_CODES.IN,
+    controller,
+    controller.queryForPtrRecord,
+    [serviceName]
+  );
 });
 
 test('queryForSrvRecord calls query with correct args', function(t) {
-  var args = [];
-  var returnArg = 'foo';
-  var querySpy = function(name, type, clazz) {
-    args.push(name);
-    args.push(type);
-    args.push(clazz);
-    return returnArg;
-  };
-  var mockedController = require(
+  var controller = require(
     '../../../app/scripts/dnssd/dns-controller'
   );
 
-  mockedController.getResourcesForQuery = querySpy;
-
   var instanceName = 'Fancy Cache._semcache._tcp';
 
-  var actual = mockedController.queryForSrvRecord(instanceName);
-
-  t.equal(args[0], instanceName);
-  t.equal(args[1], dnsCodes.RECORD_TYPES.SRV);
-  t.equal(args[2], dnsCodes.CLASS_CODES.IN);
-  t.equal(actual, returnArg);
-  t.end();
-
-  resetDnsController();
+  helperQueryForType(
+    t,
+    instanceName,
+    dnsCodes.RECORD_TYPES.SRV,
+    dnsCodes.CLASS_CODES.IN,
+    controller,
+    controller.queryForSrvRecord,
+    [instanceName]
+  );
 });
 
 test('query calls sendPacket with correct args', function(t) {
@@ -459,28 +426,19 @@ test('sendPacket gets socket and sends', function(t) {
 test('start initializes correctly', function(t) {
   // getSocket() should resolve and initializeNetworkInetfaceCache() should
   // resolve
-  var calledGetSocket = false;
-  var calledInitializeCaches = false;
-
-  var getSocketStub = function() {
-    calledGetSocket = true;
-    return Promise.resolve();
-  };
-
-  var initializeCacheStub = function() {
-    calledInitializeCaches = true;
-    return new Promise(function tests() {
-      t.true(calledGetSocket);
-      t.true(calledInitializeCaches);
-      resetDnsController();
-      t.end();
-    });
-  };
+  var getSocketStub = sinon.stub().resolves();
+  var initializeCacheStub = sinon.stub().resolves();
 
   dnsController.getSocket = getSocketStub;
   dnsController.initializeNetworkInterfaceCache = initializeCacheStub;
   
-  dnsController.start();
+  dnsController.start()
+    .then(() => {
+      t.true(getSocketStub.calledOnce);
+      t.true(initializeCacheStub.calledOnce);
+      t.end();
+      resetDnsController();
+    });
 });
 
 test('initializeNetworkInterfaceCache initializes cache', function(t) {
@@ -622,19 +580,9 @@ test('handleIncomingPacket sends packet for each question', function(t) {
     0
   );
 
-  // The arguments passed to our createResponsePacket spy.
-  var responsePacketArgs = [];
-  var responsePacketCallCount = 0;
-  var createResponsePacketSpy = function(packetArg) {
-    responsePacketArgs.push(packetArg);
-    if (responsePacketCallCount === 0) {
-      responsePacketCallCount += 1;
-      return responsePacket1;
-    } else {
-      responsePacketCallCount += 1;
-      return responsePacket2;
-    }
-  };
+  var createResponsePacketSpy = sinon.stub();
+  createResponsePacketSpy.onCall(0).returns(responsePacket1);
+  createResponsePacketSpy.onCall(1).returns(responsePacket2);
   dnsController.createResponsePacket = createResponsePacketSpy;
 
   // Now we need to make sure we add the correct records to the response.
@@ -643,20 +591,9 @@ test('handleIncomingPacket sends packet for each question', function(t) {
   var q2record2 = new resRec.PtrRecord('service', 5, 'instance', 1);
 
   // We will maintain the arguments we expect.
-  var getResourcesArgs = [];
-  var getResourcesCallCount = 0;
-  var getResourcesForQuerySpy = function(qName, qClass, qType) {
-    var args = [qName, qClass, qType];
-    getResourcesArgs.push(args);
-    if (getResourcesCallCount === 0) {
-      getResourcesCallCount += 1;
-      return [q1record1];
-    } else {
-      getResourcesCallCount += 1;
-      return [q2record1, q2record2];
-    }
-    getResourcesCallCount += 1;
-  };
+  var getResourcesForQuerySpy = sinon.stub();
+  getResourcesForQuerySpy.onCall(0).returns([q1record1]);
+  getResourcesForQuerySpy.onCall(1).returns([q2record1, q2record2]);
   dnsController.getResourcesForQuery = getResourcesForQuerySpy;
 
   var sendSpy = sinon.spy();
@@ -670,7 +607,8 @@ test('handleIncomingPacket sends packet for each question', function(t) {
   // And now for the asserstions.
   // Create response packet should have been called twice--once for each
   // question.
-  t.deepEqual(responsePacketArgs, [queryPacket, queryPacket]);
+  t.deepEqual(createResponsePacketSpy.args[0], [queryPacket]);
+  t.deepEqual(createResponsePacketSpy.args[1], [queryPacket]);
 
   // Send should have been called with two packets--both to the multicast
   var sendArgs1 = sendSpy.args[0];
@@ -691,6 +629,7 @@ test('handleIncomingPacket sends packet for each question', function(t) {
 });
 
 test('handleIncomingPacket does not send if no records found', function(t) {
+  // TODO: update here down
   var queryPacket = new dnsPacket.DnsPacket(
     0,
     true,
