@@ -6,6 +6,24 @@ This is the code for the Chrome App portion of SemCache. The app is responsible
 for interacting with the file system and sockets--permissions that are
 available to Chrome Apps but not to Chrome extensions.
 
+# Running
+
+The built code is checked into git and is located in the `dist/` directory.
+This is a conscious decision to facilitate use even by those without the build
+tools installed.
+
+Go to `chrome://extensions`, check the `Enable Developer Mode` box in the top
+right. Click `Load Unpacked Extension` and select the `dist/` directory.
+
+If necessary, click `launch`. The UI should open. Select `Settings` and
+complete the settings, click `Save Settings`, then right click and select
+`Reload App`. (This step will be removed in the future.) Click the `Start`
+toggle.
+
+You should now be able to browse your own cache and see other users on the
+network.
+
+
 # Building
 
 ## Build Overview
@@ -16,7 +34,7 @@ interface. The JS is written using
 be written using the familiar `require()` syntax from node. 
 
 The HTML UI is written using [Polymer](https://www.polymer-project.org/1.0/).
-This requires a few extra steps for Chrome Apps, which prevent things like
+This requires a few extra steps for Chrome Apps, which disallow things like
 navigation via `<a href="...">` and `window.location`. Instead, the process
 uses Polymer routing and [vulcanize](https://github.com/Polymer/vulcanize) to
 stick everything in one giant file.
@@ -27,8 +45,8 @@ makes extensive use of inline scripts, so we use
 [crisper](https://github.com/PolymerLabs/crisper) to pull out all the inline
 scripts into an external file.
 
-[Grunt](http://gruntjs.com/) is used for simplfying the build process. The
-manual steps here will soon be moving to Grunt.
+[Grunt](http://gruntjs.com/) is used for simplifying the build process, hiding
+much of the manual labor required for `browserify` and `vulcanize`/`crisper`.
 
 ## Build Process
 
@@ -55,8 +73,13 @@ we only need to use grunt:
 grunt
 ```
 
-Building the UI is slightly more complicated, as we have to run the step
-manually as opposed to via Grunt. This command tells `vulcanize` to treat
+The code will be built and ready to deploy in the `dist/` directory.
+
+## Manually Building the UI
+
+First run `grunt browserify` to build the JS bundles we depend on.
+
+Then run the following command. This tells `vulcanize` to treat
 `app/polymer-ui/index.html` as our raw HTML file, and to perform all the HTML
 imports while inlining all scripts. `crisper` then extracts all the inline
 scripts to a single file and writes both the final `index.html` and `index.js`
@@ -67,10 +90,18 @@ cd app/polymer-ui
 vulcanize --inline-scripts --inline-css index.html | crisper --html ../index.html --js ../index.js
 ```
 
+To remove the bundles (so that we don't have any compiled code in `app/`, run
+`grunt clean:bundles`.
+
 # Testing
 
 Tests are written using [tape](https://github.com/substack/tape)
 [web-component-tester](https://github.com/Polymer/web-component-tester).
+
+`grunt test` will run both the `tape` and `wct` tests. You'll need Chrome
+installed.
+
+## Run Tests Manually
 
 All tests are run from the `chromeapp/` directory.
 
@@ -84,6 +115,10 @@ Some of the Polymer components also have tests (note that you have to have
 Chrome installed, as `wct` in the project is configured to only run in Chrome):
 ```
 wct test/polymer-ui/elements/*
+```
+or
+```
+wct test/polymer-ui/index.html
 ```
 
 
@@ -99,7 +134,7 @@ used to advertise requests.
 
 The service discovery code lives in `app/scripts/dnssd/`. Example usage is as
 follows. Modules are created as CommonJS modules and exposed via browserify and
-the Grunt buildscript.
+the Grunt build script.
 
 ```javascript
 var dnsc = require('dnsc');
