@@ -143,6 +143,7 @@ test('startServersAndRegister rejects if register rejects', function(t) {
   .catch(actualErr => {
     t.deepEqual(registerSemCacheSpy.args[0], [hostName, instanceName, port]);
     t.equal(actualErr, expectedErr);
+    t.false(appc.networkIsActive());
     t.end();
     resetAppController();
   });
@@ -185,6 +186,7 @@ test('startServersAndRegister resolves if register resolves', function(t) {
     t.deepEqual(actualResult, expectedRegisterResult);
     t.deepEqual(httpStartSpy.args[0], ['0.0.0.0', port]);
     t.true(dnsControllerStartSpy.calledOnce);
+    t.true(appc.networkIsActive());
     t.end();
     resetAppController();
   });
@@ -207,10 +209,77 @@ test('getListUrlForSelf is sensible', function(t) {
   resetAppController();
 });
 
-test('getBrowseableCaches dedupes and returns correct list', function(t) {
+test('getOwnCache returns correct info', function(t) {
   var hostName = 'myself.local';
   var serverPort = 4444;
   var instanceName = 'My Cache';
+  var ipAddress = '4.3.2.1';
+
+  var listUrl = 'list url';
+  
+  var getInstanceNameSpy = sinon.stub().returns(instanceName);
+  var getServerPortSpy = sinon.stub().returns(serverPort);
+  var getHostNameSpy = sinon.stub().returns(hostName);
+  var getHttpIfaceSpy = sinon.stub().returns({ address: ipAddress });
+  var getListUrlSpy = sinon.stub().returns(listUrl);
+
+  var appc = proxyquire('../../app/scripts/app-controller', {
+    './settings': {
+      getInstanceName: getInstanceNameSpy,
+      getServerPort: getServerPortSpy,
+      getHostName: getHostNameSpy
+    },
+    './server/server-api': {
+      getListPageUrlForCache: getListUrlSpy
+    }
+  });
+  appc.getListeningHttpInterface = getHttpIfaceSpy;
+
+  var expected = createCacheObj(
+    hostName, instanceName, ipAddress, serverPort, listUrl
+  );
+  var actual = appc.getOwnCache();
+
+  t.deepEqual(actual, expected);
+  t.end();
+  resetAppController();
+});
+
+test('getBrowseableCaches does not query network if not started', function(t) {
+  var hostName = 'myself.local';
+  var serverPort = 4444;
+  var instanceName = 'my cache';
+  var ipAddress = '4.3.2.1';
+  var listUrl = 'list url';
+
+  var ownCache = createCacheObj(
+    hostName, instanceName, ipAddress, serverPort, listUrl
+  );
+  var browseSpy = sinon.spy();
+
+  var appc = proxyquire('../../app/scripts/app-controller', {
+    './dnssd/dns-sd-semcache': {
+      browseForSemCacheInstances: browseSpy
+    }
+  });
+  appc.getOwnCache = sinon.stub().returns(ownCache);
+  appc.networkIsActive = sinon.stub().returns(false);
+
+  var expected = [ownCache];
+
+  appc.getBrowseableCaches()
+    .then(caches => {
+      t.deepEqual(caches, expected);
+      t.equal(browseSpy.callCount, 0);
+      t.end();
+      resetAppController();
+    });
+});
+
+test('getBrowseableCaches dedupes and returns correct list', function(t) {
+  var hostName = 'myself.local';
+  var serverPort = 4444;
+  var instanceName = 'my cache';
   var ipAddress = '4.3.2.1';
 
   var listUrl = 'list url';
@@ -228,19 +297,13 @@ test('getBrowseableCaches dedupes and returns correct list', function(t) {
   // Order such that we have to sort them and most ourself to the front.
   var foundCaches = [lastCache, ownCache, firstCache];
   
-  var getInstanceNameSpy = sinon.stub().returns(instanceName);
-  var getServerPortSpy = sinon.stub().returns(serverPort);
-  var getHostNameSpy = sinon.stub().returns(hostName);
   var getHttpIfaceSpy = sinon.stub().returns({ address: ipAddress });
   var getListUrlSpy = sinon.stub().returns(listUrl);
   var browseSpy = sinon.stub().resolves(foundCaches);
 
+  var getOwnCacheSpy = sinon.stub().returns(ownCache);
+
   var appc = proxyquire('../../app/scripts/app-controller', {
-    './settings': {
-      getInstanceName: getInstanceNameSpy,
-      getServerPort: getServerPortSpy,
-      getHostName: getHostNameSpy
-    },
     './server/server-api': {
       getListPageUrlForCache: getListUrlSpy
     },
@@ -249,6 +312,8 @@ test('getBrowseableCaches dedupes and returns correct list', function(t) {
     }
   });
   appc.getListeningHttpInterface = getHttpIfaceSpy;
+  appc.getOwnCache = getOwnCacheSpy;
+  appc.networkIsActive = sinon.stub().returns(true);
 
   // We should always be first, followed by the other caches sorted by instance
   // name.
@@ -256,12 +321,46 @@ test('getBrowseableCaches dedupes and returns correct list', function(t) {
   appc.getBrowseableCaches()
     .then(actual => {
       t.deepEqual(actual, expected);
-      t.true(getListUrlSpy.calledWith(ownCache.ipAddress, ownCache.port));
       t.true(getListUrlSpy.calledWith(firstCache.ipAddress, firstCache.port));
       t.true(getListUrlSpy.calledWith(lastCache.ipAddress, lastCache.port));
       t.end();
       resetAppController();
     });
+});
 
+test('networkIsActive true if started', function(t) {
+  var appc = require('../../app/scripts/app-controller');
+  appc.SERVERS_STARTED = true;
+  t.true(appc.networkIsActive());
+  t.end();
+  resetAppController();
+});
 
+test('networkIsActive false if not started', function(t) {
+  var appc = require('../../app/scripts/app-controller');
+  appc.SERVERS_STARTED = false;
+  t.false(appc.networkIsActive());
+  t.end();
+  resetAppController();
+});
+
+test('stopServers restores state', function(t) {
+  var clearAllRecordsSpy = sinon.spy();
+  var stopSpy = sinon.spy();
+
+  var appc = proxyquire('../../app/scripts/app-controller', {
+    './dnssd/dns-controller': {
+      clearAllRecords: clearAllRecordsSpy
+    }
+  });
+  appc.getServerController = sinon.stub().returns({
+    stop: stopSpy
+  });
+
+  appc.stopServers();
+  t.true(stopSpy.calledOnce);
+  t.true(clearAllRecordsSpy.calledOnce);
+  t.false(appc.networkIsActive());
+  t.end();
+  resetAppController();
 });

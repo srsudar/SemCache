@@ -352,8 +352,6 @@ exports.filterResourcesForQuery = function(resources, qName, qType, qClass) {
 };
 
 /**
- * Start the system. This must be called before any other calls to this module.
- *
  * Returns a promise that resolves with the socket.
  *
  * @return {Promise} that resolves with a ChromeUdpSocket
@@ -407,29 +405,21 @@ exports.getSocket = function() {
  * @return {Promise}
  */
 exports.start = function() {
-  if (exports.isStarted()) {
-    if (dnsUtil.DEBUG) {
-      console.log('start called when already started');
-    }
-    // Already started, resolve immediately.
-    return Promise.resolve();
-  } else {
-    // All the initialization we need to do is create the socket (so that we
-    // can receive even if we aren't advertising ourselves) and retrieve our
-    // network interfaces.
-    return new Promise(function(resolve, reject) {
-      exports.getSocket()
-      .then(function startedSocket() {
-        exports.initializeNetworkInterfaceCache();
-      })
-      .then(function initializedInterfaces() {
-        resolve();
-      })
-      .catch(function startWhenWrong() {
-        reject();
-      });
+  // All the initialization we need to do is create the socket (so that we
+  // can receive even if we aren't advertising ourselves) and retrieve our
+  // network interfaces.
+  return new Promise(function(resolve, reject) {
+    exports.getSocket()
+    .then(function startedSocket() {
+      exports.initializeNetworkInterfaceCache();
+    })
+    .then(function initializedInterfaces() {
+      resolve();
+    })
+    .catch(function startWhenWrong() {
+      reject();
     });
-  }
+  });
 };
 
 /**

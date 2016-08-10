@@ -4129,6 +4129,8 @@ var LISTENING_HTTP_INTERFACE = null;
 
 var ABS_PATH_TO_BASE_DIR = null;
 
+exports.SERVERS_STARTED = false;
+
 /**
  * Struggling to mock this during testing with proxyquire, so use this as a
  * level of redirection.
@@ -4183,6 +4185,33 @@ exports.getListUrlForSelf = function() {
 };
 
 /**
+ * @return {object} the cache object that represents this machine's own cache.
+ */
+exports.getOwnCache = function() {
+  var instanceName = settings.getInstanceName();
+  var serverPort = settings.getServerPort();
+  var hostName = settings.getHostName();
+  var ipAddress = exports.getListeningHttpInterface().address;
+  var listUrl = serverApi.getListPageUrlForCache(ipAddress, serverPort);
+
+  var result = {
+    domainName: hostName,
+    instanceName: instanceName,
+    port: serverPort,
+    ipAddress: ipAddress,
+    listUrl: listUrl
+  };
+  return result;
+};
+
+/**
+ * @return {boolean} true if we have turned on the network
+ */
+exports.networkIsActive = function() {
+  return exports.SERVERS_STARTED;
+};
+
+/**
  * Obtain an Array of all the caches that can be browsed on the current local
  * network.
  *
@@ -4203,21 +4232,16 @@ exports.getBrowseableCaches = function() {
   // First we'll construct our own cache info. Some of these variables may not
   // be set if we are initializing for the first time and settings haven't been
   // created.
-  var instanceName = settings.getInstanceName();
-  var serverPort = settings.getServerPort();
-  var hostName = settings.getHostName();
-  var ipAddress = exports.getListeningHttpInterface().address;
-  var listUrl = serverApi.getListPageUrlForCache(ipAddress, serverPort);
-
-  var thisCache = {
-    domainName: hostName,
-    instanceName: instanceName,
-    port: serverPort,
-    ipAddress: ipAddress,
-    listUrl: listUrl
-  };
+  var thisCache = exports.getOwnCache();
 
   var result = [thisCache];
+
+  if (!exports.networkIsActive()) {
+    // When we shouldn't query the network.
+    return Promise.resolve(result);
+  }
+
+  var ipAddress = exports.getListeningHttpInterface().address;
 
   return new Promise(function(resolve) {
     dnssdSem.browseForSemCacheInstances()
@@ -4269,6 +4293,7 @@ exports.startServersAndRegister = function() {
     .then(registerResult => {
       console.log('REGISTERED: ', registerResult);
       exports.getServerController().start(httpIface, serverPort);
+      exports.SERVERS_STARTED = true;
       resolve(registerResult);
     })
     .catch(rejected => {
@@ -4284,6 +4309,7 @@ exports.startServersAndRegister = function() {
 exports.stopServers = function() {
   exports.getServerController().stop();
   dnsController.clearAllRecords();
+  exports.SERVERS_STARTED = false;
 };
 
 /**
@@ -5031,8 +5057,6 @@ exports.filterResourcesForQuery = function(resources, qName, qType, qClass) {
 };
 
 /**
- * Start the system. This must be called before any other calls to this module.
- *
  * Returns a promise that resolves with the socket.
  *
  * @return {Promise} that resolves with a ChromeUdpSocket
@@ -5086,29 +5110,21 @@ exports.getSocket = function() {
  * @return {Promise}
  */
 exports.start = function() {
-  if (exports.isStarted()) {
-    if (dnsUtil.DEBUG) {
-      console.log('start called when already started');
-    }
-    // Already started, resolve immediately.
-    return Promise.resolve();
-  } else {
-    // All the initialization we need to do is create the socket (so that we
-    // can receive even if we aren't advertising ourselves) and retrieve our
-    // network interfaces.
-    return new Promise(function(resolve, reject) {
-      exports.getSocket()
-      .then(function startedSocket() {
-        exports.initializeNetworkInterfaceCache();
-      })
-      .then(function initializedInterfaces() {
-        resolve();
-      })
-      .catch(function startWhenWrong() {
-        reject();
-      });
+  // All the initialization we need to do is create the socket (so that we
+  // can receive even if we aren't advertising ourselves) and retrieve our
+  // network interfaces.
+  return new Promise(function(resolve, reject) {
+    exports.getSocket()
+    .then(function startedSocket() {
+      exports.initializeNetworkInterfaceCache();
+    })
+    .then(function initializedInterfaces() {
+      resolve();
+    })
+    .catch(function startWhenWrong() {
+      reject();
     });
-  }
+  });
 };
 
 /**
