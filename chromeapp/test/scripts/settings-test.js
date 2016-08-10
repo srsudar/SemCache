@@ -338,6 +338,4 @@ test('promptAndSetNewBaseDir calls storage APIs', function(t) {
     t.end();
     resetSettings();
   });
-
-
 });
