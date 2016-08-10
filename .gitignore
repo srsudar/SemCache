@@ -4,7 +4,6 @@ temp
 .sass-cache
 extension/app/bower_components
 extension/test/bower_components
-extension/dist
 package
 
 chromeapp/app/bower_components

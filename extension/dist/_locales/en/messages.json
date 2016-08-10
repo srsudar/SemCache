@@ -1,0 +1,10 @@
+{
+  "appName": {
+    "message": "SemCache",
+    "description": "The name of the application"
+  },
+  "appDescription": {
+    "message": "Save webpages and share them on a local network.",
+    "description": "The description of the application"
+  }
+}

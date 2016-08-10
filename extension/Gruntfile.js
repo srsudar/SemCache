@@ -30,27 +30,16 @@ module.exports = function (grunt) {
 
     browserify: {
       options: {
-        // require: [
-        //   './app/scripts/dnssd/chromeUdp:chromeUdp',
-        //   './app/scripts/dnssd/binary-utils:binaryUtils',
-        //   './app/scripts/dnssd/dns-sd:dnssd',
-        //   './app/scripts/dnssd/dns-sd-semcache:dnsSem',
-        //   './app/scripts/dnssd/dns-controller:dnsc',
-        //   './app/scripts/persistence/file-system-util:fsUtil',
-        //   './app/scripts/persistence/file-system:fileSystem',
-        //   './app/scripts/extension-bridge/messaging:extBridge',
-        //   './app/scripts/server/server-controller:serverController',
-        //   './app/scripts/app-controller:appController',
-        // ],
+        require: [],
       },
       popup: {
         // A single entry point for the app.
-        src: 'app/scripts/popup.js',
-        dest: 'app/scripts/popupBundle.js'
+        src: '<%= config.app %>/scripts/popup.js',
+        dest: '<%= config.dist %>/scripts/popupBundle.js'
       },
       background: {
-        src: 'app/scripts/background.js',
-        dest: 'app/scripts/backgroundBundle.js'
+        src: '<%= config.app %>/scripts/background.js',
+        dest: '<%= config.dist %>/scripts/backgroundBundle.js'
       }
     },
 
@@ -160,16 +149,6 @@ module.exports = function (grunt) {
       ]
     },
 
-    // Mocha testing framework configuration options
-    // mocha: {
-    //   all: {
-    //     options: {
-    //       run: true,
-    //       urls: ['http://localhost:<%= connect.options.port %>/index.html']
-    //     }
-    //   }
-    // },
-
     // Automatically inject Bower components into the HTML file
     bowerInstall: {
       app: {
@@ -177,98 +156,6 @@ module.exports = function (grunt) {
         ignorePath: '<%= config.app %>/'
       }
     },
-
-    // Reads HTML for usemin blocks to enable smart builds that automatically
-    // concat, minify and revision files. Creates configurations in memory so
-    // additional tasks can operate on them
-    // useminPrepare: {
-    //   options: {
-    //     dest: '<%= config.dist %>'
-    //   },
-    //   html: [
-    //     '<%= config.app %>/index.html'
-    //   ]
-    // },
-
-    // Performs rewrites based on rev and the useminPrepare configuration
-    // usemin: {
-    //   options: {
-    //     assetsDirs: ['<%= config.dist %>', '<%= config.dist %>/images']
-    //   },
-    //   html: ['<%= config.dist %>/{,*/}*.html'],
-    //   css: ['<%= config.dist %>/styles/{,*/}*.css']
-    // },
-
-    // The following *-min tasks produce minified files in the dist folder
-    // imagemin: {
-    //   dist: {
-    //     files: [{
-    //       expand: true,
-    //       cwd: '<%= config.app %>/images',
-    //       src: '{,*/}*.{gif,jpeg,jpg,png}',
-    //       dest: '<%= config.dist %>/images'
-    //     }]
-    //   }
-    // },
-
-//     svgmin: {
-//       dist: {
-//         files: [{
-//           expand: true,
-//           cwd: '<%= config.app %>/images',
-//           src: '{,*/}*.svg',
-//           dest: '<%= config.dist %>/images'
-//         }]
-//       }
-//     },
-
-    // htmlmin: {
-    //   dist: {
-    //     options: {
-    //       customAttrAssign: [/\?=/],
-    //       collapseBooleanAttributes: true,
-    //       collapseWhitespace: true,
-    //       removeAttributeQuotes: true,
-    //       removeCommentsFromCDATA: true,
-    //       removeEmptyAttributes: true,
-    //       removeOptionalTags: true,
-    //       removeRedundantAttributes: true,
-    //       useShortDoctype: true
-    //     },
-    //     files: [{
-    //       expand: true,
-    //       cwd: '<%= config.dist %>',
-    //       src: '{,*/}*.html',
-    //       dest: '<%= config.dist %>'
-    //     }]
-    //   }
-    // },
-
-    // By default, your `index.html`'s <!-- Usemin block --> will take care of
-    // minification. These next options are pre-configured if you do not wish
-    // to use the Usemin blocks.
-    // cssmin: {
-    //   dist: {
-    //     files: {
-    //       '<%= config.dist %>/styles/main.css': [
-    //         '.tmp/styles/{,*/}*.css',
-    //         '<%= config.app %>/styles/{,*/}*.css'
-    //       ]
-    //     }
-    //   }
-    // },
-    // uglify: {
-    //   dist: {
-    //     files: {
-    //       '<%= config.dist %>/scripts/scripts.js': [
-    //         '<%= config.dist %>/scripts/scripts.js'
-    //       ]
-    //     }
-    //   }
-    // },
-    // concat: {
-    //   dist: {}
-    // },
 
     // Copies remaining files to places other tasks can use
     copy: {
@@ -279,12 +166,13 @@ module.exports = function (grunt) {
           cwd: '<%= config.app %>',
           dest: '<%= config.dist %>',
           src: [
-            '*.{ico,png,txt}',
+            '{,*/}*.{ico,png,txt}',
             'images/{,*/}*.{webp,gif}',
-            'scripts/**/*.js',
+            'manifest.json',
             '{,*/}*.html',
             'styles/fonts/{,*/}*.*',
             '_locales/{,*/}*.json',
+            '{,*/}*.css',
           ]
         }]
       },
@@ -314,41 +202,6 @@ module.exports = function (grunt) {
         'copy:styles'
       ],
     },
-
-    // Merge event page, update build number, exclude the debug script
-    // chromeManifest: {
-    //   dist: {
-    //     options: {
-    //       buildnumber: true,
-    //       background: {
-    //         target: 'scripts/background.js',
-    //         exclude: [
-    //           'scripts/chromereload.js'
-    //         ]
-    //       }
-    //     },
-    //     src: '<%= config.app %>',
-    //     dest: '<%= config.dist %>'
-    //   }
-    // },
-
-    // Compress files in dist to make Chromea Apps package
-    // compress: {
-    //   dist: {
-    //     options: {
-    //       archive: function() {
-    //         var manifest = grunt.file.readJSON('app/manifest.json');
-    //         return 'package/SemCacheApp-' + manifest.version + '.zip';
-    //       }
-    //     },
-    //     files: [{
-    //       expand: true,
-    //       cwd: 'dist/',
-    //       src: ['**'],
-    //       dest: ''
-    //     }]
-    //   }
-    // }
   });
 
   grunt.registerTask('debug', function (platform) {
