@@ -46,27 +46,27 @@ module.exports = function (grunt) {
     browserify: {
       options: {
         require: [
-          './app/scripts/chrome-apis/udp:chromeUdp',
-          './app/scripts/dnssd/binary-utils:binaryUtils',
-          './app/scripts/dnssd/dns-sd:dnssd',
-          './app/scripts/dnssd/dns-sd-semcache:dnsSem',
-          './app/scripts/dnssd/dns-controller:dnsc',
-          './app/scripts/persistence/file-system-util:fsUtil',
-          './app/scripts/persistence/file-system:fileSystem',
-          './app/scripts/extension-bridge/messaging:extBridge',
-          './app/scripts/server/server-controller:serverController',
-          './app/scripts/app-controller:appController',
-          './app/scripts/settings:settings',
+          './<%= config.app %>/scripts/chrome-apis/udp:chromeUdp',
+          './<%= config.app %>/scripts/dnssd/binary-utils:binaryUtils',
+          './<%= config.app %>/scripts/dnssd/dns-sd:dnssd',
+          './<%= config.app %>/scripts/dnssd/dns-sd-semcache:dnsSem',
+          './<%= config.app %>/scripts/dnssd/dns-controller:dnsc',
+          './<%= config.app %>/scripts/persistence/file-system-util:fsUtil',
+          './<%= config.app %>/scripts/persistence/file-system:fileSystem',
+          './<%= config.app %>/scripts/extension-bridge/messaging:extBridge',
+          './<%= config.app %>/scripts/server/server-controller:serverController',
+          './<%= config.app %>/scripts/app-controller:appController',
+          './<%= config.app %>/scripts/settings:settings',
         ],
       },
       js: {
         // A single entry point for the app.
-        src: 'app/scripts/main.js',
-        dest: 'app/scripts/bundle.js'
+        src: '<%= config.app %>/scripts/main.js',
+        dest: '<%= config.app %>/scripts/bundle.js'
       },
       frontEnd: {
-        src: 'app/polymer-ui/main.js',
-        dest: 'app/polymer-ui/mainBundle.js'
+        src: '<%= config.app %>/polymer-ui/main.js',
+        dest: '<%= config.app %>/polymer-ui/mainBundle.js'
       }
     },
 
@@ -301,6 +301,8 @@ module.exports = function (grunt) {
             '{,*/}*.html',
             'styles/fonts/{,*/}*.*',
             '_locales/{,*/}*.json',
+            'manifest.json',
+            'index.js',
           ]
         }]
       },
