@@ -37,8 +37,8 @@ module.exports = function (grunt) {
         },
         files: {
           // Despite this odd dest: src syntax, ./app/index.html is the built
-          // output file
-          './app/index.html': './app/polymer-ui/index.html'
+          // output file from polymer-ui/index.html
+          './<%= config.dist %>/index.html': './<%= config.app %>/polymer-ui/index.html'
         },
       },
     },
@@ -83,12 +83,11 @@ module.exports = function (grunt) {
         options: {
           remote: false,
           suites: ['test/polymer-ui/index.html'],
-          // activeBrowsers: [{
-          //   browserName: 'chrome',
-          // }],
         },
         plugins: {
-          local: { browsers: ['chrome'] },
+          local: {
+            browsers: ['chrome']
+          },
         },
         files: 'test/polymer-ui/index.html',
       },
@@ -200,16 +199,6 @@ module.exports = function (grunt) {
       ]
     },
 
-    // Mocha testing framework configuration options
-    // mocha: {
-    //   all: {
-    //     options: {
-    //       run: true,
-    //       urls: ['http://localhost:<%= connect.options.port %>/index.html']
-    //     }
-    //   }
-    // },
-
     // Automatically inject Bower components into the HTML file
     bowerInstall: {
       app: {
@@ -262,54 +251,6 @@ module.exports = function (grunt) {
       }
     },
 
-    // htmlmin: {
-    //   dist: {
-    //     options: {
-    //       customAttrAssign: [/\?=/],
-    //       collapseBooleanAttributes: true,
-    //       collapseWhitespace: true,
-    //       removeAttributeQuotes: true,
-    //       removeCommentsFromCDATA: true,
-    //       removeEmptyAttributes: true,
-    //       removeOptionalTags: true,
-    //       removeRedundantAttributes: true,
-    //       useShortDoctype: true
-    //     },
-    //     files: [{
-    //       expand: true,
-    //       cwd: '<%= config.dist %>',
-    //       src: '{,*/}*.html',
-    //       dest: '<%= config.dist %>'
-    //     }]
-    //   }
-    // },
-
-    // By default, your `index.html`'s <!-- Usemin block --> will take care of
-    // minification. These next options are pre-configured if you do not wish
-    // to use the Usemin blocks.
-    // cssmin: {
-    //   dist: {
-    //     files: {
-    //       '<%= config.dist %>/styles/main.css': [
-    //         '.tmp/styles/{,*/}*.css',
-    //         '<%= config.app %>/styles/{,*/}*.css'
-    //       ]
-    //     }
-    //   }
-    // },
-    // uglify: {
-    //   dist: {
-    //     files: {
-    //       '<%= config.dist %>/scripts/scripts.js': [
-    //         '<%= config.dist %>/scripts/scripts.js'
-    //       ]
-    //     }
-    //   }
-    // },
-    // concat: {
-    //   dist: {}
-    // },
-
     // Copies remaining files to places other tasks can use
     copy: {
       dist: {
@@ -319,14 +260,17 @@ module.exports = function (grunt) {
           cwd: '<%= config.app %>',
           dest: '<%= config.dist %>',
           src: [
-            '*.{ico,png,txt}',
+            'scripts/main.js',
+            'scripts/bundle.js',
+            'scripts/chromereload.js',
+            'scripts/web-server-chrome/wsc-chrome.js',
+            'scripts/server/dummy-handler.js',
+            'index.js',
+           '*.{ico,png,txt}',
             'images/{,*/}*.{webp,gif}',
-            'scripts/**/*.js',
-            '{,*/}*.html',
             'styles/fonts/{,*/}*.*',
             '_locales/{,*/}*.json',
             'manifest.json',
-            'index.js',
           ]
         }]
       },
@@ -428,16 +372,11 @@ module.exports = function (grunt) {
   grunt.registerTask('build', [
     'clean:dist',
     'browserify',
+    'copy',
     'vulcanize',
     // 'chromeManifest:dist',
-    // 'useminPrepare',
     'concurrent:dist',
     // 'concat',
-    // 'cssmin',
-    // 'uglify',
-    'copy',
-    // 'usemin',
-    // 'htmlmin',
     // 'compress'
   ]);
 

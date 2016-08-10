@@ -1,0 +1,57 @@
+{
+    "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA6Yd9J15sNofttXR55fRScqC7J8SuWe4VowkW0O2dK1/DGZFZgCncFATJsRY9RMLvX/kAY3gKPeznYDHXE0kz3g4uxf/HM9fBi0VKxlYnaYxzAVWVTw//HVAOp46HpAGCjRMjKn8rwiBCq5c6HgNqwQcvsN4RqYzOiHGr+ubqltPEAML7+kVjZ6Qir695Nv2xZHfN2Saxe3m9tzL2rOdCeKlwcLe83me3oymkjwrdKBihzCC9v2jz/idVP01Z0RHQvYshC2hCELpvtGaBqVb3Pob2MVkdvZlCIJmDTDpd/7C9ELQOVm8jE7FK0CqWmgtgjeZKNKqcTXmPR6S2lbOJtwIDAQAB",
+    "name": "__MSG_appName__",
+    "description": "__MSG_appDescription__",
+    "version": "26",
+    "manifest_version": 2,
+    "default_locale": "en",
+    "permissions": [
+        {
+            "socket": [
+                "tcp-listen:*:*",
+                "tcp-connect:*:*",
+                "udp-bind:*:*",
+                "udp-send-to:*:*"
+            ]
+        },
+        {
+            "fileSystem": [
+                "write",
+                "retainEntries",
+                "directory"
+            ]
+        },
+        "storage",
+        "<all_urls>",
+        "system.network",
+        "file:///*"
+    ],
+    "icons": {
+        "16": "images/icon-16.png",
+        "128": "images/icon-128.png"
+    },
+    "app": {
+        "background": {
+            "scripts": [
+                "scripts/main.js",
+                "scripts/bundle.js",
+                "scripts/chromereload.js",
+                "scripts/web-server-chrome/wsc-chrome.js",
+                "scripts/server/dummy-handler.js"
+            ]
+        }
+    },
+    "sockets": {
+        "tcp": {
+            "connect": "*:*"
+        },
+        "tcpServer": {
+            "listen": ["*:*"]
+        },
+        "udp": {
+            "send": "*:*",
+            "bind": "*:*",
+            "multicastMembership": ""
+        }
+    }
+}
