@@ -1,5 +1,4 @@
 /*jshint esnext:true*/
-/* globals Promise */
 'use strict';
 var test = require('tape');
 var proxyquire = require('proxyquire');
@@ -22,6 +21,23 @@ function resetDnsSdSem() {
   delete require.cache[
     require.resolve('../../../app/scripts/dnssd/dns-sd')
   ];
+}
+
+/**
+ * Helper for asserting that getUserFriendlyName() returns the expected user
+ * friendly name. Calls getUserFriendlyName() and asserts that the result is
+ * equal to expected
+ *
+ * @param {string} instanceTypeDomain the argument that will be passed to
+ * getUserFriendlyName()
+ * @param {string} expected the user friendly name expected as a result
+ */
+function verifyUserFriendlyNameHelper(instanceTypeDomain, expected, t) {
+  var dnssdSem = require('../../../app/scripts/dnssd/dns-sd');
+
+  var actual = dnssdSem.getUserFriendlyName(instanceTypeDomain);
+  t.equal(actual, expected);
+  t.end();
 }
 
 /**
@@ -930,22 +946,30 @@ test('queryForInstanceInfo correct', function(t) {
 });
 
 test('browseServiceInstances queries all types and returns', function(t) {
+  var serviceType = '_semcache._tcp';
+  var instanceName1 = 'Sam\'s. Cache';
+  var instanceName2 = 'Joe Cache';
+  var localSuffix = 'local';
+
+  var fullSrvName1 = [instanceName1, serviceType, localSuffix].join('.');
+  var fullSrvName2 = [instanceName2, serviceType, localSuffix].join('.');
+
   var ptrInfo1 = {
-    serviceType: '_semcache._tcp',
-    serviceName: 'Sam Cache._semcache._tcp.local'
+    serviceType: serviceType,
+    serviceName: fullSrvName1
   };
   var ptrInfo2 = {
-    serviceType: '_semcache._tcp',
-    serviceName: 'Joe Cache._semcache._tcp.local'
+    serviceType: serviceType,
+    serviceName: fullSrvName2
   };
 
   var srvInfo1 = {
-    instanceName: 'Sam Cache._semcache._tcp.local',
+    instanceName: fullSrvName1,
     domain: 'laptop.local',
     port: 8888
   };
   var srvInfo2 = {
-    instanceName: 'Joe Cache._semcache._tcp.local',
+    instanceName: fullSrvName2,
     domain: 'desktop.local',
     port: 9999
   };
@@ -959,57 +983,32 @@ test('browseServiceInstances queries all types and returns', function(t) {
     ipAddress: '9.8.7.6'
   };
 
-  var serviceType = '_semcache._tcp';
-  var serviceTypeArg = null;
-  var serviceQueryCallCount = 0;
-  var queryForServiceInstancesSpy = function(serviceTypeParam) {
-    serviceTypeArg = serviceTypeParam;
-    serviceQueryCallCount += 1;
-    return Promise.resolve([ptrInfo1, ptrInfo2]);
-  };
 
-  var domainNameArgs = [];
-  var domainNameCallCount = 0;
-  var queryForIpAddressSpy = function(domainNameParam, timeoutParam) {
-    domainNameArgs.push([domainNameParam, timeoutParam]);
-    if (domainNameParam === srvInfo1.domain) {
-      domainNameCallCount += 1;
-      return Promise.resolve([aInfo1]);
-    } else if (domainNameParam === srvInfo2.domain) {
-      domainNameCallCount += 1;
-      return Promise.resolve([aInfo2]);
-    } else {
-      domainNameCallCount += 1;
-      throw new Error('unrecognized domainNameParam: ', domainNameParam);
-    }
-  };
+  var queryForServiceInstancesSpy = sinon.stub();
+  queryForServiceInstancesSpy.resolves([ptrInfo1, ptrInfo2]);
 
-  var instanceInfoArgs = [];
-  var instanceInfoCallCount = 0;
-  var queryForInstanceInfoSpy = function(instanceNameParam, timeoutParam) {
-    instanceInfoArgs.push([instanceNameParam, timeoutParam]);
-    if (instanceNameParam === srvInfo1.instanceName) {
-      instanceInfoCallCount += 1;
-      return Promise.resolve([srvInfo1]);
-    } else if (instanceNameParam === srvInfo2.instanceName) {
-      instanceInfoCallCount += 1;
-      return Promise.resolve([srvInfo2]);
-    } else {
-      instanceInfoCallCount += 1;
-      throw new Error('unrecognized instanceNameParam: ', instanceNameParam);
-    }
-  };
+  var queryForIpAddressSpy = sinon.stub();
+  queryForIpAddressSpy.withArgs(srvInfo1.domain).resolves([aInfo1]);
+  queryForIpAddressSpy.withArgs(srvInfo2.domain).resolves([aInfo2]);
+
+  var queryForInstanceInfoSpy = sinon.stub();
+  queryForInstanceInfoSpy.withArgs(srvInfo1.instanceName).resolves([srvInfo1]);
+  queryForInstanceInfoSpy.withArgs(srvInfo2.instanceName).resolves([srvInfo2]);
+
+  var getUserFriendlyNameSpy = sinon.stub();
+  getUserFriendlyNameSpy.withArgs(fullSrvName1).returns(instanceName1);
+  getUserFriendlyNameSpy.withArgs(fullSrvName2).returns(instanceName2);
 
   var expected1 = {
     serviceType: serviceType,
-    instanceName: ptrInfo1.serviceName,
+    instanceName: instanceName1,
     domainName: srvInfo1.domain,
     ipAddress: aInfo1.ipAddress,
     port: srvInfo1.port
   };
   var expected2 = {
     serviceType: serviceType,
-    instanceName: ptrInfo2.serviceName,
+    instanceName: instanceName2,
     domainName: srvInfo2.domain,
     ipAddress: aInfo2.ipAddress,
     port: srvInfo2.port
@@ -1019,36 +1018,37 @@ test('browseServiceInstances queries all types and returns', function(t) {
   dnssdSem.queryForServiceInstances = queryForServiceInstancesSpy;
   dnssdSem.queryForIpAddress = queryForIpAddressSpy;
   dnssdSem.queryForInstanceInfo = queryForInstanceInfoSpy;
+  dnssdSem.getUserFriendlyName = getUserFriendlyNameSpy;
 
   var resultPromise = dnssdSem.browseServiceInstances(serviceType);
   resultPromise.then(function gotInstances(instances) {
     // Each spy called the appropriate number of times with the appropriate
     // arguments
     // 1 call resolves all services
-    t.equal(serviceQueryCallCount, 1);
+    t.equal(queryForServiceInstancesSpy.callCount, 1);
     // 2 instances, thus 2 address resolutions required
-    t.equal(domainNameCallCount, 2);
-    t.equal(instanceInfoCallCount, 2);
+    t.equal(queryForIpAddressSpy.callCount, 2);
+    t.equal(queryForInstanceInfoSpy.callCount, 2);
 
     // Called with correct args
     // PTR records
-    t.equal(serviceTypeArg, serviceType);
+    t.equal(queryForServiceInstancesSpy.args[0][0], serviceType);
     // SRV records
     t.deepEqual(
-      instanceInfoArgs[0],
+      queryForInstanceInfoSpy.args[0],
       [ptrInfo1.serviceName, dnssdSem.DEFAULT_QUERY_WAIT_TIME]
     );
     t.deepEqual(
-      instanceInfoArgs[1],
+      queryForInstanceInfoSpy.args[1],
       [ptrInfo2.serviceName, dnssdSem.DEFAULT_QUERY_WAIT_TIME]
     );
     // A records
     t.deepEqual(
-      domainNameArgs[0],
+      queryForIpAddressSpy.args[0],
       [srvInfo1.domain, dnssdSem.DEFAULT_QUERY_WAIT_TIME]
     );
     t.deepEqual(
-      domainNameArgs[1],
+      queryForIpAddressSpy.args[1],
       [srvInfo2.domain, dnssdSem.DEFAULT_QUERY_WAIT_TIME]
     );
 
@@ -1057,4 +1057,40 @@ test('browseServiceInstances queries all types and returns', function(t) {
     resetDnsSdSem();
     t.end();
   });
+});
+
+test('getUserFriendlyName handles basic input', function(t) {
+  // The most basic example is something like the following, no special
+  // characters and only the .local suffix.
+  var serviceType = '_music._tcp';
+  var domain = 'local';
+  var name = 'My Music Library';
+  var instanceTypeDomain = [name, serviceType, domain].join('.');
+
+  verifyUserFriendlyNameHelper(instanceTypeDomain, name, t);
+});
+
+test('getUserFriendlyName handles special characters in name', function(t) {
+  // We need to be able to handle special characters in the instance name
+  var serviceType = '_semcache._tcp';
+  var domain = 'local';
+  var name = 'Joe\'s fancy.cache_fancy!';
+  var instanceTypeDomain = [name, serviceType, domain].join('.');
+
+  verifyUserFriendlyNameHelper(instanceTypeDomain, name, t);
+});
+
+test('getUserFriendlyName handles multi-level domains', function(t) {
+  // Although not relevant for multicast applications, the spec suggests we
+  // should also support multi level domains.
+  var serviceType = '_music._tcp';
+  var domain = 'www.example.com';
+  var name = 'My Music Library';
+  var instanceTypeDomain = [name, serviceType, domain].join('.');
+
+  var dnssdSem = require('../../../app/scripts/dnssd/dns-sd');
+
+  var actual = dnssdSem.getUserFriendlyName(instanceTypeDomain);
+  t.equal(actual, name);
+  t.end();
 });
