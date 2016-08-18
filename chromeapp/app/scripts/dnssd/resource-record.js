@@ -10,7 +10,7 @@ var NUM_OCTETS_CLASS = 2;
 var NUM_OCTETS_TTL = 4;
 var NUM_OCTETS_RESOURCE_DATA_LENGTH = 2;
 
-/** An A Record has for bytes, all representing an IP address. */
+/** An A Record has four bytes, all representing an IP address. */
 var NUM_OCTETS_RESOURCE_DATA_A_RECORD = 4;
 
 var NUM_OCTETS_PRIORITY = 2;
