@@ -1,13 +1,12 @@
 'use strict';
 var test = require('tape');
 var dnsQuery = require('../../../app/scripts/dnssd/dns-query');
+var byteArray = require('../../../app/scripts/dnssd/byte-array');
 
 test('create a query', function(t) {
   var name = 'www.example.com';
   var queryType = 3;
   var queryClass = 4;
-  // // Corresponds to 155.33.17.68
-  // var ipAddress = 0x9b211144;
 
   var result = new dnsQuery.DnsQuery(name, queryType, queryClass);
 
@@ -31,4 +30,23 @@ test('serializes and deserializes correctly', function(t) {
 
   t.deepEqual(actual, expected);
   t.end(); 
+});
+
+test('createQueryFromByteArray succeeds when startByte != 0', function(t) {
+  var expected = new dnsQuery.DnsQuery('mydomain.local', 1, 2);
+  var serialized = expected.serialize();
+
+  var byteArr = new byteArray.ByteArray();
+
+  // Add 5 meaningless bytes.
+  var offset = 5;
+  for (var i = 0; i < offset; i++) {
+    byteArr.push(i, 1);
+  }
+
+  byteArr.append(serialized);
+
+  var actual = dnsQuery.createQueryFromByteArray(byteArr, offset);
+  t.deepEqual(actual, expected);
+  t.end();
 });
