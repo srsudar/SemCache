@@ -14,6 +14,16 @@ function getCharAsCode(char) {
 }
 
 /**
+ * Serialize and deserialize domain, asserting that they are equivalent. Does
+ * not invoke t.end().
+ */
+function assertCanRecoverDomainHelper(domain, t) {
+  var byteArray = dnsUtil.getDomainAsByteArray(domain);
+  var actual = dnsUtil.getDomainFromByteArray(byteArray);
+  t.equal(actual, domain);
+}
+
+/**
  * Return the byte array for the EXAMPLE_URL. Created by hand.
  */
 function getByteArrayForExample() {
@@ -52,7 +62,6 @@ function getByteArrayForExample() {
 
   return expected;
 }
-
 
 test('getDomainAsByteArray outputs correct bytes for example', function(t) {
   // This is the domain name example given in the Stevens TCP/IP book.
@@ -93,6 +102,20 @@ test('getDomainFromByteArray respects start bytes', function(t) {
 
   t.equal(actual, expected);
 
+  t.end();
+});
+
+test('serialize and deserialize tiny domain', function(t) {
+  var domain = 't.co';
+  assertCanRecoverDomainHelper(domain, t);
+  t.end();
+});
+
+test('serialize and deserialize huge domain', function(t) {
+  // This is actually a real URL.
+  var domain =
+    'www.thelongestdomainnameintheworldandthensomeandthensomemoreandmore.com';
+  assertCanRecoverDomainHelper(domain, t);
   t.end();
 });
 
