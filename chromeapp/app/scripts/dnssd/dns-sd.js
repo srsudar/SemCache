@@ -27,11 +27,29 @@ var dnsCodes = require('./dns-codes');
 var resRec = require('./resource-record');
 var dnsPacket = require('./dns-packet');
 
+/**
+ * In Section 8.1, RFC 6762 uses 250ms as the length of time clients should
+ * wait when probing the network for responses when attempting to determine
+ * records (e.g. host names) are already claimed by other devices. In order to
+ * remain compliant with the RFC, It should not be changed.
+ */
 var MAX_PROBE_WAIT = 250;
+
+/**
+ * This is the default time we will wait for a response to a DNS query before
+ * timing out.
+ *
+ * This is a best effort value and may be tuned.
+ */
 var DEFAULT_QUERY_WAIT_TIME = 2000;
 
 exports.DEFAULT_QUERY_WAIT_TIME = DEFAULT_QUERY_WAIT_TIME;
 
+/**
+ * In Section 3, RFC 6762 reserves the top-level domain 'local' for hosts on
+ * the local network. This value is 'local' without any leading or trailing
+ * periods.
+ */
 exports.LOCAL_SUFFIX = 'local';
 
 /**
@@ -133,7 +151,8 @@ exports.advertiseService = function(resourceRecords) {
  * @param {integer} port the port the service is available on
  */
 exports.register = function(host, name, type, port) {
-  // Registration is a multi-step process. According to the RFC, section 8.
+  // Registration is a multi-step process. It is described in Section 8 of the
+  // RFC.
   //
   // 8.1 indicates that the first step is to send an mDNS query of type ANY
   // (255) for a given domain name.
