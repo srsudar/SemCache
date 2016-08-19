@@ -293,7 +293,7 @@ test('query calls sendPacket with correct args', function(t) {
   t.true(sendPacketSpy.calledOnce);
   t.deepEqual(args[0], targetPacket);
   t.deepEqual(args[1], mockedController.DNSSD_MULTICAST_GROUP);
-  t.deepEqual(args[2], mockedController.DNSSD_PORT);
+  t.deepEqual(args[2], mockedController.MDNS_PORT);
   t.end();
 
   resetDnsController();
@@ -339,14 +339,18 @@ test('addOnReceiveCallback adds function', function(t) {
   var fn1 = function() {};
   var fn2 = function() {};
   var startingCallbacks = dnsController.getOnReceiveCallbacks();
+  var expected = null;
 
-  t.deepEqual(startingCallbacks, []);
+  expected = new Set();
+  t.deepEqual(startingCallbacks, expected);
 
+  expected.add(fn1);
   dnsController.addOnReceiveCallback(fn1);
-  t.deepEqual([fn1], dnsController.getOnReceiveCallbacks());
+  t.deepEqual(dnsController.getOnReceiveCallbacks(), expected);
 
+  expected.add(fn2);
   dnsController.addOnReceiveCallback(fn2);
-  t.deepEqual([fn1, fn2], dnsController.getOnReceiveCallbacks());
+  t.deepEqual(dnsController.getOnReceiveCallbacks(), expected);
 
   t.end();
 
@@ -358,7 +362,8 @@ test('removeOnReceiveCallback removes function', function(t) {
   var fn2 = function() {};
   var fn3 = function() {};
 
-  t.deepEqual(dnsController.getOnReceiveCallbacks(), []);
+  var expected = new Set();
+  t.deepEqual(dnsController.getOnReceiveCallbacks(), expected);
 
   // Does not error with zero functions
   dnsController.removeOnReceiveCallback(fn1);
@@ -366,20 +371,26 @@ test('removeOnReceiveCallback removes function', function(t) {
   // Succeeds with only one function
   dnsController.addOnReceiveCallback(fn1);
   dnsController.removeOnReceiveCallback(fn1);
-  t.deepEqual(dnsController.getOnReceiveCallbacks(), []);
+  t.deepEqual(dnsController.getOnReceiveCallbacks(), expected);
 
   // Succeeds with 3 and removing last function
   dnsController.addOnReceiveCallback(fn1);
   dnsController.addOnReceiveCallback(fn2);
   dnsController.addOnReceiveCallback(fn3);
   dnsController.removeOnReceiveCallback(fn3);
-  t.deepEqual(dnsController.getOnReceiveCallbacks(), [fn1, fn2]);
+  expected.add(fn1);
+  expected.add(fn2);
+  t.deepEqual(dnsController.getOnReceiveCallbacks(), expected);
 
   // Add it back to make sure we can remove from the middle.
   dnsController.addOnReceiveCallback(fn3);
-  t.deepEqual(dnsController.getOnReceiveCallbacks(), [fn1, fn2, fn3]);
+  expected.add(fn3);
+  t.deepEqual(dnsController.getOnReceiveCallbacks(), expected);
   dnsController.removeOnReceiveCallback(fn2);
-  t.deepEqual(dnsController.getOnReceiveCallbacks(), [fn1, fn3]);
+  expected = new Set();
+  expected.add(fn1);
+  expected.add(fn3);
+  t.deepEqual(dnsController.getOnReceiveCallbacks(), expected);
 
   t.end();
 });
@@ -436,6 +447,14 @@ test('start initializes correctly', function(t) {
     });
 });
 
+test('getIPv4Interfaces throws if not started', function(t) {
+  var controller = require('../../../app/scripts/dnssd/dns-controller.js');
+  controller.isStarted = sinon.stub().returns(false);
+
+  t.throws(controller.getIPv4Interfaces, Error);
+  t.end();
+});
+
 test('initializeNetworkInterfaceCache initializes cache', function(t) {
   // We should initialize the interfaces and call getSocket() the first time to
   // make sure all is well.
@@ -456,6 +475,7 @@ test('initializeNetworkInterfaceCache initializes cache', function(t) {
       }
     }
   );
+  mockedController.isStarted = sinon.stub().returns(true);
   
   t.deepEqual(mockedController.getIPv4Interfaces(), []);
 
@@ -664,7 +684,7 @@ test('handleIncomingPacket sends to multicast address', function(t) {
     t,
     false,
     dnsController.DNSSD_MULTICAST_GROUP,
-    dnsController.DNSSD_PORT
+    dnsController.MDNS_PORT
   );
 });
 

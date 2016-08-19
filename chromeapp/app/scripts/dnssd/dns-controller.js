@@ -14,15 +14,43 @@ var qSection = require('./question-section');
  * responsible for issuing DNS requests.
  */
 
+/**
+ * This is the IPv4 address specified by RFC 6762 to be used for mDNS.
+ */
 var DNSSD_MULTICAST_GROUP = '224.0.0.251';
-var DNSSD_PORT = 53531;
+
+/**
+ * The port we use for mDNS.
+ *
+ * RFC 6762 indicates that port 5353 should be used for mDNS. However, Chrome
+ * binds to 5353 (presumably for cloud print or ChromeCast functionality) and
+ * does not expose an API to advertise using its internal mDNS machinery. The
+ * Chrome App socket API does not provide a way to bind a socket using
+ * SO_REUSEADDR, SO_REUSEPORT, or an equivalent, despite the fact that RFC 6762
+ * recommends doing so in Section 15.1.
+ *
+ * Since we cannot bind the conventional port, 5353, we instead are choosing a
+ * new port, and deciding on 5353. This can change as long as peers share the
+ * port. Ideally we would be using 5353.
+ */
+var MDNS_PORT = 53531;
+
+/**
+ * The special service string used to indicate that callers wish to enumerate
+ * all available services, not just services of a particular type.
+ *
+ * In Section 9, RFC 6763 defines this string. Callers are normally expected to
+ * issue DNSSD queries for a particular type, e.g. printers using a protocol
+ * they can interact with. This string instead allows callers to enumerate all
+ * services.
+ */
 var DNSSD_SERVICE_NAME = '_services._dns-sd._udp.local';
 
 /** True if the service has started. */
 var started = false;
 
 exports.DNSSD_MULTICAST_GROUP = DNSSD_MULTICAST_GROUP;
-exports.DNSSD_PORT = DNSSD_PORT;
+exports.MDNS_PORT = MDNS_PORT;
 exports.DNSSD_SERVICE_NAME = DNSSD_SERVICE_NAME;
 
 /**
@@ -32,7 +60,7 @@ exports.DNSSD_SERVICE_NAME = DNSSD_SERVICE_NAME;
  */
 var records = {};
 
-var onReceiveCallbacks = [];
+var onReceiveCallbacks = new Set();
 
 /**
  * The IPv4 interfaces for this machine, cached to provide synchronous calls.
@@ -53,7 +81,7 @@ exports.getRecords = function() {
  * Returns all the callbacks currently registered to be invoked with incoming
  * packets.
  *
- * @return {Array<function>} all the onReceive callbacks that have been
+ * @return {Set<function>} all the onReceive callbacks that have been
  * registered
  */
 exports.getOnReceiveCallbacks = function() {
@@ -90,7 +118,9 @@ exports.isStarted = function() {
  */
 exports.getIPv4Interfaces = function() {
   if (!exports.isStarted()) {
-    console.log('Called getIPv4Interfaces when controller was not started');
+    throw new Error(
+      'Called getIPv4Interfaces when controller was not started'
+    );
   }
   if (!ipv4Interfaces) {
     return [];
@@ -105,7 +135,7 @@ exports.getIPv4Interfaces = function() {
  * @param {function} callback a callback to be invoked with received packets.
  */
 exports.addOnReceiveCallback = function(callback) {
-  onReceiveCallbacks.push(callback);
+  onReceiveCallbacks.add(callback);
 };
 
 /**
@@ -115,10 +145,7 @@ exports.addOnReceiveCallback = function(callback) {
  * should already have been added via a call to addOnReceiveCallback().
  */
 exports.removeOnReceiveCallback = function(callback) {
-  var index = onReceiveCallbacks.indexOf(callback);
-  if (index >= 0) {
-    onReceiveCallbacks.splice(index, 1);
-  }
+  onReceiveCallbacks.delete(callback);
 };
 
 /**
@@ -175,10 +202,9 @@ exports.handleIncomingPacket = function(packet, remoteAddress, remotePort) {
   // need to respond to it.
 
   // First, invoke all the callbacks.
-  for (var i = 0; i < onReceiveCallbacks.length; i++) {
-    var fn = onReceiveCallbacks[i];
-    fn(packet);
-  }
+  onReceiveCallbacks.forEach(callback => {
+    callback(packet);
+  });
 
   // Second, see if it's a query. If it is, get the requested records,
   // construct a packet, and send the packet.
@@ -213,7 +239,7 @@ exports.handleIncomingPacket = function(packet, remoteAddress, remotePort) {
 
     // We may be multicasting, or we may be unicast responding.
     var sendAddr = DNSSD_MULTICAST_GROUP;
-    var sendPort = DNSSD_PORT;
+    var sendPort = MDNS_PORT;
     if (question.unicastResponseRequested()) {
       sendAddr = remoteAddress;
       sendPort = remotePort;
@@ -374,7 +400,7 @@ exports.getSocket = function() {
       return info;
     })
     .then(info => {
-      return chromeUdp.bind(info.socketId, '0.0.0.0', DNSSD_PORT);
+      return chromeUdp.bind(info.socketId, '0.0.0.0', MDNS_PORT);
     })
     .then(function success() {
       // We've bound to the DNSSD port successfully.
@@ -512,7 +538,7 @@ exports.query = function(queryName, queryType, queryClass) {
   );
   packet.addQuestion(question);
 
-  exports.sendPacket(packet, DNSSD_MULTICAST_GROUP, DNSSD_PORT);
+  exports.sendPacket(packet, DNSSD_MULTICAST_GROUP, MDNS_PORT);
 };
 
 /**
