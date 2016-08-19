@@ -13,12 +13,29 @@ var dnsCodes = require('./dns-codes');
 var byteArray = require('./byte-array');
 var qSection = require('./question-section');
 
+// These constants are defined by the number of bits allowed for each value in
+// the DNS spec. Section 4.1.1 of RFC 1035 has a good summary.
+// https://www.ietf.org/rfc/rfc1035.txt
+
+/**
+ * The maximum valid ID of a DNS Packet, defined by the 32 bits allowed in the
+ * spec.
+ */
 var MAX_ID = 65535;
+
+/** The maximum OPCODE is defined by the 4 bits allowed in the spec. */
 var MAX_OPCODE = 15;
+
+/** The maximum RCODE is defined by the 4 bits allowed in the spec. */
 var MAX_RETURN_CODE = 15;
 
+/** The number of octets in the ID of the DNS Packet as defined in the spec. */
 var NUM_OCTETS_ID = 2;
+
+/** The number of octets in the ID of the DNS Packet as defined in the spec. */
 var NUM_OCTETS_FLAGS = 2;
+
+/** The number of octets in the ID of the DNS Packet as defined in the spec. */
 var NUM_OCTETS_SECTION_LENGTHS = 2;
 
 /**
@@ -31,7 +48,7 @@ var NUM_OCTETS_SECTION_LENGTHS = 2;
  *
  * @return {Array<resource record>} an Array of the parsed resource records
  */
-function parseResourceRecordsFromReader(reader, numRecords) {
+exports.parseResourceRecordsFromReader = function(reader, numRecords) {
   var result = [];
   for (var i = 0; i < numRecords; i++) {
     var recordType = resRec.peekTypeInReader(reader);
@@ -55,7 +72,7 @@ function parseResourceRecordsFromReader(reader, numRecords) {
   }
 
   return result;
-}
+};
 
 /**
  * Create a DNS packet. This creates the packet with various flag values. The
@@ -256,9 +273,13 @@ exports.createPacketFromReader = function(reader) {
     result.addQuestion(question);
   }
 
-  var answers = parseResourceRecordsFromReader(reader, numAnswers);
-  var authorities = parseResourceRecordsFromReader(reader, numAuthority);
-  var infos = parseResourceRecordsFromReader(reader, numAdditionalInfo);
+  var answers = exports.parseResourceRecordsFromReader(reader, numAnswers);
+  var authorities = exports.parseResourceRecordsFromReader(
+    reader, numAuthority
+  );
+  var infos = exports.parseResourceRecordsFromReader(
+    reader, numAdditionalInfo
+  );
 
   answers.forEach(answer => {
     result.addAnswer(answer);
