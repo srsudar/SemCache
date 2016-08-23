@@ -122,11 +122,15 @@ exports.getSnapshotDataUrl = function() {
 exports.savePage = function(tabUrl, mhtmlBlob) {
   var fullUrl = tabUrl;
   var domain = exports.getDomain(tabUrl);
-  var mhtmlDataUrl = exports.getBlobAsDataUrl(mhtmlBlob);
   var captureDate = exports.getDateForSave();
 
   return new Promise(function(resolve) {
-    exports.createMetadataForWrite(fullUrl)
+    var mhtmlDataUrl = null;
+    exports.getBlobAsDataUrl(mhtmlBlob)
+      .then(dataUrl => {
+        mhtmlDataUrl = dataUrl;
+        return exports.createMetadataForWrite(fullUrl);
+      })
       .then(metadata => {
         messaging.savePage(domain, captureDate, mhtmlDataUrl, metadata);
         resolve();

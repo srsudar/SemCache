@@ -17,6 +17,23 @@ exports.update = function(url) {
 };
 
 /**
+ * Get all the tabs that have the specified properties, or all tabs if no
+ * properties are specified.
+ *
+ * @param {object} queryInfo object as specified by chrome.tabs.
+ *
+ * @return {Promise -> Array<Tab>} Promise that resolves with an Array of Tabs
+ * matching queryInfo
+ */
+exports.query = function(queryInfo) {
+  return new Promise(function(resolve) {
+    chrome.tabs.query(queryInfo, function(tabs) {
+      resolve(tabs);
+    });
+  });
+};
+
+/**
  * Capture the visible area of the currently active tab in the specified
  * window.
  *

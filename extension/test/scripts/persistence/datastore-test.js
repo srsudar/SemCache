@@ -145,7 +145,7 @@ testWrapper('savePage calls messaging component with params', function(t) {
 
   var blob = 'mhtml blob';
 
-  var getBlobAsDataUrlSpy = sinon.stub().withArgs(blob).returns(dataUrl);
+  var getBlobAsDataUrlSpy = sinon.stub().withArgs(blob).resolves(dataUrl);
   var savePageSpy = sinon.stub();
 
   proxyquireDatastore({
