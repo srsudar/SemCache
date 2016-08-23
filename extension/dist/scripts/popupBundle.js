@@ -371,6 +371,31 @@ exports.savePage = function(tabUrl, mhtmlBlob) {
 
 var api = require('./extension-api');
 
-api.saveCurrentPage();
+var spinner = document.getElementById('spinner');
+var msgSuccess = document.getElementById('msg-success');
+var msgError = document.getElementById('msg-error');
+
+function handleSuccess() {
+  msgSuccess.classList.remove('hide');
+
+  msgError.classList.add('hide');
+  spinner.classList.add('hide');
+}
+
+function handleError() {
+  msgError.classList.remove('hide');
+
+  spinner.classList.add('hide');
+  msgSuccess.classList.add('hide');
+}
+
+api.saveCurrentPage()
+  .then(() => {
+    handleSuccess();
+  })
+  .catch(err => {
+    console.log(err);
+    handleError();
+  });
 
 },{"./extension-api":5}]},{},[7]);
