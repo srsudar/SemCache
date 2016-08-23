@@ -1,7 +1,7 @@
 'use strict';
 
-var chromeRuntime = require('../chromeRuntime');
-var chromeTabs = require('../chromeTabs');
+var chromeRuntime = require('../chrome-apis/runtime');
+var chromeTabs = require('../chrome-apis/tabs');
 
 /**
  * ID of the Semcache Chrome App.
