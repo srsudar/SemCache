@@ -20,7 +20,7 @@ test('sendMessageToApp calls chromeRuntime', function(t) {
   var sendMessageSpy = sinon.spy();
   var messaging = proxyquire('../../../app/scripts/app-bridge/messaging',
     {
-      '../chromeRuntime': {
+      '../chrome-apis/runtime': {
         sendMessage: sendMessageSpy
       }
     }
@@ -65,7 +65,7 @@ test('openUrl calls chromeTabs correctly', function(t) {
 
   var messaging = proxyquire('../../../app/scripts/app-bridge/messaging',
     {
-      '../chromeTabs': {
+      '../chrome-apis/tabs': {
         update: updateSpy
       }
     }
