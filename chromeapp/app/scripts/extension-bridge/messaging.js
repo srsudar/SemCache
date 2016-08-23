@@ -25,7 +25,12 @@ exports.sendMessageToExtension = function(message) {
  * following format:
  * {
  *   type: 'write'
- *   params: {captureUrl: 'url', captureDate: 'iso', dataUrl: 'string'}
+ *   params: {
+ *     captureUrl: 'url',
+ *     captureDate: 'iso',
+ *     dataUrl: 'string',
+ *     metadata: {}
+ *   }
  * }
  * @param {MessageSender}
  * @param {function}
@@ -39,7 +44,8 @@ exports.handleExternalMessage = function(message, sender, response) {
     var blob = exports.getBlobFromDataUrl(message.params.dataUrl);
     var captureUrl = message.params.captureUrl;
     var captureDate = message.params.captureDate;
-    datastore.addPageToCache(captureUrl, captureDate, blob);
+    var metadata = message.params.metadata;
+    datastore.addPageToCache(captureUrl, captureDate, blob, metadata);
     if (response) {
       response();
     }

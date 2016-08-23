@@ -32,7 +32,8 @@ test('handleExternalMessage adds page to cache for write', function(t) {
   var params = {
     captureUrl: 'www.example.com',
     captureData: 'some day',
-    dataUrl: 'data:base64'
+    dataUrl: 'data:base64',
+    metadata: { foo: 'bar', favicon: 'ugly' }
   };
   var message = {
     type: 'write',
@@ -59,7 +60,8 @@ test('handleExternalMessage adds page to cache for write', function(t) {
     [
       params.captureUrl,
       params.captureDate,
-      blob
+      blob,
+      params.metadata
     ]
   );
   t.end();

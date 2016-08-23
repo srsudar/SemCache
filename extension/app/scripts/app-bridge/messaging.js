@@ -24,14 +24,18 @@ exports.sendMessageToApp = function(message) {
  * @param {string} captureDate the toISOString() of the date the page was
  * captured
  * @param {string} dataUrl the blob of MHTMl data as a data URL
+ * @param {object} metadata metadata to store about the page
  */
-exports.savePage = function(captureUrl, captureDate, dataUrl) {
+exports.savePage = function(captureUrl, captureDate, dataUrl, metadata) {
+  // Sensible default
+  metadata = metadata || {};
   var message = {
     type: 'write',
     params: {
       captureUrl: captureUrl,
       captureDate: captureDate,
-      dataUrl: dataUrl
+      dataUrl: dataUrl,
+      metadata: metadata
     }
   };
   exports.sendMessageToApp(message);

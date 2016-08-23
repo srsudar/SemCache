@@ -38,13 +38,15 @@ test('savePage sends correct message', function(t) {
   var captureUrl = 'someurl';
   var captureDate = 'why-not-today';
   var dataUrl = 'data:url';
+  var metadata = { hello: 'how are you doing', three: 3 };
 
   var expectedMessage = {
     type: 'write',
     params: {
       captureUrl: captureUrl,
       captureDate: captureDate,
-      dataUrl: dataUrl
+      dataUrl: dataUrl,
+      metadata: metadata
     }
   };
 
@@ -52,7 +54,7 @@ test('savePage sends correct message', function(t) {
   var sendMessageToAppSpy = sinon.spy();
   messaging.sendMessageToApp = sendMessageToAppSpy;
 
-  messaging.savePage(captureUrl, captureDate, dataUrl);
+  messaging.savePage(captureUrl, captureDate, dataUrl, metadata);
   t.deepEqual(sendMessageToAppSpy.args[0][0], expectedMessage);
   t.end();
   resetMessaging();  
