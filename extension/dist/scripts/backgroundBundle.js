@@ -1,8 +1,8 @@
 (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
 'use strict';
 
-var chromeRuntime = require('../chromeRuntime');
-var chromeTabs = require('../chromeTabs');
+var chromeRuntime = require('../chrome-apis/runtime');
+var chromeTabs = require('../chrome-apis/tabs');
 
 /**
  * ID of the Semcache Chrome App.
@@ -25,14 +25,23 @@ exports.sendMessageToApp = function(message) {
  * @param {string} captureDate the toISOString() of the date the page was
  * captured
  * @param {string} dataUrl the blob of MHTMl data as a data URL
+ * @param {object} metadata metadata to store about the page
  */
-exports.savePage = function(captureUrl, captureDate, dataUrl) {
+exports.savePage = function(captureUrl, captureDate, dataUrl, metadata) {
+  console.log('called savePage');
+  console.log('  captureUrl: ', captureUrl);
+  console.log('  captureDate: ', captureDate);
+  console.log('  dataUrl: ', dataUrl);
+  console.log('  metadata: ', metadata);
+  // Sensible default
+  metadata = metadata || {};
   var message = {
     type: 'write',
     params: {
       captureUrl: captureUrl,
       captureDate: captureDate,
-      dataUrl: dataUrl
+      dataUrl: dataUrl,
+      metadata: metadata
     }
   };
   exports.sendMessageToApp(message);
@@ -73,12 +82,12 @@ exports.onMessageExternalCallback = function(message, sender, sendResponse) {
   }
 };
 
-},{"../chromeRuntime":3,"../chromeTabs":4}],2:[function(require,module,exports){
+},{"../chrome-apis/runtime":3,"../chrome-apis/tabs":4}],2:[function(require,module,exports){
 /* global chrome */
 'use strict';
 
 var messaging = require('./app-bridge/messaging');
-var chromeRuntime = require('./chromeRuntime');
+var chromeRuntime = require('./chrome-apis/runtime');
 
 chrome.runtime.onInstalled.addListener(function (details) {
   console.log('previousVersion', details.previousVersion);
@@ -90,7 +99,7 @@ chromeRuntime.addOnMessageExternalListener(
   messaging.onMessageExternalCallback
 );
 
-},{"./app-bridge/messaging":1,"./chromeRuntime":3}],3:[function(require,module,exports){
+},{"./app-bridge/messaging":1,"./chrome-apis/runtime":3}],3:[function(require,module,exports){
 /* globals chrome */
 'use strict';
 
@@ -133,6 +142,41 @@ exports.addOnMessageExternalListener = function(fn) {
 exports.update = function(url) {
   chrome.tabs.update({
     url: url
+  });
+};
+
+/**
+ * Get all the tabs that have the specified properties, or all tabs if no
+ * properties are specified.
+ *
+ * @param {object} queryInfo object as specified by chrome.tabs.
+ *
+ * @return {Promise -> Array<Tab>} Promise that resolves with an Array of Tabs
+ * matching queryInfo
+ */
+exports.query = function(queryInfo) {
+  return new Promise(function(resolve) {
+    chrome.tabs.query(queryInfo, function(tabs) {
+      resolve(tabs);
+    });
+  });
+};
+
+/**
+ * Capture the visible area of the currently active tab in the specified
+ * window.
+ *
+ * @param {integer} windowId the target window, defaults to the current window
+ * @param {object} options
+ *
+ * @return {Promise -> string} Promise that resolves with the captured image as
+ * a data URL
+ */
+exports.captureVisibleTab = function(windowId, options) {
+  return new Promise(function(resolve) {
+    chrome.tabs.captureVisibleTab(windowId, options, function(dataUrl) {
+      resolve(dataUrl);
+    });
   });
 };
 

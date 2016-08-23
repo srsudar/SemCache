@@ -1970,6 +1970,7 @@ window.dnsSem = require('dnsSem');
 var fileSystem = require('./file-system');
 var fsUtil = require('./file-system-util');
 var serverApi = require('../server/server-api');
+var storage = require('../chrome-apis/storage');
 
 /** The number of characters output by Date.toISOString() */
 var LENGTH_ISO_DATE_STR = 24;
@@ -1986,11 +1987,15 @@ exports.MHTML_EXTENSION = '.mhtml';
  * @param {string} captureDate the ISO String representation of the datetime
  * @param {string} accessPath the path in the cache that can be used to access
  * the file the page was captured
+ * @param {object} metadata an object stored and associated with the page.
+ * Allows additional metadata to be stored, e.g. mime type, thumbnail, etc.
+ * Must be safe to serialize via chrome.storage.local.set().
  */
 exports.CachedPage = function CachedPage(
   captureUrl,
   captureDate,
-  path
+  path,
+  metadata
 ) {
   if (!(this instanceof CachedPage)) {
     throw new Error('CachedPage must be called with new');
@@ -1998,6 +2003,7 @@ exports.CachedPage = function CachedPage(
   this.captureUrl = captureUrl;
   this.captureDate = captureDate;
   this.accessPath = path;
+  this.metadata = metadata;
 };
 
 /**
@@ -2007,14 +2013,20 @@ exports.CachedPage = function CachedPage(
  * @param {string} captureDate the toISOString() of the date the page was
  * captured
  * @param {Blob} mhtmlBlob the contents of hte page
+ * @param {object} metadata metadata to store with the page
  *
  * @return {Promise} a Promise that resolves when the write is complete
  */
-exports.addPageToCache = function(captureUrl, captureDate, mhtmlBlob) {
+exports.addPageToCache = function(
+  captureUrl, captureDate, mhtmlBlob, metadata
+) {
   return new Promise(function(resolve, reject) {
     // Get the directory to write into
     // Create the file entry
     // Perform the write
+    // We'll use a default empty object so that downstream APIs can always
+    // assume to have a truthy opts value.
+    metadata = metadata || {};
     var heldEntry = null;
     fileSystem.getDirectoryForCacheEntries()
     .then(cacheDir => {
@@ -2028,6 +2040,10 @@ exports.addPageToCache = function(captureUrl, captureDate, mhtmlBlob) {
     .then(fileEntry => {
       heldEntry = fileEntry;
       return fsUtil.writeToFile(fileEntry, mhtmlBlob);
+    })
+    .then(() => {
+      // Save the metadata to storage.
+      return exports.writeMetadataForEntry(heldEntry, metadata);
     })
     .then(() => {
       resolve(heldEntry);
@@ -2047,12 +2063,15 @@ exports.getAllCachedPages = function() {
   return new Promise(function(resolve, reject) {
     exports.getAllFileEntriesForPages()
     .then(entries => {
-      var result = [];
+      var getPagePromises = [];
       entries.forEach(entry => {
-        var cachedPage = exports.getEntryAsCachedPage(entry);
-        result.push(cachedPage);
+        var promise = exports.getEntryAsCachedPage(entry);
+        getPagePromises.push(promise);
       });
-      resolve(result);
+      return Promise.all(getPagePromises);
+    })
+    .then(cachedPages => {
+      resolve(cachedPages);
     })
     .catch(err => {
       reject(err);
@@ -2097,15 +2116,64 @@ exports.getAllFileEntriesForPages = function() {
  *
  * @param {FileEntry} entry
  *
- * @return {CachedPage}
+ * @return {Promise -> CachedPage} Promise that resolves with the CachedPage
  */
 exports.getEntryAsCachedPage = function(entry) {
   var captureUrl = exports.getCaptureUrlFromName(entry.name);
   var captureDate = exports.getCaptureDateFromName(entry.name);
   var accessUrl = serverApi.getAccessUrlForCachedPage(entry.fullPath);
 
-  var result = new exports.CachedPage(captureUrl, captureDate, accessUrl);
-  return result;
+  // Retrieve the metadata from Chrome storage.
+  return new Promise(function(resolve) {
+    exports.getMetadataForEntry(entry)
+      .then(mdata => {
+        var result = new exports.CachedPage(
+          captureUrl, captureDate, accessUrl, mdata
+        );
+        resolve(result);
+      });
+  });
+};
+
+/**
+ * Retrieve the metadata for the given file entry. This assumes that a
+ * FileEntry is sufficient information to find the metadata in local storage,
+ * e.g. that the name is the key.
+ *
+ * @param {FileEntry} entry 
+ *
+ * @return {Promise -> object} Promise that resolves with the metadata object
+ */
+exports.getMetadataForEntry = function(entry) {
+  var key = exports.createMetadataKey(entry);
+  return storage.get(key);
+};
+
+/**
+ * Create the key that will store the metadata for this entry.
+ *
+ * @param {FileEntry} entry
+ *
+ * @return {string} the key to use to find the metadata in the datastore
+ */
+exports.createMetadataKey = function(entry) {
+  var prefix = 'fileMdata_';
+  return prefix + entry.name;
+};
+
+/**
+ * Write the metadata object for the given entry.
+ *
+ * @param {FileEntry} entry file pertaining to the metadata
+ * @param {object} metadata the metadata to write
+ *
+ * @return {Promise} Promise that resolves when the write is complete
+ */
+exports.writeMetadataForEntry = function(entry, metadata) {
+  var key = exports.createMetadataKey(entry);
+  var obj = {};
+  obj[key] = metadata;
+  return storage.set(obj);
 };
 
 /**
@@ -2166,7 +2234,7 @@ exports.getCaptureDateFromName = function(name) {
   return result;
 };
 
-},{"../server/server-api":13,"./file-system":"fileSystem","./file-system-util":"fsUtil"}],12:[function(require,module,exports){
+},{"../chrome-apis/storage":3,"../server/server-api":13,"./file-system":"fileSystem","./file-system-util":"fsUtil"}],12:[function(require,module,exports){
 /* globals WSC */
 'use strict';
 
@@ -5996,7 +6064,12 @@ exports.sendMessageToExtension = function(message) {
  * following format:
  * {
  *   type: 'write'
- *   params: {captureUrl: 'url', captureDate: 'iso', dataUrl: 'string'}
+ *   params: {
+ *     captureUrl: 'url',
+ *     captureDate: 'iso',
+ *     dataUrl: 'string',
+ *     metadata: {}
+ *   }
  * }
  * @param {MessageSender}
  * @param {function}
@@ -6010,7 +6083,8 @@ exports.handleExternalMessage = function(message, sender, response) {
     var blob = exports.getBlobFromDataUrl(message.params.dataUrl);
     var captureUrl = message.params.captureUrl;
     var captureDate = message.params.captureDate;
-    datastore.addPageToCache(captureUrl, captureDate, blob);
+    var metadata = message.params.metadata;
+    datastore.addPageToCache(captureUrl, captureDate, blob, metadata);
     if (response) {
       response();
     }

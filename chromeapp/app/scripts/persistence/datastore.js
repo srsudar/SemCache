@@ -87,9 +87,9 @@ exports.addPageToCache = function(
       heldEntry = fileEntry;
       return fsUtil.writeToFile(fileEntry, mhtmlBlob);
     })
-    .then(entry => {
+    .then(() => {
       // Save the metadata to storage.
-      return exports.writeMetadataForEntry(entry, metadata);
+      return exports.writeMetadataForEntry(heldEntry, metadata);
     })
     .then(() => {
       resolve(heldEntry);

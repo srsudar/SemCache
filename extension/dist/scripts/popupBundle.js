@@ -1,8 +1,8 @@
 (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
 'use strict';
 
-var chromeRuntime = require('../chromeRuntime');
-var chromeTabs = require('../chromeTabs');
+var chromeRuntime = require('../chrome-apis/runtime');
+var chromeTabs = require('../chrome-apis/tabs');
 
 /**
  * ID of the Semcache Chrome App.
@@ -25,14 +25,23 @@ exports.sendMessageToApp = function(message) {
  * @param {string} captureDate the toISOString() of the date the page was
  * captured
  * @param {string} dataUrl the blob of MHTMl data as a data URL
+ * @param {object} metadata metadata to store about the page
  */
-exports.savePage = function(captureUrl, captureDate, dataUrl) {
+exports.savePage = function(captureUrl, captureDate, dataUrl, metadata) {
+  console.log('called savePage');
+  console.log('  captureUrl: ', captureUrl);
+  console.log('  captureDate: ', captureDate);
+  console.log('  dataUrl: ', dataUrl);
+  console.log('  metadata: ', metadata);
+  // Sensible default
+  metadata = metadata || {};
   var message = {
     type: 'write',
     params: {
       captureUrl: captureUrl,
       captureDate: captureDate,
-      dataUrl: dataUrl
+      dataUrl: dataUrl,
+      metadata: metadata
     }
   };
   exports.sendMessageToApp(message);
@@ -73,7 +82,30 @@ exports.onMessageExternalCallback = function(message, sender, sendResponse) {
   }
 };
 
-},{"../chromeRuntime":2,"../chromeTabs":3}],2:[function(require,module,exports){
+},{"../chrome-apis/runtime":3,"../chrome-apis/tabs":4}],2:[function(require,module,exports){
+/* globals chrome */
+'use strict';
+
+/**
+ * Promise-ified wrapper around the chrome.pageCapture API.
+ */
+
+/**
+ * @param {object} details details object as specified in the
+ * chrome.pageCapture API.
+ *
+ * @return {Promise -> Blob} Promise that resolves with the Blob of mhtml
+ * content
+ */
+exports.saveAsMHTML = function(details) {
+  return new Promise(function(resolve) {
+    chrome.pageCapture.saveAsMHTML(details, function(blob) {
+      resolve(blob);
+    });
+  });
+};
+
+},{}],3:[function(require,module,exports){
 /* globals chrome */
 'use strict';
 
@@ -100,7 +132,7 @@ exports.addOnMessageExternalListener = function(fn) {
   chrome.runtime.onMessageExternal.addListener(fn);
 };
 
-},{}],3:[function(require,module,exports){
+},{}],4:[function(require,module,exports){
 /* global chrome */
 'use strict';
 
@@ -119,17 +151,131 @@ exports.update = function(url) {
   });
 };
 
-},{}],4:[function(require,module,exports){
-/* globals chrome, Promise */
+/**
+ * Get all the tabs that have the specified properties, or all tabs if no
+ * properties are specified.
+ *
+ * @param {object} queryInfo object as specified by chrome.tabs.
+ *
+ * @return {Promise -> Array<Tab>} Promise that resolves with an Array of Tabs
+ * matching queryInfo
+ */
+exports.query = function(queryInfo) {
+  return new Promise(function(resolve) {
+    chrome.tabs.query(queryInfo, function(tabs) {
+      resolve(tabs);
+    });
+  });
+};
+
+/**
+ * Capture the visible area of the currently active tab in the specified
+ * window.
+ *
+ * @param {integer} windowId the target window, defaults to the current window
+ * @param {object} options
+ *
+ * @return {Promise -> string} Promise that resolves with the captured image as
+ * a data URL
+ */
+exports.captureVisibleTab = function(windowId, options) {
+  return new Promise(function(resolve) {
+    chrome.tabs.captureVisibleTab(windowId, options, function(dataUrl) {
+      resolve(dataUrl);
+    });
+  });
+};
+
+},{}],5:[function(require,module,exports){
 'use strict';
 
-var messaging = require('./app-bridge/messaging');
+/**
+ * API to be used by the Extension
+ */
+
+var capture = require('./chrome-apis/page-capture');
+var tabs = require('./chrome-apis/tabs');
+var datastore = require('./persistence/datastore');
+
+exports.saveCurrentPage = function() {
+  // Get all tabs.
+  // Get the active tab.
+  // Ask the datastore to perform the write.
+  return new Promise(function(resolve, reject) {
+    var fullUrl = null;
+    tabs.query({ currentWindow: true, active: true})
+      .then(tabs => {
+        return tabs[0];
+      })
+      .then(activeTab => {
+        fullUrl = activeTab.url;
+        var tabId = activeTab.id;
+        return capture.saveAsMHTML({ tabId: tabId });
+      })
+      .then(mhtmlBlob => {
+        return datastore.savePage(fullUrl, mhtmlBlob); 
+      })
+      .then(() => {
+        // all done
+        resolve();
+      })
+      .catch(err => {
+        reject(err);
+      });
+  });
+};
+
+},{"./chrome-apis/page-capture":2,"./chrome-apis/tabs":4,"./persistence/datastore":6}],6:[function(require,module,exports){
+'use strict';
+
+var tabs = require('../chrome-apis/tabs');
+var messaging = require('../app-bridge/messaging');
+
+/**
+ * Handles persisting data for the extension. For the time being we are relying
+ * on the app to do most of the persisting, so this relies heavily on
+ * messaging.
+ */
+
+exports.MIME_TYPE_MHTML = 'multipart/related';
+
+/**
+ * @param {Blob} blob
+ *
+ * @return {Promise} Promise that resolves with a data url string
+ */
+exports.getBlobAsDataUrl = function(blob) {
+  return new Promise(function(resolve) {
+    var reader = new window.FileReader();
+    reader.onloadend = function() {
+      var base64 = reader.result;
+      resolve(base64);
+    };
+    reader.readAsDataURL(blob);
+  });
+};
+
+/**
+ * Get the string representation of this date moment.
+ *
+ * This exists to allow testing to mock out date creation.
+ *
+ * @return {string} ISO representation of this moment
+ */
+exports.getDateForSave = function() {
+  var result = new Date().toISOString();
+  return result;
+};
 
 /**
  * Return the URL from the string representation. fullUrl must begin with the
  * scheme (i.e. http:// or https://).
+ *
+ * @param {string} fullUrl
+ *
+ * @return {string}
  */
-function getDomain(fullUrl) {
+exports.getDomain = function(fullUrl) {
   // We will rely on the :// that occurs in the scheme to determine the start
   // of the domain.
   var colonLocation = fullUrl.indexOf(':');
@@ -152,41 +298,79 @@ function getDomain(fullUrl) {
   var domain = urlWithoutScheme.substring(0, domainEnd);
 
   return domain;
-}
+};
 
 /**
- * @param {Blob} blob
+ * Create the metadata object that will be associated with the saved file.
  *
- * @return {Promise} Promise that resolves with a data url string
+ * @param {string} fullUrl
+ *
+ * @return {Promise -> object} Promise that resolves with the metadata object
  */
-function getBlobAsDataUrl(blob) {
+exports.createMetadataForWrite = function(fullUrl) {
+  // We include the full URL, a snapshot of the image, and a mime type.
+  // var expected = {
+  //   fullUrl: fullUrl,
+  //   snapshot: snapshotUrl,
+  //   mimeType: mimeType
+  // };
   return new Promise(function(resolve) {
-    var reader = new window.FileReader();
-    reader.onloadend = function() {
-      var base64 = reader.result;
-      resolve(base64);
-    };
-    reader.readAsDataURL(blob);
+    exports.getSnapshotDataUrl()
+      .then(snapshotUrl => {
+        var result = {
+          fullUrl: fullUrl,
+          mimeType: exports.MIME_TYPE_MHTML
+        };
+        if (snapshotUrl && snapshotUrl !== '') {
+          result.snapshot = snapshotUrl;
+        }
+        resolve(result);    
+      });
   });
-}
+};
 
-chrome.tabs.query({ currentWindow: true, active: true}, function(tabs) {
-  var tab = tabs[0];
-  var tabId = tab.id;
-  var tabUrl = tab.url;
-  console.log('Tab id: ' + tabId);
-  console.log(tab);
+/**
+ * Get a snapshot of the current window.
+ *
+ * @return {Promise -> string} Promise that resolves with a data URL
+ * representing the jpeg snapshot.
+ */
+exports.getSnapshotDataUrl = function() {
+  return tabs.captureVisibleTab();
+};
 
-  chrome.pageCapture.saveAsMHTML({ tabId: tabId }, function(blob) {
-    console.log('got blob: ' + blob);
-    var domain = getDomain(tabUrl);
-    var captureDate = new Date().toISOString();
-    getBlobAsDataUrl(blob).then(base64 => {
-      messaging.savePage(domain, captureDate, base64);
-    });
-    // var fileName = createFileName(tabUrl);
-    // writeBlob(blob, fileName);
+/**
+ * Save an MHTML page to the datastore.
+ *
+ * @param {string} tabUrl the full URL of the tab being saved
+ * @param {blob} mhtmlBlob the mhtml blob as returned by chrome.pagecapture
+ *
+ * @return {Promise} a Promise that resolves when the save is complete
+ */
+exports.savePage = function(tabUrl, mhtmlBlob) {
+  var fullUrl = tabUrl;
+  var domain = exports.getDomain(tabUrl);
+  var captureDate = exports.getDateForSave();
+
+  return new Promise(function(resolve) {
+    var mhtmlDataUrl = null;
+    exports.getBlobAsDataUrl(mhtmlBlob)
+      .then(dataUrl => {
+        mhtmlDataUrl = dataUrl;
+        return exports.createMetadataForWrite(fullUrl);
+      })
+      .then(metadata => {
+        messaging.savePage(domain, captureDate, mhtmlDataUrl, metadata);
+        resolve();
+      });
   });
-});
+};
 
-},{"./app-bridge/messaging":1}]},{},[4]);
+},{"../app-bridge/messaging":1,"../chrome-apis/tabs":4}],7:[function(require,module,exports){
+'use strict';
+
+var api = require('./extension-api');
+
+api.saveCurrentPage();
+
+},{"./extension-api":5}]},{},[7]);

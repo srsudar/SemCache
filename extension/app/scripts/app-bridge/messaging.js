@@ -27,6 +27,11 @@ exports.sendMessageToApp = function(message) {
  * @param {object} metadata metadata to store about the page
  */
 exports.savePage = function(captureUrl, captureDate, dataUrl, metadata) {
+  console.log('called savePage');
+  console.log('  captureUrl: ', captureUrl);
+  console.log('  captureDate: ', captureDate);
+  console.log('  dataUrl: ', dataUrl);
+  console.log('  metadata: ', metadata);
   // Sensible default
   metadata = metadata || {};
   var message = {
