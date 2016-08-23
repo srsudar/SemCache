@@ -93,6 +93,10 @@ testWrapper('getSnapshotDataUrl resolves with correct result', function(t) {
 
   datastore.getSnapshotDataUrl()
     .then(actual => {
+      t.deepEqual(
+        captureVisibleTabSpy.args[0],
+        [null, { quality: datastore.DEFAULT_SNAPSHOT_QUALITY }]
+      );
       t.deepEqual(actual, expected);
       t.end();
     });

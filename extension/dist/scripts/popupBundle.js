@@ -240,6 +240,12 @@ var messaging = require('../app-bridge/messaging');
 exports.MIME_TYPE_MHTML = 'multipart/related';
 
 /**
+ * The default quality score to pass to chrome.tabs.captureVisibleTab. Docs are
+ * sparse, but this assumes lower is worse.
+ */
+exports.DEFAULT_SNAPSHOT_QUALITY = 5;
+
+/**
  * @param {Blob} blob
  *
  * @return {Promise} Promise that resolves with a data url string
@@ -336,7 +342,11 @@ exports.createMetadataForWrite = function(fullUrl) {
  * representing the jpeg snapshot.
  */
 exports.getSnapshotDataUrl = function() {
-  return tabs.captureVisibleTab();
+  // We are going to ask for a low quality image, as are just after thumbnail
+  // and nothing more.
+  var jpegQuality = exports.DEFAULT_SNAPSHOT_QUALITY;
+  var options = { quality: jpegQuality };
+  return tabs.captureVisibleTab(null, options);
 };
 
 /**
