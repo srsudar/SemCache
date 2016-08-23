@@ -2913,6 +2913,11 @@ Example:
     </style>
 
     <div class="card">
+
+      <template is="dom-if" if="{{metadata.snapshot}}">
+        <img src="{{metadata.snapshot}}" alt="snapshot">
+      </template>
+
       <h1 id="title">{{captureUrl}}</h1>
       <div id="date" class="card-content">{{captureDate}}</div>
       <div class="card-actions">
@@ -3467,7 +3472,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
     <iron-ajax id="ajax" auto="" url="{{url}}" handle-as="json" last-response="{{response}}"></iron-ajax>
 
       <template is="dom-repeat" items="{{response.cachedPages}}">
-        <cached-page-summary capture-url="{{item.captureUrl}}" capture-date="{{item.captureDate}}" access-path="{{item.accessPath}}">
+        <cached-page-summary capture-url="{{item.captureUrl}}" capture-date="{{item.captureDate}}" access-path="{{item.accessPath}}" metadata="{{item.metadata}}">
         </cached-page-summary>
       </template>
 

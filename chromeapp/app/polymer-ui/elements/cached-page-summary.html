@@ -53,6 +53,11 @@ Example:
     </style>
 
     <div class="card">
+
+      <template is="dom-if" if="{{metadata.snapshot}}">
+        <img src="{{metadata.snapshot}}" alt="snapshot"/>
+      </template>
+
       <h1 id="title">{{captureUrl}}</h1>
       <div id="date" class="card-content">{{captureDate}}</div>
       <div class="card-actions">
@@ -75,6 +80,7 @@ Example:
         captureUrl: String,
         captureDate: String,
         accessPath: String,
+        metadata: Object,
 
         /**
          * Describes the author of the element, but is really just an excuse to

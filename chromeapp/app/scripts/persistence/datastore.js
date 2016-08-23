@@ -192,7 +192,21 @@ exports.getEntryAsCachedPage = function(entry) {
  */
 exports.getMetadataForEntry = function(entry) {
   var key = exports.createMetadataKey(entry);
-  return storage.get(key);
+  return new Promise(function(resolve) {
+    storage.get(key)
+      .then(obj => {
+        // The get API resolves with the key value pair in a single object,
+        // e.g. get('foo') -> { foo: bar }.
+        var result = {};
+        if (obj && obj[key]) {
+          result = obj[key];
+        }
+        console.log('querying for key: ', key);
+        console.log('  get result: ', obj);
+        console.log('  metadata: ', result);
+        resolve(result);
+      });
+  });
 };
 
 /**

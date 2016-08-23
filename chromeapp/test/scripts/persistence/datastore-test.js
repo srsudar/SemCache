@@ -370,9 +370,11 @@ test('getMetadataForEntry resolves with result to storage', function(t) {
   var expected = { meta: 'data', favicon: 'base64mebruh' };
   var entry = { name: 'file_name.mhtml' };
   var mdataKey = 'keyIntoStorage';
+  var getResult = {};
+  getResult[mdataKey] = expected;
 
   var createMetadataKeySpy = sinon.stub().withArgs(entry).returns(mdataKey);
-  var getSpy = sinon.stub().withArgs(mdataKey).resolves(expected);
+  var getSpy = sinon.stub().withArgs(mdataKey).resolves(getResult);
 
   datastore = proxyquire(
     '../../../app/scripts/persistence/datastore',

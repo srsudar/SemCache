@@ -36,9 +36,11 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
       last-response="{{response}}"></iron-ajax>
 
       <template is="dom-repeat" items="{{response.cachedPages}}">
-        <cached-page-summary capture-url="{{item.captureUrl}}"
-                             capture-date="{{item.captureDate}}"
-                             access-path="{{item.accessPath}}">
+        <cached-page-summary
+          capture-url="{{item.captureUrl}}"
+          capture-date="{{item.captureDate}}"
+          access-path="{{item.accessPath}}"
+          metadata="{{item.metadata}}" >
         </cached-page-summary>
       </template>
 
