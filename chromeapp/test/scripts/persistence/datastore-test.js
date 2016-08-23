@@ -22,12 +22,14 @@ test('CachedPage constructs', function(t) {
   var url = 'http://www.example.com';
   var path = 'pages/www.example.com';
   var captureDate = 'date';
+  var mdata = {foo: 'bar'};
 
-  var actual = new datastore.CachedPage(url, captureDate, path);
+  var actual = new datastore.CachedPage(url, captureDate, path, mdata);
 
   t.equal(actual.captureUrl, url);
   t.equal(actual.captureDate, captureDate);
   t.equal(actual.accessPath, path);
+  t.deepEqual(actual.metadata, mdata);
 
   t.end();
 });
@@ -75,7 +77,7 @@ test('getAllCachedPages resolves all pages', function(t) {
 
   var getEntryAsCachedPageSpy = sinon.stub();
   for (var i = 0; i < expectedCachedPages.length; i++) {
-    getEntryAsCachedPageSpy.onCall(i).returns(expectedCachedPages[i]);
+    getEntryAsCachedPageSpy.onCall(i).resolves(expectedCachedPages[i]);
   }
 
   datastore.getAllFileEntriesForPages = getAllFileEntriesSpy;
@@ -155,9 +157,15 @@ test('getEntryAsCachedPage returns CachedPage', function(t) {
     name: url + '_' + date,
     fullPath: '/cache/dir/www.example.co.uk/fancyExample.html_dateTime',
   };
+  var mdata = {
+    favicon: 'so pretty',
+    acl: 'no page for you'
+  };
+  var getMetadataForEntrySpy = sinon.stub().resolves(mdata);
+
 
   var accessUrl = 'the url with the file';
-  var getAccessUrlStub = sinon.stub().returns(accessUrl);
+  var getAccessUrlStub = sinon.stub().withArgs(entry).returns(accessUrl);
 
   datastore = proxyquire(
     '../../../app/scripts/persistence/datastore',
@@ -167,6 +175,7 @@ test('getEntryAsCachedPage returns CachedPage', function(t) {
       }
     }
   );
+  datastore.getMetadataForEntry = getMetadataForEntrySpy;
 
   var getUrlStub = sinon.stub().returns(url);
   var getDateStub = sinon.stub().returns(date);
@@ -174,11 +183,12 @@ test('getEntryAsCachedPage returns CachedPage', function(t) {
   datastore.getCaptureUrlFromName = getUrlStub;
   datastore.getCaptureDateFromName = getDateStub;
 
-  var expected = new datastore.CachedPage(url, date, accessUrl);
-  var actual = datastore.getEntryAsCachedPage(entry);
-
-  t.deepEqual(actual, expected);
-  t.end();
+  var expected = new datastore.CachedPage(url, date, accessUrl, mdata);
+  datastore.getEntryAsCachedPage(entry)
+    .then(actual => {
+      t.deepEqual(actual, expected);
+      t.end();
+    });
 });
 
 test(
@@ -186,6 +196,7 @@ test(
   function(t) {
     var errObj = { msg: 'no base dir' };
     var getDirectoryForCacheEntriesSpy = sinon.stub().rejects(errObj);
+    var writeMetadataForEntrySpy = sinon.stub().resolves();
 
     datastore = proxyquire(
       '../../../app/scripts/persistence/datastore',
@@ -195,6 +206,7 @@ test(
         }
       }
     );
+    datastore.writeMetadataForEntry = writeMetadataForEntrySpy;
 
     datastore.addPageToCache('url', 'date', 'blob')
       .catch(err => {
@@ -205,10 +217,51 @@ test(
   }
 );
 
+test('addPageToCache rejects if write metadata rejects', function(t) {
+  // At the time there is no way for write metadata to reject, as that is not
+  // supported by the chrome API, but we're going to test for it anyways in
+  // case the API changes.
+  var expected = { errMsg: 'write went wrong, son' };
+  var captureUrl = 'such a great url';
+  var captureDate = 'tomorrow';
+  var blob = {much: 'binary'};
+  var fileName = 'file_entry_name.mhtml';
+  var dirEntryStub = {cacheDir: 'someDir'};
+  var fileEntryStub = {fileName: 'sofancy'};
+  var getDirectoryForCacheEntriesSpy = sinon.stub().resolves(dirEntryStub);
+  var getFileSpy = sinon.stub().resolves(fileEntryStub);
+  var writeToFileSpy = sinon.stub().resolves();
+  var writeMetadataForEntrySpy = sinon.stub().rejects(expected);
+  var createFileNameSpy = sinon.stub().returns(fileName);
+
+  datastore = proxyquire(
+    '../../../app/scripts/persistence/datastore',
+    {
+      './file-system': {
+        getDirectoryForCacheEntries: getDirectoryForCacheEntriesSpy
+      },
+      './file-system-util': {
+        getFile: getFileSpy,
+        writeToFile: writeToFileSpy
+      }
+    }
+  );
+  datastore.createFileNameForPage = createFileNameSpy;
+  datastore.writeMetadataForEntry = writeMetadataForEntrySpy;
+
+  datastore.addPageToCache(captureUrl, captureDate, blob)
+  .catch(actual => {
+    t.deepEqual(actual, expected);
+    t.end();
+    resetDatastore();
+  });
+});
+
 test('addPageToCache rejects if getFile rejects', function(t) {
   var errObj = { msg: 'no base dir' };
   var getDirectoryForCacheEntriesSpy = sinon.stub().rejects(errObj);
   var getFileSpy = sinon.stub().rejects(errObj);
+  var writeMetadataForEntrySpy = sinon.stub().resolves();
 
   datastore = proxyquire(
     '../../../app/scripts/persistence/datastore',
@@ -221,6 +274,7 @@ test('addPageToCache rejects if getFile rejects', function(t) {
       }
     }
   );
+  datastore.writeMetadataForEntry = writeMetadataForEntrySpy;
 
   datastore.addPageToCache('url', 'date', 'blob')
   .catch(err => {
@@ -235,6 +289,7 @@ test('addPageToCache rejects if writeToFile rejects', function(t) {
   var getDirectoryForCacheEntriesSpy = sinon.stub().rejects(errObj);
   var getFileSpy = sinon.stub().resolves();
   var writeToFileSpy = sinon.stub().rejects(errObj);
+  var writeMetadataForEntrySpy = sinon.stub().resolves();
 
   datastore = proxyquire(
     '../../../app/scripts/persistence/datastore',
@@ -248,6 +303,7 @@ test('addPageToCache rejects if writeToFile rejects', function(t) {
       }
     }
   );
+  datastore.writeMetadataForEntry = writeMetadataForEntrySpy;
 
   datastore.addPageToCache('url', 'date', 'blob')
   .catch(err => {
@@ -267,6 +323,8 @@ test('addPageToCache resolves if all others succeed', function(t) {
   var getDirectoryForCacheEntriesSpy = sinon.stub().resolves(dirEntryStub);
   var getFileSpy = sinon.stub().resolves(fileEntryStub);
   var writeToFileSpy = sinon.stub().resolves();
+  var writeMetadataForEntrySpy = sinon.stub().resolves();
+  var createFileNameSpy = sinon.stub().returns(fileName);
 
   datastore = proxyquire(
     '../../../app/scripts/persistence/datastore',
@@ -280,8 +338,8 @@ test('addPageToCache resolves if all others succeed', function(t) {
       }
     }
   );
-  var createFileNameSpy = sinon.stub().returns(fileName);
   datastore.createFileNameForPage = createFileNameSpy;
+  datastore.writeMetadataForEntry = writeMetadataForEntrySpy;
 
   datastore.addPageToCache(captureUrl, captureDate, blob)
   .then(returnedFile => {
@@ -297,4 +355,67 @@ test('addPageToCache resolves if all others succeed', function(t) {
     t.end();
     resetDatastore();
   });
+});
+
+test('createMetadataKey returns correct', function(t) {
+  var name = 'fancyFile.mhtml';
+  var entry = { name: name };
+  var expected = 'fileMdata_' + name;
+  var actual = datastore.createMetadataKey(entry);
+  t.equal(actual, expected);
+  t.end();
+});
+
+test('getMetadataForEntry resolves with result to storage', function(t) {
+  var expected = { meta: 'data', favicon: 'base64mebruh' };
+  var entry = { name: 'file_name.mhtml' };
+  var mdataKey = 'keyIntoStorage';
+
+  var createMetadataKeySpy = sinon.stub().withArgs(entry).returns(mdataKey);
+  var getSpy = sinon.stub().withArgs(mdataKey).resolves(expected);
+
+  datastore = proxyquire(
+    '../../../app/scripts/persistence/datastore',
+    {
+      '../chrome-apis/storage': {
+        get: getSpy
+      }
+    }
+  );
+  datastore.createMetadataKey = createMetadataKeySpy;
+
+  datastore.getMetadataForEntry(entry)
+    .then(actual => {
+      t.deepEqual(actual, expected);
+      t.end();
+      resetDatastore();
+    });
+});
+
+test('writeMetadataForEntry resolves if set resolves', function(t) {
+  var key = 'mdatakey';
+  var setArgs = {};
+  setArgs[key] = { favicon: 'pretteh', snapshot: 'nice' };
+  var entry = { name: 'fileName.mhtml' };
+
+  var setSpy = sinon.stub().withArgs(setArgs).resolves();
+  var createMetadataKeySpy = sinon.stub().withArgs(entry).returns(key);
+
+  datastore = proxyquire(
+    '../../../app/scripts/persistence/datastore',
+    {
+      '../chrome-apis/storage': {
+        set: setSpy
+      }
+    }
+  );
+  datastore.createMetadataKey = createMetadataKeySpy;
+
+  datastore.writeMetadataForEntry(entry)
+    .then(result => {
+      // We don't expect to resolve with anything.
+      t.equal(result, undefined);
+      t.end();
+      resetDatastore();
+    });
 });
