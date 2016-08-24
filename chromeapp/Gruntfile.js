@@ -57,6 +57,7 @@ module.exports = function (grunt) {
           './<%= config.app %>/scripts/server/server-controller:serverController',
           './<%= config.app %>/scripts/app-controller:appController',
           './<%= config.app %>/scripts/settings:settings',
+          'moment:moment',
         ],
       },
       // Note that these targets build to the app/ directory, NOT to the dist/

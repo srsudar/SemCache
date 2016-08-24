@@ -73,8 +73,8 @@ Example:
 
       <h1 id="title">{{metadata.title}}</h1>
       <h3 id="title">{{metadata.fullUrl}}</h1>
-      <h3 id="title">{{captureUrl}}</h1>
-      <div id="date" class="card-content">{{captureDate}}</div>
+      <div id="date" class="card-content">{{friendlyDate}}</div>
+      <div id="date" class="card-content">{{fullDate}}</div>
       <div class="card-actions">
         <paper-button id="open" on-tap="openUrl">Open</paper-button>
       </div>
@@ -96,6 +96,15 @@ Example:
         captureDate: String,
         accessPath: String,
         metadata: Object,
+        friendlyDate: {
+          type: String,
+          computed: 'computeFriendlyDate(captureDate)'
+        },
+        fullDate: {
+          type: String,
+          computed: 'computeFullDate(captureDate)'
+        },
+
 
         /**
          * Describes the author of the element, but is really just an excuse to
@@ -121,6 +130,21 @@ Example:
             };
           }
         },
+      },
+
+      computeFriendlyDate: function(isoString) {
+        var moment = require('moment');
+        if (!moment) {
+          console.warn('moment is not defined!');
+          return isoString;
+        }
+        return moment(isoString).calendar();
+      },
+
+      computeFullDate: function(isoString) {
+        console.log('isoString: ', isoString);
+        var date = new Date(isoString);
+        return date.toString();
       },
 
       getAppController: function() {
