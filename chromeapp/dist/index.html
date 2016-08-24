@@ -1767,7 +1767,6 @@ The following custom properties are available for styling:
 
 Custom property | Description | Default
 ----------------|-------------|----------
-`--iron-icon` | Mixin applied to the icon | {}
 `--iron-icon-width` | Width of the icon | `24px`
 `--iron-icon-height` | Height of the icon | `24px`
 `--iron-icon-fill-color` | Fill color of the svg icon | `currentcolor`
@@ -1795,7 +1794,6 @@ Custom property | Description | Default
 
         width: var(--iron-icon-width, 24px);
         height: var(--iron-icon-height, 24px);
-        @apply(--iron-icon);
       }
     </style>
   </template>
@@ -2904,8 +2902,12 @@ Example:
         color: #212121;
       }
 
-      .snapshot {
-        max-width: 800px
+      img.snapshot {
+        max-width: 1000px;
+        display: block;
+        margin-left: auto;
+        margin-right: auto;
+        width: 100%;
       }
 
       .card {
@@ -2921,7 +2923,11 @@ Example:
     <div class="card">
 
       <template is="dom-if" if="{{metadata.snapshot}}">
-        <img id="snapshot" class="snapshot" src="{{metadata.snapshot}}" alt="snapshot">
+        <div id="header">
+          <div id="hero-container">
+            <img id="snapshot" class="snapshot" src="{{metadata.snapshot}}" alt="snapshot">
+          </div>
+        </div>
       </template>
 
       <h1 id="title">{{metadata.title}}</h1>

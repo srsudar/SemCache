@@ -42,8 +42,12 @@ Example:
         color: #212121;
       }
 
-      .snapshot {
-        max-width: 800px
+      img.snapshot {
+        max-width: 1000px;
+        display: block;
+        margin-left: auto;
+        margin-right: auto;
+        width: 100%;
       }
 
       .card {
@@ -59,8 +63,12 @@ Example:
     <div class="card">
 
       <template is="dom-if" if="{{metadata.snapshot}}">
-        <img id="snapshot" class="snapshot"
-          src="{{metadata.snapshot}}" alt="snapshot"/>
+        <div id="header">
+          <div id="hero-container">
+            <img id="snapshot" class="snapshot"
+              src="{{metadata.snapshot}}" alt="snapshot"/>
+          </div>
+        </div>
       </template>
 
       <h1 id="title">{{metadata.title}}</h1>
