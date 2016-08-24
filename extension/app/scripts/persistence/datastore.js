@@ -171,14 +171,14 @@ exports.getSnapshotDataUrl = function() {
 /**
  * Save an MHTML page to the datastore.
  *
- * @param {string} tabUrl the full URL of the tab being saved
+ * @param {Tab} tab Chrome Tab object that is being saved
  * @param {blob} mhtmlBlob the mhtml blob as returned by chrome.pagecapture
  *
  * @return {Promise} a Promise that resolves when the save is complete
  */
-exports.savePage = function(tabUrl, mhtmlBlob) {
-  var fullUrl = tabUrl;
-  var domain = exports.getDomain(tabUrl);
+exports.savePage = function(tab, mhtmlBlob) {
+  var fullUrl = tab.url;
+  var domain = exports.getDomain(fullUrl);
   var captureDate = exports.getDateForSave();
 
   return new Promise(function(resolve) {
@@ -186,7 +186,7 @@ exports.savePage = function(tabUrl, mhtmlBlob) {
     exports.getBlobAsDataUrl(mhtmlBlob)
       .then(dataUrl => {
         mhtmlDataUrl = dataUrl;
-        return exports.createMetadataForWrite(fullUrl);
+        return exports.createMetadataForWrite(tab);
       })
       .then(metadata => {
         messaging.savePage(domain, captureDate, mhtmlDataUrl, metadata);

@@ -269,11 +269,15 @@ testWrapper('savePage calls messaging component with params', function(t) {
   var captureDate = 'today';
   var dataUrl = 'data: blob';
   var metadata = { much: 'fancy', less: 'lame' };
+  var title = 'titular title';
 
   var blob = 'mhtml blob';
+  var tab = createTabObj(4, title, captureUrl, 'faviconUrl');
 
   var getBlobAsDataUrlSpy = sinon.stub().withArgs(blob).resolves(dataUrl);
   var savePageSpy = sinon.stub();
+  var createMetadataForWriteSpy = sinon.stub().withArgs(captureUrl)
+    .resolves(metadata);
 
   proxyquireDatastore({
     '../app-bridge/messaging': {
@@ -282,15 +286,15 @@ testWrapper('savePage calls messaging component with params', function(t) {
   });
   datastore.getBlobAsDataUrl = getBlobAsDataUrlSpy;
   datastore.getDateForSave = sinon.stub().returns(captureDate);
-  datastore.createMetadataForWrite = sinon.stub().withArgs(captureUrl)
-    .resolves(metadata);
+  datastore.createMetadataForWrite = createMetadataForWriteSpy;
 
-  datastore.savePage(captureUrl, blob)
+  datastore.savePage(tab, blob)
     .then(result => {
       t.deepEqual(
         savePageSpy.args[0],
         [domain, captureDate, dataUrl, metadata]
       );
+      t.deepEqual(createMetadataForWriteSpy.args[0], [tab]);
       // We don't expect a resolved value.
       t.equal(result, undefined);
       t.end();

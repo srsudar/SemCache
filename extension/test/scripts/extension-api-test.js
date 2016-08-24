@@ -45,7 +45,7 @@ test('saveCurrentPage resolves if all resolve', function(t) {
 
   var querySpy = sinon.stub().withArgs(getQueryArg).resolves(expectedTabs);
   var saveAsMhtmlSpy = sinon.stub().withArgs(captureArg).resolves(blob);
-  var savePageSpy = sinon.stub().withArgs(fullUrl, blob).resolves();
+  var savePageSpy = sinon.stub().withArgs(tab, blob).resolves();
   
   proxyquireApi({
     './chrome-apis/tabs': {
@@ -63,7 +63,7 @@ test('saveCurrentPage resolves if all resolve', function(t) {
     .then(result => {
       // We don't expect a resolve object.
       t.equal(result, undefined);
-      t.deepEqual(savePageSpy.args[0], [fullUrl, blob]);
+      t.deepEqual(savePageSpy.args[0], [tab, blob]);
       t.end();
       resetApi();
     });

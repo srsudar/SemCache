@@ -1,3 +1,4 @@
+/* globals Promise */
 'use strict';
 
 /**
@@ -13,18 +14,18 @@ exports.saveCurrentPage = function() {
   // Get the active tab.
   // Ask the datastore to perform the write.
   return new Promise(function(resolve, reject) {
-    var fullUrl = null;
+    var tab = null;
     tabs.query({ currentWindow: true, active: true})
       .then(tabs => {
-        return tabs[0];
+        tab = tabs[0];
+        return tab;
       })
       .then(activeTab => {
-        fullUrl = activeTab.url;
         var tabId = activeTab.id;
         return capture.saveAsMHTML({ tabId: tabId });
       })
       .then(mhtmlBlob => {
-        return datastore.savePage(fullUrl, mhtmlBlob); 
+        return datastore.savePage(tab, mhtmlBlob);
       })
       .then(() => {
         // all done
