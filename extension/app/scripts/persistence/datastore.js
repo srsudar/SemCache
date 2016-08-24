@@ -174,14 +174,15 @@ exports.getSnapshotDataUrl = function() {
  * @param {Tab} tab Chrome Tab object that is being saved
  * @param {blob} mhtmlBlob the mhtml blob as returned by chrome.pagecapture
  *
- * @return {Promise} a Promise that resolves when the save is complete
+ * @return {Promise} a Promise that resolves when the save is complete or
+ * rejects if the save fails.
  */
 exports.savePage = function(tab, mhtmlBlob) {
   var fullUrl = tab.url;
   var domain = exports.getDomain(fullUrl);
   var captureDate = exports.getDateForSave();
 
-  return new Promise(function(resolve) {
+  return new Promise(function(resolve, reject) {
     var mhtmlDataUrl = null;
     exports.getBlobAsDataUrl(mhtmlBlob)
       .then(dataUrl => {
@@ -189,8 +190,13 @@ exports.savePage = function(tab, mhtmlBlob) {
         return exports.createMetadataForWrite(tab);
       })
       .then(metadata => {
-        messaging.savePage(domain, captureDate, mhtmlDataUrl, metadata);
-        resolve();
+        return messaging.savePage(domain, captureDate, mhtmlDataUrl, metadata);
+      })
+      .then(msgFromApp => {
+        resolve(msgFromApp);
+      })
+      .catch(err => {
+        reject(err);
       });
   });
 };

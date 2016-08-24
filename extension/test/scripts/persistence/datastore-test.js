@@ -263,6 +263,33 @@ testWrapper('createMetadataForWrite correct if snapshot empty', function(t) {
     });
 });
 
+testWrapper('savePage rejects if messaging.savePage rejects', function(t) {
+  var tab = createTabObj(4, 'any title', 'any url', 'faviconUrl');
+  var blob = 'blobby mcblobface';
+  var dataUrl = 'data url for blobby';
+  var metadata = 'mdata';
+
+  var errFromDatastore = { msg: 'things gone wrong' };
+  var savePageSpy = sinon.stub().rejects(errFromDatastore);
+
+  proxyquireDatastore({
+    '../app-bridge/messaging': {
+      savePage: savePageSpy,
+      setTimeout: sinon.stub()
+    }
+  });
+  datastore.getDateForSave = sinon.stub();
+  datastore.getBlobAsDataUrl = sinon.stub().withArgs(blob).resolves(dataUrl);
+  datastore.createMetadataForWrite = sinon.stub().withArgs(tab)
+    .resolves(metadata);
+
+  datastore.savePage(tab, blob)
+    .catch(err => {
+      t.deepEqual(err, errFromDatastore);
+      t.end();
+    });
+});
+
 testWrapper('savePage calls messaging component with params', function(t) {
   var captureUrl = 'http://www.savemeplz.com';
   var domain = 'www.savemeplz.com';
@@ -270,18 +297,20 @@ testWrapper('savePage calls messaging component with params', function(t) {
   var dataUrl = 'data: blob';
   var metadata = { much: 'fancy', less: 'lame' };
   var title = 'titular title';
+  var messageFromApp = 'from the app';
 
   var blob = 'mhtml blob';
   var tab = createTabObj(4, title, captureUrl, 'faviconUrl');
 
   var getBlobAsDataUrlSpy = sinon.stub().withArgs(blob).resolves(dataUrl);
-  var savePageSpy = sinon.stub();
+  var savePageSpy = sinon.stub().resolves(messageFromApp);
   var createMetadataForWriteSpy = sinon.stub().withArgs(captureUrl)
     .resolves(metadata);
 
   proxyquireDatastore({
     '../app-bridge/messaging': {
-      savePage: savePageSpy
+      savePage: savePageSpy,
+      setTimeout: sinon.stub()
     }
   });
   datastore.getBlobAsDataUrl = getBlobAsDataUrlSpy;
@@ -295,8 +324,7 @@ testWrapper('savePage calls messaging component with params', function(t) {
         [domain, captureDate, dataUrl, metadata]
       );
       t.deepEqual(createMetadataForWriteSpy.args[0], [tab]);
-      // We don't expect a resolved value.
-      t.equal(result, undefined);
+      t.equal(result, messageFromApp);
       t.end();
     });
 });

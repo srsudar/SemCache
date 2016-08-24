@@ -36,22 +36,71 @@ exports.sendMessageToExtension = function(message) {
  * @param {function}
  */
 exports.handleExternalMessage = function(message, sender, response) {
+  // Methods via onMessagExternal.addListener must respond true if the response
+  // callback is going to be invoked asynchronously. We'll create this value
+  // and allow the if logic below to specify if it will be invoking response.
+  var result = false;
   if (sender.id !== exports.EXTENSION_ID) {
     console.log('ID not from SemCache extension: ', sender);
     return;
   }
   if (message.type === 'write') {
+    if (response) {
+      // We'll handle the response callback asynchronously. Return true to
+      // inform Chrome to keep the channel open for us.
+      result = true;
+    }
     var blob = exports.getBlobFromDataUrl(message.params.dataUrl);
     var captureUrl = message.params.captureUrl;
     var captureDate = message.params.captureDate;
     var metadata = message.params.metadata;
-    datastore.addPageToCache(captureUrl, captureDate, blob, metadata);
-    if (response) {
-      response();
-    }
+    datastore.addPageToCache(captureUrl, captureDate, blob, metadata)
+      .then(() => {
+        var successMsg = exports.createResponseSuccess(message);
+        if (response) {
+          response(successMsg);
+        }
+      })
+      .catch(err => {
+        var errorMsg = exports.createResponseError(message, err);
+        if (response) {
+          response(errorMsg);
+        }
+      });
   } else {
     console.log('Unrecognized message type from extension: ', message.type);
   }
+  return result;
+};
+
+/**
+ * Create a message to send to the extension upon a successful action.
+ *
+ * @param {object} message the original message that generated the request
+ *
+ * @return {object} a response object. Contains at a result key, indicating
+ * 'success', a type key, indicating the type of the original message, and an
+ * optional params key with additional values.
+ */
+exports.createResponseSuccess = function(message) {
+  return {
+    type: message.type,
+    result: 'success',
+  };
+};
+
+/**
+ * Create a message to send to the extension upon an error.
+ *
+ * @param {object} message the original message that generated the request
+ * @param {any} err the error info to send to the extension
+ */
+exports.createResponseError = function(message, err) {
+  return {
+    type: message.type,
+    result: 'error',
+    err: err
+  };
 };
 
 /**

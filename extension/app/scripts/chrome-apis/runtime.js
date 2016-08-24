@@ -10,9 +10,10 @@
  *
  * @param {string} appId
  * @param {any} message must be JSON-serializable
+ * @param {function} responseCallback
  */
-exports.sendMessage = function(appId, message) {
-  chrome.runtime.sendMessage(appId, message);
+exports.sendMessage = function(appId, message, responseCallback) {
+  chrome.runtime.sendMessage(appId, message, responseCallback);
 };
 
 /**
