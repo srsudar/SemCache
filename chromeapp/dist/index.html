@@ -2924,7 +2924,9 @@ Example:
         <img id="snapshot" class="snapshot" src="{{metadata.snapshot}}" alt="snapshot">
       </template>
 
-      <h1 id="title">{{captureUrl}}</h1>
+      <h1 id="title">{{metadata.title}}</h1>
+      <h3 id="title">{{metadata.fullUrl}}</h3>
+      <h3 id="title">{{captureUrl}}</h3>
       <div id="date" class="card-content">{{captureDate}}</div>
       <div class="card-actions">
         <paper-button id="open" on-tap="openUrl">Open</paper-button>
