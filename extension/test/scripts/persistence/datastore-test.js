@@ -102,10 +102,29 @@ testWrapper('getSnapshotDataUrl resolves with correct result', function(t) {
     });
 });
 
+testWrapper('getFaviconAsUrl resolves with data url', function(t) {
+
+});
+
+testWrapper('getFaviconAsUrl empty if rejects', function(t) {
+
+});
+
 testWrapper('createMetadataForWrite correct if all resolve', function(t) {
   var fullUrl = 'https://www.foo.com#happyDays?happy=maybe';
-  var snapshotUrl = 'data:snappy';
   var mimeType = 'multipart/related';
+  var favUrl = 'http://foo.com/tinyIcon.png';
+  var title = 'The Day The Earth Stood Still';
+
+  var snapshotUrl = 'data:snappy';
+  var faviconDataUrl = 'data:fromIcon';
+
+  var tab = {
+    url: fullUrl,
+    favIconUrl: favUrl,
+    title: title
+  };
+
   var expected = {
     fullUrl: fullUrl,
     snapshot: snapshotUrl,
@@ -113,8 +132,10 @@ testWrapper('createMetadataForWrite correct if all resolve', function(t) {
   };
 
   datastore.getSnapshotDataUrl = sinon.stub().resolves(snapshotUrl);
+  datastore.getFaviconAsUrl = sinon.stub().withArgs(favUrl)
+    .resolves(faviconDataUrl);
 
-  datastore.createMetadataForWrite(fullUrl)
+  datastore.createMetadataForWrite(tab)
     .then(actual => {
       t.deepEqual(actual, expected);
       t.end();
