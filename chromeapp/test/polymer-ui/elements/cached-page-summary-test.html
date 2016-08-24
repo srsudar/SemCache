@@ -27,7 +27,8 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
         <cached-page-summary
           capture-url="{{captureUrl}}"
           capture-date="{{captureDate}}"
-          access-path="{{accessPath}}">
+          access-path="{{accessPath}}"
+          metadata="{{metadata}}">
           <h2>seed-element</h2>
         </cached-page-summary>
       </template>
@@ -37,25 +38,34 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
       suite('<cached-page-summary>', function() {
 
         var myEl;
+        var moment;
+
+        var isoDate = '2016-08-24T19:38:22.016Z';
+        var fullDate = 'Wed Aug 24 2016 12:38:22 GMT-0700 (PDT)';
 
         var boundData = {
           captureUrl: 'the capture url',
-          captureDate: 'the capture date',
-          accessPath: 'access me here'
+          captureDate: isoDate,
+          accessPath: 'access me here',
+          metadata: {
+            title: 'why hello, francis'
+          }
         };
 
         setup(function() {
           myEl = fixture('my-fixture', boundData);
+          moment = sinon.stub();
+          myEl.getMoment = sinon.stub().returns(moment);
         });
 
-        test('heading is captureUrl', function() {
+        test('heading is metadata.title', function() {
           var heading = myEl.$.title;
-          assert.equal(heading.innerText, boundData.captureUrl);
+          assert.equal(heading.innerText, boundData.metadata.title);
         });
 
-        test('date is captureDate', function() {
-          var dateDiv = myEl.$.date;
-          assert.equal(dateDiv.innerText, boundData.captureDate);
+        test('fulldate is formatted', function() {
+          var dateDiv = myEl.$.fulldate;
+          assert.equal(dateDiv.innerText, fullDate);
         });
 
         test('open button calls saveMhtmlAndOpen', function() {
