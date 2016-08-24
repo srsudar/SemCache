@@ -1,7 +1,9 @@
+/* globals Promise */
 'use strict';
 
 var tabs = require('../chrome-apis/tabs');
 var messaging = require('../app-bridge/messaging');
+var util = require('../util');
 
 /**
  * Handles persisting data for the extension. For the time being we are relying
@@ -30,6 +32,40 @@ exports.getBlobAsDataUrl = function(blob) {
       resolve(base64);
     };
     reader.readAsDataURL(blob);
+  });
+};
+
+/**
+ * Request the favicon url and return the resulting image as a data URL.
+ *
+ * @param {string} url the http URL of the favicon, as you would include in the
+ * meta tag in the head of an HTML document
+ *
+ * @return {Promise -> string} Promise that resolves with a data URL that is a
+ * string representation of the favicon. If fetch rejects it logs the error and
+ * rejects with an empty string.
+ */
+exports.getFaviconAsUrl = function(url) {
+  if (!url || url === '') {
+    // The chrome.tabs API doesn't guarantee the existence of the favicon URL
+    // property. Fail gracefully.
+    return Promise.resolve('');
+  }
+  return new Promise(function(resolve, reject) {
+    util.fetch(url)
+      .then(resp => {
+        return resp.blob();
+      })
+      .then(blob => {
+        return exports.getBlobAsDataUrl(blob);
+      })
+      .then(dataUrl => {
+        resolve(dataUrl);
+      })
+      .catch(err => {
+        console.log(err);
+        reject('');
+      });
   });
 };
 
@@ -81,28 +117,39 @@ exports.getDomain = function(fullUrl) {
 /**
  * Create the metadata object that will be associated with the saved file.
  *
- * @param {string} fullUrl
+ * @param {Tab} tab the Chrome Tab object to save
  *
  * @return {Promise -> object} Promise that resolves with the metadata object
  */
-exports.createMetadataForWrite = function(fullUrl) {
+exports.createMetadataForWrite = function(tab) {
   // We include the full URL, a snapshot of the image, and a mime type.
   // var expected = {
   //   fullUrl: fullUrl,
   //   snapshot: snapshotUrl,
-  //   mimeType: mimeType
+  //   mimeType: mimeType,
+  //   favicon: faviconUrl,
+  //   title: title
   // };
   return new Promise(function(resolve) {
+    var result = {
+      fullUrl: tab.url,
+      mimeType: exports.MIME_TYPE_MHTML,
+      title: tab.title
+    };
     exports.getSnapshotDataUrl()
       .then(snapshotUrl => {
-        var result = {
-          fullUrl: fullUrl,
-          mimeType: exports.MIME_TYPE_MHTML
-        };
         if (snapshotUrl && snapshotUrl !== '') {
           result.snapshot = snapshotUrl;
         }
-        resolve(result);    
+      })
+      .then(() => {
+        return exports.getFaviconAsUrl(tab.favIconUrl);
+      })
+      .then(faviconDataUrl => {
+        if (faviconDataUrl && faviconDataUrl !== '') {
+          result.favicon = faviconDataUrl;
+        }
+        resolve(result);
       });
   });
 };

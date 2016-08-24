@@ -1,4 +1,5 @@
 /*jshint esnext:true*/
+/* globals Promise */
 'use strict';
 var test = require('tape');
 var proxyquire = require('proxyquire');
@@ -26,6 +27,19 @@ function resetDatastore() {
     require.resolve('../../../app/scripts/persistence/datastore')
   ];
   datastore = require('../../../app/scripts/persistence/datastore');
+}
+
+/**
+ * @return {object} an object mimicking Chrome's Tab object
+ */
+function createTabObj(id, title, url, faviconUrl) {
+  var result = {
+    tabId: id,
+    url: url,
+    favIconUrl: faviconUrl,
+    title: title
+  };
+  return result;
 }
 
 /**
@@ -103,11 +117,90 @@ testWrapper('getSnapshotDataUrl resolves with correct result', function(t) {
 });
 
 testWrapper('getFaviconAsUrl resolves with data url', function(t) {
+  var url = 'http://g.co/favicon.png';
+  var raw = 'rawfavicon';
+  var expected = 'dataurl';
+  
+  var fetchResponse = {
+    blob: sinon.stub().resolves(raw)
+  };
+  var fetchSpy = sinon.stub().withArgs(url).resolves(fetchResponse);
+  var getBlobAsDataUrlSpy = sinon.stub().withArgs(raw).resolves(expected);
 
+  proxyquireDatastore({
+    '../util': {
+      fetch: fetchSpy
+    }
+  });
+  datastore.getBlobAsDataUrl = getBlobAsDataUrlSpy;
+
+  datastore.getFaviconAsUrl(url)
+    .then(actual => {
+      t.equal(actual, expected);
+      t.deepEqual(fetchSpy.args[0], [url]);
+      t.deepEqual(getBlobAsDataUrlSpy.args[0], [raw]);
+      t.end();
+    });
 });
 
 testWrapper('getFaviconAsUrl empty if rejects', function(t) {
+  var url = 'hello.png';
+  var expected = '';
 
+  var fetchSpy = sinon.stub().withArgs(url).rejects(expected);
+
+  proxyquireDatastore({
+    '../util': {
+      fetch: fetchSpy
+    }
+  });
+
+  datastore.getFaviconAsUrl(url)
+    .catch(actual => {
+      t.deepEqual(actual, expected);
+      t.end();
+    });
+});
+
+testWrapper('getFaviconAsUrl handles invalid url input', function(t) {
+  var invalid1 = datastore.getFaviconAsUrl(undefined);
+  var invalid2 = datastore.getFaviconAsUrl('');
+
+  Promise.all([invalid1, invalid2])
+    .then(results => {
+      t.deepEqual(results, ['', '']);
+      t.end();
+    });
+});
+
+testWrapper('createMetadataForWrite no favicon if empty', function(t) {
+  var fullUrl = 'https://www.foo.com#happyDays?happy=maybe';
+  var mimeType = 'multipart/related';
+  var favUrl = 'http://foo.com/tinyIcon.png';
+  var title = 'The Day The Earth Stood Still';
+  var tabId = 'the-tab-id';
+
+  var tab = createTabObj(tabId, title, fullUrl, favUrl);
+
+  var snapshotUrl = 'data:snappy';
+  var faviconDataUrl = '';
+
+  var expected = {
+    fullUrl: fullUrl,
+    snapshot: snapshotUrl,
+    mimeType: mimeType,
+    title: title,
+  };
+
+  datastore.getSnapshotDataUrl = sinon.stub().resolves(snapshotUrl);
+  datastore.getFaviconAsUrl = sinon.stub().withArgs(favUrl)
+    .resolves(faviconDataUrl);
+
+  datastore.createMetadataForWrite(tab)
+    .then(actual => {
+      t.deepEqual(actual, expected);
+      t.end();
+    });
 });
 
 testWrapper('createMetadataForWrite correct if all resolve', function(t) {
@@ -115,20 +208,19 @@ testWrapper('createMetadataForWrite correct if all resolve', function(t) {
   var mimeType = 'multipart/related';
   var favUrl = 'http://foo.com/tinyIcon.png';
   var title = 'The Day The Earth Stood Still';
+  var tabId = 'the-tab-id';
+
+  var tab = createTabObj(tabId, title, fullUrl, favUrl);
 
   var snapshotUrl = 'data:snappy';
   var faviconDataUrl = 'data:fromIcon';
 
-  var tab = {
-    url: fullUrl,
-    favIconUrl: favUrl,
-    title: title
-  };
-
   var expected = {
     fullUrl: fullUrl,
     snapshot: snapshotUrl,
-    mimeType: mimeType
+    mimeType: mimeType,
+    title: title,
+    favicon: faviconDataUrl
   };
 
   datastore.getSnapshotDataUrl = sinon.stub().resolves(snapshotUrl);
@@ -147,14 +239,24 @@ testWrapper('createMetadataForWrite correct if snapshot empty', function(t) {
   var fullUrl = 'https://www.foo.com#happyDays?happy=maybe';
   var snapshotUrl = '';
   var mimeType = 'multipart/related';
+  var faviconUrl = 'path/to/favicon';
+  var faviconAsData = 'faviconAsData';
+  var id = 12345;
+  var title = 'fancy msg';
   var expected = {
     fullUrl: fullUrl,
-    mimeType: mimeType
+    mimeType: mimeType,
+    favicon: faviconAsData,
+    title: title
   };
 
-  datastore.getSnapshotDataUrl = sinon.stub().resolves(snapshotUrl);
+  var tab = createTabObj(id, title, fullUrl, faviconUrl);
 
-  datastore.createMetadataForWrite(fullUrl)
+  datastore.getSnapshotDataUrl = sinon.stub().resolves(snapshotUrl);
+  datastore.getFaviconAsUrl = sinon.stub().withArgs(faviconUrl)
+    .resolves(faviconAsData);
+
+  datastore.createMetadataForWrite(tab)
     .then(actual => {
       t.deepEqual(actual, expected);
       t.end();
