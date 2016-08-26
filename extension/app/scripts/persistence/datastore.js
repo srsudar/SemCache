@@ -3,7 +3,7 @@
 
 var tabs = require('../chrome-apis/tabs');
 var messaging = require('../app-bridge/messaging');
-var util = require('../util');
+var util = require('../util/util');
 
 /**
  * Handles persisting data for the extension. For the time being we are relying

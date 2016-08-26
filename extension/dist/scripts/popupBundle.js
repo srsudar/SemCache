@@ -184,6 +184,15 @@ exports.addOnMessageExternalListener = function(fn) {
   chrome.runtime.onMessageExternal.addListener(fn);
 };
 
+/**
+ * Add a function as a listener on chrome.runtime.onMessage.
+ *
+ * @param {function} fn
+ */
+exports.addOnMessageListener = function(fn) {
+  chrome.runtime.onMessage.addListener(fn);
+};
+
 },{}],4:[function(require,module,exports){
 /* global chrome */
 'use strict';
@@ -238,53 +247,24 @@ exports.captureVisibleTab = function(windowId, options) {
   });
 };
 
-},{}],5:[function(require,module,exports){
-/* globals Promise */
-'use strict';
-
 /**
- * API to be used by the Extension
+ * Send a message to a particular tab.
+ *
+ * @param {integer} tabId
+ * @param {any} message must be JSON serializable
+ * @param {function} callback
  */
-
-var capture = require('./chrome-apis/page-capture');
-var tabs = require('./chrome-apis/tabs');
-var datastore = require('./persistence/datastore');
-
-exports.saveCurrentPage = function() {
-  // Get all tabs.
-  // Get the active tab.
-  // Ask the datastore to perform the write.
-  return new Promise(function(resolve, reject) {
-    var tab = null;
-    tabs.query({ currentWindow: true, active: true})
-      .then(tabs => {
-        tab = tabs[0];
-        return tab;
-      })
-      .then(activeTab => {
-        var tabId = activeTab.id;
-        return capture.saveAsMHTML({ tabId: tabId });
-      })
-      .then(mhtmlBlob => {
-        return datastore.savePage(tab, mhtmlBlob);
-      })
-      .then(() => {
-        // all done
-        resolve();
-      })
-      .catch(err => {
-        reject(err);
-      });
-  });
+exports.sendMessage = function(tabId, message, callback) {
+  chrome.tabs.sendMessage(tabId, message, callback);
 };
 
-},{"./chrome-apis/page-capture":2,"./chrome-apis/tabs":4,"./persistence/datastore":6}],6:[function(require,module,exports){
+},{}],5:[function(require,module,exports){
 /* globals Promise */
 'use strict';
 
 var tabs = require('../chrome-apis/tabs');
 var messaging = require('../app-bridge/messaging');
-var util = require('../util');
+var util = require('../util/util');
 
 /**
  * Handles persisting data for the extension. For the time being we are relying
@@ -482,64 +462,185 @@ exports.savePage = function(tab, mhtmlBlob) {
   });
 };
 
-},{"../app-bridge/messaging":1,"../chrome-apis/tabs":4,"../util":8}],7:[function(require,module,exports){
+},{"../app-bridge/messaging":1,"../chrome-apis/tabs":4,"../util/util":8}],6:[function(require,module,exports){
+/* globals Promise */
 'use strict';
 
-var api = require('./extension-api');
+/**
+ * API to be used by the Extension
+ */
+
+var capture = require('../chrome-apis/page-capture');
+var tabs = require('../chrome-apis/tabs');
+var datastore = require('../persistence/datastore');
+var util = require('../util/util');
+
+exports.saveCurrentPage = function() {
+  // Get all tabs.
+  // Get the active tab.
+  // Ask the datastore to perform the write.
+  return new Promise(function(resolve, reject) {
+    var tab = null;
+    tabs.query({ currentWindow: true, active: true})
+      .then(tabs => {
+        tab = tabs[0];
+        return tab;
+      })
+      .then(activeTab => {
+        var tabId = activeTab.id;
+        return capture.saveAsMHTML({ tabId: tabId });
+      })
+      .then(mhtmlBlob => {
+        return datastore.savePage(tab, mhtmlBlob);
+      })
+      .then(() => {
+        // all done
+        resolve();
+      })
+      .catch(err => {
+        reject(err);
+      });
+  });
+};
+
+/**
+ * Create a message that indicates a caller is interested in when
+ * document.readyState is complete.
+ *
+ * E.g. this is the messaged passed to the content script to indicate it should
+ * inform the caller via a callback that the load is complete with how long the
+ * load took.
+ */
+exports.createLoadMessage = function() {
+  return {
+    type: 'readystateComplete'
+  };
+};
+
+/**
+ * Wait until the current tab is finished loading. If the load is already
+ * complete, the Promise will resolve immediately. Resolves with the message
+ * returned from the content script running in the current page.
+ *
+ * @return {Promise -> object} Promise that resolves when document.readyState
+ * is 'complete' on the current tab. The resolved object is the message passed
+ * back by the tab.
+ */
+exports.waitForCurrentPageToLoad = function() {
+  console.log('in waitForCurrentPageToLoad');
+  return new Promise(function(resolve) {
+    util.getActiveTab()
+      .then(tab => {
+        console.log('active tab: ', tab);
+        var message = exports.createLoadMessage();
+        tabs.sendMessage(tab.id, message, function(resp) {
+          console.log('Got response from tab: ', resp);
+          resolve(resp);
+        });
+      });
+  });
+};
+
+},{"../chrome-apis/page-capture":2,"../chrome-apis/tabs":4,"../persistence/datastore":5,"../util/util":8}],7:[function(require,module,exports){
+'use strict';
+
+var api = require('./popup-api');
+var messaging = require('../app-bridge/messaging');
 
 var spinner = document.getElementById('spinner');
-var msgSuccess = document.getElementById('msg-success');
-var msgError = document.getElementById('msg-error');
-var timing = document.getElementById('timing');
+var message = document.getElementById('message');
+var timing1 = document.getElementById('timing1');
+var timing2 = document.getElementById('timing2');
+var divSaveTime = document.getElementById('save-time');
+var divLoadTime = document.getElementById('load-time');
 
 // Crazy value to make sure we notice if there are errors.
 var saveStart = -10000;
+var domCompleteTime = null;
+
+function round(num) {
+  // Round to two decimal places
+  var factor = 100;
+  var result = Math.round(num * factor) / factor;
+  return result;
+}
 
 function finishTiming() {
   var saveEnd = window.performance.now();
-  var total = saveEnd - saveStart;
-  console.log('un-rounded total: ', total);
+  var totalSaveTime = saveEnd - saveStart;
 
-  // Round to two decimal places
-  var factor = 100;
-  var rounded = Math.round(total * factor) / factor;
+  var totalLoadTime = domCompleteTime;
 
-  timing.classList.remove('hide');
+  console.log('un-rounded totalSaveTime: ', totalSaveTime);
+  console.log('un-rounded totalLoadTime: ', totalLoadTime);
 
-  timing.innerText = rounded + ' ms';
+  timing1.classList.remove('hide');
+  timing2.classList.remove('hide');
+
+  divSaveTime.innerText = round(totalSaveTime);
+  divLoadTime.innerText = round(totalLoadTime);
+
+}
+
+function hideSpinner() {
+  spinner.classList.add('hide');
 }
 
 function handleSuccess() {
-  msgSuccess.classList.remove('hide');
-
-  msgError.classList.add('hide');
-  spinner.classList.add('hide');
   finishTiming();
+  message.innerText = 'Page saved!';
+
+  hideSpinner();
 }
 
-function handleError() {
-  msgError.classList.remove('hide');
-
-  spinner.classList.add('hide');
-  msgSuccess.classList.add('hide');
+/**
+ * @param {boolean} timedOut if the error is because waiting for the app timed
+ * out
+ */
+function handleError(timedOut) {
   finishTiming();
+
+  if (timedOut) {
+    message.innerText = 'Timed out waiting for App';
+  } else {
+    message.innerText = 'Something went wrong...';
+  }
 }
 
-var saveStart = window.performance.now();
+function beforeLoadComplete() {
+  message.classList.remove('hide');
+  message.innerText = 'Page Loading';
+}
 
-api.saveCurrentPage()
 
-  .then(() => {
-    handleSuccess();
-  })
-  .catch(err => {
-    console.log(err);
-    handleError();
+function afterLoadComplete(msgFromTab) {
+  saveStart = window.performance.now();
+  domCompleteTime = msgFromTab.loadTime;
+  message.innerText = 'Saving';
+  api.saveCurrentPage()
+    .then(() => {
+      handleSuccess();
+    })
+    .catch(err => {
+      console.log(err);
+      var timedOut = err === messaging.MSG_TIMEOUT;
+      handleError(timedOut);
+    });
+}
+
+
+beforeLoadComplete();
+
+api.waitForCurrentPageToLoad()
+  .then(msgFromTab => {
+    afterLoadComplete(msgFromTab);
   });
 
-},{"./extension-api":5}],8:[function(require,module,exports){
+},{"../app-bridge/messaging":1,"./popup-api":6}],8:[function(require,module,exports){
 /* globals fetch */
 'use strict';
+
+var tabs = require('../chrome-apis/tabs');
 
 /**
  * Very thin wrapper around the global fetch API to enable mocks during test.
@@ -552,4 +653,51 @@ exports.fetch = function(url) {
   return fetch(url);
 };
 
-},{}]},{},[7]);
+/**
+ * @return {document} the global document object
+ */
+exports.getDocument = function() {
+  return document;
+};
+
+/**
+ * @return {window} the global window object
+ */
+exports.getWindow = function() {
+  return window;
+};
+
+/**
+ * @return {Promise} Promise that resolves when document.readyState is
+ * complete, indicating that all resources have been loaded (and thus the page
+ * is presumably safe to save
+ */
+exports.getOnCompletePromise = function() {
+  // Modeled on Jake Archibald's svgomg utils:
+  // https://github.com/jakearchibald/svgomg/blob/master/src/js/page/utils.js
+  var doc = exports.getDocument();
+  return new Promise(function(resolve) {
+    var checkState = function() {
+      if (doc.readyState === 'complete') {
+        resolve();
+      }
+    };
+    doc.addEventListener('readystatechange', checkState);
+    checkState();
+  });
+};
+
+/**
+ * @return {Promise -> Tab} Promise that resolves with the current active Tab
+ */
+exports.getActiveTab = function() {
+  return new Promise(function(resolve) {
+    tabs.query({ currentWindow: true, active: true})
+      .then(tabs => {
+        var tab = tabs[0];
+        resolve(tab);
+      });
+  });
+};
+
+},{"../chrome-apis/tabs":4}]},{},[7]);

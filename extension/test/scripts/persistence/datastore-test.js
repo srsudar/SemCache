@@ -128,7 +128,7 @@ testWrapper('getFaviconAsUrl resolves with data url', function(t) {
   var getBlobAsDataUrlSpy = sinon.stub().withArgs(raw).resolves(expected);
 
   proxyquireDatastore({
-    '../util': {
+    '../util/util': {
       fetch: fetchSpy
     }
   });
@@ -150,7 +150,7 @@ testWrapper('getFaviconAsUrl empty if rejects', function(t) {
   var fetchSpy = sinon.stub().withArgs(url).rejects(expected);
 
   proxyquireDatastore({
-    '../util': {
+    '../util/util': {
       fetch: fetchSpy
     }
   });

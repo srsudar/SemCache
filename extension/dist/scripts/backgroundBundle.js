@@ -178,6 +178,15 @@ exports.addOnMessageExternalListener = function(fn) {
   chrome.runtime.onMessageExternal.addListener(fn);
 };
 
+/**
+ * Add a function as a listener on chrome.runtime.onMessage.
+ *
+ * @param {function} fn
+ */
+exports.addOnMessageListener = function(fn) {
+  chrome.runtime.onMessage.addListener(fn);
+};
+
 },{}],4:[function(require,module,exports){
 /* global chrome */
 'use strict';
@@ -230,6 +239,17 @@ exports.captureVisibleTab = function(windowId, options) {
       resolve(dataUrl);
     });
   });
+};
+
+/**
+ * Send a message to a particular tab.
+ *
+ * @param {integer} tabId
+ * @param {any} message must be JSON serializable
+ * @param {function} callback
+ */
+exports.sendMessage = function(tabId, message, callback) {
+  chrome.tabs.sendMessage(tabId, message, callback);
 };
 
 },{}]},{},[2]);

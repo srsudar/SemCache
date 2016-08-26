@@ -34,13 +34,17 @@ module.exports = function (grunt) {
       },
       popup: {
         // A single entry point for the app.
-        src: '<%= config.app %>/scripts/popup.js',
+        src: '<%= config.app %>/scripts/popup/popup.js',
         dest: '<%= config.dist %>/scripts/popupBundle.js'
       },
       background: {
         src: '<%= config.app %>/scripts/background.js',
         dest: '<%= config.dist %>/scripts/backgroundBundle.js'
-      }
+      },
+      contentscript: {
+        src: '<%= config.app %>/scripts/content-script/contentscript.js',
+        dest: '<%= config.dist %>/scripts/contentscriptBundle.js'
+      },
     },
 
     tape: {

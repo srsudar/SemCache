@@ -5,14 +5,14 @@ var proxyquire = require('proxyquire');
 var sinon = require('sinon');
 require('sinon-as-promised');
 
-var api = require('../../app/scripts/extension-api');
+var api = require('../../../app/scripts/popup/popup-api');
 
 /**
  * Proxyquire the api object with proxies passed as the proxied modules.
  */
 function proxyquireApi(proxies) {
   api = proxyquire(
-    '../../app/scripts/extension-api',
+    '../../../app/scripts/popup/popup-api',
     proxies
   );
 }
@@ -24,9 +24,9 @@ function proxyquireApi(proxies) {
  */
 function resetApi() {
   delete require.cache[
-    require.resolve('../../../app/scripts/extension-api')
+    require.resolve('../../../app/scripts/popup/popup-api')
   ];
-  api = require('../../../app/scripts/extension-api');
+  api = require('../../../app/scripts/popup/popup-api');
 }
 
 /**
@@ -48,13 +48,13 @@ test('saveCurrentPage resolves if all resolve', function(t) {
   var savePageSpy = sinon.stub().withArgs(tab, blob).resolves();
   
   proxyquireApi({
-    './chrome-apis/tabs': {
+    '../chrome-apis/tabs': {
       query: querySpy
     },
-    './chrome-apis/page-capture': {
+    '../chrome-apis/page-capture': {
       saveAsMHTML: saveAsMhtmlSpy
     },
-    './persistence/datastore': {
+    '../persistence/datastore': {
       savePage: savePageSpy
     }
   });
@@ -85,13 +85,13 @@ test('saveCurrentPage rejects if savePage rejects', function(t) {
   var savePageSpy = sinon.stub().withArgs(fullUrl, blob).rejects(expected);
   
   proxyquireApi({
-    './chrome-apis/tabs': {
+    '../chrome-apis/tabs': {
       query: querySpy
     },
-    './chrome-apis/page-capture': {
+    '../chrome-apis/page-capture': {
       saveAsMHTML: saveAsMhtmlSpy
     },
-    './persistence/datastore': {
+    '../persistence/datastore': {
       savePage: savePageSpy
     }
   });
@@ -100,6 +100,42 @@ test('saveCurrentPage rejects if savePage rejects', function(t) {
     .catch(actual => {
       // We don't expect a resolve object.
       t.equal(actual, expected);
+      t.end();
+      resetApi();
+    });
+});
+
+test('waitForCurrentPageToLoad calls sendMessage and resolves', function(t) {
+  var activeTab = { id: 156 };
+  var getActiveTabSpy = sinon.stub().resolves(activeTab);
+  var messageForContentScript = { hello: 'how long did it take you to load?' };
+  var expected = { msg: 'I come from the content script' };
+
+  var sendArgs = [];
+  var sendMessageSpy = function(tabId, message, callback) {
+    sendArgs.push(tabId);
+    sendArgs.push(message);
+    sendArgs.push(callback);
+    callback(expected);
+  };
+
+  proxyquireApi({
+    '../chrome-apis/tabs': {
+      sendMessage: sendMessageSpy
+    },
+    '../util/util': {
+      getActiveTab: getActiveTabSpy
+    }
+  });
+  api.createLoadMessage = sinon.stub().returns(messageForContentScript);
+
+
+  api.waitForCurrentPageToLoad()
+    .then(actual => {
+      t.deepEqual(actual, expected);
+      t.deepEqual(sendArgs[0], activeTab.id);
+      t.deepEqual(sendArgs[1], messageForContentScript);
+      t.deepEqual(actual, expected);
       t.end();
       resetApi();
     });

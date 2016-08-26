@@ -50,3 +50,14 @@ exports.captureVisibleTab = function(windowId, options) {
     });
   });
 };
+
+/**
+ * Send a message to a particular tab.
+ *
+ * @param {integer} tabId
+ * @param {any} message must be JSON serializable
+ * @param {function} callback
+ */
+exports.sendMessage = function(tabId, message, callback) {
+  chrome.tabs.sendMessage(tabId, message, callback);
+};

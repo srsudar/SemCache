@@ -24,3 +24,12 @@ exports.sendMessage = function(appId, message, responseCallback) {
 exports.addOnMessageExternalListener = function(fn) {
   chrome.runtime.onMessageExternal.addListener(fn);
 };
+
+/**
+ * Add a function as a listener on chrome.runtime.onMessage.
+ *
+ * @param {function} fn
+ */
+exports.addOnMessageListener = function(fn) {
+  chrome.runtime.onMessage.addListener(fn);
+};

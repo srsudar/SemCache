@@ -11,11 +11,15 @@
     <!-- endbuild -->
   </head>
   <body>
-    <h1 id="msg-success" class="hide">Page saved!</h1>
+    <h1 id="message" class="hide"></h1>
 
-    <h1 id="msg-error" class="hide">Something went wrong...</h1>
+    <div id="timing1" class="hide footer">
+      Load: <span id="load-time"></span> ms
+    </div>
 
-    <div id="timing" class="hide footer"></div>
+    <div id="timing2" class="hide footer">
+      Save: <span id="save-time"></span> ms
+    </div>
 
     <!-- This materialized spinner is based on:
       https://codepen.io/mrrocks/pen/EiplA -->
