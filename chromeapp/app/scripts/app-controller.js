@@ -279,6 +279,7 @@ exports.getAbsPathToBaseDir = function() {
  * @return {Promise} a Promise that resolves after open has been called.
  */
 exports.saveMhtmlAndOpen = function(captureUrl, captureDate, mhtmlUrl) {
+  // TODO: save the metadata object with the file!
   return new Promise(function(resolve) {
     exports.fetch(mhtmlUrl)
       .then(response => {
