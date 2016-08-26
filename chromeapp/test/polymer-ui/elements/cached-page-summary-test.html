@@ -70,7 +70,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 
         test('open button calls saveMhtmlAndOpen', function() {
           var appControllerSpy = {
-            saveMhtmlAndOpen: sinon.spy()
+            saveMhtmlAndOpen: sinon.stub().returns(Promise.resolve())
           };
           myEl.getAppController = sinon.stub().returns(appControllerSpy);
           myEl.$.open.click();

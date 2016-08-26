@@ -10,6 +10,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 
 <link rel="import" href="../../../bower_components/polymer/polymer.html">
 <link rel="import" href="../../../bower_components/paper-button/paper-button.html">
+<link rel="import" href="../../../bower_components/paper-toast/paper-toast.html">
 
 <!--
 An element providing a solution to no problem in particular.
@@ -89,8 +90,16 @@ Example:
       <h3 id="full-url">{{metadata.fullUrl}}</h1>
       <div id="date" class="card-content">{{friendlyDate}}</div>
       <div id="fulldate" class="card-content">{{fullDate}}</div>
-      <div class="card-actions">
+      <div id="actioncontainer" class="card-actions">
         <paper-button id="open" on-tap="openUrl">Open</paper-button>
+
+        <paper-toast
+          id="toastopening"
+          duration="0"
+          class="fit-bottom"
+          text="Opening">
+        </paper-toast>
+
       </div>
     </div>
   </template>
@@ -179,11 +188,17 @@ Example:
 
       openUrl: function(url) {
         var appController = this.getAppController();
+        var toast = this.$.toastopening;
+        toast.fitInto = this.$.actioncontainer;
+        toast.open();
         appController.saveMhtmlAndOpen(
             this.captureUrl,
             this.captureDate,
             this.accessPath
-        );
+        )
+        .then(() => {
+          this.$.toastopening.toggle();
+        });
       },
 
 
