@@ -87,9 +87,14 @@ test('saveMhtmlAndOpen persists and opens', function(t) {
   var captureUrl = 'the capture url';
   var captureDate = 'the date it was captured';
   var accessPath = 'the url to download the mhtml';
-  appc.saveMhtmlAndOpen(captureUrl, captureDate, accessPath)
+  var mdata = { muchMeta: 'so data' };
+  appc.saveMhtmlAndOpen(captureUrl, captureDate, accessPath, mdata)
     .then(() => {
       t.equal(sendMessageToOpenSpy.args[0][0], fileUrl);
+      t.deepEqual(
+        addPageStub.args[0],
+        [captureUrl, captureDate, blob, mdata]
+      );
       t.end();
       resetAppController();
     });

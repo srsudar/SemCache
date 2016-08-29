@@ -275,18 +275,28 @@ exports.getAbsPathToBaseDir = function() {
  * @param {captureUrl} captureUrl
  * @param {captureDate} captureDate
  * @param {string} mhtmlUrl the url of the mhtml file to save and open
+ * @param {object} metadata the metadata that is stored along with the file
  *
  * @return {Promise} a Promise that resolves after open has been called.
  */
-exports.saveMhtmlAndOpen = function(captureUrl, captureDate, mhtmlUrl) {
-  // TODO: save the metadata object with the file!
+exports.saveMhtmlAndOpen = function(
+  captureUrl,
+  captureDate,
+  mhtmlUrl,
+  metadata
+) {
   return new Promise(function(resolve) {
     exports.fetch(mhtmlUrl)
       .then(response => {
         return response.blob();
       })
       .then(mhtmlBlob => {
-        return datastore.addPageToCache(captureUrl, captureDate, mhtmlBlob);
+        return datastore.addPageToCache(
+          captureUrl,
+          captureDate,
+          mhtmlBlob,
+          metadata
+        );
       })
       .then((entry) => {
         var fileUrl = fileSystem.constructFileSchemeUrl(
