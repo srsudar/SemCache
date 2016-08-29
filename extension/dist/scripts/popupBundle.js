@@ -278,7 +278,7 @@ exports.MIME_TYPE_MHTML = 'multipart/related';
  * The default quality score to pass to chrome.tabs.captureVisibleTab. Docs are
  * sparse, but this assumes lower is worse.
  */
-exports.DEFAULT_SNAPSHOT_QUALITY = 5;
+exports.DEFAULT_SNAPSHOT_QUALITY = 50;
 
 /**
  * @param {Blob} blob
