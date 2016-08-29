@@ -17529,615 +17529,85 @@ Polymer({
         return (icon.length > 0) || (src.length > 0);
       }
     });
-Polymer({
-      is: 'iron-image',
+/** @polymerBehavior */
+  Polymer.PaperSpinnerBehavior = {
 
-      properties: {
-        /**
-         * The URL of an image.
-         */
-        src: {
-          observer: '_srcChanged',
-          type: String,
-          value: ''
-        },
-
-        /**
-         * A short text alternative for the image.
-         */
-        alt: {
-          type: String,
-          value: null
-        },
-
-        /**
-         * When true, the image is prevented from loading and any placeholder is
-         * shown.  This may be useful when a binding to the src property is known to
-         * be invalid, to prevent 404 requests.
-         */
-        preventLoad: {
-          type: Boolean,
-          value: false,
-          observer: '_preventLoadChanged'
-        },
-
-        /**
-         * Sets a sizing option for the image.  Valid values are `contain` (full
-         * aspect ratio of the image is contained within the element and
-         * letterboxed) or `cover` (image is cropped in order to fully cover the
-         * bounds of the element), or `null` (default: image takes natural size).
-         */
-        sizing: {
-          type: String,
-          value: null,
-          reflectToAttribute: true
-        },
-
-        /**
-         * When a sizing option is used (`cover` or `contain`), this determines
-         * how the image is aligned within the element bounds.
-         */
-        position: {
-          type: String,
-          value: 'center'
-        },
-
-        /**
-         * When `true`, any change to the `src` property will cause the `placeholder`
-         * image to be shown until the new image has loaded.
-         */
-        preload: {
-          type: Boolean,
-          value: false
-        },
-
-        /**
-         * This image will be used as a background/placeholder until the src image has
-         * loaded.  Use of a data-URI for placeholder is encouraged for instant rendering.
-         */
-        placeholder: {
-          type: String,
-          value: null,
-          observer: '_placeholderChanged'
-        },
-
-        /**
-         * When `preload` is true, setting `fade` to true will cause the image to
-         * fade into place.
-         */
-        fade: {
-          type: Boolean,
-          value: false
-        },
-
-        /**
-         * Read-only value that is true when the image is loaded.
-         */
-        loaded: {
-          notify: true,
-          readOnly: true,
-          type: Boolean,
-          value: false
-        },
-
-        /**
-         * Read-only value that tracks the loading state of the image when the `preload`
-         * option is used.
-         */
-        loading: {
-          notify: true,
-          readOnly: true,
-          type: Boolean,
-          value: false
-        },
-
-        /**
-         * Read-only value that indicates that the last set `src` failed to load.
-         */
-        error: {
-          notify: true,
-          readOnly: true,
-          type: Boolean,
-          value: false
-        },
-
-        /**
-         * Can be used to set the width of image (e.g. via binding); size may also be
-         * set via CSS.
-         */
-        width: {
-          observer: '_widthChanged',
-          type: Number,
-          value: null
-        },
-
-        /**
-         * Can be used to set the height of image (e.g. via binding); size may also be
-         * set via CSS.
-         *
-         * @attribute height
-         * @type number
-         * @default null
-         */
-        height: {
-          observer: '_heightChanged',
-          type: Number,
-          value: null
-        },
-      },
-
-      observers: [
-        '_transformChanged(sizing, position)'
-      ],
-
-      ready: function() {
-        var img = this.$.img;
-
-        img.onload = function() {
-          if (this.$.img.src !== this._resolveSrc(this.src)) return;
-
-          this._setLoading(false);
-          this._setLoaded(true);
-          this._setError(false);
-        }.bind(this);
-
-        img.onerror = function() {
-          if (this.$.img.src !== this._resolveSrc(this.src)) return;
-
-          this._reset();
-
-          this._setLoading(false);
-          this._setLoaded(false);
-          this._setError(true);
-        }.bind(this);
-
-        this._resolvedSrc = '';
-      },
-
-      _load: function(src) {
-        if (src) {
-          this.$.img.src = src;
-        } else {
-          this.$.img.removeAttribute('src');
-        }
-        this.$.sizedImgDiv.style.backgroundImage = src ? 'url("' + src + '")' : '';
-
-        this._setLoading(!!src);
-        this._setLoaded(false);
-        this._setError(false);
-      },
-
-      _reset: function() {
-        this.$.img.removeAttribute('src');
-        this.$.sizedImgDiv.style.backgroundImage = '';
-
-        this._setLoading(false);
-        this._setLoaded(false);
-        this._setError(false);
-      },
-
-      _computePlaceholderHidden: function() {
-        return !this.preload || (!this.fade && !this.loading && this.loaded);
-      },
-
-      _computePlaceholderClassName: function() {
-        return (this.preload && this.fade && !this.loading && this.loaded) ? 'faded-out' : '';
-      },
-
-      _computeImgDivHidden: function() {
-        return !this.sizing;
-      },
-
-      _computeImgDivARIAHidden: function() {
-        return this.alt === '' ? 'true' : undefined;
-      },
-
-      _computeImgDivARIALabel: function() {
-        if (this.alt !== null) {
-          return this.alt;
-        }
-
-        // Polymer.ResolveUrl.resolveUrl will resolve '' relative to a URL x to
-        // that URL x, but '' is the default for src.
-        if (this.src === '') {
-          return '';
-        }
-
-        var pathComponents = (new URL(this._resolveSrc(this.src))).pathname.split("/");
-        return pathComponents[pathComponents.length - 1];
-      },
-
-      _computeImgHidden: function() {
-        return !!this.sizing;
-      },
-
-      _widthChanged: function() {
-        this.style.width = isNaN(this.width) ? this.width : this.width + 'px';
-      },
-
-      _heightChanged: function() {
-        this.style.height = isNaN(this.height) ? this.height : this.height + 'px';
-      },
-
-      _preventLoadChanged: function() {
-        if (this.preventLoad || this.loaded) return;
-
-        this._reset();
-        this._load(this.src);
-      },
-
-      _srcChanged: function(newSrc, oldSrc) {
-        var newResolvedSrc = this._resolveSrc(newSrc);
-        if (newResolvedSrc === this._resolvedSrc) return;
-        this._resolvedSrc = newResolvedSrc;
-
-        this._reset();
-        if (!this.preventLoad) {
-          this._load(newSrc);
-        }
-      },
-
-      _placeholderChanged: function() {
-        this.$.placeholder.style.backgroundImage =
-          this.placeholder ? 'url("' + this.placeholder + '")' : '';
-      },
-
-      _transformChanged: function() {
-        var sizedImgDivStyle = this.$.sizedImgDiv.style;
-        var placeholderStyle = this.$.placeholder.style;
-
-        sizedImgDivStyle.backgroundSize =
-        placeholderStyle.backgroundSize =
-          this.sizing;
-
-        sizedImgDivStyle.backgroundPosition =
-        placeholderStyle.backgroundPosition =
-          this.sizing ? this.position : '';
-
-        sizedImgDivStyle.backgroundRepeat =
-        placeholderStyle.backgroundRepeat =
-          this.sizing ? 'no-repeat' : '';
-      },
-
-      _resolveSrc: function(testSrc) {
-        return Polymer.ResolveUrl.resolveUrl(testSrc, this.ownerDocument.baseURI);
-      }
-    });
-Polymer({
-    is: 'paper-material',
+    listeners: {
+      'animationend': '__reset',
+      'webkitAnimationEnd': '__reset'
+    },
 
     properties: {
       /**
-       * The z-depth of this element, from 0-5. Setting to 0 will remove the
-       * shadow, and each increasing number greater than 0 will be "deeper"
-       * than the last.
-       *
-       * @attribute elevation
-       * @type number
-       * @default 1
+       * Displays the spinner.
        */
-      elevation: {
-        type: Number,
+      active: {
+        type: Boolean,
+        value: false,
         reflectToAttribute: true,
-        value: 1
+        observer: '__activeChanged'
       },
 
       /**
-       * Set this to true to animate the shadow when setting a new
-       * `elevation` value.
-       *
-       * @attribute animated
-       * @type boolean
-       * @default false
+       * Alternative text content for accessibility support.
+       * If alt is present, it will add an aria-label whose content matches alt when active.
+       * If alt is not present, it will default to 'loading' as the alt value.
        */
-      animated: {
+      alt: {
+        type: String,
+        value: 'loading',
+        observer: '__altChanged'
+      },
+
+      __coolingDown: {
         type: Boolean,
-        reflectToAttribute: true,
         value: false
       }
-    }
-  });
-Polymer({
-      is: 'paper-card',
+    },
 
-      properties: {
-        /**
-         * The title of the card.
-         */
-        heading: {
-          type: String,
-          value: '',
-          observer: '_headingChanged'
-        },
+    __computeContainerClasses: function(active, coolingDown) {
+      return [
+        active || coolingDown ? 'active' : '',
+        coolingDown ? 'cooldown' : ''
+      ].join(' ');
+    },
 
-        /**
-         * The url of the title image of the card.
-         */
-        image: {
-          type: String,
-          value: ''
-        },
+    __activeChanged: function(active, old) {
+      this.__setAriaHidden(!active);
+      this.__coolingDown = !active && old;
+    },
 
-        /**
-         * The text alternative of the card's title image.
-         */
-        alt: {
-          type: String
-        },
-
-        /**
-         * When `true`, any change to the image url property will cause the
-         * `placeholder` image to be shown until the image is fully rendered.
-         */
-        preloadImage: {
-          type: Boolean,
-          value: false
-        },
-
-        /**
-         * When `preloadImage` is true, setting `fadeImage` to true will cause the
-         * image to fade into place.
-         */
-        fadeImage: {
-          type: Boolean,
-          value: false
-        },
-
-        /**
-         * This image will be used as a background/placeholder until the src image has
-         * loaded. Use of a data-URI for placeholder is encouraged for instant rendering.
-         */
-        placeholderImage: {
-          type: String,
-          value: null
-        },
-
-        /**
-         * The z-depth of the card, from 0-5.
-         */
-        elevation: {
-          type: Number,
-          value: 1,
-          reflectToAttribute: true
-        },
-
-        /**
-         * Set this to true to animate the card shadow when setting a new
-         * `z` value.
-         */
-        animatedShadow: {
-          type: Boolean,
-          value: false
-        },
-
-        /**
-         * Read-only property used to pass down the `animatedShadow` value to
-         * the underlying paper-material style (since they have different names).
-         */
-        animated: {
-          type: Boolean,
-          reflectToAttribute: true,
-          readOnly: true,
-          computed: '_computeAnimated(animatedShadow)'
-        }
-      },
-
-      _headingChanged: function(heading) {
-        var label = this.getAttribute('aria-label');
-        this.setAttribute('aria-label', heading);
-      },
-
-      _computeHeadingClass: function(image) {
-        var cls = 'title-text';
-        if (image)
-          cls += ' over-image';
-        return cls;
-      },
-
-      _computeAnimated: function(animatedShadow) {
-        return animatedShadow;
+    __altChanged: function(alt) {
+      // user-provided `aria-label` takes precedence over prototype default
+      if (alt === this.getPropertyInfo('alt').value) {
+        this.alt = this.getAttribute('aria-label') || alt;
+      } else {
+        this.__setAriaHidden(alt==='');
+        this.setAttribute('aria-label', alt);
       }
+    },
+
+    __setAriaHidden: function(hidden) {
+      var attr = 'aria-hidden';
+      if (hidden) {
+        this.setAttribute(attr, 'true');
+      } else {
+        this.removeAttribute(attr);
+      }
+    },
+
+    __reset: function() {
+      this.active = false;
+      this.__coolingDown = false;
+    }
+  };
+Polymer({
+      is: 'paper-spinner',
+
+      behaviors: [
+        Polymer.PaperSpinnerBehavior
+      ]
     });
-/**
- * `iron-range-behavior` provides the behavior for something with a minimum to maximum range.
- *
- * @demo demo/index.html
- * @polymerBehavior
- */
- Polymer.IronRangeBehavior = {
-
-  properties: {
-
-    /**
-     * The number that represents the current value.
-     */
-    value: {
-      type: Number,
-      value: 0,
-      notify: true,
-      reflectToAttribute: true
-    },
-
-    /**
-     * The number that indicates the minimum value of the range.
-     */
-    min: {
-      type: Number,
-      value: 0,
-      notify: true
-    },
-
-    /**
-     * The number that indicates the maximum value of the range.
-     */
-    max: {
-      type: Number,
-      value: 100,
-      notify: true
-    },
-
-    /**
-     * Specifies the value granularity of the range's value.
-     */
-    step: {
-      type: Number,
-      value: 1,
-      notify: true
-    },
-
-    /**
-     * Returns the ratio of the value.
-     */
-    ratio: {
-      type: Number,
-      value: 0,
-      readOnly: true,
-      notify: true
-    },
-  },
-
-  observers: [
-    '_update(value, min, max, step)'
-  ],
-
-  _calcRatio: function(value) {
-    return (this._clampValue(value) - this.min) / (this.max - this.min);
-  },
-
-  _clampValue: function(value) {
-    return Math.min(this.max, Math.max(this.min, this._calcStep(value)));
-  },
-
-  _calcStep: function(value) {
-    // polymer/issues/2493
-    value = parseFloat(value);
-
-    if (!this.step) {
-      return value;
-    }
-
-    var numSteps = Math.round((value - this.min) / this.step);
-    if (this.step < 1) {
-     /**
-      * For small values of this.step, if we calculate the step using
-      * `Math.round(value / step) * step` we may hit a precision point issue
-      * eg. 0.1 * 0.2 =  0.020000000000000004
-      * http://docs.oracle.com/cd/E19957-01/806-3568/ncg_goldberg.html
-      *
-      * as a work around we can divide by the reciprocal of `step`
-      */
-      return numSteps / (1 / this.step) + this.min;
-    } else {
-      return numSteps * this.step + this.min;
-    }
-  },
-
-  _validateValue: function() {
-    var v = this._clampValue(this.value);
-    this.value = this.oldValue = isNaN(v) ? this.oldValue : v;
-    return this.value !== v;
-  },
-
-  _update: function() {
-    this._validateValue();
-    this._setRatio(this._calcRatio(this.value) * 100);
-  }
-
-};
-Polymer({
-    is: 'paper-progress',
-
-    behaviors: [
-      Polymer.IronRangeBehavior
-    ],
-
-    properties: {
-      /**
-       * The number that represents the current secondary progress.
-       */
-      secondaryProgress: {
-        type: Number,
-        value: 0
-      },
-
-      /**
-       * The secondary ratio
-       */
-      secondaryRatio: {
-        type: Number,
-        value: 0,
-        readOnly: true
-      },
-
-      /**
-       * Use an indeterminate progress indicator.
-       */
-      indeterminate: {
-        type: Boolean,
-        value: false,
-        observer: '_toggleIndeterminate'
-      },
-
-      /**
-       * True if the progress is disabled.
-       */
-      disabled: {
-        type: Boolean,
-        value: false,
-        reflectToAttribute: true,
-        observer: '_disabledChanged'
-      }
-    },
-
-    observers: [
-      '_progressChanged(secondaryProgress, value, min, max)'
-    ],
-
-    hostAttributes: {
-      role: 'progressbar'
-    },
-
-    _toggleIndeterminate: function(indeterminate) {
-      // If we use attribute/class binding, the animation sometimes doesn't translate properly
-      // on Safari 7.1. So instead, we toggle the class here in the update method.
-      this.toggleClass('indeterminate', indeterminate, this.$.primaryProgress);
-    },
-
-    _transformProgress: function(progress, ratio) {
-      var transform = 'scaleX(' + (ratio / 100) + ')';
-      progress.style.transform = progress.style.webkitTransform = transform;
-    },
-
-    _mainRatioChanged: function(ratio) {
-      this._transformProgress(this.$.primaryProgress, ratio);
-    },
-
-    _progressChanged: function(secondaryProgress, value, min, max) {
-      secondaryProgress = this._clampValue(secondaryProgress);
-      value = this._clampValue(value);
-
-      var secondaryRatio = this._calcRatio(secondaryProgress) * 100;
-      var mainRatio = this._calcRatio(value) * 100;
-
-      this._setSecondaryRatio(secondaryRatio);
-      this._transformProgress(this.$.secondaryProgress, secondaryRatio);
-      this._transformProgress(this.$.primaryProgress, mainRatio);
-
-      this.secondaryProgress = secondaryProgress;
-
-      this.setAttribute('aria-valuenow', value);
-      this.setAttribute('aria-valuemin', min);
-      this.setAttribute('aria-valuemax', max);
-    },
-
-    _disabledChanged: function(disabled) {
-      this.setAttribute('aria-disabled', disabled ? 'true' : 'false');
-    },
-
-    _hideSecondaryProgress: function(secondaryRatio) {
-      return secondaryRatio === 0;
-    }
-  });
 Polymer({
     is: 'cache-page-list',
 
@@ -18146,11 +17616,11 @@ Polymer({
     },
     refresh: function() {
       this.$.ajax.generateRequest();
-      this.$.pagesLoading.classList.remove('hide');
+      this.$.loading.classList.remove('hide');
       console.log('CLICKED FAB');
     },
     hideLoading: function() {
-      this.$.pagesLoading.classList.add('hide');
+      this.$.loading.classList.add('hide');
     }
   });
 Polymer({
@@ -19790,6 +19260,415 @@ var cachedPages = [];
       }
     }
   });
+Polymer({
+      is: 'iron-image',
+
+      properties: {
+        /**
+         * The URL of an image.
+         */
+        src: {
+          observer: '_srcChanged',
+          type: String,
+          value: ''
+        },
+
+        /**
+         * A short text alternative for the image.
+         */
+        alt: {
+          type: String,
+          value: null
+        },
+
+        /**
+         * When true, the image is prevented from loading and any placeholder is
+         * shown.  This may be useful when a binding to the src property is known to
+         * be invalid, to prevent 404 requests.
+         */
+        preventLoad: {
+          type: Boolean,
+          value: false,
+          observer: '_preventLoadChanged'
+        },
+
+        /**
+         * Sets a sizing option for the image.  Valid values are `contain` (full
+         * aspect ratio of the image is contained within the element and
+         * letterboxed) or `cover` (image is cropped in order to fully cover the
+         * bounds of the element), or `null` (default: image takes natural size).
+         */
+        sizing: {
+          type: String,
+          value: null,
+          reflectToAttribute: true
+        },
+
+        /**
+         * When a sizing option is used (`cover` or `contain`), this determines
+         * how the image is aligned within the element bounds.
+         */
+        position: {
+          type: String,
+          value: 'center'
+        },
+
+        /**
+         * When `true`, any change to the `src` property will cause the `placeholder`
+         * image to be shown until the new image has loaded.
+         */
+        preload: {
+          type: Boolean,
+          value: false
+        },
+
+        /**
+         * This image will be used as a background/placeholder until the src image has
+         * loaded.  Use of a data-URI for placeholder is encouraged for instant rendering.
+         */
+        placeholder: {
+          type: String,
+          value: null,
+          observer: '_placeholderChanged'
+        },
+
+        /**
+         * When `preload` is true, setting `fade` to true will cause the image to
+         * fade into place.
+         */
+        fade: {
+          type: Boolean,
+          value: false
+        },
+
+        /**
+         * Read-only value that is true when the image is loaded.
+         */
+        loaded: {
+          notify: true,
+          readOnly: true,
+          type: Boolean,
+          value: false
+        },
+
+        /**
+         * Read-only value that tracks the loading state of the image when the `preload`
+         * option is used.
+         */
+        loading: {
+          notify: true,
+          readOnly: true,
+          type: Boolean,
+          value: false
+        },
+
+        /**
+         * Read-only value that indicates that the last set `src` failed to load.
+         */
+        error: {
+          notify: true,
+          readOnly: true,
+          type: Boolean,
+          value: false
+        },
+
+        /**
+         * Can be used to set the width of image (e.g. via binding); size may also be
+         * set via CSS.
+         */
+        width: {
+          observer: '_widthChanged',
+          type: Number,
+          value: null
+        },
+
+        /**
+         * Can be used to set the height of image (e.g. via binding); size may also be
+         * set via CSS.
+         *
+         * @attribute height
+         * @type number
+         * @default null
+         */
+        height: {
+          observer: '_heightChanged',
+          type: Number,
+          value: null
+        },
+      },
+
+      observers: [
+        '_transformChanged(sizing, position)'
+      ],
+
+      ready: function() {
+        var img = this.$.img;
+
+        img.onload = function() {
+          if (this.$.img.src !== this._resolveSrc(this.src)) return;
+
+          this._setLoading(false);
+          this._setLoaded(true);
+          this._setError(false);
+        }.bind(this);
+
+        img.onerror = function() {
+          if (this.$.img.src !== this._resolveSrc(this.src)) return;
+
+          this._reset();
+
+          this._setLoading(false);
+          this._setLoaded(false);
+          this._setError(true);
+        }.bind(this);
+
+        this._resolvedSrc = '';
+      },
+
+      _load: function(src) {
+        if (src) {
+          this.$.img.src = src;
+        } else {
+          this.$.img.removeAttribute('src');
+        }
+        this.$.sizedImgDiv.style.backgroundImage = src ? 'url("' + src + '")' : '';
+
+        this._setLoading(!!src);
+        this._setLoaded(false);
+        this._setError(false);
+      },
+
+      _reset: function() {
+        this.$.img.removeAttribute('src');
+        this.$.sizedImgDiv.style.backgroundImage = '';
+
+        this._setLoading(false);
+        this._setLoaded(false);
+        this._setError(false);
+      },
+
+      _computePlaceholderHidden: function() {
+        return !this.preload || (!this.fade && !this.loading && this.loaded);
+      },
+
+      _computePlaceholderClassName: function() {
+        return (this.preload && this.fade && !this.loading && this.loaded) ? 'faded-out' : '';
+      },
+
+      _computeImgDivHidden: function() {
+        return !this.sizing;
+      },
+
+      _computeImgDivARIAHidden: function() {
+        return this.alt === '' ? 'true' : undefined;
+      },
+
+      _computeImgDivARIALabel: function() {
+        if (this.alt !== null) {
+          return this.alt;
+        }
+
+        // Polymer.ResolveUrl.resolveUrl will resolve '' relative to a URL x to
+        // that URL x, but '' is the default for src.
+        if (this.src === '') {
+          return '';
+        }
+
+        var pathComponents = (new URL(this._resolveSrc(this.src))).pathname.split("/");
+        return pathComponents[pathComponents.length - 1];
+      },
+
+      _computeImgHidden: function() {
+        return !!this.sizing;
+      },
+
+      _widthChanged: function() {
+        this.style.width = isNaN(this.width) ? this.width : this.width + 'px';
+      },
+
+      _heightChanged: function() {
+        this.style.height = isNaN(this.height) ? this.height : this.height + 'px';
+      },
+
+      _preventLoadChanged: function() {
+        if (this.preventLoad || this.loaded) return;
+
+        this._reset();
+        this._load(this.src);
+      },
+
+      _srcChanged: function(newSrc, oldSrc) {
+        var newResolvedSrc = this._resolveSrc(newSrc);
+        if (newResolvedSrc === this._resolvedSrc) return;
+        this._resolvedSrc = newResolvedSrc;
+
+        this._reset();
+        if (!this.preventLoad) {
+          this._load(newSrc);
+        }
+      },
+
+      _placeholderChanged: function() {
+        this.$.placeholder.style.backgroundImage =
+          this.placeholder ? 'url("' + this.placeholder + '")' : '';
+      },
+
+      _transformChanged: function() {
+        var sizedImgDivStyle = this.$.sizedImgDiv.style;
+        var placeholderStyle = this.$.placeholder.style;
+
+        sizedImgDivStyle.backgroundSize =
+        placeholderStyle.backgroundSize =
+          this.sizing;
+
+        sizedImgDivStyle.backgroundPosition =
+        placeholderStyle.backgroundPosition =
+          this.sizing ? this.position : '';
+
+        sizedImgDivStyle.backgroundRepeat =
+        placeholderStyle.backgroundRepeat =
+          this.sizing ? 'no-repeat' : '';
+      },
+
+      _resolveSrc: function(testSrc) {
+        return Polymer.ResolveUrl.resolveUrl(testSrc, this.ownerDocument.baseURI);
+      }
+    });
+Polymer({
+    is: 'paper-material',
+
+    properties: {
+      /**
+       * The z-depth of this element, from 0-5. Setting to 0 will remove the
+       * shadow, and each increasing number greater than 0 will be "deeper"
+       * than the last.
+       *
+       * @attribute elevation
+       * @type number
+       * @default 1
+       */
+      elevation: {
+        type: Number,
+        reflectToAttribute: true,
+        value: 1
+      },
+
+      /**
+       * Set this to true to animate the shadow when setting a new
+       * `elevation` value.
+       *
+       * @attribute animated
+       * @type boolean
+       * @default false
+       */
+      animated: {
+        type: Boolean,
+        reflectToAttribute: true,
+        value: false
+      }
+    }
+  });
+Polymer({
+      is: 'paper-card',
+
+      properties: {
+        /**
+         * The title of the card.
+         */
+        heading: {
+          type: String,
+          value: '',
+          observer: '_headingChanged'
+        },
+
+        /**
+         * The url of the title image of the card.
+         */
+        image: {
+          type: String,
+          value: ''
+        },
+
+        /**
+         * The text alternative of the card's title image.
+         */
+        alt: {
+          type: String
+        },
+
+        /**
+         * When `true`, any change to the image url property will cause the
+         * `placeholder` image to be shown until the image is fully rendered.
+         */
+        preloadImage: {
+          type: Boolean,
+          value: false
+        },
+
+        /**
+         * When `preloadImage` is true, setting `fadeImage` to true will cause the
+         * image to fade into place.
+         */
+        fadeImage: {
+          type: Boolean,
+          value: false
+        },
+
+        /**
+         * This image will be used as a background/placeholder until the src image has
+         * loaded. Use of a data-URI for placeholder is encouraged for instant rendering.
+         */
+        placeholderImage: {
+          type: String,
+          value: null
+        },
+
+        /**
+         * The z-depth of the card, from 0-5.
+         */
+        elevation: {
+          type: Number,
+          value: 1,
+          reflectToAttribute: true
+        },
+
+        /**
+         * Set this to true to animate the card shadow when setting a new
+         * `z` value.
+         */
+        animatedShadow: {
+          type: Boolean,
+          value: false
+        },
+
+        /**
+         * Read-only property used to pass down the `animatedShadow` value to
+         * the underlying paper-material style (since they have different names).
+         */
+        animated: {
+          type: Boolean,
+          reflectToAttribute: true,
+          readOnly: true,
+          computed: '_computeAnimated(animatedShadow)'
+        }
+      },
+
+      _headingChanged: function(heading) {
+        var label = this.getAttribute('aria-label');
+        this.setAttribute('aria-label', heading);
+      },
+
+      _computeHeadingClass: function(image) {
+        var cls = 'title-text';
+        if (image)
+          cls += ' over-image';
+        return cls;
+      },
+
+      _computeAnimated: function(animatedShadow) {
+        return animatedShadow;
+      }
+    });
 /**
   Polymer.IronFormElementBehavior enables a custom element to be included
   in an `iron-form`.
@@ -22252,9 +22131,11 @@ Polymer({
       refreshCaches: function() {
         var appc = this.getAppControllerModule();
         var _this = this;
+        this.$.loading.classList.remove('hide');
         appc.getBrowseableCaches()
           .then(browsedCaches => {
             _this.caches = browsedCaches;
+            _this.$.loading.classList.add('hide');
           });
       },
 
@@ -22408,6 +22289,206 @@ Polymer({
       }
 
     });
+/**
+ * `iron-range-behavior` provides the behavior for something with a minimum to maximum range.
+ *
+ * @demo demo/index.html
+ * @polymerBehavior
+ */
+ Polymer.IronRangeBehavior = {
+
+  properties: {
+
+    /**
+     * The number that represents the current value.
+     */
+    value: {
+      type: Number,
+      value: 0,
+      notify: true,
+      reflectToAttribute: true
+    },
+
+    /**
+     * The number that indicates the minimum value of the range.
+     */
+    min: {
+      type: Number,
+      value: 0,
+      notify: true
+    },
+
+    /**
+     * The number that indicates the maximum value of the range.
+     */
+    max: {
+      type: Number,
+      value: 100,
+      notify: true
+    },
+
+    /**
+     * Specifies the value granularity of the range's value.
+     */
+    step: {
+      type: Number,
+      value: 1,
+      notify: true
+    },
+
+    /**
+     * Returns the ratio of the value.
+     */
+    ratio: {
+      type: Number,
+      value: 0,
+      readOnly: true,
+      notify: true
+    },
+  },
+
+  observers: [
+    '_update(value, min, max, step)'
+  ],
+
+  _calcRatio: function(value) {
+    return (this._clampValue(value) - this.min) / (this.max - this.min);
+  },
+
+  _clampValue: function(value) {
+    return Math.min(this.max, Math.max(this.min, this._calcStep(value)));
+  },
+
+  _calcStep: function(value) {
+    // polymer/issues/2493
+    value = parseFloat(value);
+
+    if (!this.step) {
+      return value;
+    }
+
+    var numSteps = Math.round((value - this.min) / this.step);
+    if (this.step < 1) {
+     /**
+      * For small values of this.step, if we calculate the step using
+      * `Math.round(value / step) * step` we may hit a precision point issue
+      * eg. 0.1 * 0.2 =  0.020000000000000004
+      * http://docs.oracle.com/cd/E19957-01/806-3568/ncg_goldberg.html
+      *
+      * as a work around we can divide by the reciprocal of `step`
+      */
+      return numSteps / (1 / this.step) + this.min;
+    } else {
+      return numSteps * this.step + this.min;
+    }
+  },
+
+  _validateValue: function() {
+    var v = this._clampValue(this.value);
+    this.value = this.oldValue = isNaN(v) ? this.oldValue : v;
+    return this.value !== v;
+  },
+
+  _update: function() {
+    this._validateValue();
+    this._setRatio(this._calcRatio(this.value) * 100);
+  }
+
+};
+Polymer({
+    is: 'paper-progress',
+
+    behaviors: [
+      Polymer.IronRangeBehavior
+    ],
+
+    properties: {
+      /**
+       * The number that represents the current secondary progress.
+       */
+      secondaryProgress: {
+        type: Number,
+        value: 0
+      },
+
+      /**
+       * The secondary ratio
+       */
+      secondaryRatio: {
+        type: Number,
+        value: 0,
+        readOnly: true
+      },
+
+      /**
+       * Use an indeterminate progress indicator.
+       */
+      indeterminate: {
+        type: Boolean,
+        value: false,
+        observer: '_toggleIndeterminate'
+      },
+
+      /**
+       * True if the progress is disabled.
+       */
+      disabled: {
+        type: Boolean,
+        value: false,
+        reflectToAttribute: true,
+        observer: '_disabledChanged'
+      }
+    },
+
+    observers: [
+      '_progressChanged(secondaryProgress, value, min, max)'
+    ],
+
+    hostAttributes: {
+      role: 'progressbar'
+    },
+
+    _toggleIndeterminate: function(indeterminate) {
+      // If we use attribute/class binding, the animation sometimes doesn't translate properly
+      // on Safari 7.1. So instead, we toggle the class here in the update method.
+      this.toggleClass('indeterminate', indeterminate, this.$.primaryProgress);
+    },
+
+    _transformProgress: function(progress, ratio) {
+      var transform = 'scaleX(' + (ratio / 100) + ')';
+      progress.style.transform = progress.style.webkitTransform = transform;
+    },
+
+    _mainRatioChanged: function(ratio) {
+      this._transformProgress(this.$.primaryProgress, ratio);
+    },
+
+    _progressChanged: function(secondaryProgress, value, min, max) {
+      secondaryProgress = this._clampValue(secondaryProgress);
+      value = this._clampValue(value);
+
+      var secondaryRatio = this._calcRatio(secondaryProgress) * 100;
+      var mainRatio = this._calcRatio(value) * 100;
+
+      this._setSecondaryRatio(secondaryRatio);
+      this._transformProgress(this.$.secondaryProgress, secondaryRatio);
+      this._transformProgress(this.$.primaryProgress, mainRatio);
+
+      this.secondaryProgress = secondaryProgress;
+
+      this.setAttribute('aria-valuenow', value);
+      this.setAttribute('aria-valuemin', min);
+      this.setAttribute('aria-valuemax', max);
+    },
+
+    _disabledChanged: function(disabled) {
+      this.setAttribute('aria-disabled', disabled ? 'true' : 'false');
+    },
+
+    _hideSecondaryProgress: function(secondaryRatio) {
+      return secondaryRatio === 0;
+    }
+  });
 Polymer({
       is: 'app-loading',
     });

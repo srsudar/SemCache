@@ -10,6 +10,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 
 <link rel="import" href="../../../bower_components/polymer/polymer.html">
 <link rel="import" href="../../../bower_components/paper-fab/paper-fab.html">
+<link rel="import" href="../../../bower_components/paper-spinner/paper-spinner.html">
 <link rel="import" href="../../../bower_components/iron-icons/iron-icons.html">
 
 <!--
@@ -24,11 +25,34 @@ Provide the list of caches for other elements to consume.
         box-sizing: border-box;
       }
 
-      paper-fab {
+      .cache-controls {
+        display: flex;
+        position: relative;
+        height: 80px;
+      }
+
+      .hide {
+        display: none;
+      }
+
+      .ringer {
+        width: 64px;
+        height: 64px;
+        margin: 12px;
+        --paper-spinner-stroke-width: 6px;
+      }
+
+      .fab {
+        position: absolute;
         margin: 16px;
       }
+
     </style>
-    <paper-fab icon="refresh" on-tap="refresh"></paper-fab>
+
+    <div class="cache-controls">
+      <paper-spinner id="loading" class="ringer hide" active></paper-spinner>
+      <paper-fab icon="refresh" class="fab" on-tap="refresh"></paper-fab>
+    </div>
 
   </template>
 
@@ -61,9 +85,11 @@ Provide the list of caches for other elements to consume.
       refreshCaches: function() {
         var appc = this.getAppControllerModule();
         var _this = this;
+        this.$.loading.classList.remove('hide');
         appc.getBrowseableCaches()
           .then(browsedCaches => {
             _this.caches = browsedCaches;
+            _this.$.loading.classList.add('hide');
           });
       },
 

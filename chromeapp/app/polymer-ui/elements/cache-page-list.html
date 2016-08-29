@@ -12,8 +12,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 <link rel="import" href="../../../bower_components/iron-ajax/iron-ajax.html">
 <link rel="import" href="../../../bower_components/iron-icons/iron-icons.html">
 <link rel="import" href="../../../bower_components/paper-fab/paper-fab.html">
-<link rel="import" href="../../../bower_components/paper-card/paper-card.html">
-<link rel="import" href="../../../bower_components/paper-progress/paper-progress.html">
+<link rel="import" href="../../../bower_components/paper-spinner/paper-spinner.html">
 <link rel="import" href="cached-page-summary.html">
 
 <dom-module id="cache-page-list">
@@ -23,10 +22,6 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
         display: block;
       }
 
-      paper-fab {
-        margin: 16px;
-      }
-
       .loading-container {
         margin-left: auto;
         margin-right: auto;
@@ -34,25 +29,31 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 
       .cache-controls {
         display: flex;
+        position: relative;
+        height: 80px;
       }
 
       .hide {
         display: none;
       }
 
+      .ringer {
+        width: 64px;
+        height: 64px;
+        margin: 12px;
+        --paper-spinner-stroke-width: 6px;
+      }
+
+      .fab {
+        position: absolute;
+        margin: 16px;
+      }
+
     </style>
 
     <div class="cache-controls">
-      <paper-fab icon="refresh" on-tap="refresh"></paper-fab>
-
-        <paper-card id="pagesLoading" class="loading-container hide" heading="Loading...">
-          <div class="card-content">
-            <paper-progress
-              indeterminate value="800" min="100" max="1000">
-            </paper-progress>
-          </div>
-        </paper-card>
-
+      <paper-spinner id="loading" class="ringer hide" active></paper-spinner>
+      <paper-fab icon="refresh" class="fab" on-tap="refresh"></paper-fab>
     </div>
 
     <iron-ajax
@@ -83,11 +84,11 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
     },
     refresh: function() {
       this.$.ajax.generateRequest();
-      this.$.pagesLoading.classList.remove('hide');
+      this.$.loading.classList.remove('hide');
       console.log('CLICKED FAB');
     },
     hideLoading: function() {
-      this.$.pagesLoading.classList.add('hide');
+      this.$.loading.classList.add('hide');
     }
   });
   </script>
