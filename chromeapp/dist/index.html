@@ -3728,6 +3728,548 @@ The complete set of authors may be found at http://polymer.github.io/AUTHORS.txt
 The complete set of contributors may be found at http://polymer.github.io/CONTRIBUTORS.txt
 Code distributed by Google as part of the polymer project is also
 subject to an additional IP rights grant found at http://polymer.github.io/PATENTS.txt
+--><!--
+`iron-image` is an element for displaying an image that provides useful sizing and
+preloading options not found on the standard `<img>` tag.
+
+The `sizing` option allows the image to be either cropped (`cover`) or
+letterboxed (`contain`) to fill a fixed user-size placed on the element.
+
+The `preload` option prevents the browser from rendering the image until the
+image is fully loaded.  In the interim, either the element's CSS `background-color`
+can be be used as the placeholder, or the `placeholder` property can be
+set to a URL (preferably a data-URI, for instant rendering) for an
+placeholder image.
+
+The `fade` option (only valid when `preload` is set) will cause the placeholder
+image/color to be faded out once the image is rendered.
+
+Examples:
+
+  Basically identical to `<img src="...">` tag:
+
+    <iron-image src="http://lorempixel.com/400/400"></iron-image>
+
+  Will letterbox the image to fit:
+
+    <iron-image style="width:400px; height:400px;" sizing="contain"
+      src="http://lorempixel.com/600/400"></iron-image>
+
+  Will crop the image to fit:
+
+    <iron-image style="width:400px; height:400px;" sizing="cover"
+      src="http://lorempixel.com/600/400"></iron-image>
+
+  Will show light-gray background until the image loads:
+
+    <iron-image style="width:400px; height:400px; background-color: lightgray;"
+      sizing="cover" preload src="http://lorempixel.com/600/400"></iron-image>
+
+  Will show a base-64 encoded placeholder image until the image loads:
+
+    <iron-image style="width:400px; height:400px;" placeholder="data:image/gif;base64,..."
+      sizing="cover" preload src="http://lorempixel.com/600/400"></iron-image>
+
+  Will fade the light-gray background out once the image is loaded:
+
+    <iron-image style="width:400px; height:400px; background-color: lightgray;"
+      sizing="cover" preload fade src="http://lorempixel.com/600/400"></iron-image>
+
+Custom property | Description | Default
+----------------|-------------|----------
+`--iron-image-placeholder` | Mixin applied to #placeholder | `{}`
+`--iron-image-width` | Sets the width of the wrapped image | `auto`
+`--iron-image-height` | Sets the height of the wrapped image | `auto`
+
+@group Iron Elements
+@element iron-image
+@demo demo/index.html
+-->
+
+<dom-module id="iron-image" assetpath="../../bower_components/iron-image/">
+  <template>
+    <style>
+      :host {
+        display: inline-block;
+        overflow: hidden;
+        position: relative;
+      }
+
+      #sizedImgDiv {
+        @apply(--layout-fit);
+
+        display: none;
+      }
+
+      #img {
+        display: block;
+        width: var(--iron-image-width, auto);
+        height: var(--iron-image-height, auto);
+      }
+
+      :host([sizing]) #sizedImgDiv {
+        display: block;
+      }
+
+      :host([sizing]) #img {
+        display: none;
+      }
+
+      #placeholder {
+        @apply(--layout-fit);
+
+        background-color: inherit;
+        opacity: 1;
+
+        @apply(--iron-image-placeholder);
+      }
+
+      #placeholder.faded-out {
+        transition: opacity 0.5s linear;
+        opacity: 0;
+      }
+    </style>
+
+    <div id="sizedImgDiv" role="img" hidden$="[[_computeImgDivHidden(sizing)]]" aria-hidden$="[[_computeImgDivARIAHidden(alt)]]" aria-label$="[[_computeImgDivARIALabel(alt, src)]]"></div>
+    <img id="img" alt$="[[alt]]" hidden$="[[_computeImgHidden(sizing)]]">
+    <div id="placeholder" hidden$="[[_computePlaceholderHidden(preload, fade, loading, loaded)]]" class$="[[_computePlaceholderClassName(preload, fade, loading, loaded)]]"></div>
+  </template>
+
+  </dom-module>
+<!--
+@license
+Copyright (c) 2015 The Polymer Project Authors. All rights reserved.
+This code may only be used under the BSD style license found at http://polymer.github.io/LICENSE.txt
+The complete set of authors may be found at http://polymer.github.io/AUTHORS.txt
+The complete set of contributors may be found at http://polymer.github.io/CONTRIBUTORS.txt
+Code distributed by Google as part of the polymer project is also
+subject to an additional IP rights grant found at http://polymer.github.io/PATENTS.txt
+--><!--
+Material design: [Cards](https://www.google.com/design/spec/components/cards.html)
+
+`paper-material` is a container that renders two shadows on top of each other to
+create the effect of a lifted piece of paper.
+
+Example:
+
+    <paper-material elevation="1">
+      ... content ...
+    </paper-material>
+
+@group Paper Elements
+@demo demo/index.html
+-->
+
+<dom-module id="paper-material" assetpath="../../bower_components/paper-material/">
+  <template>
+    <style include="paper-material-shared-styles"></style>
+    <style>
+      :host([animated]) {
+        @apply(--shadow-transition);
+      }
+    </style>
+
+    <content></content>
+  </template>
+</dom-module>
+<!--
+@license
+Copyright (c) 2015 The Polymer Project Authors. All rights reserved.
+This code may only be used under the BSD style license found at http://polymer.github.io/LICENSE.txt
+The complete set of authors may be found at http://polymer.github.io/AUTHORS.txt
+The complete set of contributors may be found at http://polymer.github.io/CONTRIBUTORS.txt
+Code distributed by Google as part of the polymer project is also
+subject to an additional IP rights grant found at http://polymer.github.io/PATENTS.txt
+--><!--
+Material design: [Cards](https://www.google.com/design/spec/components/cards.html)
+
+`paper-card` is a container with a drop shadow.
+
+Example:
+
+    <paper-card heading="Card Title">
+      <div class="card-content">Some content</div>
+      <div class="card-actions">
+        <paper-button>Some action</paper-button>
+      </div>
+    </paper-card>
+
+Example - top card image:
+
+    <paper-card heading="Card Title" image="/path/to/image.png" alt="image">
+      ...
+    </paper-card>
+
+### Accessibility
+
+By default, the `aria-label` will be set to the value of the `heading` attribute.
+
+### Styling
+
+The following custom properties and mixins are available for styling:
+
+Custom property | Description | Default
+----------------|-------------|----------
+`--paper-card-background-color` | The background color of the card | `--primary-background-color`
+`--paper-card-header-color` | The color of the header text | `#000`
+`--paper-card-header` | Mixin applied to the card header section | `{}`
+`--paper-card-header-text` | Mixin applied to the title in the card header section | `{}`
+`--paper-card-header-image` | Mixin applied to the image in the card header section | `{}`
+`--paper-card-header-image-text` | Mixin applied to the text overlapping the image in the card header section | `{}`
+`--paper-card-content` | Mixin applied to the card content section| `{}`
+`--paper-card-actions` | Mixin applied to the card action section | `{}`
+`--paper-card` | Mixin applied to the card | `{}`
+
+@group Paper Elements
+@element paper-card
+@demo demo/index.html
+-->
+
+<dom-module id="paper-card" assetpath="../../bower_components/paper-card/">
+  <template>
+    <style include="paper-material">
+      :host {
+        display: inline-block;
+        position: relative;
+        box-sizing: border-box;
+        background-color: var(--paper-card-background-color, --primary-background-color);
+        border-radius: 2px;
+
+        @apply(--paper-font-common-base);
+        @apply(--paper-card);
+      }
+
+      /* IE 10 support for HTML5 hidden attr */
+      [hidden] {
+        display: none !important;
+      }
+
+      .header {
+        position: relative;
+        border-top-left-radius: inherit;
+        border-top-right-radius: inherit;
+        overflow: hidden;
+
+        @apply(--paper-card-header);
+      }
+
+      .header iron-image {
+        display: block;
+        width: 100%;
+        --iron-image-width: 100%;
+        pointer-events: none;
+
+        @apply(--paper-card-header-image);
+      }
+
+      .header .title-text {
+        padding: 16px;
+        font-size: 24px;
+        font-weight: 400;
+        color: var(--paper-card-header-color, #000);
+
+        @apply(--paper-card-header-text);
+      }
+
+      .header .title-text.over-image {
+        position: absolute;
+        bottom: 0px;
+
+        @apply(--paper-card-header-image-text);
+      }
+
+      :host ::content .card-content {
+        padding: 16px;
+        position:relative;
+
+        @apply(--paper-card-content);
+      }
+
+      :host ::content .card-actions {
+        border-top: 1px solid #e8e8e8;
+        padding: 5px 16px;
+        position:relative;
+
+        @apply(--paper-card-actions);
+      }
+    </style>
+
+    <div class="header">
+      <iron-image hidden$="[[!image]]" src="[[image]]" alt="[[alt]]" placeholder="[[placeholderImage]]" preload="[[preloadImage]]" fade="[[fadeImage]]"></iron-image>
+      <div hidden$="[[!heading]]" class$="[[_computeHeadingClass(image)]]">[[heading]]</div>
+    </div>
+
+    <content></content>
+  </template>
+
+  </dom-module>
+<!--
+@license
+Copyright (c) 2015 The Polymer Project Authors. All rights reserved.
+This code may only be used under the BSD style license found at http://polymer.github.io/LICENSE.txt
+The complete set of authors may be found at http://polymer.github.io/AUTHORS.txt
+The complete set of contributors may be found at http://polymer.github.io/CONTRIBUTORS.txt
+Code distributed by Google as part of the polymer project is also
+subject to an additional IP rights grant found at http://polymer.github.io/PATENTS.txt
+--><!--
+@license
+Copyright (c) 2015 The Polymer Project Authors. All rights reserved.
+This code may only be used under the BSD style license found at http://polymer.github.io/LICENSE.txt
+The complete set of authors may be found at http://polymer.github.io/AUTHORS.txt
+The complete set of contributors may be found at http://polymer.github.io/CONTRIBUTORS.txt
+Code distributed by Google as part of the polymer project is also
+subject to an additional IP rights grant found at http://polymer.github.io/PATENTS.txt
+--><!--
+Material design: [Progress & activity](https://www.google.com/design/spec/components/progress-activity.html)
+
+The progress bars are for situations where the percentage completed can be
+determined. They give users a quick sense of how much longer an operation
+will take.
+
+Example:
+
+    <paper-progress value="10"></paper-progress>
+
+There is also a secondary progress which is useful for displaying intermediate
+progress, such as the buffer level during a streaming playback progress bar.
+
+Example:
+
+    <paper-progress value="10" secondary-progress="30"></paper-progress>
+
+### Styling progress bar:
+
+To change the active progress bar color:
+
+    paper-progress {
+       --paper-progress-active-color: #e91e63;
+    }
+
+To change the secondary progress bar color:
+
+    paper-progress {
+      --paper-progress-secondary-color: #f8bbd0;
+    }
+
+To change the progress bar background color:
+
+    paper-progress {
+      --paper-progress-container-color: #64ffda;
+    }
+
+Add the class `transiting` to a paper-progress to animate the progress bar when
+the value changed. You can also customize the transition:
+
+    paper-progress {
+      --paper-progress-transition-duration: 0.08s;
+      --paper-progress-transition-timing-function: ease;
+      --paper-progress-transition-transition-delay: 0s;
+    }
+
+To change the duration of the indeterminate cycle:
+
+    paper-progress {
+      --paper-progress-indeterminate-cycle-duration: 2s;
+    }
+
+The following mixins are available for styling:
+
+Custom property                                  | Description                                 | Default
+-------------------------------------------------|---------------------------------------------|--------------
+`--paper-progress-container`                     | Mixin applied to container                  | `{}`
+`--paper-progress-transition-duration`           | Duration of the transition                  | `0.008s`
+`--paper-progress-transition-timing-function`    | The timing function for the transition      | `ease`
+`--paper-progress-transition-delay`              | delay for the transition                    | `0s`
+`--paper-progress-container-color`               | Color of the container                      | `--google-grey-300`
+`--paper-progress-active-color`                  | The color of the active bar                 | `--google-green-500`
+`--paper-progress-secondary-color`               | The color of the secondary bar              | `--google-green-100`
+`--paper-progress-disabled-active-color`         | The color of the active bar if disabled     | `--google-grey-500`
+`--paper-progress-disabled-secondary-color`      | The color of the secondary bar if disabled  | `--google-grey-300`
+`--paper-progress-height`                        | The height of the progress bar              | `4px`
+`--paper-progress-indeterminate-cycle-duration`  | Duration of an indeterminate cycle          | `2s`
+
+@group Paper Elements
+@element paper-progress
+@hero hero.svg
+@demo demo/index.html
+-->
+
+<dom-module id="paper-progress" assetpath="../../bower_components/paper-progress/">
+  <template>
+    <style>
+      :host {
+        display: block;
+        width: 200px;
+        position: relative;
+        overflow: hidden;
+      }
+
+      :host([hidden]) {
+        display: none !important;
+      }
+
+      #progressContainer {
+        @apply(--paper-progress-container);
+        position: relative;
+      }
+
+      #progressContainer,
+      /* the stripe for the indeterminate animation*/
+      .indeterminate::after {
+        height: var(--paper-progress-height, 4px);
+      }
+
+      #primaryProgress,
+      #secondaryProgress,
+      .indeterminate::after {
+        @apply(--layout-fit);
+      }
+
+      #progressContainer,
+      .indeterminate::after {
+        background: var(--paper-progress-container-color, --google-grey-300);
+      }
+
+      :host(.transiting) #primaryProgress,
+      :host(.transiting) #secondaryProgress {
+        -webkit-transition-property: -webkit-transform;
+        transition-property: transform;
+
+        /* Duration */
+        -webkit-transition-duration: var(--paper-progress-transition-duration, 0.08s);
+        transition-duration: var(--paper-progress-transition-duration, 0.08s);
+
+        /* Timing function */
+        -webkit-transition-timing-function: var(--paper-progress-transition-timing-function, ease);
+        transition-timing-function: var(--paper-progress-transition-timing-function, ease);
+
+        /* Delay */
+        -webkit-transition-delay: var(--paper-progress-transition-delay, 0s);
+        transition-delay: var(--paper-progress-transition-delay, 0s);
+      }
+
+      #primaryProgress,
+      #secondaryProgress {
+        @apply(--layout-fit);
+        -webkit-transform-origin: left center;
+        transform-origin: left center;
+        -webkit-transform: scaleX(0);
+        transform: scaleX(0);
+        will-change: transform;
+      }
+
+      #primaryProgress {
+        background: var(--paper-progress-active-color, --google-green-500);
+      }
+
+      #secondaryProgress {
+        background: var(--paper-progress-secondary-color, --google-green-100);
+      }
+
+      :host([disabled]) #primaryProgress {
+        background: var(--paper-progress-disabled-active-color, --google-grey-500);
+      }
+
+      :host([disabled]) #secondaryProgress {
+        background: var(--paper-progress-disabled-secondary-color, --google-grey-300);
+      }
+
+      :host(:not([disabled])) #primaryProgress.indeterminate {
+        -webkit-transform-origin: right center;
+        transform-origin: right center;
+        -webkit-animation: indeterminate-bar var(--paper-progress-indeterminate-cycle-duration, 2s) linear infinite;
+        animation: indeterminate-bar var(--paper-progress-indeterminate-cycle-duration, 2s) linear infinite;
+      }
+
+      :host(:not([disabled])) #primaryProgress.indeterminate::after {
+        content: "";
+        -webkit-transform-origin: center center;
+        transform-origin: center center;
+
+        -webkit-animation: indeterminate-splitter var(--paper-progress-indeterminate-cycle-duration, 2s) linear infinite;
+        animation: indeterminate-splitter var(--paper-progress-indeterminate-cycle-duration, 2s) linear infinite;
+      }
+
+      @-webkit-keyframes indeterminate-bar {
+        0% {
+          -webkit-transform: scaleX(1) translateX(-100%);
+        }
+        50% {
+          -webkit-transform: scaleX(1) translateX(0%);
+        }
+        75% {
+          -webkit-transform: scaleX(1) translateX(0%);
+          -webkit-animation-timing-function: cubic-bezier(.28,.62,.37,.91);
+        }
+        100% {
+          -webkit-transform: scaleX(0) translateX(0%);
+        }
+      }
+
+      @-webkit-keyframes indeterminate-splitter {
+        0% {
+          -webkit-transform: scaleX(.75) translateX(-125%);
+        }
+        30% {
+          -webkit-transform: scaleX(.75) translateX(-125%);
+          -webkit-animation-timing-function: cubic-bezier(.42,0,.6,.8);
+        }
+        90% {
+          -webkit-transform: scaleX(.75) translateX(125%);
+        }
+        100% {
+          -webkit-transform: scaleX(.75) translateX(125%);
+        }
+      }
+
+      @keyframes indeterminate-bar {
+        0% {
+          transform: scaleX(1) translateX(-100%);
+        }
+        50% {
+          transform: scaleX(1) translateX(0%);
+        }
+        75% {
+          transform: scaleX(1) translateX(0%);
+          animation-timing-function: cubic-bezier(.28,.62,.37,.91);
+        }
+        100% {
+          transform: scaleX(0) translateX(0%);
+        }
+      }
+
+      @keyframes indeterminate-splitter {
+        0% {
+          transform: scaleX(.75) translateX(-125%);
+        }
+        30% {
+          transform: scaleX(.75) translateX(-125%);
+          animation-timing-function: cubic-bezier(.42,0,.6,.8);
+        }
+        90% {
+          transform: scaleX(.75) translateX(125%);
+        }
+        100% {
+          transform: scaleX(.75) translateX(125%);
+        }
+      }
+    </style>
+
+    <div id="progressContainer">
+      <div id="secondaryProgress" hidden$="[[_hideSecondaryProgress(secondaryRatio)]]"></div>
+      <div id="primaryProgress"></div>
+    </div>
+  </template>
+</dom-module>
+
+<!--
+@license
+Copyright (c) 2015 The Polymer Project Authors. All rights reserved.
+This code may only be used under the BSD style license found at http://polymer.github.io/LICENSE.txt
+The complete set of authors may be found at http://polymer.github.io/AUTHORS.txt
+The complete set of contributors may be found at http://polymer.github.io/CONTRIBUTORS.txt
+Code distributed by Google as part of the polymer project is also
+subject to an additional IP rights grant found at http://polymer.github.io/PATENTS.txt
 --><dom-module id="cache-page-list" assetpath="elements/">
   <template>
     <style>
@@ -3739,10 +4281,34 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
         margin: 16px;
       }
 
-    </style>
-    <paper-fab icon="refresh" on-tap="refresh"></paper-fab>
+      .loading-container {
+        margin-left: auto;
+        margin-right: auto;
+      }
 
-    <iron-ajax id="ajax" auto="" url="{{url}}" handle-as="json" last-response="{{response}}"></iron-ajax>
+      .cache-controls {
+        display: flex;
+      }
+
+      .hide {
+        display: none;
+      }
+
+    </style>
+
+    <div class="cache-controls">
+      <paper-fab icon="refresh" on-tap="refresh"></paper-fab>
+
+        <paper-card id="pagesLoading" class="loading-container hide" heading="Loading...">
+          <div class="card-content">
+            <paper-progress indeterminate="" value="800" min="100" max="1000">
+            </paper-progress>
+          </div>
+        </paper-card>
+
+    </div>
+
+    <iron-ajax id="ajax" auto="" url="{{url}}" handle-as="json" on-response="hideLoading" on-error="hideLoading" last-response="{{response}}"></iron-ajax>
 
       <template is="dom-repeat" items="{{response.cachedPages}}">
         <cached-page-summary capture-url="{{item.captureUrl}}" capture-date="{{item.captureDate}}" access-path="{{item.accessPath}}" metadata="{{item.metadata}}">
@@ -4113,289 +4679,6 @@ will only render 20.
 </template>
 
 </dom-module>
-<!--
-@license
-Copyright (c) 2015 The Polymer Project Authors. All rights reserved.
-This code may only be used under the BSD style license found at http://polymer.github.io/LICENSE.txt
-The complete set of authors may be found at http://polymer.github.io/AUTHORS.txt
-The complete set of contributors may be found at http://polymer.github.io/CONTRIBUTORS.txt
-Code distributed by Google as part of the polymer project is also
-subject to an additional IP rights grant found at http://polymer.github.io/PATENTS.txt
---><!--
-`iron-image` is an element for displaying an image that provides useful sizing and
-preloading options not found on the standard `<img>` tag.
-
-The `sizing` option allows the image to be either cropped (`cover`) or
-letterboxed (`contain`) to fill a fixed user-size placed on the element.
-
-The `preload` option prevents the browser from rendering the image until the
-image is fully loaded.  In the interim, either the element's CSS `background-color`
-can be be used as the placeholder, or the `placeholder` property can be
-set to a URL (preferably a data-URI, for instant rendering) for an
-placeholder image.
-
-The `fade` option (only valid when `preload` is set) will cause the placeholder
-image/color to be faded out once the image is rendered.
-
-Examples:
-
-  Basically identical to `<img src="...">` tag:
-
-    <iron-image src="http://lorempixel.com/400/400"></iron-image>
-
-  Will letterbox the image to fit:
-
-    <iron-image style="width:400px; height:400px;" sizing="contain"
-      src="http://lorempixel.com/600/400"></iron-image>
-
-  Will crop the image to fit:
-
-    <iron-image style="width:400px; height:400px;" sizing="cover"
-      src="http://lorempixel.com/600/400"></iron-image>
-
-  Will show light-gray background until the image loads:
-
-    <iron-image style="width:400px; height:400px; background-color: lightgray;"
-      sizing="cover" preload src="http://lorempixel.com/600/400"></iron-image>
-
-  Will show a base-64 encoded placeholder image until the image loads:
-
-    <iron-image style="width:400px; height:400px;" placeholder="data:image/gif;base64,..."
-      sizing="cover" preload src="http://lorempixel.com/600/400"></iron-image>
-
-  Will fade the light-gray background out once the image is loaded:
-
-    <iron-image style="width:400px; height:400px; background-color: lightgray;"
-      sizing="cover" preload fade src="http://lorempixel.com/600/400"></iron-image>
-
-Custom property | Description | Default
-----------------|-------------|----------
-`--iron-image-placeholder` | Mixin applied to #placeholder | `{}`
-`--iron-image-width` | Sets the width of the wrapped image | `auto`
-`--iron-image-height` | Sets the height of the wrapped image | `auto`
-
-@group Iron Elements
-@element iron-image
-@demo demo/index.html
--->
-
-<dom-module id="iron-image" assetpath="../../bower_components/iron-image/">
-  <template>
-    <style>
-      :host {
-        display: inline-block;
-        overflow: hidden;
-        position: relative;
-      }
-
-      #sizedImgDiv {
-        @apply(--layout-fit);
-
-        display: none;
-      }
-
-      #img {
-        display: block;
-        width: var(--iron-image-width, auto);
-        height: var(--iron-image-height, auto);
-      }
-
-      :host([sizing]) #sizedImgDiv {
-        display: block;
-      }
-
-      :host([sizing]) #img {
-        display: none;
-      }
-
-      #placeholder {
-        @apply(--layout-fit);
-
-        background-color: inherit;
-        opacity: 1;
-
-        @apply(--iron-image-placeholder);
-      }
-
-      #placeholder.faded-out {
-        transition: opacity 0.5s linear;
-        opacity: 0;
-      }
-    </style>
-
-    <div id="sizedImgDiv" role="img" hidden$="[[_computeImgDivHidden(sizing)]]" aria-hidden$="[[_computeImgDivARIAHidden(alt)]]" aria-label$="[[_computeImgDivARIALabel(alt, src)]]"></div>
-    <img id="img" alt$="[[alt]]" hidden$="[[_computeImgHidden(sizing)]]">
-    <div id="placeholder" hidden$="[[_computePlaceholderHidden(preload, fade, loading, loaded)]]" class$="[[_computePlaceholderClassName(preload, fade, loading, loaded)]]"></div>
-  </template>
-
-  </dom-module>
-<!--
-@license
-Copyright (c) 2015 The Polymer Project Authors. All rights reserved.
-This code may only be used under the BSD style license found at http://polymer.github.io/LICENSE.txt
-The complete set of authors may be found at http://polymer.github.io/AUTHORS.txt
-The complete set of contributors may be found at http://polymer.github.io/CONTRIBUTORS.txt
-Code distributed by Google as part of the polymer project is also
-subject to an additional IP rights grant found at http://polymer.github.io/PATENTS.txt
---><!--
-Material design: [Cards](https://www.google.com/design/spec/components/cards.html)
-
-`paper-material` is a container that renders two shadows on top of each other to
-create the effect of a lifted piece of paper.
-
-Example:
-
-    <paper-material elevation="1">
-      ... content ...
-    </paper-material>
-
-@group Paper Elements
-@demo demo/index.html
--->
-
-<dom-module id="paper-material" assetpath="../../bower_components/paper-material/">
-  <template>
-    <style include="paper-material-shared-styles"></style>
-    <style>
-      :host([animated]) {
-        @apply(--shadow-transition);
-      }
-    </style>
-
-    <content></content>
-  </template>
-</dom-module>
-<!--
-@license
-Copyright (c) 2015 The Polymer Project Authors. All rights reserved.
-This code may only be used under the BSD style license found at http://polymer.github.io/LICENSE.txt
-The complete set of authors may be found at http://polymer.github.io/AUTHORS.txt
-The complete set of contributors may be found at http://polymer.github.io/CONTRIBUTORS.txt
-Code distributed by Google as part of the polymer project is also
-subject to an additional IP rights grant found at http://polymer.github.io/PATENTS.txt
---><!--
-Material design: [Cards](https://www.google.com/design/spec/components/cards.html)
-
-`paper-card` is a container with a drop shadow.
-
-Example:
-
-    <paper-card heading="Card Title">
-      <div class="card-content">Some content</div>
-      <div class="card-actions">
-        <paper-button>Some action</paper-button>
-      </div>
-    </paper-card>
-
-Example - top card image:
-
-    <paper-card heading="Card Title" image="/path/to/image.png" alt="image">
-      ...
-    </paper-card>
-
-### Accessibility
-
-By default, the `aria-label` will be set to the value of the `heading` attribute.
-
-### Styling
-
-The following custom properties and mixins are available for styling:
-
-Custom property | Description | Default
-----------------|-------------|----------
-`--paper-card-background-color` | The background color of the card | `--primary-background-color`
-`--paper-card-header-color` | The color of the header text | `#000`
-`--paper-card-header` | Mixin applied to the card header section | `{}`
-`--paper-card-header-text` | Mixin applied to the title in the card header section | `{}`
-`--paper-card-header-image` | Mixin applied to the image in the card header section | `{}`
-`--paper-card-header-image-text` | Mixin applied to the text overlapping the image in the card header section | `{}`
-`--paper-card-content` | Mixin applied to the card content section| `{}`
-`--paper-card-actions` | Mixin applied to the card action section | `{}`
-`--paper-card` | Mixin applied to the card | `{}`
-
-@group Paper Elements
-@element paper-card
-@demo demo/index.html
--->
-
-<dom-module id="paper-card" assetpath="../../bower_components/paper-card/">
-  <template>
-    <style include="paper-material">
-      :host {
-        display: inline-block;
-        position: relative;
-        box-sizing: border-box;
-        background-color: var(--paper-card-background-color, --primary-background-color);
-        border-radius: 2px;
-
-        @apply(--paper-font-common-base);
-        @apply(--paper-card);
-      }
-
-      /* IE 10 support for HTML5 hidden attr */
-      [hidden] {
-        display: none !important;
-      }
-
-      .header {
-        position: relative;
-        border-top-left-radius: inherit;
-        border-top-right-radius: inherit;
-        overflow: hidden;
-
-        @apply(--paper-card-header);
-      }
-
-      .header iron-image {
-        display: block;
-        width: 100%;
-        --iron-image-width: 100%;
-        pointer-events: none;
-
-        @apply(--paper-card-header-image);
-      }
-
-      .header .title-text {
-        padding: 16px;
-        font-size: 24px;
-        font-weight: 400;
-        color: var(--paper-card-header-color, #000);
-
-        @apply(--paper-card-header-text);
-      }
-
-      .header .title-text.over-image {
-        position: absolute;
-        bottom: 0px;
-
-        @apply(--paper-card-header-image-text);
-      }
-
-      :host ::content .card-content {
-        padding: 16px;
-        position:relative;
-
-        @apply(--paper-card-content);
-      }
-
-      :host ::content .card-actions {
-        border-top: 1px solid #e8e8e8;
-        padding: 5px 16px;
-        position:relative;
-
-        @apply(--paper-card-actions);
-      }
-    </style>
-
-    <div class="header">
-      <iron-image hidden$="[[!image]]" src="[[image]]" alt="[[alt]]" placeholder="[[placeholderImage]]" preload="[[preloadImage]]" fade="[[fadeImage]]"></iron-image>
-      <div hidden$="[[!heading]]" class$="[[_computeHeadingClass(image)]]">[[heading]]</div>
-    </div>
-
-    <content></content>
-  </template>
-
-  </dom-module>
 <!--
 @license
 Copyright (c) 2015 The Polymer Project Authors. All rights reserved.
@@ -6055,16 +6338,6 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
         <cache-display incoming="{{page}}" caches="{{retrievedCaches}}">
         </cache-display>
 
-<!--         <iron-pages role="main" selected="{{page}}" attr-for-selected="name"> -->
-<!--           <my-view1 name="view1"></my-view1> -->
-<!--           <my-view2 name="view2"></my-view2> -->
-<!--           <my-view3 name="view3"></my-view3> -->
-<!--           <settings-view name="settings"></settings-view> -->
-<!--           <my-view1 name="view4"></my-view1> -->
-<!--           <my-view2 name="view5"></my-view2> -->
-<!--           </div> -->
-<!--         </iron-pages> -->
-
       </app-header-layout>
 
     </app-drawer-layout>
@@ -6072,265 +6345,6 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
   </template>
 
   </dom-module>
-<!--
-@license
-Copyright (c) 2015 The Polymer Project Authors. All rights reserved.
-This code may only be used under the BSD style license found at http://polymer.github.io/LICENSE.txt
-The complete set of authors may be found at http://polymer.github.io/AUTHORS.txt
-The complete set of contributors may be found at http://polymer.github.io/CONTRIBUTORS.txt
-Code distributed by Google as part of the polymer project is also
-subject to an additional IP rights grant found at http://polymer.github.io/PATENTS.txt
---><!--
-@license
-Copyright (c) 2015 The Polymer Project Authors. All rights reserved.
-This code may only be used under the BSD style license found at http://polymer.github.io/LICENSE.txt
-The complete set of authors may be found at http://polymer.github.io/AUTHORS.txt
-The complete set of contributors may be found at http://polymer.github.io/CONTRIBUTORS.txt
-Code distributed by Google as part of the polymer project is also
-subject to an additional IP rights grant found at http://polymer.github.io/PATENTS.txt
---><!--
-Material design: [Progress & activity](https://www.google.com/design/spec/components/progress-activity.html)
-
-The progress bars are for situations where the percentage completed can be
-determined. They give users a quick sense of how much longer an operation
-will take.
-
-Example:
-
-    <paper-progress value="10"></paper-progress>
-
-There is also a secondary progress which is useful for displaying intermediate
-progress, such as the buffer level during a streaming playback progress bar.
-
-Example:
-
-    <paper-progress value="10" secondary-progress="30"></paper-progress>
-
-### Styling progress bar:
-
-To change the active progress bar color:
-
-    paper-progress {
-       --paper-progress-active-color: #e91e63;
-    }
-
-To change the secondary progress bar color:
-
-    paper-progress {
-      --paper-progress-secondary-color: #f8bbd0;
-    }
-
-To change the progress bar background color:
-
-    paper-progress {
-      --paper-progress-container-color: #64ffda;
-    }
-
-Add the class `transiting` to a paper-progress to animate the progress bar when
-the value changed. You can also customize the transition:
-
-    paper-progress {
-      --paper-progress-transition-duration: 0.08s;
-      --paper-progress-transition-timing-function: ease;
-      --paper-progress-transition-transition-delay: 0s;
-    }
-
-To change the duration of the indeterminate cycle:
-
-    paper-progress {
-      --paper-progress-indeterminate-cycle-duration: 2s;
-    }
-
-The following mixins are available for styling:
-
-Custom property                                  | Description                                 | Default
--------------------------------------------------|---------------------------------------------|--------------
-`--paper-progress-container`                     | Mixin applied to container                  | `{}`
-`--paper-progress-transition-duration`           | Duration of the transition                  | `0.008s`
-`--paper-progress-transition-timing-function`    | The timing function for the transition      | `ease`
-`--paper-progress-transition-delay`              | delay for the transition                    | `0s`
-`--paper-progress-container-color`               | Color of the container                      | `--google-grey-300`
-`--paper-progress-active-color`                  | The color of the active bar                 | `--google-green-500`
-`--paper-progress-secondary-color`               | The color of the secondary bar              | `--google-green-100`
-`--paper-progress-disabled-active-color`         | The color of the active bar if disabled     | `--google-grey-500`
-`--paper-progress-disabled-secondary-color`      | The color of the secondary bar if disabled  | `--google-grey-300`
-`--paper-progress-height`                        | The height of the progress bar              | `4px`
-`--paper-progress-indeterminate-cycle-duration`  | Duration of an indeterminate cycle          | `2s`
-
-@group Paper Elements
-@element paper-progress
-@hero hero.svg
-@demo demo/index.html
--->
-
-<dom-module id="paper-progress" assetpath="../../bower_components/paper-progress/">
-  <template>
-    <style>
-      :host {
-        display: block;
-        width: 200px;
-        position: relative;
-        overflow: hidden;
-      }
-
-      :host([hidden]) {
-        display: none !important;
-      }
-
-      #progressContainer {
-        @apply(--paper-progress-container);
-        position: relative;
-      }
-
-      #progressContainer,
-      /* the stripe for the indeterminate animation*/
-      .indeterminate::after {
-        height: var(--paper-progress-height, 4px);
-      }
-
-      #primaryProgress,
-      #secondaryProgress,
-      .indeterminate::after {
-        @apply(--layout-fit);
-      }
-
-      #progressContainer,
-      .indeterminate::after {
-        background: var(--paper-progress-container-color, --google-grey-300);
-      }
-
-      :host(.transiting) #primaryProgress,
-      :host(.transiting) #secondaryProgress {
-        -webkit-transition-property: -webkit-transform;
-        transition-property: transform;
-
-        /* Duration */
-        -webkit-transition-duration: var(--paper-progress-transition-duration, 0.08s);
-        transition-duration: var(--paper-progress-transition-duration, 0.08s);
-
-        /* Timing function */
-        -webkit-transition-timing-function: var(--paper-progress-transition-timing-function, ease);
-        transition-timing-function: var(--paper-progress-transition-timing-function, ease);
-
-        /* Delay */
-        -webkit-transition-delay: var(--paper-progress-transition-delay, 0s);
-        transition-delay: var(--paper-progress-transition-delay, 0s);
-      }
-
-      #primaryProgress,
-      #secondaryProgress {
-        @apply(--layout-fit);
-        -webkit-transform-origin: left center;
-        transform-origin: left center;
-        -webkit-transform: scaleX(0);
-        transform: scaleX(0);
-        will-change: transform;
-      }
-
-      #primaryProgress {
-        background: var(--paper-progress-active-color, --google-green-500);
-      }
-
-      #secondaryProgress {
-        background: var(--paper-progress-secondary-color, --google-green-100);
-      }
-
-      :host([disabled]) #primaryProgress {
-        background: var(--paper-progress-disabled-active-color, --google-grey-500);
-      }
-
-      :host([disabled]) #secondaryProgress {
-        background: var(--paper-progress-disabled-secondary-color, --google-grey-300);
-      }
-
-      :host(:not([disabled])) #primaryProgress.indeterminate {
-        -webkit-transform-origin: right center;
-        transform-origin: right center;
-        -webkit-animation: indeterminate-bar var(--paper-progress-indeterminate-cycle-duration, 2s) linear infinite;
-        animation: indeterminate-bar var(--paper-progress-indeterminate-cycle-duration, 2s) linear infinite;
-      }
-
-      :host(:not([disabled])) #primaryProgress.indeterminate::after {
-        content: "";
-        -webkit-transform-origin: center center;
-        transform-origin: center center;
-
-        -webkit-animation: indeterminate-splitter var(--paper-progress-indeterminate-cycle-duration, 2s) linear infinite;
-        animation: indeterminate-splitter var(--paper-progress-indeterminate-cycle-duration, 2s) linear infinite;
-      }
-
-      @-webkit-keyframes indeterminate-bar {
-        0% {
-          -webkit-transform: scaleX(1) translateX(-100%);
-        }
-        50% {
-          -webkit-transform: scaleX(1) translateX(0%);
-        }
-        75% {
-          -webkit-transform: scaleX(1) translateX(0%);
-          -webkit-animation-timing-function: cubic-bezier(.28,.62,.37,.91);
-        }
-        100% {
-          -webkit-transform: scaleX(0) translateX(0%);
-        }
-      }
-
-      @-webkit-keyframes indeterminate-splitter {
-        0% {
-          -webkit-transform: scaleX(.75) translateX(-125%);
-        }
-        30% {
-          -webkit-transform: scaleX(.75) translateX(-125%);
-          -webkit-animation-timing-function: cubic-bezier(.42,0,.6,.8);
-        }
-        90% {
-          -webkit-transform: scaleX(.75) translateX(125%);
-        }
-        100% {
-          -webkit-transform: scaleX(.75) translateX(125%);
-        }
-      }
-
-      @keyframes indeterminate-bar {
-        0% {
-          transform: scaleX(1) translateX(-100%);
-        }
-        50% {
-          transform: scaleX(1) translateX(0%);
-        }
-        75% {
-          transform: scaleX(1) translateX(0%);
-          animation-timing-function: cubic-bezier(.28,.62,.37,.91);
-        }
-        100% {
-          transform: scaleX(0) translateX(0%);
-        }
-      }
-
-      @keyframes indeterminate-splitter {
-        0% {
-          transform: scaleX(.75) translateX(-125%);
-        }
-        30% {
-          transform: scaleX(.75) translateX(-125%);
-          animation-timing-function: cubic-bezier(.42,0,.6,.8);
-        }
-        90% {
-          transform: scaleX(.75) translateX(125%);
-        }
-        100% {
-          transform: scaleX(.75) translateX(125%);
-        }
-      }
-    </style>
-
-    <div id="progressContainer">
-      <div id="secondaryProgress" hidden$="[[_hideSecondaryProgress(secondaryRatio)]]"></div>
-      <div id="primaryProgress"></div>
-    </div>
-  </template>
-</dom-module>
-
 <!--
 @license
 Copyright (c) 2015 The Polymer Project Authors. All rights reserved.
