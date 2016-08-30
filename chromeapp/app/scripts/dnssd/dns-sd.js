@@ -440,11 +440,12 @@ exports.browseServiceInstances = function(serviceType) {
         var result = [];
         for (var i = 0; i < ptrResponses.length; i++) {
           var ptr = ptrResponses[i];
+          var instanceName = exports.getUserFriendlyName(ptr.serviceName);
           var srv = srvResponses[i];
           var aRec = aResponses[i];
           result.push({
             serviceType: serviceType,
-            instanceName: ptr.serviceName,
+            instanceName: instanceName,
             domainName: srv.domain,
             ipAddress: aRec.ipAddress,
             port: srv.port
@@ -458,6 +459,36 @@ exports.browseServiceInstances = function(serviceType) {
         reject('Caught error in browsing for service: ' + err);
       });
   });
+};
+
+/**
+ * Recover the user-friendly instance name from the <instance>.<type>.<domain>
+ * representation stored in the DNS records.
+ *
+ * @param {string} instanceTypeDomain the full string treated as the name of
+ * the SRV record, e.g. 'Sam Cache._semcache._tcp.local'.
+ *
+ * @return {string} the instance name, e.g. 'Sam Cache'
+ */
+exports.getUserFriendlyName = function(instanceTypeDomain) {
+  // We have to allow for any number of legal characters here, including '.'
+  // and '_'.
+  // It isn't immediately obvious how to do this without accessing the actual
+  // underlying DNS labels and counting the number of octets in the first
+  // label. It's conceivable that we might add this functionality to the PTR or
+  // SRV records themselves. However, I believe that all type strings must
+  // include two underscores, and underscores are forbidden in URLs that we
+  // might expect as a domain. Thus I think we can use the last two indices of
+  // underscores to retrieve the name.
+  var idxLastUnderscore = instanceTypeDomain.lastIndexOf('_');
+  var idxPenultimateUnderscore = instanceTypeDomain
+    .substring(0, idxLastUnderscore)
+    .lastIndexOf('_');
+  // The penultimate underscore must be preceded by a period, which we don't
+  // want to include in the user friendly name.
+  var idxEnd = idxPenultimateUnderscore - 1;
+  var result = instanceTypeDomain.substring(0, idxEnd);
+  return result;
 };
 
 /**
