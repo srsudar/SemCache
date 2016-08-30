@@ -3,6 +3,7 @@
 
 var api = require('./server-api');
 var handlers = require('./handlers');
+var evalHandlers = require('./evaluation-handler');
 
 function startServer(host, port, endpointHandlers) {
   window.httpServer = new WSC.WebApplication({
@@ -50,6 +51,10 @@ exports.start = function(host, port) {
     [
       endpoints.pageCache,
       handlers.CachedPageHandler
+    ],
+    [
+      '/eval/list_pages*',
+      evalHandlers.EvaluationHandler
     ]
   ];
 

@@ -1928,6 +1928,78 @@ exports.peekTypeInReader = function(reader) {
 };
 
 },{"./byte-array":4,"./dns-codes":5,"./dns-util":7}],10:[function(require,module,exports){
+'use strict';
+
+var datastore = require('./persistence/datastore');
+var api = require('./server/server-api');
+
+/**
+ * Functionality useful to evaluating SemCache.
+ */
+
+/**
+ * Generate an Array of CachedPage objects useful for creating a response to
+ * mimic response pages during an evaluation.
+ *
+ * @param {integer} numPages the number of CachedPages to generate. The number
+ * of elements in the returned Array
+ * @param {string} nonce a string that will be incorporated somehow into the
+ * captureUrl value of the CachedPage. This is intended to allow the querier to
+ * verify that the response has been generated based solely on this request.
+ *
+ * @return {Array<CachedPage>}
+ */
+exports.generateDummyPages = function(numPages, nonce) {
+  var result = [];
+
+  for (var i = 0; i < numPages; i++) {
+    var page = exports.generateDummyPage(i, nonce);
+    result.push(page);
+  }
+
+  return result;
+};
+
+/**
+ * @param {integer} index position in the final Array for this page
+ * @param {string} nonce the unique string that will be contained in the
+ * captureUrl value of the resulting CachedPage
+ *
+ * @return {CachedPage}
+ */
+exports.generateDummyPage = function(index, nonce) {
+  var captureUrl = 'www.' + nonce + '.' + index + '.com';
+  var captureDate = new Date().toISOString();
+  var path = 'http://somepath';
+  var metadata = { muchMeta: 'so data' };
+
+  var result = new datastore.CachedPage(
+    captureUrl,
+    captureDate,
+    path,
+    metadata
+  );
+  return result;
+};
+
+/**
+ * Generate a response mirroring the functionality of
+ * server-api.getResponseForAllCachedPages to be used for evaluation.
+ *
+ * @param {integer} numPages the number of responses to return
+ * @param {string} nonce a string to incorporate into answers
+ *
+ * @return {object} the JSON server response
+ */
+exports.getDummyResponseForAllCachedPages = function(numPages, nonce) {
+  var pages = exports.generateDummyPages(numPages, nonce);
+  var result = {};
+  result.metadata = api.createMetadatObj();
+  result.cachedPages = pages;
+  return result;
+};
+
+},{"./persistence/datastore":12,"./server/server-api":15}],11:[function(require,module,exports){
 /* globals chrome */
 'use strict';
 
@@ -1951,7 +2023,7 @@ window.dnssd = require('dnssd');
 window.dnsc = require('dnsc');
 window.dnsSem = require('dnsSem');
 
-},{"dnsSem":"dnsSem","dnsc":"dnsc","dnssd":"dnssd"}],11:[function(require,module,exports){
+},{"dnsSem":"dnsSem","dnsc":"dnsc","dnssd":"dnssd"}],12:[function(require,module,exports){
 /* globals Promise */
 'use strict';
 
@@ -2248,7 +2320,37 @@ exports.getCaptureDateFromName = function(name) {
   return result;
 };
 
-},{"../chrome-apis/storage":3,"../server/server-api":13,"./file-system":"fileSystem","./file-system-util":"fsUtil"}],12:[function(require,module,exports){
+},{"../chrome-apis/storage":3,"../server/server-api":15,"./file-system":"fileSystem","./file-system-util":"fsUtil"}],13:[function(require,module,exports){
+/* globals WSC, _, TextEncoder */
+'use strict';
+
+var evaluation = require('../evaluation');
+
+/**
+ * A handler to generate responses to a mock list_pages endpoint.
+ */
+
+exports.EvaluationHandler = function(request) {
+  WSC.BaseHandler.prototype.constructor.call(this);
+};
+
+_.extend(exports.EvaluationHandler.prototype, {
+  get: function() {
+    var numPages = this.get_argument('numPages');
+    var nonce = this.get_argument('nonce');
+    numPages = numPages || 1;
+    nonce = nonce || 'useNonceArg';
+
+    var result = evaluation.getDummyResponseForAllCachedPages(numPages, nonce);
+    this.setHeader('content-type','text/json');
+    var encoder = new TextEncoder('utf-8');
+    var buf = encoder.encode(JSON.stringify(result)).buffer;
+    this.write(buf);
+    this.finish();
+  }
+}, WSC.BaseHandler.prototype);
+
+},{"../evaluation":10}],14:[function(require,module,exports){
 /* globals WSC */
 'use strict';
 
@@ -2340,7 +2442,7 @@ _.extend(exports.CachedPageHandler.prototype,
   WSC.BaseHandler.prototype
 );
 
-},{"../persistence/file-system":"fileSystem","../persistence/file-system-util":"fsUtil","./server-api":13,"underscore":15}],13:[function(require,module,exports){
+},{"../persistence/file-system":"fileSystem","../persistence/file-system-util":"fsUtil","./server-api":15,"underscore":17}],15:[function(require,module,exports){
 'use strict';
 
 /**
@@ -2457,7 +2559,7 @@ exports.getCachedFileNameFromPath = function(path) {
   return result;
 };
 
-},{"../app-controller":"appController","../persistence/datastore":11}],14:[function(require,module,exports){
+},{"../app-controller":"appController","../persistence/datastore":12}],16:[function(require,module,exports){
 (function (global){
 /*! http://mths.be/base64 v0.1.0 by @mathias | MIT license */
 ;(function(root) {
@@ -2626,7 +2728,7 @@ exports.getCachedFileNameFromPath = function(path) {
 }(this));
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],15:[function(require,module,exports){
+},{}],17:[function(require,module,exports){
 //     Underscore.js 1.8.3
 //     http://underscorejs.org
 //     (c) 2009-2015 Jeremy Ashkenas, DocumentCloud and Investigative Reporters & Editors
@@ -4488,7 +4590,7 @@ exports.saveMhtmlAndOpen = function(
   });
 };
 
-},{"./chrome-apis/udp":"chromeUdp","./dnssd/dns-controller":"dnsc","./dnssd/dns-sd-semcache":"dnsSem","./extension-bridge/messaging":"extBridge","./persistence/datastore":11,"./persistence/file-system":"fileSystem","./server/server-api":13,"./server/server-controller":"serverController","./settings":"settings"}],"binaryUtils":[function(require,module,exports){
+},{"./chrome-apis/udp":"chromeUdp","./dnssd/dns-controller":"dnsc","./dnssd/dns-sd-semcache":"dnsSem","./extension-bridge/messaging":"extBridge","./persistence/datastore":12,"./persistence/file-system":"fileSystem","./server/server-api":15,"./server/server-controller":"serverController","./settings":"settings"}],"binaryUtils":[function(require,module,exports){
 /*jshint esnext:true*/
 /*
  * https://github.com/justindarc/dns-sd.js
@@ -6207,7 +6309,7 @@ exports.sendMessageToOpenUrl = function(url) {
   exports.sendMessageToExtension(message);
 };
 
-},{"../chrome-apis/runtime":2,"../persistence/datastore":11,"base-64":14}],"fileSystem":[function(require,module,exports){
+},{"../chrome-apis/runtime":2,"../persistence/datastore":12,"base-64":16}],"fileSystem":[function(require,module,exports){
 /*jshint esnext:true*/
 /* globals Promise */
 'use strict';
@@ -10666,6 +10768,7 @@ exports.getDirectory = function(dirEntry, options, name) {
 
 var api = require('./server-api');
 var handlers = require('./handlers');
+var evalHandlers = require('./evaluation-handler');
 
 function startServer(host, port, endpointHandlers) {
   window.httpServer = new WSC.WebApplication({
@@ -10713,13 +10816,17 @@ exports.start = function(host, port) {
     [
       endpoints.pageCache,
       handlers.CachedPageHandler
+    ],
+    [
+      '/eval/list_pages*',
+      evalHandlers.EvaluationHandler
     ]
   ];
 
   startServer(host, port, endpointHandlers);
 };
 
-},{"./handlers":12,"./server-api":13}],"settings":[function(require,module,exports){
+},{"./evaluation-handler":13,"./handlers":14,"./server-api":15}],"settings":[function(require,module,exports){
 /* global Promise */
 'use strict';
 
@@ -11011,4 +11118,4 @@ exports.promptAndSetNewBaseDir = function() {
   });
 };
 
-},{"./chrome-apis/file-system":1,"./chrome-apis/storage":3,"./persistence/file-system":"fileSystem"}]},{},[10]);
+},{"./chrome-apis/file-system":1,"./chrome-apis/storage":3,"./persistence/file-system":"fileSystem"}]},{},[11]);
