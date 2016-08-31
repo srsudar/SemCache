@@ -288,6 +288,7 @@ exports.saveMhtmlAndOpen = function(
 ) {
   return new Promise(function(resolve) {
     var start = evaluation.getNow();
+    var streamName = 'open_' + captureUrl;
     exports.fetch(mhtmlUrl)
       .then(response => {
         return response.blob();
@@ -308,6 +309,7 @@ exports.saveMhtmlAndOpen = function(
         extBridge.sendMessageToOpenUrl(fileUrl);
         var end = evaluation.getNow();
         var totalTime = end - start;
+        evaluation.logTime(streamName, totalTime);
         console.warn('totalTime to fetch: ', totalTime);
         resolve();
       });

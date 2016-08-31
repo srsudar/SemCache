@@ -1,11 +1,26 @@
 'use strict';
 
-var datastore = require('./persistence/datastore');
-var api = require('./server/server-api');
-
 /**
  * Functionality useful to evaluating SemCache.
  */
+
+var datastore = require('./persistence/datastore');
+var api = require('./server/server-api');
+var storage = require('./chrome-apis/storage');
+
+/** The prefix value for timing keys we will use for local storage. */
+var TIMING_KEY_PREFIX = 'timing_';
+
+/**
+ * Create a scoped version of key for to safely put in local storage
+ *
+ * @param {string} key
+ *
+ * @return {string} a scoped key, e.g. timing_key
+ */
+exports.createTimingKey = function(key) {
+  return TIMING_KEY_PREFIX + key;
+};
 
 /**
  * Generate an Array of CachedPage objects useful for creating a response to
@@ -74,4 +89,35 @@ exports.getDummyResponseForAllCachedPages = function(numPages, nonce) {
  */
 exports.getNow = function() {
   return window.performance.now();
+};
+
+/**
+ * Log an event time to local storage. The key will be scoped for timing and
+ * time will be added to a list of times to that value. E.g. logTim('foo', 3)
+ * would result in a value like { timing_foo: [ 3 ] } being added to local
+ * storage. Subsequent calls would append to that list.
+ *
+ * @param {string} key the key that will be scoped and set in chrome.storage
+ * @param {number} time the timing value that will be logged
+ *
+ * @return {Promise} Promise that resolves when the write completes
+ */
+exports.logTime = function(key, time) {
+  return new Promise(function(resolve) {
+    var scopedKey = exports.createTimingKey(key);
+    storage.get(scopedKey)
+      .then(existingValues => {
+        if (existingValues && existingValues[scopedKey]) {
+          existingValues[scopedKey].push(time);
+          return storage.set(existingValues);
+        } else {
+          // New value.
+          existingValues[scopedKey] = [ time ];
+          return storage.set(existingValues);
+        }
+      })
+      .then(() => {
+        resolve();
+      });
+  });
 };

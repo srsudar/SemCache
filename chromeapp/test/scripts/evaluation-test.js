@@ -28,6 +28,62 @@ function proxyquireEvaluation(proxies) {
   );
 }
 
+test('logTime calls storage correctly if new stream', function(t) {
+  var key = 'foo';
+  var time = 1234;
+  var scopedKey = 'timing_foo';
+
+  var setSpy = sinon.stub();
+  var getSpy = sinon.stub().resolves({});
+  proxyquireEvaluation({
+    './chrome-apis/storage': {
+      set: setSpy,
+      get: getSpy
+    }
+  });
+
+  var expectedSet = {};
+  expectedSet[scopedKey] = [ time ];
+
+  evaluation.logTime(key, time)
+    .then(() => {
+      t.deepEqual(setSpy.args[0], [ expectedSet ]);
+      t.end();
+      resetEvaluation();
+    });
+});
+
+test('logTime calls storage correctly if appending to stream', function(t) {
+  var key = 'openKhan';
+  var time = 123.56;
+  var scopedKey = 'timing_openKhan';
+
+  var existingValues = {};
+  var existingTimes = [ 3, 5 ];
+  existingValues[scopedKey] = existingTimes;
+
+  var setSpy = sinon.stub();
+  var getSpy = sinon.stub().resolves(existingValues);
+  proxyquireEvaluation({
+    './chrome-apis/storage': {
+      set: setSpy,
+      get: getSpy
+    }
+  });
+
+  var expectedSet = {};
+  var newTimes = existingTimes.slice();
+  newTimes.push(time);
+  expectedSet[scopedKey] = newTimes;
+
+  evaluation.logTime(key, time)
+    .then(() => {
+      t.deepEqual(setSpy.args[0], [ expectedSet ]);
+      t.end();
+      resetEvaluation();
+    });
+});
+
 test('generateDummyPage incorporates nonce and number', function(t) {
   var index = 123;
   var nonce = 'feefifofum';
