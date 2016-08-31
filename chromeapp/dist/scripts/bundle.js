@@ -1999,6 +1999,13 @@ exports.getDummyResponseForAllCachedPages = function(numPages, nonce) {
   return result;
 };
 
+/**
+ * @return {number} return window.performance.now()
+ */
+exports.getNow = function() {
+  return window.performance.now();
+};
+
 },{"./persistence/datastore":12,"./server/server-api":15}],11:[function(require,module,exports){
 /* globals chrome */
 'use strict';
@@ -4294,6 +4301,7 @@ var settings = require('./settings');
 var dnssdSem = require('./dnssd/dns-sd-semcache');
 var serverApi = require('./server/server-api');
 var dnsController = require('./dnssd/dns-controller');
+var evaluation = require('./evaluation');
 
 var LISTENING_HTTP_INTERFACE = null;
 
@@ -4567,6 +4575,7 @@ exports.saveMhtmlAndOpen = function(
   metadata
 ) {
   return new Promise(function(resolve) {
+    var start = evaluation.getNow();
     exports.fetch(mhtmlUrl)
       .then(response => {
         return response.blob();
@@ -4585,12 +4594,15 @@ exports.saveMhtmlAndOpen = function(
           entry.fullPath
         );
         extBridge.sendMessageToOpenUrl(fileUrl);
+        var end = evaluation.getNow();
+        var totalTime = end - start;
+        console.warn('totalTime to fetch: ', totalTime);
         resolve();
       });
   });
 };
 
-},{"./chrome-apis/udp":"chromeUdp","./dnssd/dns-controller":"dnsc","./dnssd/dns-sd-semcache":"dnsSem","./extension-bridge/messaging":"extBridge","./persistence/datastore":12,"./persistence/file-system":"fileSystem","./server/server-api":15,"./server/server-controller":"serverController","./settings":"settings"}],"binaryUtils":[function(require,module,exports){
+},{"./chrome-apis/udp":"chromeUdp","./dnssd/dns-controller":"dnsc","./dnssd/dns-sd-semcache":"dnsSem","./evaluation":10,"./extension-bridge/messaging":"extBridge","./persistence/datastore":12,"./persistence/file-system":"fileSystem","./server/server-api":15,"./server/server-controller":"serverController","./settings":"settings"}],"binaryUtils":[function(require,module,exports){
 /*jshint esnext:true*/
 /*
  * https://github.com/justindarc/dns-sd.js
@@ -10848,10 +10860,10 @@ exports.start = function(host, port) {
       endpoints.pageCache,
       handlers.CachedPageHandler
     ],
-    // [
-    //   '/eval/list_pages*',
-    //   evalHandlers.EvaluationHandler
-    // ]
+    [
+      '/eval_list*',
+      evalHandlers.EvaluationHandler
+    ]
   ];
 
   startServer(host, port, endpointHandlers);

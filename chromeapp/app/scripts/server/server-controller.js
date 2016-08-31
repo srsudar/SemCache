@@ -52,10 +52,10 @@ exports.start = function(host, port) {
       endpoints.pageCache,
       handlers.CachedPageHandler
     ],
-    // [
-    //   '/eval/list_pages*',
-    //   evalHandlers.EvaluationHandler
-    // ]
+    [
+      '/eval_list*',
+      evalHandlers.EvaluationHandler
+    ]
   ];
 
   startServer(host, port, endpointHandlers);

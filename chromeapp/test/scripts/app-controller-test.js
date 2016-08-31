@@ -60,6 +60,8 @@ test('saveMhtmlAndOpen persists and opens', function(t) {
   var fileUrl = 'file:///some path to the dir';
   var constructFileSchemeUrlSpy = sinon.stub().returns(fileUrl);
 
+  var getNowStub = sinon.stub().returns(1);
+
   // ADD THE ABSOLUTE PATH TO THE BASE DIRECTORY
   var appc = proxyquire(
     '../../app/scripts/app-controller',
@@ -72,6 +74,9 @@ test('saveMhtmlAndOpen persists and opens', function(t) {
       },
       './persistence/file-system': {
         constructFileSchemeUrl: constructFileSchemeUrlSpy
+      },
+      './evaluation': {
+        getNow: getNowStub
       }
     }
   );

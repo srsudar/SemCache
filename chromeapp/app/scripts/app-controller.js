@@ -13,6 +13,7 @@ var settings = require('./settings');
 var dnssdSem = require('./dnssd/dns-sd-semcache');
 var serverApi = require('./server/server-api');
 var dnsController = require('./dnssd/dns-controller');
+var evaluation = require('./evaluation');
 
 var LISTENING_HTTP_INTERFACE = null;
 
@@ -286,6 +287,7 @@ exports.saveMhtmlAndOpen = function(
   metadata
 ) {
   return new Promise(function(resolve) {
+    var start = evaluation.getNow();
     exports.fetch(mhtmlUrl)
       .then(response => {
         return response.blob();
@@ -304,6 +306,9 @@ exports.saveMhtmlAndOpen = function(
           entry.fullPath
         );
         extBridge.sendMessageToOpenUrl(fileUrl);
+        var end = evaluation.getNow();
+        var totalTime = end - start;
+        console.warn('totalTime to fetch: ', totalTime);
         resolve();
       });
   });

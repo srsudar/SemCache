@@ -68,3 +68,10 @@ exports.getDummyResponseForAllCachedPages = function(numPages, nonce) {
   result.cachedPages = pages;
   return result;
 };
+
+/**
+ * @return {number} return window.performance.now()
+ */
+exports.getNow = function() {
+  return window.performance.now();
+};
