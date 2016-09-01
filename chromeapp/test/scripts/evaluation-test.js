@@ -28,6 +28,87 @@ function proxyquireEvaluation(proxies) {
   );
 }
 
+test('getTimeValues returns result of get', function(t) {
+  var key = 'timeMePlz';
+  var scopedKey = 'timing_timeMePlz';
+  var expected = [1, 2, 3];
+
+  var getResult = {};
+  getResult[scopedKey] = expected;
+  var getSpy = sinon.stub().resolves(getResult);
+
+  proxyquireEvaluation({
+    './chrome-apis/storage': {
+      get: getSpy
+    }
+  });
+
+  evaluation.getTimeValues(key)
+    .then(actual => {
+      t.deepEqual(actual, expected);
+      t.deepEqual(getSpy.args[0], [scopedKey]);
+      t.end();
+      resetEvaluation();
+    });
+});
+
+test('getTimeValues returns null if not present', function(t) {
+  var key = 'timeMePlz';
+  var scopedKey = 'timing_timeMePlz';
+  var expected = null;
+
+  var getSpy = sinon.stub().resolves({});
+
+  proxyquireEvaluation({
+    './chrome-apis/storage': {
+      get: getSpy
+    }
+  });
+
+  evaluation.getTimeValues(key)
+    .then(actual => {
+      t.equal(actual, expected);
+      t.deepEqual(getSpy.args[0], [scopedKey]);
+      t.end();
+      resetEvaluation();
+    });
+});
+
+test('runDiscoverPeerPagesTrial calls helper', function(t) {
+  var numPeers = 30;
+  var numPages = 15;
+  var numIterations = 5;
+
+  var expected = [ 0.1, 1.1, 2.1, 3.1, 4.1 ];
+
+  var runDiscoverPeerPagesIterationSpy = sinon.stub();
+  runDiscoverPeerPagesIterationSpy.onCall(0).resolves(expected[0]);
+  runDiscoverPeerPagesIterationSpy.onCall(1).resolves(expected[1]);
+  runDiscoverPeerPagesIterationSpy.onCall(2).resolves(expected[2]);
+  runDiscoverPeerPagesIterationSpy.onCall(3).resolves(expected[3]);
+  runDiscoverPeerPagesIterationSpy.onCall(4).resolves(expected[4]);
+
+  evaluation.runDiscoverPeerPagesIteration = runDiscoverPeerPagesIterationSpy;
+
+  evaluation.runDiscoverPeerPagesTrial(numPeers, numPages, numIterations)
+  .then(actual => {
+    t.deepEqual(actual, expected);
+    t.equal(runDiscoverPeerPagesIterationSpy.callCount, numIterations);
+    t.deepEqual(
+      runDiscoverPeerPagesIterationSpy.args[0],
+      [numPeers, numPages]
+    );
+    t.end();
+    resetEvaluation(); 
+  });
+});
+
+test('runDiscoverPeerPagesTrial handles rejects', function(t) {
+  t.true(t);
+  console.log('unimplemented');
+  t.end();
+});
+
 test('logTime calls storage correctly if new stream', function(t) {
   var key = 'foo';
   var time = 1234;

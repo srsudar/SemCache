@@ -103,21 +103,132 @@ exports.getNow = function() {
  * @return {Promise} Promise that resolves when the write completes
  */
 exports.logTime = function(key, time) {
+  var scopedKey = exports.createTimingKey(key);
   return new Promise(function(resolve) {
-    var scopedKey = exports.createTimingKey(key);
-    storage.get(scopedKey)
+    exports.getTimeValues(key)
       .then(existingValues => {
-        if (existingValues && existingValues[scopedKey]) {
-          existingValues[scopedKey].push(time);
-          return storage.set(existingValues);
+        var setObj = {};
+        if (existingValues) {
+          existingValues.push(time);
+          setObj[scopedKey] = existingValues;
         } else {
           // New value.
-          existingValues[scopedKey] = [ time ];
-          return storage.set(existingValues);
+          setObj[scopedKey] = [ time ];
         }
+        return storage.set(setObj);
       })
       .then(() => {
         resolve();
       });
   });
+};
+
+/**
+ * Get the list of values logged for a particular key. This is essentially just
+ * a getter that accounts for the prefix scoping applied to the key by this
+ * module. E.g. if you save an event as 'foo', it will be scoped in chrome
+ * storage as something like 'timing_foo'. Passing 'foo' to this method will
+ * scope the key and return the result.
+ *
+ * @param {string} key
+ *
+ * @return {Promise -> any} Promise that resolves with the value paired to this
+ * key in storage. Returns null if the value is not present.
+ */
+exports.getTimeValues = function(key) {
+  return new Promise(function(resolve) {
+    var scopedKey = exports.createTimingKey(key);
+    storage.get(scopedKey)
+    .then(existingValues => {
+      if (existingValues && existingValues[scopedKey]) {
+        resolve(existingValues[scopedKey]);
+      } else {
+        // Not present.
+        resolve(null);
+      }
+    });
+  });
+};
+
+/**
+ * Execute an array of Promise returning functions in order, one after another.
+ *
+ * @param{Array<function>} promises an Array of functions that return a Promise
+ * that should then be executed.
+ * @return {Promise -> Array<object>} Promise that resolves with an array of
+ * objects. Each object will be a key value pair of either { resolved: value }
+ * or { rejected: value } representing the value that either resolved or
+ * rejected from the Promise.
+ */
+exports.fulfillPromises = function(promises) {
+  return null;
+};
+
+/**
+ * Run a time trial for discovering peers.
+ *
+ * @param {integer} numPeers the number of peers you are running against
+ * @param {integer} numPages the number of pages you will tell each peer to
+ * return
+ * @param {integer} numIterations the number of times you wish to run the
+ * trial
+ */
+exports.runDiscoverPeerPagesTrial = function(
+  numPeers,
+  numPages,
+  numIterations
+  ) {
+  return new Promise(function(resolve) {
+    // We will call runDiscoverPagesIteration and attach them all to a sequence
+    // of Promises, such that they will resolve in order.
+    var nextIter = function() {
+      return exports.runDiscoverPeerPagesIteration(numPeers, numPages);
+    };
+
+    var promises = [];
+    for (var i = 0; i < numIterations; i++) {
+      promises.push(nextIter);
+    }
+
+    var result = [];
+    var seedPromise = Promise.resolve(null);
+
+    // Now we have an array with all our promises. We want to execute them
+    // sequentially, for which we will use reduce. seedPromise will be our
+    // initial value--a promise that returns null.
+    promises.reduce(function(cur, next) {
+      return cur.then(time => {
+        if (time !== null) {
+          // should always have a value except for the first time
+          result.push({ resolved: time });
+        }
+      })
+      .catch(err => {
+          result.push({ caught: err });
+      })
+      .then(next);
+    }, seedPromise).then(lastVal => {
+      // All executed.
+      // lastVal is the resolved value of the last promise. 
+      result.push(lastVal);
+      resolve(result);
+    });
+  });
+};
+
+/**
+ * Run a single iteration of a discover peers trial. This will query the
+ * network for peers, expecting to discover numPeers number of peers. It will
+ * then query each peer, expecting each peer to have numPages available. It
+ * will time this occurence and resolve with the amount of time it took.
+ *
+ * @param {integer} numPeers the number of peers you expect
+ * @param {integer} numPages the number of pages expected to be on each peer
+ *
+ * @return {Promise -> number} Promise that resolves with the time it took to
+ * run the trial. Rejects if it cannot find the correct number of peers or
+ * pages.
+ */
+exports.runDiscoverPeerPagesIteration = function(numPeers, numPages) {
+  console.log(numPeers, numPages);
 };
