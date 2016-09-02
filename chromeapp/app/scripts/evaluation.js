@@ -7,6 +7,8 @@
 var datastore = require('./persistence/datastore');
 var api = require('./server/server-api');
 var storage = require('./chrome-apis/storage');
+var appc = require('./app-controller');
+var util = require('./util');
 
 /** The prefix value for timing keys we will use for local storage. */
 var TIMING_KEY_PREFIX = 'timing_';
@@ -218,30 +220,22 @@ exports.runDiscoverPeerPagesTrial = function(
       promises.push(nextIter);
     }
 
-    var result = [];
-    var seedPromise = Promise.resolve(null);
-
-    // Now we have an array with all our promises. We want to execute them
-    // sequentially, for which we will use reduce. seedPromise will be our
-    // initial value--a promise that returns null.
-    promises.reduce(function(cur, next) {
-      return cur.then(time => {
-        if (time !== null) {
-          // should always have a value except for the first time
-          result.push({ resolved: time });
-        }
-      })
-      .catch(err => {
-          result.push({ caught: err });
-      })
-      .then(next);
-    }, seedPromise).then(lastVal => {
-      // All executed.
-      // lastVal is the resolved value of the last promise. 
-      result.push(lastVal);
-      resolve(result);
+    // Now we have an array with all our promises.
+    exports.fulfillPromises(promises)
+    .then(results => {
+      resolve(results);
     });
   });
+};
+
+/**
+ * @param {string} ipAddress
+ *
+ * @return {string} a complete URL that generates a mocked response for
+ * evaluation
+ */
+exports.getEvalPagesUrl = function(ipAddress, numPages, nonce) {
+  return ipAddress + numPages + nonce;
 };
 
 /**
@@ -258,5 +252,64 @@ exports.runDiscoverPeerPagesTrial = function(
  * pages.
  */
 exports.runDiscoverPeerPagesIteration = function(numPeers, numPages) {
-  console.log(numPeers, numPages);
+  return new Promise(function(resolve, reject) {
+    var startBrowse = exports.getNow();
+    var finishBrowsePeers = null;
+    var finishBrowsePages = null;
+    appc.getBrowseableCaches()
+    .then(caches => {
+      console.log('found peers: ', caches);
+
+      if (caches.length !== numPeers) {
+        var message = 'missing peer: found ' +
+          caches.length +
+          ', expected ' +
+          numPeers;
+        reject({
+          err: message
+        });
+      }
+
+      finishBrowsePeers = exports.getNow();
+      
+      // We'll create a fetch for each listUrl.
+      var promises = [];
+      caches.forEach(cache => {
+        var evalUrl = exports.getEvalPagesUrl(cache.ipAddress);
+        var prom = util.fetchJson(evalUrl);
+        promises.push(prom);
+      });
+
+      return Promise.all(promises);
+    })
+    .then(cacheJsons => {
+      console.log('found caches: ', cacheJsons);
+
+      cacheJsons.forEach(cacheJson => {
+        if (cacheJson.cachedPages.length !== numPages) {
+          var message = 'missing pages: found ' +
+            cacheJson.cachedPages.length +
+            ', expected ' +
+            numPages;
+          reject({
+            err: message
+          });
+        }
+      });
+      finishBrowsePages = exports.getNow();
+    })
+    .then(() => {
+      var timeBrowsePeers = finishBrowsePeers - startBrowse;
+      var timeBrowsePages = finishBrowsePages - finishBrowsePeers;
+      var totalTime = finishBrowsePages - startBrowse;
+
+      var result = {
+        timeBrowsePeers: timeBrowsePeers,
+        timeBrowsePages: timeBrowsePages,
+        totalTime: totalTime
+      };
+
+      resolve(result);
+    });
+  });
 };

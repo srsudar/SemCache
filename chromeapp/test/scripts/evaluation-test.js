@@ -74,7 +74,7 @@ test('getTimeValues returns null if not present', function(t) {
     });
 });
 
-test.only('fulfillPromises all resolve', function(t) {
+test('fulfillPromises all resolve', function(t) {
   var expected = [ 
     { resolved: 0.1 },
     { resolved: 1.1 },
@@ -86,9 +86,24 @@ test.only('fulfillPromises all resolve', function(t) {
   var promises = [];
   promises[0] = () => Promise.resolve(expected[0].resolved);
 
-  // This value will not resolve immediately, to ensure that we are waiting
-  // between executing in order to do so synchronously.
-  promises[1] = () => Promise.resolve(expected[1].resolved);
+  // This value will have the option to not resolve immediately, to ensure that
+  // we are waiting between executing in order to do so synchronously.
+  var delayedResolve = function() {
+    return new Promise(function(resolve) {
+      setTimeout(
+        function() {
+          resolve(expected[1].resolved);
+        },
+        // change to a >0 number, like 1000, to ensure that we execute the
+        // Promises in order and not parallelized. We are keeping it at 0 for
+        // the checked in version to resolve immediately and not slow down the
+        // tests.
+        0
+      );
+    });
+  };
+
+  promises[1] = delayedResolve;
   promises[2] = () => Promise.resolve(expected[2].resolved);
   promises[3] = () => Promise.resolve(expected[3].resolved);
   promises[4] = () => Promise.resolve(expected[4].resolved);
@@ -102,7 +117,194 @@ test.only('fulfillPromises all resolve', function(t) {
 });
 
 test('fulfillPromises all reject', function(t) {
+  var expected = [ 
+    { caught: 0.1 },
+    { caught: 1.1 },
+    { caught: 2.1 },
+    { caught: 3.1 },
+    { caught: 4.1 }
+  ];
 
+  var promises = [];
+  promises[0] = () => Promise.reject(expected[0].caught);
+  promises[1] = () => Promise.reject(expected[1].caught);
+  promises[2] = () => Promise.reject(expected[2].caught);
+  promises[3] = () => Promise.reject(expected[3].caught);
+  promises[4] = () => Promise.reject(expected[4].caught);
+
+  evaluation.fulfillPromises(promises)
+  .then(actual => {
+    t.deepEqual(actual, expected);
+    t.end();
+    resetEvaluation(); 
+  });
+
+});
+
+test('runDiscoverPeerPagesIteration resolves if all is well', function(t) {
+  var numPeers = 2;
+  var numPages = 5;
+
+  var peer1 = {
+    serviceName: 'Tyrion Cache',
+    type: '_semcache._tcp',
+    domain: 'tyrion.local',
+    port: 8877,
+    ipAddress: '1.2.3.4'
+  };
+
+  var peer2 = {
+    serviceName: 'Cersei Cache',
+    type: '_semcache._tcp',
+    domain: 'cersei.local',
+    port: 8888,
+    ipAddress: '172.198.14.23'
+  };
+
+  // We will return < the number we expect.
+  var resolvedInstances = [ peer1, peer2 ];
+
+  var peer1Response = {
+    metadata: { version: 0 },
+    cachedPages: [ 'one', 'two', 'three', 'four', 'five' ]
+  };
+
+  var peer2Response = {
+    metadata: { version: 0 },
+    cachedPages: [ 'a', 'b', 'c', 'd', 'e' ]
+  };
+
+  var evalUrl1 = 'tyrion/eval.json';
+  var evalUrl2 = 'cersei/eval.json';
+  var getEvalPagesUrlSpy = sinon.stub();
+  getEvalPagesUrlSpy.withArgs(peer1.ipAddress).returns(evalUrl1);
+  getEvalPagesUrlSpy.withArgs(peer2.ipAddress).returns(evalUrl2);
+
+  var fetchJsonSpy = sinon.stub();
+  fetchJsonSpy.withArgs(evalUrl1).resolves(peer1Response);
+  fetchJsonSpy.withArgs(evalUrl2).resolves(peer2Response);
+
+  var startTime = 5413;
+  var browsePeerEnd = 8171;
+  var browsePageEnd = 1200;
+  var totalTime = browsePageEnd - startTime;
+  var browsePeerTime = browsePeerEnd - startTime;
+  var browsePageTime = browsePageEnd - browsePeerEnd;
+
+  var getNowSpy = sinon.stub();
+  getNowSpy.onCall(0).returns(startTime);
+  getNowSpy.onCall(1).returns(browsePeerEnd);
+  getNowSpy.onCall(2).returns(browsePageEnd);
+  
+  var expected = {
+    timeBrowsePeers: browsePeerTime,
+    timeBrowsePages: browsePageTime,
+    totalTime: totalTime
+  };
+
+  var getBrowseableCachesSpy = sinon.stub().resolves(resolvedInstances);
+  proxyquireEvaluation({
+    './app-controller': {
+      getBrowseableCaches: getBrowseableCachesSpy
+    },
+    './util': {
+      fetchJson: fetchJsonSpy
+    }
+  });
+  evaluation.getNow = getNowSpy;
+  evaluation.getEvalPagesUrl = getEvalPagesUrlSpy;
+  
+  evaluation.runDiscoverPeerPagesIteration(numPeers, numPages)
+  .then(actual => { 
+    t.deepEqual(actual, expected);
+    t.equal(fetchJsonSpy.callCount, 2);
+    t.deepEqual(fetchJsonSpy.args[0], [ evalUrl1 ]);
+    t.deepEqual(fetchJsonSpy.args[1], [ evalUrl2 ]);
+    t.end();
+    resetEvaluation();
+  });
+});
+
+test('runDiscoverPeerPagesIteration rejects if not enough pages', function(t) {
+  var numPeers = 2;
+  var numPages = 5;
+
+  var peer1 = {
+    serviceName: 'Tyrion Cache',
+    type: '_semcache._tcp',
+    domain: 'tyrion.local',
+    port: 8877,
+    ipAddress: '1.2.3.4'
+  };
+
+  var peer2 = {
+    serviceName: 'Cersei Cache',
+    type: '_semcache._tcp',
+    domain: 'cersei.local',
+    port: 8888,
+    ipAddress: '172.2.9.45'
+  };
+
+  var resolvedInstances = [ peer1, peer2 ];
+
+  var evalUrl1 = 'tyrionlist.json';
+  var evalUrl2 = 'cersei/list.json';
+  var getEvalPagesUrlSpy = sinon.stub();
+  getEvalPagesUrlSpy.withArgs(peer1.ipAddress).returns(evalUrl1);
+  getEvalPagesUrlSpy.withArgs(peer2.ipAddress).returns(evalUrl2);
+
+  var peer1Response = {
+    metadata: { version: 0 },
+    cachedPages: [ 'one', 'two', 'three' ]
+  };
+  var fetchJsonSpy = sinon.stub();
+  fetchJsonSpy.withArgs(evalUrl1).resolves(peer1Response);
+  
+  var expected = { err: 'missing pages: found 3, expected 5' };
+
+  var getBrowseableCachesSpy = sinon.stub().resolves(resolvedInstances);
+  proxyquireEvaluation({
+    './app-controller': {
+      getBrowseableCaches: getBrowseableCachesSpy
+    },
+    './util': {
+      fetchJson: fetchJsonSpy
+    }
+  });
+  evaluation.getNow = sinon.stub();
+  evaluation.getEvalPagesUrl = getEvalPagesUrlSpy;
+  
+  evaluation.runDiscoverPeerPagesIteration(numPeers, numPages)
+  .catch(actual => { 
+    t.deepEqual(actual, expected);
+    t.end();
+    resetEvaluation();
+  });
+});
+
+test('runDiscoverPeerPagesIteration rejects if missing peers', function(t) {
+  var numPeers = 5;
+  var numPages = 10;
+
+  // We will return < the number we expect.
+  var resolvedCaches = [ 'one', 'two', 'three', 'four' ];
+  
+  var expected = { err: 'missing peer: found 4, expected 5' };
+
+  var getBrowseableCachesSpy = sinon.stub().resolves(resolvedCaches);
+  proxyquireEvaluation({
+    './app-controller': {
+      getBrowseableCaches: getBrowseableCachesSpy
+    }
+  });
+  evaluation.getNow = sinon.stub();
+  
+  evaluation.runDiscoverPeerPagesIteration(numPeers, numPages)
+  .catch(actual => { 
+    t.deepEqual(actual, expected);
+    t.end();
+    resetEvaluation();
+  });
 });
 
 test('runDiscoverPeerPagesTrial calls helper', function(t) {
@@ -110,25 +312,16 @@ test('runDiscoverPeerPagesTrial calls helper', function(t) {
   var numPages = 15;
   var numIterations = 5;
 
-  var expected = [ 0.1, 1.1, 2.1, 3.1, 4.1 ];
+  var expected = [ 'fee', 'fi', 'fo', 'fum' ];
 
-  var runDiscoverPeerPagesIterationSpy = sinon.stub();
-  runDiscoverPeerPagesIterationSpy.onCall(0).resolves(expected[0]);
-  runDiscoverPeerPagesIterationSpy.onCall(1).resolves(expected[1]);
-  runDiscoverPeerPagesIterationSpy.onCall(2).resolves(expected[2]);
-  runDiscoverPeerPagesIterationSpy.onCall(3).resolves(expected[3]);
-  runDiscoverPeerPagesIterationSpy.onCall(4).resolves(expected[4]);
-
-  evaluation.runDiscoverPeerPagesIteration = runDiscoverPeerPagesIterationSpy;
+  var fulfillPromisesSpy = sinon.stub().resolves(expected);
+  evaluation.fulfillPromises = fulfillPromisesSpy;
 
   evaluation.runDiscoverPeerPagesTrial(numPeers, numPages, numIterations)
   .then(actual => {
     t.deepEqual(actual, expected);
-    t.equal(runDiscoverPeerPagesIterationSpy.callCount, numIterations);
-    t.deepEqual(
-      runDiscoverPeerPagesIterationSpy.args[0],
-      [numPeers, numPages]
-    );
+    t.equal(fulfillPromisesSpy.callCount, 1);
+    t.equal(fulfillPromisesSpy.args[0][0].length, numIterations);
     t.end();
     resetEvaluation(); 
   });
