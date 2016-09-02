@@ -154,14 +154,42 @@ exports.getTimeValues = function(key) {
  * Execute an array of Promise returning functions in order, one after another.
  *
  * @param{Array<function>} promises an Array of functions that return a Promise
- * that should then be executed.
+ * that should be executed.
  * @return {Promise -> Array<object>} Promise that resolves with an array of
  * objects. Each object will be a key value pair of either { resolved: value }
  * or { rejected: value } representing the value that either resolved or
  * rejected from the Promise.
  */
 exports.fulfillPromises = function(promises) {
-  return null;
+  return new Promise(function(resolve) {
+    var result = [];
+    var seedPromise = Promise.resolve(null);
+
+    // Now we have an array with all our promises. We want to execute them
+    // sequentially, for which we will use reduce. seedPromise will be our
+    // initial value--a promise that returns null.
+    promises.reduce(function(cur, next) {
+      return cur.then(time => {
+        if (time !== null) {
+          // should always have a value except for the first time
+          result.push({ resolved: time });
+        }
+      })
+      .catch(err => {
+          result.push({ caught: err });
+      })
+      .then(next);
+    }, seedPromise).then(lastVal => {
+      // All executed.
+      // lastVal is the resolved value of the last promise. 
+      result.push({ resolved: lastVal });
+      resolve(result);
+    })
+    .catch(lastVal => {
+      result.push({ caught: lastVal });
+      resolve(result);
+    });
+  });
 };
 
 /**

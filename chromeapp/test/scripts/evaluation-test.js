@@ -74,6 +74,37 @@ test('getTimeValues returns null if not present', function(t) {
     });
 });
 
+test.only('fulfillPromises all resolve', function(t) {
+  var expected = [ 
+    { resolved: 0.1 },
+    { resolved: 1.1 },
+    { resolved: 2.1 },
+    { resolved: 3.1 },
+    { resolved: 4.1 }
+  ];
+
+  var promises = [];
+  promises[0] = () => Promise.resolve(expected[0].resolved);
+
+  // This value will not resolve immediately, to ensure that we are waiting
+  // between executing in order to do so synchronously.
+  promises[1] = () => Promise.resolve(expected[1].resolved);
+  promises[2] = () => Promise.resolve(expected[2].resolved);
+  promises[3] = () => Promise.resolve(expected[3].resolved);
+  promises[4] = () => Promise.resolve(expected[4].resolved);
+
+  evaluation.fulfillPromises(promises)
+  .then(actual => {
+    t.deepEqual(actual, expected);
+    t.end();
+    resetEvaluation(); 
+  });
+});
+
+test('fulfillPromises all reject', function(t) {
+
+});
+
 test('runDiscoverPeerPagesTrial calls helper', function(t) {
   var numPeers = 30;
   var numPages = 15;
