@@ -202,17 +202,28 @@ exports.fulfillPromises = function(promises) {
  * return
  * @param {integer} numIterations the number of times you wish to run the
  * trial
+ * @param {string} key the key to which the trials will be logged in storage
+ *
+ * @return {Promise -> Array} Promise that resolves when all the trials
+ * are complete. Resolves with an Array of the resolved results of the
+ * individual iterations
  */
 exports.runDiscoverPeerPagesTrial = function(
   numPeers,
   numPages,
-  numIterations
+  numIterations,
+  key
   ) {
+  key = key || 'lastEval';
   return new Promise(function(resolve) {
     // We will call runDiscoverPagesIteration and attach them all to a sequence
     // of Promises, such that they will resolve in order.
     var nextIter = function() {
-      return exports.runDiscoverPeerPagesIteration(numPeers, numPages);
+      return exports.runDiscoverPeerPagesIteration(numPeers, numPages)
+      .then(iterationResult => {
+        exports.logTime(key, iterationResult);
+        return Promise.resolve(iterationResult);
+      });
     };
 
     var promises = [];

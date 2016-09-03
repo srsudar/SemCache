@@ -326,27 +326,41 @@ test('runDiscoverPeerPagesIteration rejects if missing peers', function(t) {
 test('runDiscoverPeerPagesTrial calls helper', function(t) {
   var numPeers = 30;
   var numPages = 15;
-  var numIterations = 5;
+  var numIterations = 4;
+  var key = 'testKey';
 
-  var expected = [ 'fee', 'fi', 'fo', 'fum' ];
+  var expected = [
+    { resolved: 'fee' },
+    { resolved: 'fi' },
+    { resolved: 'fo' },
+    { resolved: 'fum' }
+  ];
 
-  var fulfillPromisesSpy = sinon.stub().resolves(expected);
-  evaluation.fulfillPromises = fulfillPromisesSpy;
+  // var fulfillPromisesSpy = sinon.stub().resolves(expected);
+  // evaluation.fulfillPromises = fulfillPromisesSpy;
+  
+  var logTimeSpy = sinon.stub();
+  var runDiscoverPeerPagesIterationSpy = sinon.stub();
+  for (var i = 0; i < expected.length; i++) {
+    logTimeSpy.onCall(i).resolves(expected[i].resolved);
+    runDiscoverPeerPagesIterationSpy.onCall(i).resolves(expected[i].resolved);
+  }
+  evaluation.logTime = logTimeSpy;
+  evaluation.runDiscoverPeerPagesIteration = runDiscoverPeerPagesIterationSpy;
 
-  evaluation.runDiscoverPeerPagesTrial(numPeers, numPages, numIterations)
+  evaluation.runDiscoverPeerPagesTrial(numPeers, numPages, numIterations, key)
   .then(actual => {
     t.deepEqual(actual, expected);
-    t.equal(fulfillPromisesSpy.callCount, 1);
-    t.equal(fulfillPromisesSpy.args[0][0].length, numIterations);
+    // t.equal(fulfillPromisesSpy.callCount, 1);
+    // t.equal(fulfillPromisesSpy.args[0][0].length, numIterations);
+
+    for (var j = 0; j < expected.length; j++) {
+      t.deepEqual(logTimeSpy.args[j], [ key, expected[j].resolved ]);
+    }
+
     t.end();
     resetEvaluation(); 
   });
-});
-
-test('runDiscoverPeerPagesTrial handles rejects', function(t) {
-  t.true(t);
-  console.log('unimplemented');
-  t.end();
 });
 
 test('logTime calls storage correctly if new stream', function(t) {
