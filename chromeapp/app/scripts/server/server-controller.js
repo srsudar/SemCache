@@ -53,7 +53,7 @@ exports.start = function(host, port) {
       handlers.CachedPageHandler
     ],
     [
-      '/eval_list*',
+      endpoints.evalListPages,
       evalHandlers.EvaluationHandler
     ]
   ];

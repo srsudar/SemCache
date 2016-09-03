@@ -1928,131 +1928,6 @@ exports.peekTypeInReader = function(reader) {
 };
 
 },{"./byte-array":4,"./dns-codes":5,"./dns-util":7}],10:[function(require,module,exports){
-'use strict';
-
-/**
- * Functionality useful to evaluating SemCache.
- */
-
-var datastore = require('./persistence/datastore');
-var api = require('./server/server-api');
-var storage = require('./chrome-apis/storage');
-
-/** The prefix value for timing keys we will use for local storage. */
-var TIMING_KEY_PREFIX = 'timing_';
-
-/**
- * Create a scoped version of key for to safely put in local storage
- *
- * @param {string} key
- *
- * @return {string} a scoped key, e.g. timing_key
- */
-exports.createTimingKey = function(key) {
-  return TIMING_KEY_PREFIX + key;
-};
-
-/**
- * Generate an Array of CachedPage objects useful for creating a response to
- * mimic response pages during an evaluation.
- *
- * @param {integer} numPages the number of CachedPages to generate. The number
- * of elements in the returned Array
- * @param {string} nonce a string that will be incorporated somehow into the
- * captureUrl value of the CachedPage. This is intended to allow the querier to
- * verify that the response has been generated based solely on this request.
- *
- * @return {Array<CachedPage>}
- */
-exports.generateDummyPages = function(numPages, nonce) {
-  var result = [];
-
-  for (var i = 0; i < numPages; i++) {
-    var page = exports.generateDummyPage(i, nonce);
-    result.push(page);
-  }
-
-  return result;
-};
-
-/**
- * @param {integer} index position in the final Array for this page
- * @param {string} nonce the unique string that will be contained in the
- * captureUrl value of the resulting CachedPage
- *
- * @return {CachedPage}
- */
-exports.generateDummyPage = function(index, nonce) {
-  var captureUrl = 'www.' + nonce + '.' + index + '.com';
-  var captureDate = new Date().toISOString();
-  var path = 'http://somepath';
-  var metadata = { muchMeta: 'so data' };
-
-  var result = new datastore.CachedPage(
-    captureUrl,
-    captureDate,
-    path,
-    metadata
-  );
-  return result;
-};
-
-/**
- * Generate a response mirroring the functionality of
- * server-api.getResponseForAllCachedPages to be used for evaluation.
- *
- * @param {integer} numPages the number of responses to return
- * @param {string} nonce a string to incorporate into answers
- *
- * @return {object} the JSON server response
- */
-exports.getDummyResponseForAllCachedPages = function(numPages, nonce) {
-  var pages = exports.generateDummyPages(numPages, nonce);
-  var result = {};
-  result.metadata = api.createMetadatObj();
-  result.cachedPages = pages;
-  return result;
-};
-
-/**
- * @return {number} return window.performance.now()
- */
-exports.getNow = function() {
-  return window.performance.now();
-};
-
-/**
- * Log an event time to local storage. The key will be scoped for timing and
- * time will be added to a list of times to that value. E.g. logTim('foo', 3)
- * would result in a value like { timing_foo: [ 3 ] } being added to local
- * storage. Subsequent calls would append to that list.
- *
- * @param {string} key the key that will be scoped and set in chrome.storage
- * @param {number} time the timing value that will be logged
- *
- * @return {Promise} Promise that resolves when the write completes
- */
-exports.logTime = function(key, time) {
-  return new Promise(function(resolve) {
-    var scopedKey = exports.createTimingKey(key);
-    storage.get(scopedKey)
-      .then(existingValues => {
-        if (existingValues && existingValues[scopedKey]) {
-          existingValues[scopedKey].push(time);
-          return storage.set(existingValues);
-        } else {
-          // New value.
-          existingValues[scopedKey] = [ time ];
-          return storage.set(existingValues);
-        }
-      })
-      .then(() => {
-        resolve();
-      });
-  });
-};
-
-},{"./chrome-apis/storage":3,"./persistence/datastore":12,"./server/server-api":15}],11:[function(require,module,exports){
 /* globals chrome */
 'use strict';
 
@@ -2076,7 +1951,7 @@ window.dnssd = require('dnssd');
 window.dnsc = require('dnsc');
 window.dnsSem = require('dnsSem');
 
-},{"dnsSem":"dnsSem","dnsc":"dnsc","dnssd":"dnssd"}],12:[function(require,module,exports){
+},{"dnsSem":"dnsSem","dnsc":"dnsc","dnssd":"dnssd"}],11:[function(require,module,exports){
 /* globals Promise */
 'use strict';
 
@@ -2373,7 +2248,7 @@ exports.getCaptureDateFromName = function(name) {
   return result;
 };
 
-},{"../chrome-apis/storage":3,"../server/server-api":15,"./file-system":"fileSystem","./file-system-util":"fsUtil"}],13:[function(require,module,exports){
+},{"../chrome-apis/storage":3,"../server/server-api":14,"./file-system":"fileSystem","./file-system-util":"fsUtil"}],12:[function(require,module,exports){
 /* globals WSC, _, TextEncoder */
 'use strict';
 
@@ -2403,7 +2278,7 @@ _.extend(exports.EvaluationHandler.prototype, {
   }
 }, WSC.BaseHandler.prototype);
 
-},{"../evaluation":10}],14:[function(require,module,exports){
+},{"../evaluation":"eval"}],13:[function(require,module,exports){
 /* globals WSC */
 'use strict';
 
@@ -2495,7 +2370,7 @@ _.extend(exports.CachedPageHandler.prototype,
   WSC.BaseHandler.prototype
 );
 
-},{"../persistence/file-system":"fileSystem","../persistence/file-system-util":"fsUtil","./server-api":15,"underscore":17}],15:[function(require,module,exports){
+},{"../persistence/file-system":"fileSystem","../persistence/file-system-util":"fsUtil","./server-api":14,"underscore":17}],14:[function(require,module,exports){
 'use strict';
 
 /**
@@ -2514,6 +2389,8 @@ var VERSION = 0.0;
  */
 var PATH_LIST_PAGE_CACHE = 'list_pages';
 var PATH_GET_CACHED_PAGE = 'pages';
+/** The path we use for mimicking the list_pages endpoing during evaluation. */
+var PATH_EVAL_LIST_PAGE_CACHE = 'eval_list';
 
 /**
  * Create the metadata object that is returned in server responses.
@@ -2540,7 +2417,8 @@ exports.createMetadatObj = function() {
 exports.getApiEndpoints = function() {
   return {
     pageCache: PATH_GET_CACHED_PAGE,
-    listPageCache: PATH_LIST_PAGE_CACHE
+    listPageCache: PATH_LIST_PAGE_CACHE,
+    evalListPages: PATH_EVAL_LIST_PAGE_CACHE
   };
 };
 
@@ -2612,7 +2490,38 @@ exports.getCachedFileNameFromPath = function(path) {
   return result;
 };
 
-},{"../app-controller":"appController","../persistence/datastore":12}],16:[function(require,module,exports){
+},{"../app-controller":"appController","../persistence/datastore":11}],15:[function(require,module,exports){
+'use strict';
+
+/**
+ * Helper to fetch and parse JSON from a URL.
+ *
+ * @param {string} url
+ *
+ * @return {Promise -> object} Promise that resolves with JSON fetched and
+ * parsed from url.
+ */
+exports.fetchJson = function(url) {
+  return new Promise(function(resolve) {
+    exports.fetch(url)
+    .then(response => {
+      resolve(response.json());
+    });
+  });
+};
+
+/**
+ * Wrapper around the global fetch api.
+ *
+ * @param {string} url
+ *
+ * @return {Promise} Promise returned by fetch()
+ */
+exports.fetch = function(url) {
+  return fetch(url);
+};
+
+},{}],16:[function(require,module,exports){
 (function (global){
 /*! http://mths.be/base64 v0.1.0 by @mathias | MIT license */
 ;(function(root) {
@@ -4650,7 +4559,7 @@ exports.saveMhtmlAndOpen = function(
   });
 };
 
-},{"./chrome-apis/udp":"chromeUdp","./dnssd/dns-controller":"dnsc","./dnssd/dns-sd-semcache":"dnsSem","./evaluation":10,"./extension-bridge/messaging":"extBridge","./persistence/datastore":12,"./persistence/file-system":"fileSystem","./server/server-api":15,"./server/server-controller":"serverController","./settings":"settings"}],"binaryUtils":[function(require,module,exports){
+},{"./chrome-apis/udp":"chromeUdp","./dnssd/dns-controller":"dnsc","./dnssd/dns-sd-semcache":"dnsSem","./evaluation":"eval","./extension-bridge/messaging":"extBridge","./persistence/datastore":11,"./persistence/file-system":"fileSystem","./server/server-api":14,"./server/server-controller":"serverController","./settings":"settings"}],"binaryUtils":[function(require,module,exports){
 /*jshint esnext:true*/
 /*
  * https://github.com/justindarc/dns-sd.js
@@ -6254,7 +6163,338 @@ exports.queryForResponses = function(
   });
 };
 
-},{"./dns-codes":5,"./dns-controller":"dnsc","./dns-packet":6,"./dns-util":7,"./resource-record":9}],"extBridge":[function(require,module,exports){
+},{"./dns-codes":5,"./dns-controller":"dnsc","./dns-packet":6,"./dns-util":7,"./resource-record":9}],"eval":[function(require,module,exports){
+'use strict';
+
+/**
+ * Functionality useful to evaluating SemCache.
+ */
+
+var datastore = require('./persistence/datastore');
+var api = require('./server/server-api');
+var storage = require('./chrome-apis/storage');
+var appc = require('./app-controller');
+var util = require('./util');
+
+/** The prefix value for timing keys we will use for local storage. */
+var TIMING_KEY_PREFIX = 'timing_';
+
+/**
+ * Create a scoped version of key for to safely put in local storage
+ *
+ * @param {string} key
+ *
+ * @return {string} a scoped key, e.g. timing_key
+ */
+exports.createTimingKey = function(key) {
+  return TIMING_KEY_PREFIX + key;
+};
+
+/**
+ * Generate an Array of CachedPage objects useful for creating a response to
+ * mimic response pages during an evaluation.
+ *
+ * @param {integer} numPages the number of CachedPages to generate. The number
+ * of elements in the returned Array
+ * @param {string} nonce a string that will be incorporated somehow into the
+ * captureUrl value of the CachedPage. This is intended to allow the querier to
+ * verify that the response has been generated based solely on this request.
+ *
+ * @return {Array<CachedPage>}
+ */
+exports.generateDummyPages = function(numPages, nonce) {
+  var result = [];
+
+  for (var i = 0; i < numPages; i++) {
+    var page = exports.generateDummyPage(i, nonce);
+    result.push(page);
+  }
+
+  return result;
+};
+
+/**
+ * @param {integer} index position in the final Array for this page
+ * @param {string} nonce the unique string that will be contained in the
+ * captureUrl value of the resulting CachedPage
+ *
+ * @return {CachedPage}
+ */
+exports.generateDummyPage = function(index, nonce) {
+  var captureUrl = 'www.' + nonce + '.' + index + '.com';
+  var captureDate = new Date().toISOString();
+  var path = 'http://somepath';
+  var metadata = { muchMeta: 'so data' };
+
+  var result = new datastore.CachedPage(
+    captureUrl,
+    captureDate,
+    path,
+    metadata
+  );
+  return result;
+};
+
+/**
+ * Generate a response mirroring the functionality of
+ * server-api.getResponseForAllCachedPages to be used for evaluation.
+ *
+ * @param {integer} numPages the number of responses to return
+ * @param {string} nonce a string to incorporate into answers
+ *
+ * @return {object} the JSON server response
+ */
+exports.getDummyResponseForAllCachedPages = function(numPages, nonce) {
+  var pages = exports.generateDummyPages(numPages, nonce);
+  var result = {};
+  result.metadata = api.createMetadatObj();
+  result.cachedPages = pages;
+  return result;
+};
+
+/**
+ * @return {number} return window.performance.now()
+ */
+exports.getNow = function() {
+  return window.performance.now();
+};
+
+/**
+ * Log an event time to local storage. The key will be scoped for timing and
+ * time will be added to a list of times to that value. E.g. logTim('foo', 3)
+ * would result in a value like { timing_foo: [ 3 ] } being added to local
+ * storage. Subsequent calls would append to that list.
+ *
+ * @param {string} key the key that will be scoped and set in chrome.storage
+ * @param {number} time the timing value that will be logged
+ *
+ * @return {Promise} Promise that resolves when the write completes
+ */
+exports.logTime = function(key, time) {
+  var scopedKey = exports.createTimingKey(key);
+  return new Promise(function(resolve) {
+    exports.getTimeValues(key)
+      .then(existingValues => {
+        var setObj = {};
+        if (existingValues) {
+          existingValues.push(time);
+          setObj[scopedKey] = existingValues;
+        } else {
+          // New value.
+          setObj[scopedKey] = [ time ];
+        }
+        return storage.set(setObj);
+      })
+      .then(() => {
+        resolve();
+      });
+  });
+};
+
+/**
+ * Get the list of values logged for a particular key. This is essentially just
+ * a getter that accounts for the prefix scoping applied to the key by this
+ * module. E.g. if you save an event as 'foo', it will be scoped in chrome
+ * storage as something like 'timing_foo'. Passing 'foo' to this method will
+ * scope the key and return the result.
+ *
+ * @param {string} key
+ *
+ * @return {Promise -> any} Promise that resolves with the value paired to this
+ * key in storage. Returns null if the value is not present.
+ */
+exports.getTimeValues = function(key) {
+  return new Promise(function(resolve) {
+    var scopedKey = exports.createTimingKey(key);
+    storage.get(scopedKey)
+    .then(existingValues => {
+      if (existingValues && existingValues[scopedKey]) {
+        resolve(existingValues[scopedKey]);
+      } else {
+        // Not present.
+        resolve(null);
+      }
+    });
+  });
+};
+
+/**
+ * Execute an array of Promise returning functions in order, one after another.
+ *
+ * @param{Array<function>} promises an Array of functions that return a Promise
+ * that should be executed.
+ * @return {Promise -> Array<object>} Promise that resolves with an array of
+ * objects. Each object will be a key value pair of either { resolved: value }
+ * or { rejected: value } representing the value that either resolved or
+ * rejected from the Promise.
+ */
+exports.fulfillPromises = function(promises) {
+  return new Promise(function(resolve) {
+    var result = [];
+    var seedPromise = Promise.resolve(null);
+
+    // Now we have an array with all our promises. We want to execute them
+    // sequentially, for which we will use reduce. seedPromise will be our
+    // initial value--a promise that returns null.
+    promises.reduce(function(cur, next) {
+      return cur.then(time => {
+        if (time !== null) {
+          // should always have a value except for the first time
+          result.push({ resolved: time });
+        }
+      })
+      .catch(err => {
+          result.push({ caught: err });
+      })
+      .then(next);
+    }, seedPromise).then(lastVal => {
+      // All executed.
+      // lastVal is the resolved value of the last promise. 
+      result.push({ resolved: lastVal });
+      resolve(result);
+    })
+    .catch(lastVal => {
+      result.push({ caught: lastVal });
+      resolve(result);
+    });
+  });
+};
+
+/**
+ * Run a time trial for discovering peers.
+ *
+ * @param {integer} numPeers the number of peers you are running against
+ * @param {integer} numPages the number of pages you will tell each peer to
+ * return
+ * @param {integer} numIterations the number of times you wish to run the
+ * trial
+ */
+exports.runDiscoverPeerPagesTrial = function(
+  numPeers,
+  numPages,
+  numIterations
+  ) {
+  return new Promise(function(resolve) {
+    // We will call runDiscoverPagesIteration and attach them all to a sequence
+    // of Promises, such that they will resolve in order.
+    var nextIter = function() {
+      return exports.runDiscoverPeerPagesIteration(numPeers, numPages);
+    };
+
+    var promises = [];
+    for (var i = 0; i < numIterations; i++) {
+      promises.push(nextIter);
+    }
+
+    // Now we have an array with all our promises.
+    exports.fulfillPromises(promises)
+    .then(results => {
+      resolve(results);
+    });
+  });
+};
+
+/**
+ * @param {string} ipAddress
+ * @param {integer} port
+ * @param {integer} numPages
+ *
+ * @return {string} a complete URL that generates a mocked response for
+ * evaluation
+ */
+exports.getEvalPagesUrl = function(ipAddress, port, numPages) {
+  var result = 'http://' +
+    ipAddress +
+    ':' +
+    port +
+    '/' +
+    api.getApiEndpoints().evalListPages +
+    '?numPages=' +
+    numPages;
+  return result;
+};
+
+/**
+ * Run a single iteration of a discover peers trial. This will query the
+ * network for peers, expecting to discover numPeers number of peers. It will
+ * then query each peer, expecting each peer to have numPages available. It
+ * will time this occurence and resolve with the amount of time it took.
+ *
+ * @param {integer} numPeers the number of peers you expect
+ * @param {integer} numPages the number of pages expected to be on each peer
+ *
+ * @return {Promise -> number} Promise that resolves with the time it took to
+ * run the trial. Rejects if it cannot find the correct number of peers or
+ * pages.
+ */
+exports.runDiscoverPeerPagesIteration = function(numPeers, numPages) {
+  return new Promise(function(resolve, reject) {
+    var startBrowse = exports.getNow();
+    var finishBrowsePeers = null;
+    var finishBrowsePages = null;
+    appc.getBrowseableCaches()
+    .then(caches => {
+      console.log('found peers: ', caches);
+
+      if (caches.length !== numPeers) {
+        var message = 'missing peer: found ' +
+          caches.length +
+          ', expected ' +
+          numPeers;
+        reject({
+          err: message
+        });
+      }
+
+      finishBrowsePeers = exports.getNow();
+      
+      // We'll create a fetch for each listUrl.
+      var promises = [];
+      caches.forEach(cache => {
+        var evalUrl = exports.getEvalPagesUrl(
+          cache.ipAddress,
+          cache.port,
+          numPages
+        );
+        var prom = util.fetchJson(evalUrl);
+        promises.push(prom);
+      });
+
+      return Promise.all(promises);
+    })
+    .then(cacheJsons => {
+      console.log('found caches: ', cacheJsons);
+
+      cacheJsons.forEach(cacheJson => {
+        if (cacheJson.cachedPages.length !== numPages) {
+          var message = 'missing pages: found ' +
+            cacheJson.cachedPages.length +
+            ', expected ' +
+            numPages;
+          reject({
+            err: message
+          });
+        }
+      });
+      finishBrowsePages = exports.getNow();
+    })
+    .then(() => {
+      var timeBrowsePeers = finishBrowsePeers - startBrowse;
+      var timeBrowsePages = finishBrowsePages - finishBrowsePeers;
+      var totalTime = finishBrowsePages - startBrowse;
+
+      var result = {
+        timeBrowsePeers: timeBrowsePeers,
+        timeBrowsePages: timeBrowsePages,
+        totalTime: totalTime
+      };
+
+      resolve(result);
+    });
+  });
+};
+
+},{"./app-controller":"appController","./chrome-apis/storage":3,"./persistence/datastore":11,"./server/server-api":14,"./util":15}],"extBridge":[function(require,module,exports){
 'use strict';
 
 var chromeRuntime = require('../chrome-apis/runtime');
@@ -6400,7 +6640,7 @@ exports.sendMessageToOpenUrl = function(url) {
   exports.sendMessageToExtension(message);
 };
 
-},{"../chrome-apis/runtime":2,"../persistence/datastore":12,"base-64":16}],"fileSystem":[function(require,module,exports){
+},{"../chrome-apis/runtime":2,"../persistence/datastore":11,"base-64":16}],"fileSystem":[function(require,module,exports){
 /*jshint esnext:true*/
 /* globals Promise */
 'use strict';
@@ -10909,7 +11149,7 @@ exports.start = function(host, port) {
       handlers.CachedPageHandler
     ],
     [
-      '/eval_list*',
+      endpoints.evalListPages,
       evalHandlers.EvaluationHandler
     ]
   ];
@@ -10917,7 +11157,7 @@ exports.start = function(host, port) {
   startServer(host, port, endpointHandlers);
 };
 
-},{"./evaluation-handler":13,"./handlers":14,"./server-api":15}],"settings":[function(require,module,exports){
+},{"./evaluation-handler":12,"./handlers":13,"./server-api":14}],"settings":[function(require,module,exports){
 /* global Promise */
 'use strict';
 
@@ -11209,4 +11449,4 @@ exports.promptAndSetNewBaseDir = function() {
   });
 };
 
-},{"./chrome-apis/file-system":1,"./chrome-apis/storage":3,"./persistence/file-system":"fileSystem"}]},{},[11]);
+},{"./chrome-apis/file-system":1,"./chrome-apis/storage":3,"./persistence/file-system":"fileSystem"}]},{},[10]);

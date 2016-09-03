@@ -57,6 +57,7 @@ module.exports = function (grunt) {
           './<%= config.app %>/scripts/server/server-controller:serverController',
           './<%= config.app %>/scripts/app-controller:appController',
           './<%= config.app %>/scripts/settings:settings',
+          './<%= config.app %>/scripts/evaluation:eval',
           'moment:moment',
         ],
       },

@@ -230,12 +230,22 @@ exports.runDiscoverPeerPagesTrial = function(
 
 /**
  * @param {string} ipAddress
+ * @param {integer} port
+ * @param {integer} numPages
  *
  * @return {string} a complete URL that generates a mocked response for
  * evaluation
  */
-exports.getEvalPagesUrl = function(ipAddress, numPages, nonce) {
-  return ipAddress + numPages + nonce;
+exports.getEvalPagesUrl = function(ipAddress, port, numPages) {
+  var result = 'http://' +
+    ipAddress +
+    ':' +
+    port +
+    '/' +
+    api.getApiEndpoints().evalListPages +
+    '?numPages=' +
+    numPages;
+  return result;
 };
 
 /**
@@ -275,7 +285,11 @@ exports.runDiscoverPeerPagesIteration = function(numPeers, numPages) {
       // We'll create a fetch for each listUrl.
       var promises = [];
       caches.forEach(cache => {
-        var evalUrl = exports.getEvalPagesUrl(cache.ipAddress);
+        var evalUrl = exports.getEvalPagesUrl(
+          cache.ipAddress,
+          cache.port,
+          numPages
+        );
         var prom = util.fetchJson(evalUrl);
         promises.push(prom);
       });

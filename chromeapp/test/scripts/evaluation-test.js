@@ -177,8 +177,8 @@ test('runDiscoverPeerPagesIteration resolves if all is well', function(t) {
   var evalUrl1 = 'tyrion/eval.json';
   var evalUrl2 = 'cersei/eval.json';
   var getEvalPagesUrlSpy = sinon.stub();
-  getEvalPagesUrlSpy.withArgs(peer1.ipAddress).returns(evalUrl1);
-  getEvalPagesUrlSpy.withArgs(peer2.ipAddress).returns(evalUrl2);
+  getEvalPagesUrlSpy.onCall(0).returns(evalUrl1);
+  getEvalPagesUrlSpy.onCall(1).returns(evalUrl2);
 
   var fetchJsonSpy = sinon.stub();
   fetchJsonSpy.withArgs(evalUrl1).resolves(peer1Response);
@@ -218,6 +218,22 @@ test('runDiscoverPeerPagesIteration resolves if all is well', function(t) {
   .then(actual => { 
     t.deepEqual(actual, expected);
     t.equal(fetchJsonSpy.callCount, 2);
+    t.deepEqual(
+      getEvalPagesUrlSpy.args[0],
+      [
+        peer1.ipAddress,
+        peer1.port,
+        numPages
+      ]
+    );
+    t.deepEqual(
+      getEvalPagesUrlSpy.args[1],
+      [
+        peer2.ipAddress,
+        peer2.port,
+        numPages
+      ]
+    );
     t.deepEqual(fetchJsonSpy.args[0], [ evalUrl1 ]);
     t.deepEqual(fetchJsonSpy.args[1], [ evalUrl2 ]);
     t.end();
@@ -451,4 +467,16 @@ test('getDummyResponseForAllCachedPages calls helpers', function(t) {
   t.deepEqual(generateDummyPagesSpy.args[0], [numPages, nonce]);
   t.end();
   resetEvaluation();
+});
+
+test('getEvalPagesUrl correct', function(t) {
+  var ipAddress = '1.2.3.4';
+  var port = 123;
+  var numPages = 5;
+
+  var expected = 'http://1.2.3.4:123/eval_list?numPages=5';
+  var actual = evaluation.getEvalPagesUrl(ipAddress, port, numPages);
+
+  t.equal(actual, expected);
+  t.end();
 });

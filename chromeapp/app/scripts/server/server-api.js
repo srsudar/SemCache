@@ -16,6 +16,8 @@ var VERSION = 0.0;
  */
 var PATH_LIST_PAGE_CACHE = 'list_pages';
 var PATH_GET_CACHED_PAGE = 'pages';
+/** The path we use for mimicking the list_pages endpoing during evaluation. */
+var PATH_EVAL_LIST_PAGE_CACHE = 'eval_list';
 
 /**
  * Create the metadata object that is returned in server responses.
@@ -42,7 +44,8 @@ exports.createMetadatObj = function() {
 exports.getApiEndpoints = function() {
   return {
     pageCache: PATH_GET_CACHED_PAGE,
-    listPageCache: PATH_LIST_PAGE_CACHE
+    listPageCache: PATH_LIST_PAGE_CACHE,
+    evalListPages: PATH_EVAL_LIST_PAGE_CACHE
   };
 };
 
