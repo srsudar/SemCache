@@ -1,7 +1,7 @@
 /* globals Promise, chrome */
 'use strict';
 
-var DEBUG = true;
+var DEBUG = false;
 
 exports.ChromeUdpSocket = function ChromeUdpSocket(socketInfo) {
   if (!(this instanceof ChromeUdpSocket)) {
@@ -91,8 +91,10 @@ exports.send = function(socketId, arrayBuffer, address, port) {
 exports.joinGroup = function(socketId, address) {
   return new Promise(function(resolve, reject) {
     chrome.sockets.udp.joinGroup(socketId, address, function(result) {
-      console.log('socketId: ', socketId);
-      console.log('address: ', address);
+      if (DEBUG) {
+        console.log('socketId: ', socketId);
+        console.log('address: ', address);
+      }
       if (result < 0) {
         console.log('chromeUdp.joinGroup: result < 0, reject');
         reject(result);

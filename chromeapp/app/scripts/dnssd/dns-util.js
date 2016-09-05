@@ -9,7 +9,7 @@ var byteArray = require('./byte-array');
 var MAX_LABEL_LENGTH = 63;
 var OCTET_LABEL_LENGTH = 1;
 
-exports.DEBUG = true;
+exports.DEBUG = false;
 
 exports.DEFAULT_TTL = 10;
 exports.DEFAULT_PRIORITY = 0;

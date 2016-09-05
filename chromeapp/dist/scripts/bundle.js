@@ -1090,7 +1090,7 @@ var byteArray = require('./byte-array');
 var MAX_LABEL_LENGTH = 63;
 var OCTET_LABEL_LENGTH = 1;
 
-exports.DEBUG = true;
+exports.DEBUG = false;
 
 exports.DEFAULT_TTL = 10;
 exports.DEFAULT_PRIORITY = 0;
@@ -4639,7 +4639,7 @@ return BinaryUtils;
 /* globals Promise, chrome */
 'use strict';
 
-var DEBUG = true;
+var DEBUG = false;
 
 exports.ChromeUdpSocket = function ChromeUdpSocket(socketInfo) {
   if (!(this instanceof ChromeUdpSocket)) {
@@ -4729,8 +4729,10 @@ exports.send = function(socketId, arrayBuffer, address, port) {
 exports.joinGroup = function(socketId, address) {
   return new Promise(function(resolve, reject) {
     chrome.sockets.udp.joinGroup(socketId, address, function(result) {
-      console.log('socketId: ', socketId);
-      console.log('address: ', address);
+      if (DEBUG) {
+        console.log('socketId: ', socketId);
+        console.log('address: ', address);
+      }
       if (result < 0) {
         console.log('chromeUdp.joinGroup: result < 0, reject');
         reject(result);
