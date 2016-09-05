@@ -44461,6 +44461,8 @@ exports.DNSSD_MULTICAST_GROUP = DNSSD_MULTICAST_GROUP;
 exports.DNSSD_PORT = DNSSD_PORT;
 exports.DNSSD_SERVICE_NAME = DNSSD_SERVICE_NAME;
 
+exports.DEBUG = true;
+
 /**
  * These are the records owned by this module. They are maintained in an object
  * of domain name to array of records, e.g. { 'www.example.com': [Object,
@@ -44637,6 +44639,11 @@ exports.handleIncomingPacket = function(packet, remoteAddress, remotePort) {
       question.queryType,
       question.queryClass
     );
+
+    if (exports.DEBUG) {
+      console.log('Received question: ', question);
+      console.log('  found records: ', records);
+    }
 
     // If we didn't get any records, don't send anything.
     if (records.length === 0) {
