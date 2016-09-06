@@ -44924,6 +44924,12 @@ exports.sendPacket = function(packet, address, port) {
   var uint8Arr = byteArray.getByteArrayAsUint8Array(byteArr);
 
   exports.getSocket().then(socket => {
+    if (exports.DEBUG) {
+      console.log('dns-controller.sendPacket(): got socket, sending');
+      console.log('  packet: ', packet);
+      console.log('  address: ', address);
+      console.log('  port: ', port);
+    }
     socket.send(uint8Arr.buffer, address, port);
   });
 };
@@ -45063,6 +45069,8 @@ var DEFAULT_QUERY_WAIT_TIME = 2000;
 exports.DEFAULT_QUERY_WAIT_TIME = DEFAULT_QUERY_WAIT_TIME;
 
 exports.LOCAL_SUFFIX = 'local';
+
+exports.DEBUG = true;
 
 /**
  * Returns a promise that resolves after the given time (in ms).
@@ -45429,6 +45437,9 @@ exports.browseServiceInstances = function(serviceType) {
     var aResponses = [];
     exports.queryForServiceInstances(serviceType)
       .then(function success(ptrInfos) {
+        if (exports.DEBUG) {
+          console.log('ptrInfos: ', ptrInfos);
+        }
         var srvRequests = [];
         ptrInfos.forEach(ptr => {
           ptrResponses.push(ptr);
@@ -45441,6 +45452,9 @@ exports.browseServiceInstances = function(serviceType) {
         return Promise.all(srvRequests);
       })
       .then(function success(srvInfos) {
+        if (exports.DEBUG) {
+          console.log('srvInfos: ', srvInfos);
+        }
         var aRequests = [];
         srvInfos.forEach(srv => {
           // the query methods return an Array of responses, even if only a
@@ -45462,6 +45476,10 @@ exports.browseServiceInstances = function(serviceType) {
         return Promise.all(aRequests);
       })
       .then(function success(aInfos) {
+        if (exports.DEBUG) {
+          console.log('aInfos: ', aInfos);
+        }
+
         aInfos.forEach(aInfo => {
           aInfo = aInfo[0];
           aResponses.push(aInfo);
@@ -45730,6 +45748,13 @@ exports.queryForResponses = function(
       }
     };
     dnsController.addOnReceiveCallback(callback);
+
+    if (exports.DEBUG) {
+      console.log('Calling queryForResponses');
+      console.log('  qName: ', qName);
+      console.log('  qType: ', qType);
+      console.log('  qClass: ', qClass);
+    }
 
     dnsController.query(
       qName,

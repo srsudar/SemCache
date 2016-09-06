@@ -488,6 +488,12 @@ exports.sendPacket = function(packet, address, port) {
   var uint8Arr = byteArray.getByteArrayAsUint8Array(byteArr);
 
   exports.getSocket().then(socket => {
+    if (exports.DEBUG) {
+      console.log('dns-controller.sendPacket(): got socket, sending');
+      console.log('  packet: ', packet);
+      console.log('  address: ', address);
+      console.log('  port: ', port);
+    }
     socket.send(uint8Arr.buffer, address, port);
   });
 };
