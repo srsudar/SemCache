@@ -44463,6 +44463,8 @@ exports.DNSSD_SERVICE_NAME = DNSSD_SERVICE_NAME;
 
 exports.DEBUG = true;
 
+exports.NEXT_PACKET_ID = 1;
+
 /**
  * These are the records owned by this module. They are maintained in an object
  * of domain name to array of records, e.g. { 'www.example.com': [Object,
@@ -44574,6 +44576,17 @@ exports.removeOnReceiveCallback = function(callback) {
 exports.onReceiveListener = function(info) {
   if (dnsUtil.DEBUG) {
     chromeUdp.logSocketInfo(info);
+  }
+
+  if (exports.DEBUG) {
+    // Before we do anything else, parse the packet. This will let us try to
+    // see if we are getting the packet and ignoring it or just never getting
+    // the packet.
+    var byteArrImmediate = new byteArray.ByteArray(info.data);
+    var packetImmediate =
+      dnsPacket.createPacketFromReader(byteArrImmediate.getReader());
+    console.log('Got packet: ', packetImmediate);
+    console.log('  packet id: ', packetImmediate.id);
   }
 
   if (!exports.socket) {
@@ -44918,6 +44931,11 @@ exports.stop = function() {
  * @param {number} port the port to sent the packet to
  */
 exports.sendPacket = function(packet, address, port) {
+  // For now, change the ID of the packet. We want to allow debugging, so we
+  // are going to use this to try and track packets.
+  packet.id = exports.NEXT_PACKET_ID;
+  exports.NEXT_PACKET_ID += 1;
+
   var byteArr = packet.convertToByteArray();
   // And now we need the underlying buffer of the byteArray, truncated to the
   // correct size.
