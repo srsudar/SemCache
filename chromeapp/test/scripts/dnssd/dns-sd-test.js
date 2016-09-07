@@ -1192,72 +1192,33 @@ test('browseServiceInstances handles dropped A', function(t) {
 
 test('browseServiceInstances queries all types and returns', function(t) {
   var serviceType = '_semcache._tcp';
-  var instanceName1 = 'Sam\'s. Cache';
-  var instanceName2 = 'Joe Cache';
-  var localSuffix = 'local';
+  var records = generateFakeRecords(serviceType, 2);
 
-  var fullSrvName1 = [instanceName1, serviceType, localSuffix].join('.');
-  var fullSrvName2 = [instanceName2, serviceType, localSuffix].join('.');
-
-  var ptrInfo1 = {
-    serviceType: serviceType,
-    serviceName: fullSrvName1
-  };
-  var ptrInfo2 = {
-    serviceType: serviceType,
-    serviceName: fullSrvName2
-  };
-
-  var srvInfo1 = {
-    instanceName: fullSrvName1,
-    domain: 'laptop.local',
-    port: 8888
-  };
-  var srvInfo2 = {
-    instanceName: fullSrvName2,
-    domain: 'desktop.local',
-    port: 9999
-  };
-
-  var aInfo1 = {
-    domainName: 'laptop.local',
-    ipAddress: '1.2.3.4'
-  };
-  var aInfo2 = {
-    domainName: 'desktop.local',
-    ipAddress: '9.8.7.6'
-  };
-
-
+  // PTR records
   var queryForServiceInstancesSpy = sinon.stub();
-  queryForServiceInstancesSpy.resolves([ptrInfo1, ptrInfo2]);
+  queryForServiceInstancesSpy.resolves([
+    records[0].ptr, records[1].ptr
+  ]);
 
-  var queryForIpAddressSpy = sinon.stub();
-  queryForIpAddressSpy.withArgs(srvInfo1.domain).resolves([aInfo1]);
-  queryForIpAddressSpy.withArgs(srvInfo2.domain).resolves([aInfo2]);
-
+  // SRV records
   var queryForInstanceInfoSpy = sinon.stub();
-  queryForInstanceInfoSpy.withArgs(srvInfo1.instanceName).resolves([srvInfo1]);
-  queryForInstanceInfoSpy.withArgs(srvInfo2.instanceName).resolves([srvInfo2]);
+  queryForInstanceInfoSpy.withArgs(records[0].ptr.serviceName)
+    .resolves([records[0].srv]);
+  queryForInstanceInfoSpy.withArgs(records[1].ptr.serviceName)
+    .resolves([records[1].srv]);
+
+  // A records
+  var queryForIpAddressSpy = sinon.stub();
+  queryForIpAddressSpy.withArgs(records[0].srv.domain)
+    .resolves([records[0].aRec]);
+  queryForIpAddressSpy.withArgs(records[1].srv.domain)
+    .resolves([records[1].aRec]);
 
   var getUserFriendlyNameSpy = sinon.stub();
-  getUserFriendlyNameSpy.withArgs(fullSrvName1).returns(instanceName1);
-  getUserFriendlyNameSpy.withArgs(fullSrvName2).returns(instanceName2);
-
-  var expected1 = {
-    serviceType: serviceType,
-    instanceName: instanceName1,
-    domainName: srvInfo1.domain,
-    ipAddress: aInfo1.ipAddress,
-    port: srvInfo1.port
-  };
-  var expected2 = {
-    serviceType: serviceType,
-    instanceName: instanceName2,
-    domainName: srvInfo2.domain,
-    ipAddress: aInfo2.ipAddress,
-    port: srvInfo2.port
-  };
+  getUserFriendlyNameSpy.withArgs(records[0].ptr.serviceName)
+    .returns(records[0].friendlyName);
+  getUserFriendlyNameSpy.withArgs(records[1].ptr.serviceName)
+    .returns(records[1].friendlyName);
 
   var dnssdSem = require('../../../app/scripts/dnssd/dns-sd');
   dnssdSem.queryForServiceInstances = queryForServiceInstancesSpy;
@@ -1278,27 +1239,28 @@ test('browseServiceInstances queries all types and returns', function(t) {
     // Called with correct args
     // PTR records
     t.equal(queryForServiceInstancesSpy.args[0][0], serviceType);
+
     // SRV records
     t.deepEqual(
       queryForInstanceInfoSpy.args[0],
-      [ptrInfo1.serviceName, dnssdSem.DEFAULT_QUERY_WAIT_TIME]
+      [records[0].ptr.serviceName, dnssdSem.DEFAULT_QUERY_WAIT_TIME]
     );
     t.deepEqual(
       queryForInstanceInfoSpy.args[1],
-      [ptrInfo2.serviceName, dnssdSem.DEFAULT_QUERY_WAIT_TIME]
+      [records[1].ptr.serviceName, dnssdSem.DEFAULT_QUERY_WAIT_TIME]
     );
     // A records
     t.deepEqual(
       queryForIpAddressSpy.args[0],
-      [srvInfo1.domain, dnssdSem.DEFAULT_QUERY_WAIT_TIME]
+      [records[0].srv.domain, dnssdSem.DEFAULT_QUERY_WAIT_TIME]
     );
     t.deepEqual(
       queryForIpAddressSpy.args[1],
-      [srvInfo2.domain, dnssdSem.DEFAULT_QUERY_WAIT_TIME]
+      [records[1].srv.domain, dnssdSem.DEFAULT_QUERY_WAIT_TIME]
     );
 
     // Result promise resolves with the correct objects.
-    t.deepEqual(instances, [expected1, expected2]);
+    t.deepEqual(instances, [records[0].expected, records[1].expected]);
     resetDnsSdSem();
     t.end();
   });
