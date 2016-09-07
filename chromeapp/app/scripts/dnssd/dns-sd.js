@@ -443,7 +443,7 @@ exports.browseServiceInstances = function(serviceType) {
           if (srv.length === 0) {
             // If no records resolved (e.g. from a dropped packet or a peer
             // that has dropped out), fail gracefully and log that it occurred.
-            console.log(
+            console.warn(
               'Did not receive SRV to match PTR, ignoring. PTR: ',
               ptrResponses[srvIter]
             );
@@ -470,6 +470,10 @@ exports.browseServiceInstances = function(serviceType) {
           var aInfo = aInfos[aIter];
           if (aInfo.length === 0) {
             // We didn't receive an A. Log that both the 
+            console.warn(
+              'Did not receive A to match SRV, ignoring. SRV: ',
+              srvResponses[aIter]
+            );
           } else {
             aInfo = aInfo[0];
             aResponses.push(aInfo);
@@ -477,12 +481,19 @@ exports.browseServiceInstances = function(serviceType) {
             srvsWithAs.push(srvResponses[aIter]);
           }
         }
+
+        if (
+          ptrsWithAs.length !== srvsWithAs.length ||
+          srvsWithAs.length !== aResponses.length
+        ) {
+          throw new Error('Different numbers of PTR, SRV, and A records!');
+        }
         
         var result = [];
-        for (var i = 0; i < ptrResponses.length; i++) {
-          var ptr = ptrResponses[i];
+        for (var i = 0; i < aResponses.length; i++) {
+          var ptr = ptrsWithAs[i];
           var instanceName = exports.getUserFriendlyName(ptr.serviceName);
-          var srv = srvResponses[i];
+          var srv = srvsWithAs[i];
           var aRec = aResponses[i];
           result.push({
             serviceType: serviceType,
