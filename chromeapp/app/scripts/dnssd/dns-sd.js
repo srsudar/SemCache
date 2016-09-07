@@ -399,6 +399,16 @@ exports.browseServiceInstances = function(serviceType) {
     var ptrResponses = [];
     var srvResponses = [];
     var aResponses = [];
+
+    // When resolving services, it is possible that at every step along the way
+    // a request goes unanswered. These arrays will keep track of that.
+    // The PTR records for which SRV records were returned
+    var ptrsWithSrvs = [];
+    // The PTR records for which both SRV and A records were returned
+    var ptrsWithAs = [];
+    // SRV records for which A records were returned
+    var srvsWithAs = [];
+
     exports.queryForServiceInstances(serviceType)
       .then(function success(ptrInfos) {
         if (exports.DEBUG) {
@@ -420,7 +430,7 @@ exports.browseServiceInstances = function(serviceType) {
           console.log('srvInfos: ', srvInfos);
         }
         var aRequests = [];
-        srvInfos.forEach(srv => {
+        for (var srvIter = 0; srvIter < srvInfos.length; srvIter++) {
           // the query methods return an Array of responses, even if only a
           // single response is requested. This allows for for API similarity
           // across calls and for an eventual implementation that permits both
@@ -429,14 +439,26 @@ exports.browseServiceInstances = function(serviceType) {
           // simplicity, however, we will assume at this stage that we only
           // ever expect a single response, which is correct in the vast
           // majority of cases.
-          srv = srv[0];
-          srvResponses.push(srv);
-          var hostname = srv.domain;
-          var req = exports.queryForIpAddress(
-            hostname, exports.DEFAULT_QUERY_WAIT_TIME
-          );
-          aRequests.push(req);
-        });
+          var srv = srvInfos[srvIter];
+          if (srv.length === 0) {
+            // If no records resolved (e.g. from a dropped packet or a peer
+            // that has dropped out), fail gracefully and log that it occurred.
+            console.log(
+              'Did not receive SRV to match PTR, ignoring. PTR: ',
+              ptrResponses[srvIter]
+            );
+          } else {
+            // Record that this PTR is active.
+            ptrsWithSrvs.push(ptrResponses[srvIter]);
+            srv = srv[0];
+            srvResponses.push(srv);
+            var hostname = srv.domain;
+            var req = exports.queryForIpAddress(
+              hostname, exports.DEFAULT_QUERY_WAIT_TIME
+            );
+            aRequests.push(req);
+          }
+        }
         return Promise.all(aRequests);
       })
       .then(function success(aInfos) {
@@ -444,10 +466,17 @@ exports.browseServiceInstances = function(serviceType) {
           console.log('aInfos: ', aInfos);
         }
 
-        aInfos.forEach(aInfo => {
-          aInfo = aInfo[0];
-          aResponses.push(aInfo);
-        });
+        for (var aIter = 0; aIter < aInfos.length; aIter++) {
+          var aInfo = aInfos[aIter];
+          if (aInfo.length === 0) {
+            // We didn't receive an A. Log that both the 
+          } else {
+            aInfo = aInfo[0];
+            aResponses.push(aInfo);
+            ptrsWithAs.push(ptrsWithSrvs[aIter]);
+            srvsWithAs.push(srvResponses[aIter]);
+          }
+        }
         
         var result = [];
         for (var i = 0; i < ptrResponses.length; i++) {

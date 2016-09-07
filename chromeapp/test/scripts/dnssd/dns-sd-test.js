@@ -945,7 +945,110 @@ test('queryForInstanceInfo correct', function(t) {
   );
 });
 
-test('browseServiceInstances queries all types and returns', function(t) {
+test('browseServiceInstances handles dropped SRV', function(t) {
+  // It might occur that we get two PTR records but from those only resolve a
+  // single SRV. In this case, we should not request an A record and should
+  // fail gracefully.
+  var serviceType = '_semcache._tcp';
+  var instanceName1 = 'Sam\'s. Cache';
+  var instanceName2 = 'Joe Cache';
+  var localSuffix = 'local';
+
+  var fullSrvName1 = [instanceName1, serviceType, localSuffix].join('.');
+  var fullSrvName2 = [instanceName2, serviceType, localSuffix].join('.');
+
+  var ptrInfo1 = {
+    serviceType: serviceType,
+    serviceName: fullSrvName1
+  };
+  var ptrInfo2 = {
+    serviceType: serviceType,
+    serviceName: fullSrvName2
+  };
+
+  var srvInfo1 = {
+    instanceName: fullSrvName1,
+    domain: 'laptop.local',
+    port: 8888
+  };
+
+  var aInfo1 = {
+    domainName: 'laptop.local',
+    ipAddress: '1.2.3.4'
+  };
+
+
+  var queryForServiceInstancesSpy = sinon.stub();
+  queryForServiceInstancesSpy.resolves([ptrInfo1, ptrInfo2]);
+
+  // We should never issue a query for the domain, since we don't have the SRV
+  var queryForIpAddressSpy = sinon.stub();
+  queryForIpAddressSpy.withArgs(srvInfo1.domain).resolves([aInfo1]);
+
+  var queryForInstanceInfoSpy = sinon.stub();
+  queryForInstanceInfoSpy.withArgs(srvInfo1.instanceName).resolves([srvInfo1]);
+  queryForInstanceInfoSpy.withArgs(instanceName2).resolves([]);
+
+  var getUserFriendlyNameSpy = sinon.stub();
+  getUserFriendlyNameSpy.withArgs(fullSrvName1).returns(instanceName1);
+  getUserFriendlyNameSpy.withArgs(fullSrvName2).returns(instanceName2);
+
+  var expected1 = {
+    serviceType: serviceType,
+    instanceName: instanceName1,
+    domainName: srvInfo1.domain,
+    ipAddress: aInfo1.ipAddress,
+    port: srvInfo1.port
+  };
+
+  var dnssdSem = require('../../../app/scripts/dnssd/dns-sd');
+  dnssdSem.queryForServiceInstances = queryForServiceInstancesSpy;
+  dnssdSem.queryForIpAddress = queryForIpAddressSpy;
+  dnssdSem.queryForInstanceInfo = queryForInstanceInfoSpy;
+  dnssdSem.getUserFriendlyName = getUserFriendlyNameSpy;
+
+  var resultPromise = dnssdSem.browseServiceInstances(serviceType);
+  resultPromise.then(function gotInstances(instances) {
+    // Each spy called the appropriate number of times with the appropriate
+    // arguments
+    // 1 call resolves all services
+    t.equal(queryForServiceInstancesSpy.callCount, 1);
+    // 2 PTR infos means 2 SRV requests
+    t.equal(queryForInstanceInfoSpy.callCount, 2);
+    // 1 SRV record, therefore only one A record request
+    t.equal(queryForIpAddressSpy.callCount, 1);
+
+    // Called with correct args
+    // PTR records
+    t.equal(queryForServiceInstancesSpy.args[0][0], serviceType);
+    // SRV records
+    t.deepEqual(
+      queryForInstanceInfoSpy.args[0],
+      [ptrInfo1.serviceName, dnssdSem.DEFAULT_QUERY_WAIT_TIME]
+    );
+    t.deepEqual(
+      queryForInstanceInfoSpy.args[1],
+      [ptrInfo2.serviceName, dnssdSem.DEFAULT_QUERY_WAIT_TIME]
+    );
+    // A records
+    t.deepEqual(
+      queryForIpAddressSpy.args[0],
+      [srvInfo1.domain, dnssdSem.DEFAULT_QUERY_WAIT_TIME]
+    );
+
+    // Result promise resolves with the correct objects.
+    t.deepEqual(instances, [expected1]);
+    resetDnsSdSem();
+    t.end();
+  });
+});
+
+test('browseServiceInstances handles dropped A', function(t) {
+  t.true(false);
+  t.end();
+});
+
+test.only('browseServiceInstances queries all types and returns', function(t) {
   var serviceType = '_semcache._tcp';
   var instanceName1 = 'Sam\'s. Cache';
   var instanceName2 = 'Joe Cache';
