@@ -5521,7 +5521,7 @@ exports.DEFAULT_NUM_RETRIES = 2;
  * additional queries will always be issued, so the number should be increased
  * more cautiously than DEFAULT_NUM_RETRIES.
  */
-exports.DEFAULT_NUM_PTR_RETRIES = 0;
+exports.DEFAULT_NUM_PTR_RETRIES = 1;
 
 exports.LOCAL_SUFFIX = 'local';
 
