@@ -32,6 +32,22 @@ var DEFAULT_QUERY_WAIT_TIME = 2000;
 
 exports.DEFAULT_QUERY_WAIT_TIME = DEFAULT_QUERY_WAIT_TIME;
 
+/**
+ * The default number of additional queries that are sent if an expected
+ * response is not generated. E.g. SRV records are expected to generate A
+ * records, unless a peer leaves the group. If a SRV does not generate an A on
+ * the first query, the query will be issued up to this many additional times.
+ */
+exports.DEFAULT_NUM_RETRIES = 2;
+
+/**
+ * The default number of initial scans for PTR requests. Since PTR requests
+ * accept multiple responses (i.e. from all the devices on the network) these
+ * additional queries will always be issued, so the number should be increased
+ * more cautiously than DEFAULT_NUM_RETRIES.
+ */
+exports.DEFAULT_NUM_PTR_RETRIES = 0;
+
 exports.LOCAL_SUFFIX = 'local';
 
 exports.DEBUG = true;
@@ -409,7 +425,11 @@ exports.browseServiceInstances = function(serviceType) {
     // SRV records for which A records were returned
     var srvsWithAs = [];
 
-    exports.queryForServiceInstances(serviceType)
+    exports.queryForServiceInstances(
+      serviceType,
+      exports.DEFAULT_QUERY_WAIT_TIME,
+      exports.DEFAULT_NUM_PTR_RETRIES
+    )
       .then(function success(ptrInfos) {
         if (exports.DEBUG) {
           console.log('ptrInfos: ', ptrInfos);
@@ -419,7 +439,9 @@ exports.browseServiceInstances = function(serviceType) {
           ptrResponses.push(ptr);
           var instanceName = ptr.serviceName;
           var req = exports.queryForInstanceInfo(
-            instanceName, exports.DEFAULT_QUERY_WAIT_TIME
+            instanceName,
+            exports.DEFAULT_QUERY_WAIT_TIME,
+            exports.DEFAULT_NUM_RETRIES
           );
           srvRequests.push(req);
         });
@@ -454,7 +476,9 @@ exports.browseServiceInstances = function(serviceType) {
             srvResponses.push(srv);
             var hostname = srv.domain;
             var req = exports.queryForIpAddress(
-              hostname, exports.DEFAULT_QUERY_WAIT_TIME
+              hostname,
+              exports.DEFAULT_QUERY_WAIT_TIME,
+              exports.DEFAULT_NUM_RETRIES
             );
             aRequests.push(req);
           }
@@ -552,6 +576,8 @@ exports.getUserFriendlyName = function(instanceTypeDomain) {
  * responses can be expected in response to a query for instances of a service
  * (as multiple instances can exist on the same network), the Promise will
  * always resolve after this many milliseconds.
+ * @param {number} numRetries the number of additional queries that should be
+ * sent. This can be 0, in which case only the first query will be sent
  *
  * @return {Promise} Returns a Promise that resolves with a list of objects
  * representing services, like the following:
@@ -560,8 +586,12 @@ exports.getUserFriendlyName = function(instanceTypeDomain) {
  *   serviceName: 'Magic Cache'
  * }
  */
-exports.queryForServiceInstances = function(serviceType, timeout) {
-  timeout = timeout || exports.DEFAULT_QUERY_WAIT_TIME;
+exports.queryForServiceInstances = function(
+  serviceType,
+  waitTime,
+  numRetries
+) {
+  waitTime = waitTime || exports.DEFAULT_QUERY_WAIT_TIME;
   var rType = dnsCodes.RECORD_TYPES.PTR;
   var rClass = dnsCodes.CLASS_CODES.IN;
   return new Promise(function(resolve) {
@@ -570,7 +600,8 @@ exports.queryForServiceInstances = function(serviceType, timeout) {
       rType,
       rClass,
       true,
-      timeout
+      waitTime,
+      numRetries
     )
     .then(function gotPackets(packets) {
       var result = [];
@@ -596,6 +627,8 @@ exports.queryForServiceInstances = function(serviceType, timeout) {
  *
  * @param {string} domainName the domain name to query for
  * @param {number} timeout the number of ms after which to time out
+ * @param {number} numRetries the number of additional queries to send after
+ * the first if a response is not received.
  *
  * @return {Promise} Returns a Promise that resolves with a list of objects
  * representing services, like the following:
@@ -604,7 +637,7 @@ exports.queryForServiceInstances = function(serviceType, timeout) {
  *   ipAddress: '123.4.5.6'
  * }
  */
-exports.queryForIpAddress = function(domainName, timeout) {
+exports.queryForIpAddress = function(domainName, timeout, numRetries) {
   // Note that this method ignores the fact that you could have multiple IP
   // addresses per domain name. At a minimum, you could have IPv6 and IPv4
   // addresses. For prototyping purposes, a single IP address is sufficient.
@@ -617,7 +650,8 @@ exports.queryForIpAddress = function(domainName, timeout) {
       rType,
       rClass,
       false,
-      timeout
+      timeout,
+      numRetries
     )
     .then(function gotPackets(packets) {
       var result = [];
@@ -644,6 +678,8 @@ exports.queryForIpAddress = function(domainName, timeout) {
  *
  * @param {string} instanceName the instance name to query for
  * @param {number} timeout the number of ms after which to time out
+ * @param {number} numRetries the number of additional queries to send after
+ * the first if a response is not received.
  *
  * @return {Promise} Returns a Promise that resolves with a list of objects
  * representing services, like the following:
@@ -653,7 +689,7 @@ exports.queryForIpAddress = function(domainName, timeout) {
  *   port: 1234
  * }
  */
-exports.queryForInstanceInfo = function(instanceName, timeout) {
+exports.queryForInstanceInfo = function(instanceName, timeout, numRetries) {
   timeout = timeout || exports.DEFAULT_QUERY_WAIT_TIME;
   var rType = dnsCodes.RECORD_TYPES.SRV;
   var rClass = dnsCodes.CLASS_CODES.IN;
@@ -663,7 +699,8 @@ exports.queryForInstanceInfo = function(instanceName, timeout) {
       rType,
       rClass,
       false,
-      timeout
+      timeout,
+      numRetries
     )
     .then(function gotPackets(packets) {
       var result = [];

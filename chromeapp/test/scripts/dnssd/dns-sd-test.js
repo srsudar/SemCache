@@ -50,6 +50,7 @@ function callsQueryForResponsesHelper(
   qClass,
   multipleResponses,
   timeout,
+  numRetries,
   packets,
   result,
   method,
@@ -58,13 +59,14 @@ function callsQueryForResponsesHelper(
   var querySpy = sinon.stub().resolves(packets);
   dnssdSem.queryForResponses = querySpy;
 
-  method(qName, timeout)
+  method(qName, timeout, numRetries)
     .then(function resolved(services) {
       var qNameArg = querySpy.args[0][0];
       var qTypeArg = querySpy.args[0][1];
       var qClassArg = querySpy.args[0][2];
       var multipleArg = querySpy.args[0][3];
       var timeoutArg = querySpy.args[0][4];
+      var numRetriesArg = querySpy.args[0][5];
 
       t.true(querySpy.calledOnce, 1);
       t.equal(qNameArg, qName);
@@ -72,6 +74,7 @@ function callsQueryForResponsesHelper(
       t.equal(qClassArg, qClass);
       t.equal(multipleArg, multipleResponses);
       t.equal(timeoutArg, timeout);
+      t.equal(numRetriesArg, numRetries);
       t.deepEqual(services, result);
       t.end();
 
@@ -973,6 +976,7 @@ test('queryForServiceInstances correct', function(t) {
     dnsCodes.CLASS_CODES.IN,
     true,
     112233,
+    2,
     packets,
     expected,
     dnssdSem.queryForServiceInstances,
@@ -1014,6 +1018,7 @@ test('queryForIpAddress correct', function(t) {
     dnsCodes.CLASS_CODES.IN,
     false,
     112233,
+    4,
     packets,
     expected,
     dnssdSem.queryForIpAddress,
@@ -1055,6 +1060,7 @@ test('queryForInstanceInfo correct', function(t) {
     dnsCodes.CLASS_CODES.IN,
     false,
     112233,
+    12,
     packets,
     expected,
     dnssdSem.queryForInstanceInfo,
@@ -1118,30 +1124,43 @@ test('browseServiceInstances handles dropped SRV', function(t) {
 
     // Called with correct args
     // PTR records
-    t.equal(queryForServiceInstancesSpy.args[0][0], serviceType);
+    t.deepEqual(
+      queryForServiceInstancesSpy.args[0],
+      [
+        serviceType,
+        dnssdSem.DEFAULT_QUERY_WAIT_TIME,
+        dnssdSem.DEFAULT_NUM_PTR_RETRIES
+      ]
+    );
 
     // SRV records should query for 3
-    t.deepEqual(
-      queryForInstanceInfoSpy.args[0],
-      [records[0].ptr.serviceName, dnssdSem.DEFAULT_QUERY_WAIT_TIME]
-    );
-    t.deepEqual(
-      queryForInstanceInfoSpy.args[1],
-      [records[1].ptr.serviceName, dnssdSem.DEFAULT_QUERY_WAIT_TIME]
-    );
-    t.deepEqual(
-      queryForInstanceInfoSpy.args[2],
-      [records[2].ptr.serviceName, dnssdSem.DEFAULT_QUERY_WAIT_TIME]
-    );
+    for (var srvQueryIter = 0; srvQueryIter < records.length; srvQueryIter++) {
+      t.deepEqual(
+        queryForInstanceInfoSpy.args[srvQueryIter],
+        [
+          records[srvQueryIter].ptr.serviceName,
+          dnssdSem.DEFAULT_QUERY_WAIT_TIME,
+          dnssdSem.DEFAULT_NUM_RETRIES
+        ]
+      );
+    }
 
     // A records
     t.deepEqual(
       queryForIpAddressSpy.args[0],
-      [records[0].srv.domain, dnssdSem.DEFAULT_QUERY_WAIT_TIME]
+      [
+        records[0].srv.domain, 
+        dnssdSem.DEFAULT_QUERY_WAIT_TIME,
+        dnssdSem.DEFAULT_NUM_RETRIES
+      ]
     );
     t.deepEqual(
       queryForIpAddressSpy.args[1],
-      [records[2].srv.domain, dnssdSem.DEFAULT_QUERY_WAIT_TIME]
+      [
+        records[2].srv.domain, 
+        dnssdSem.DEFAULT_QUERY_WAIT_TIME,
+        dnssdSem.DEFAULT_NUM_RETRIES
+      ]
     );
 
     // Result promise resolves with the correct objects.
@@ -1208,30 +1227,43 @@ test('browseServiceInstances handles dropped A', function(t) {
 
     // Called with correct args
     // PTR records
-    t.equal(queryForServiceInstancesSpy.args[0][0], serviceType);
+    t.deepEqual(
+      queryForServiceInstancesSpy.args[0],
+      [
+        serviceType,
+        dnssdSem.DEFAULT_QUERY_WAIT_TIME,
+        dnssdSem.DEFAULT_NUM_PTR_RETRIES
+      ]
+    );
 
     // SRV records
-    t.deepEqual(
-      queryForInstanceInfoSpy.args[0],
-      [records[0].ptr.serviceName, dnssdSem.DEFAULT_QUERY_WAIT_TIME]
-    );
-    t.deepEqual(
-      queryForInstanceInfoSpy.args[1],
-      [records[1].ptr.serviceName, dnssdSem.DEFAULT_QUERY_WAIT_TIME]
-    );
-    t.deepEqual(
-      queryForInstanceInfoSpy.args[2],
-      [records[2].ptr.serviceName, dnssdSem.DEFAULT_QUERY_WAIT_TIME]
-    );
+    for (var srvQueryIter = 0; srvQueryIter < records.length; srvQueryIter++) {
+      t.deepEqual(
+        queryForInstanceInfoSpy.args[srvQueryIter],
+        [
+          records[srvQueryIter].ptr.serviceName,
+          dnssdSem.DEFAULT_QUERY_WAIT_TIME,
+          dnssdSem.DEFAULT_NUM_RETRIES
+        ]
+      );
+    }
 
     // A records
     t.deepEqual(
       queryForIpAddressSpy.args[0],
-      [records[0].srv.domain, dnssdSem.DEFAULT_QUERY_WAIT_TIME]
+      [
+        records[0].srv.domain, 
+        dnssdSem.DEFAULT_QUERY_WAIT_TIME,
+        dnssdSem.DEFAULT_NUM_RETRIES
+      ]
     );
     t.deepEqual(
       queryForIpAddressSpy.args[1],
-      [records[1].srv.domain, dnssdSem.DEFAULT_QUERY_WAIT_TIME]
+      [
+        records[1].srv.domain, 
+        dnssdSem.DEFAULT_QUERY_WAIT_TIME,
+        dnssdSem.DEFAULT_NUM_RETRIES
+      ]
     );
 
     // Result promise resolves with the correct objects.
@@ -1287,28 +1319,37 @@ test('browseServiceInstances queries all types and returns', function(t) {
     t.equal(queryForIpAddressSpy.callCount, 2);
     t.equal(queryForInstanceInfoSpy.callCount, 2);
 
-    // Called with correct args
     // PTR records
-    t.equal(queryForServiceInstancesSpy.args[0][0], serviceType);
+    t.deepEqual(
+      queryForServiceInstancesSpy.args[0],
+      [
+        serviceType,
+        dnssdSem.DEFAULT_QUERY_WAIT_TIME,
+        dnssdSem.DEFAULT_NUM_PTR_RETRIES  
+      ]
+    );
 
-    // SRV records
-    t.deepEqual(
-      queryForInstanceInfoSpy.args[0],
-      [records[0].ptr.serviceName, dnssdSem.DEFAULT_QUERY_WAIT_TIME]
-    );
-    t.deepEqual(
-      queryForInstanceInfoSpy.args[1],
-      [records[1].ptr.serviceName, dnssdSem.DEFAULT_QUERY_WAIT_TIME]
-    );
-    // A records
-    t.deepEqual(
-      queryForIpAddressSpy.args[0],
-      [records[0].srv.domain, dnssdSem.DEFAULT_QUERY_WAIT_TIME]
-    );
-    t.deepEqual(
-      queryForIpAddressSpy.args[1],
-      [records[1].srv.domain, dnssdSem.DEFAULT_QUERY_WAIT_TIME]
-    );
+    for (var recordIter = 0; recordIter < records.length; recordIter++) {
+      // SRV records
+      t.deepEqual(
+        queryForInstanceInfoSpy.args[recordIter],
+        [
+          records[recordIter].ptr.serviceName,
+          dnssdSem.DEFAULT_QUERY_WAIT_TIME,
+          dnssdSem.DEFAULT_NUM_RETRIES
+        ]
+      );
+
+      // A records
+      t.deepEqual(
+        queryForIpAddressSpy.args[recordIter],
+        [
+          records[recordIter].srv.domain, 
+          dnssdSem.DEFAULT_QUERY_WAIT_TIME,
+          dnssdSem.DEFAULT_NUM_RETRIES
+        ]
+      );
+    }
 
     // Result promise resolves with the correct objects.
     t.deepEqual(instances, [records[0].expected, records[1].expected]);
