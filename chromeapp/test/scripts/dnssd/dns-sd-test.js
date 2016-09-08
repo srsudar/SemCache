@@ -80,6 +80,141 @@ function callsQueryForResponsesHelper(
 }
 
 /**
+ * Helper for the case that no packets are returned.
+ */
+function queryForResponsesNoPacketsHelper(numRetries, t) {
+  // we added a callback
+  // we issued a query
+  // we waited 2 seconds
+  // we resolved with the appropriate list
+  // we removed the callback
+
+  var qName = 'hello there';
+  var qType = 4;
+  var qClass = 2;
+  var qTime = 4000;
+  // we want no packets.
+  var expectedPackets = [];
+
+  var addOnReceiveCallbackSpy = sinon.spy();
+  var removeOnReceiveCallbackSpy = sinon.spy();
+  var querySpy = sinon.spy();
+  var packetIsForQuerySpy = sinon.stub().returns(true);
+  var waitSpy = sinon.stub().resolves();
+
+  var dnssdSem = proxyquire(
+    '../../../app/scripts/dnssd/dns-sd',
+    {
+      './dns-controller':
+      {
+        addOnReceiveCallback: addOnReceiveCallbackSpy,
+        removeOnReceiveCallback: removeOnReceiveCallbackSpy,
+        query: querySpy
+      }
+    }
+  );
+  dnssdSem.wait = waitSpy;
+  dnssdSem.packetIsForQuery = packetIsForQuerySpy;
+
+  var totalQueries = numRetries + 1;
+  dnssdSem.queryForResponses(qName, qType, qClass, true, qTime, numRetries)
+  .then(function success(records) {
+    // Assertions
+    t.equal(addOnReceiveCallbackSpy.callCount, 1);
+    t.equal(removeOnReceiveCallbackSpy.callCount, 1);
+
+    t.equal(querySpy.callCount, totalQueries);
+    t.equal(waitSpy.callCount, totalQueries);
+
+    for (var i = 0; i < totalQueries; i++) {
+      t.deepEqual(querySpy.args[i], [qName, qType, qClass]);
+      t.deepEqual(waitSpy.args[i], [qTime]);
+    }
+
+    t.equal(packetIsForQuerySpy.callCount, 0);
+    t.deepEqual(records, expectedPackets);
+  });
+}
+
+/**
+ * Helper function for ensuring that queryForResponses resolves after the
+ * correct number of calls for a single packet.
+ *
+ * @param {integer} numRetries passed to queryForResponses
+ * @param {integer} resolveOnNum the single packet will be passed to the
+ * function via the callback on the resolveOnNum call to query
+ * @param {tape} t not ended
+ */
+function queryForResponsesSinglePacketHelper(numRetries, resolveOnNum, t) {
+  // Make sure we handle automatic retries as expected
+
+  var qName = 'hello there';
+  var qType = 4;
+  var qClass = 2;
+  var qTime = 4000;
+  var packet1 = new dnsPacket.DnsPacket(
+    0, false, 0, false, false, false, false, 0
+  );
+
+  var expectedPackets = [packet1];
+
+  var addOnReceiveCallbackCount = 0;
+  var callback = null;
+  var addOnReceiveCallbackSpy = function(callbackParam) {
+    addOnReceiveCallbackCount += 1;
+    callback = callbackParam;
+  };
+  var removeOnReceiveCallbackSpy = sinon.spy();
+
+  // In this case the magic is going to happen in our spy function. We don't
+  // want to invoke the callback until the last call.
+  var numQueryCalls = 0;
+  var querySpy = sinon.spy(function() {
+    numQueryCalls += 1;
+    console.log('calling query');
+    console.log('numQueryCalls: ', numQueryCalls);
+    if (numQueryCalls === resolveOnNum) {
+      callback(packet1);
+    }
+  });
+
+  var waitSpy = sinon.stub().resolves();
+  var packetIsForQuerySpy = sinon.stub().returns(true);
+
+  var dnssdSem = proxyquire(
+    '../../../app/scripts/dnssd/dns-sd',
+    {
+      './dns-controller':
+      {
+        addOnReceiveCallback: addOnReceiveCallbackSpy,
+        removeOnReceiveCallback: removeOnReceiveCallbackSpy,
+        query: querySpy
+      }
+    }
+  );
+  dnssdSem.wait = waitSpy;
+  dnssdSem.packetIsForQuery = packetIsForQuerySpy;
+
+  dnssdSem.queryForResponses(qName, qType, qClass, false, qTime, numRetries)
+  .then(function success(records) {
+    // Assertions
+    t.equal(addOnReceiveCallbackCount, 1);
+    t.equal(removeOnReceiveCallbackSpy.callCount, 1);
+
+    // Make sure we called query and wait as many times as we're supposed to.
+    t.equal(querySpy.callCount, resolveOnNum);
+    for (var i = 0; i < resolveOnNum; i++) {
+      t.deepEqual(querySpy.args[i], [qName, qType, qClass]);
+      // We expect to wait for 2 seconds.
+      t.equal(waitSpy.args[i][0], qTime);
+    }
+
+    t.equal(packetIsForQuerySpy.callCount, 1);
+    t.deepEqual(records, expectedPackets);
+  });
+}
+
+/**
  * Helper to reject a probe promise due to receiving packets.
  *
  * returnTrueAfterCall: the call number after which receivedResponsePacket
@@ -708,112 +843,28 @@ test('advertiseService advertises', function(t) {
 });
 
 test('queryForResponses times out for if no responses', function(t) {
-  // we added a callback
-  // we issued a query
-  // we waited 2 seconds
-  // we resolved with the appropriate list
-  // we removed the callback
+  // no retries
+  queryForResponsesNoPacketsHelper(0, t);
 
-  var qName = 'hello there';
-  var qType = 4;
-  var qClass = 2;
-  var qTime = 4000;
-  // we want no packets.
-  var expectedPackets = [];
+  // 3 retries
+  queryForResponsesNoPacketsHelper(3, t);
 
-  var addOnReceiveCallbackSpy = sinon.spy();
-  var removeOnReceiveCallbackSpy = sinon.spy();
-  var querySpy = sinon.spy();
-  var packetIsForQuerySpy = sinon.stub().returns(true);
-  var waitSpy = sinon.stub().resolves();
-
-  var dnssdSem = proxyquire(
-    '../../../app/scripts/dnssd/dns-sd',
-    {
-      './dns-controller':
-      {
-        addOnReceiveCallback: addOnReceiveCallbackSpy,
-        removeOnReceiveCallback: removeOnReceiveCallbackSpy,
-        query: querySpy
-      }
-    }
-  );
-  dnssdSem.wait = waitSpy;
-  dnssdSem.packetIsForQuery = packetIsForQuerySpy;
-
-  dnssdSem.queryForResponses(qName, qType, qClass, true, qTime)
-  .then(function success(records) {
-    // Assertions
-    t.equal(addOnReceiveCallbackSpy.callCount, 1);
-    t.equal(removeOnReceiveCallbackSpy.callCount, 1);
-    t.true(querySpy.calledWith(qName, qType, qClass));
-    // We expect to wait for 2 seconds.
-    t.equal(waitSpy.args[0][0], qTime);
-    t.equal(packetIsForQuerySpy.callCount, 0);
-    t.deepEqual(records, expectedPackets);
-    t.end();
-    resetDnsSdSem();
-  });
+  t.end();
+  resetDnsSdSem();
 });
 
-test('queryForResponses returns immediately for single response', function(t) {
-  // we added a callback
-  // we issued a query
-  // we waited 2 seconds
-  // we resolved with the appropriate list
-  // we removed the callback
+test('queryForResponses handles retry attempts for single', function(t) {
+  // no retries
+  queryForResponsesSinglePacketHelper(0, 1, t);
 
-  var qName = 'hello there';
-  var qType = 4;
-  var qClass = 2;
-  var qTime = 4000;
-  // Add two packets. One will have an A record and a PTR, the other will have
-  // just a PTR.
-  var packet1 = new dnsPacket.DnsPacket(
-    0, false, 0, false, false, false, false, 0
-  );
+  // 4 retries
+  queryForResponsesSinglePacketHelper(4, 5, t);
 
-  var expectedPackets = [packet1];
+  // Ask for 4 retries, but resolve after the 1st.
+  queryForResponsesSinglePacketHelper(4, 1, t);
 
-  var addOnReceiveCallbackCount = 0;
-  var callback = null;
-  var addOnReceiveCallbackSpy = function(callbackParam) {
-    addOnReceiveCallbackCount += 1;
-    callback = callbackParam;
-    callbackParam(packet1);
-  };
-  var removeOnReceiveCallbackSpy = sinon.spy();
-  var querySpy = sinon.spy();
-  var waitSpy = sinon.stub().resolves();
-  var packetIsForQuerySpy = sinon.stub().returns(true);
-
-  var dnssdSem = proxyquire(
-    '../../../app/scripts/dnssd/dns-sd',
-    {
-      './dns-controller':
-      {
-        addOnReceiveCallback: addOnReceiveCallbackSpy,
-        removeOnReceiveCallback: removeOnReceiveCallbackSpy,
-        query: querySpy
-      }
-    }
-  );
-  dnssdSem.wait = waitSpy;
-  dnssdSem.packetIsForQuery = packetIsForQuerySpy;
-
-  dnssdSem.queryForResponses(qName, qType, qClass, false, qTime)
-  .then(function success(records) {
-    // Assertions
-    t.equal(addOnReceiveCallbackCount, 1);
-    t.equal(removeOnReceiveCallbackSpy.callCount, 1);
-    t.true(querySpy.calledWith(qName, qType, qClass));
-    // We expect to wait for 2 seconds.
-    t.equal(waitSpy.args[0][0], qTime);
-    t.equal(packetIsForQuerySpy.callCount, 1);
-    t.deepEqual(records, expectedPackets);
-    t.end();
-    resetDnsSdSem();
-  });
+  t.end();
+  resetDnsSdSem();
 });
 
 test('queryForResponses correct for multiple', function(t) {
@@ -862,7 +913,7 @@ test('queryForResponses correct for multiple', function(t) {
   dnssdSem.wait = waitSpy;
   dnssdSem.packetIsForQuery = packetIsForQuerySpy;
 
-  dnssdSem.queryForResponses(qName, qType, qClass, true, qTime)
+  dnssdSem.queryForResponses(qName, qType, qClass, true, qTime, 0)
   .then(function success(records) {
     // Assertions
     t.equal(addOnReceiveCallbackCount, 1);

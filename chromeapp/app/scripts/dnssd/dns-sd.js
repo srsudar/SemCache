@@ -699,6 +699,8 @@ exports.queryForInstanceInfo = function(instanceName, timeout) {
  * false (e.g. querying for an A Record, which should have a single answer),
  * this is the amount of time we wait before timing out and resolving with an
  * empty list.
+ * @param {number} numRetries the number of retries to attempt if a query
+ * doesn't generate packets.
  *
  * @return {Promise} Returns a Promise that resolves with an Array of Packets
  * received in response to the query. If multipleResponses is true, will not
@@ -711,7 +713,8 @@ exports.queryForResponses = function(
   qType,
   qClass,
   multipleResponses,
-  timeoutOrWait
+  timeoutOrWait,
+  numRetries
 ) {
   // Considerations for querying exist in RFC 6762 Section 5.2: Continuous
   // Multicast DNS Querying. This scenario essentially allows for a standing
@@ -760,22 +763,32 @@ exports.queryForResponses = function(
       console.log('  qClass: ', qClass);
     }
 
-    dnsController.query(
-      qName,
-      qType,
-      qClass
-    );
-    
-    exports.wait(timeoutOrWait)
-      .then(function waited() {
-        if (!resolved) {
-          dnsController.removeOnReceiveCallback(callback);
-          resolved = true;
-          resolve(packets);
-        }
-      })
-      .catch(function somethingWentWrong(err) {
-        console.log('Something went wrong in query: ', err);
-      });
+    var retriesAttempted = 0;
+
+    var queryAndWait = function() {
+      dnsController.query(qName, qType, qClass);
+      exports.wait(timeoutOrWait)
+        .then(() => {
+          if (resolved) {
+            // Already handled. Do nothing.
+            return;
+          }
+          if (retriesAttempted < numRetries) {
+            // We have more retries to attempt. Try again.
+            retriesAttempted += 1;
+            queryAndWait();
+          } else {
+            // We've waited and all of our retries are spent. Prepare to resolve.
+            dnsController.removeOnReceiveCallback(callback);
+            resolved = true;
+            resolve(packets);
+          }
+        })
+        .catch(err => {
+          console.log('Something went wrong in query: ', err);
+        });
+    };
+
+    queryAndWait();
   });
 };
