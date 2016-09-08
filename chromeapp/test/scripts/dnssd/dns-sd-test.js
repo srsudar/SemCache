@@ -56,19 +56,19 @@ function callsQueryForResponsesHelper(
   method,
   t
 ) {
-  var querySpy = sinon.stub().resolves(packets);
-  dnssdSem.queryForResponses = querySpy;
+  var queryForResponsesSpy = sinon.stub().resolves(packets);
+  dnssdSem.queryForResponses = queryForResponsesSpy;
 
   method(qName, timeout, numRetries)
     .then(function resolved(services) {
-      var qNameArg = querySpy.args[0][0];
-      var qTypeArg = querySpy.args[0][1];
-      var qClassArg = querySpy.args[0][2];
-      var multipleArg = querySpy.args[0][3];
-      var timeoutArg = querySpy.args[0][4];
-      var numRetriesArg = querySpy.args[0][5];
+      var qNameArg = queryForResponsesSpy.args[0][0];
+      var qTypeArg = queryForResponsesSpy.args[0][1];
+      var qClassArg = queryForResponsesSpy.args[0][2];
+      var multipleArg = queryForResponsesSpy.args[0][3];
+      var timeoutArg = queryForResponsesSpy.args[0][4];
+      var numRetriesArg = queryForResponsesSpy.args[0][5];
 
-      t.true(querySpy.calledOnce, 1);
+      t.true(queryForResponsesSpy.calledOnce);
       t.equal(qNameArg, qName);
       t.equal(qTypeArg, qType);
       t.equal(qClassArg, qClass);
@@ -956,7 +956,10 @@ test('queryForServiceInstances correct', function(t) {
   packet1.addAnswer(ptrRecord1);
   packet2.addAnswer(ptrRecord2);
 
-  var packets = [packet1, packet2];
+  // Since we can have multiple packets, even from the same machine (e.g. if we
+  // issue queries for PTR records twice), we need to ensure that we de-dupe
+  // our responses. For that reason add one packet twice.
+  var packets = [packet1, packet2, packet1];
 
   var expected = [
     {
