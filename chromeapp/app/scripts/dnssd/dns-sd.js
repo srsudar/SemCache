@@ -21,6 +21,8 @@
  */
 
 
+var _ = require('lodash');
+
 var dnsUtil = require('./dns-util');
 var dnsController = require('./dns-controller');
 var dnsCodes = require('./dns-codes');
@@ -617,6 +619,10 @@ exports.queryForServiceInstances = function(
           }
         });
       });
+
+      // Now de-dupe the results
+      result = _.uniqWith(result, _.isEqual);
+
       resolve(result);
     });
   });
