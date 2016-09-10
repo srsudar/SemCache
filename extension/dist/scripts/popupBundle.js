@@ -475,23 +475,20 @@ var tabs = require('../chrome-apis/tabs');
 var datastore = require('../persistence/datastore');
 var util = require('../util/util');
 
+/**
+ * Save the currently active page.
+ *
+ * @return {Promise} Promise that resolves when the save completes, or rejects
+ * if the save fails
+ */
 exports.saveCurrentPage = function() {
   // Get all tabs.
   // Get the active tab.
   // Ask the datastore to perform the write.
   return new Promise(function(resolve, reject) {
-    var tab = null;
-    tabs.query({ currentWindow: true, active: true})
-      .then(tabs => {
-        tab = tabs[0];
-        return tab;
-      })
+    util.getActiveTab()
       .then(activeTab => {
-        var tabId = activeTab.id;
-        return capture.saveAsMHTML({ tabId: tabId });
-      })
-      .then(mhtmlBlob => {
-        return datastore.savePage(tab, mhtmlBlob);
+        return exports.saveTab(activeTab);
       })
       .then(() => {
         // all done
@@ -500,6 +497,30 @@ exports.saveCurrentPage = function() {
       .catch(err => {
         reject(err);
       });
+  });
+};
+
+/**
+ * Save the given tab to the datastore.
+ *
+ * @param {Tab} tab the tab to save
+ *
+ * @return {Promise} Promise that resolves when the save completes.
+ */
+exports.saveTab = function(tab) {
+  return new Promise(function(resolve, reject) {
+    var tabId = tab.tabId;
+    capture.saveAsMHTML({ tabId: tabId })
+    .then(mhtmlBlob => {
+      return datastore.savePage(tab, mhtmlBlob);
+    })
+    .then(() => {
+      // all done
+      resolve();
+    })
+    .catch(err => {
+      reject(err);
+    });
   });
 };
 

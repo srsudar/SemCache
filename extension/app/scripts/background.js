@@ -13,3 +13,7 @@ console.log('SemCache: Event Page for Browser Action');
 chromeRuntime.addOnMessageExternalListener(
   messaging.onMessageExternalCallback
 );
+
+chromeRuntime.addOnMessageListener(
+  messaging.onMessageCallback
+);

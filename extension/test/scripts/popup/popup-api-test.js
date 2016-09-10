@@ -29,28 +29,16 @@ function resetApi() {
   api = require('../../../app/scripts/popup/popup-api');
 }
 
-/**
- * @return {object} a valid argument to tab.query
- */
-function getQueryArg() {
-  return { currentWindow: true, active: true };
-}
-
-test('saveCurrentPage resolves if all resolve', function(t) {
+test('saveTab resolves if all resolve', function(t) {
   var fullUrl = 'https://www.foo.com#money';
   var blob = 'so blobby';
   var tab = { tabId: 13, url: fullUrl };
-  var expectedTabs = [tab];
   var captureArg = { tabId: tab.tabId };
 
-  var querySpy = sinon.stub().withArgs(getQueryArg).resolves(expectedTabs);
   var saveAsMhtmlSpy = sinon.stub().withArgs(captureArg).resolves(blob);
   var savePageSpy = sinon.stub().withArgs(tab, blob).resolves();
   
   proxyquireApi({
-    '../chrome-apis/tabs': {
-      query: querySpy
-    },
     '../chrome-apis/page-capture': {
       saveAsMHTML: saveAsMhtmlSpy
     },
@@ -59,7 +47,7 @@ test('saveCurrentPage resolves if all resolve', function(t) {
     }
   });
 
-  api.saveCurrentPage()
+  api.saveTab(tab)
     .then(result => {
       // We don't expect a resolve object.
       t.equal(result, undefined);
@@ -69,25 +57,20 @@ test('saveCurrentPage resolves if all resolve', function(t) {
     });
 });
 
-test('saveCurrentPage rejects if savePage rejects', function(t) {
+test('saveTab rejects if savePage rejects', function(t) {
   // We don't currently permit this, but we are going to test for it just in
   // case.
   var fullUrl = 'https://www.foo.com#money';
   var blob = 'so blobby';
   var tab = { tabId: 13, url: fullUrl };
-  var expectedTabs = [tab];
   var captureArg = { tabId: tab.tabId };
 
   var expected = { msg: 'went wrong as expected' };
 
-  var querySpy = sinon.stub().withArgs(getQueryArg).resolves(expectedTabs);
   var saveAsMhtmlSpy = sinon.stub().withArgs(captureArg).resolves(blob);
   var savePageSpy = sinon.stub().withArgs(fullUrl, blob).rejects(expected);
   
   proxyquireApi({
-    '../chrome-apis/tabs': {
-      query: querySpy
-    },
     '../chrome-apis/page-capture': {
       saveAsMHTML: saveAsMhtmlSpy
     },
@@ -96,9 +79,54 @@ test('saveCurrentPage rejects if savePage rejects', function(t) {
     }
   });
 
+  api.saveTab(tab)
+    .catch(actual => {
+      t.equal(actual, expected);
+      t.end();
+      resetApi();
+    });
+});
+
+test('saveCurrentPage resolves if saveTab resolves', function(t) {
+  var tab = { tabId: 13 };
+
+  var getActiveTabSpy = sinon.stub().resolves(tab);
+  var saveTabSpy = sinon.stub().withArgs(tab).resolves();
+
+  proxyquireApi({
+    '../util/util': {
+      getActiveTab: getActiveTabSpy
+    },
+  });
+  api.saveTab = saveTabSpy;
+
+  api.saveCurrentPage()
+    .then(result => {
+      // We don't expect a resolve object.
+      t.equal(result, undefined);
+      t.deepEqual(saveTabSpy.args[0], [tab]);
+      t.end();
+      resetApi();
+    });
+});
+
+test('saveCurrentPage rejects if saveTab rejects', function(t) {
+  var tab = { tabId: 13 };
+
+  var expected = { msg: 'went wrong as expected' };
+
+  var getActiveTabSpy = sinon.stub().resolves(tab);
+  var saveTabSpy = sinon.stub().withArgs(tab).rejects(expected);
+  
+  proxyquireApi({
+    '../util/util': {
+      getActiveTab: getActiveTabSpy
+    }
+  });
+  api.saveTab = saveTabSpy;
+
   api.saveCurrentPage()
     .catch(actual => {
-      // We don't expect a resolve object.
       t.equal(actual, expected);
       t.end();
       resetApi();

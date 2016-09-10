@@ -60,3 +60,10 @@ exports.getActiveTab = function() {
       });
   });
 };
+
+/**
+ * @return {Date} return result of 'new Date()'
+ */
+exports.getToday = function() {
+  return new Date();
+};
