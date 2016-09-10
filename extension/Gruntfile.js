@@ -30,7 +30,9 @@ module.exports = function (grunt) {
 
     browserify: {
       options: {
-        require: [],
+        require: [
+          './<%= config.app %>/scripts/content-script/cs-evaluation:cs-eval',
+        ],
       },
       popup: {
         // A single entry point for the app.

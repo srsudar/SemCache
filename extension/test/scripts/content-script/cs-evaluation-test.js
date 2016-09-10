@@ -80,44 +80,40 @@ test('isPerformingTrial returns result if present', function(t) {
   );
 });
 
-test('getTotalIterations returns set value', function(t) {
-  var expected = 55;
-  storageGetHelper(
-    evaluation.KEY_NUM_ITERATIONS,
-    expected,
-    'getTotalIterations',
-    t
-  );
-});
+test('getParameters returns results', function(t) {
+  var expected = {
+    key: 'logKey',
+    numIterations: 15,
+    currentIter: 2,
+    pageId: 'google/path'
+  };
 
-test('getCurrentIteration returns set value', function(t) {
-  var expected = 0;
-  storageGetHelper(
-    evaluation.KEY_CURRENT_ITERATION,
-    expected,
-    'getCurrentIteration',
-    t
-  );
-});
-
-test('getDomainAndPath returns result if present', function(t) {
-  var expected = 'www.google.com/mailstuff';
-  storageGetHelper(
+  var expectedGetArg = [
     evaluation.KEY_DOMAIN_AND_PATH,
-    expected,
-    'getDomainAndPath',
-    t
-  );
-});
+    evaluation.KEY_NUM_ITERATIONS,
+    evaluation.KEY_CURRENT_ITERATION,
+    evaluation.KEY_LOG_KEY
+  ];
 
-test('getLogKey returns result if present', function(t) {
-  var expected = 'wwwgoogle';
-  storageGetHelper(
-    evaluation.KEY_LOG_KEY,
-    expected,
-    'getLogKey',
-    t
-  );
+  var getResult = {};
+  getResult[evaluation.KEY_DOMAIN_AND_PATH] = expected.pageId;
+  getResult[evaluation.KEY_NUM_ITERATIONS] = expected.numIterations;
+  getResult[evaluation.KEY_CURRENT_ITERATION] = expected.currentIter;
+  getResult[evaluation.KEY_LOG_KEY] = expected.key;
+
+  var getSpy = sinon.stub().withArgs(expectedGetArg).resolves(getResult);
+  proxyquireEvaluation({
+    '../../../../chromeapp/app/scripts/chrome-apis/storage': {
+      get: getSpy
+    }
+  });
+
+  evaluation.getParameters()
+    .then(actual => {
+      t.deepEqual(actual, expected);
+      t.end();
+      resetEvaluation();
+    });
 });
 
 test('requestSavePage sends message and resolves', function(t) {
@@ -224,7 +220,9 @@ test('deleteStorageHelperValues deletes and resolves', function(t) {
           [
             evaluation.KEY_PERFORMING_TRIAL,
             evaluation.KEY_NUM_ITERATIONS,
-            evaluation.KEY_CURRENT_ITERATION
+            evaluation.KEY_CURRENT_ITERATION,
+            evaluation.KEY_LOG_KEY,
+            evaluation.KEY_DOMAIN_AND_PATH
           ]
         ]
       );

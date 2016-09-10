@@ -57,40 +57,35 @@ exports.isPerformingTrial = function() {
 };
 
 /**
- * Resolves the number of iterations we should perform in this trial.
- * 
- * @return {Promise -> integer}
+ * @return {Promise -> object} Promise that resolves with an object like the
+ * following, defining the parameters of this trial:
+ * {
+ *   key: user defined key,
+ *   numIterations: number we are running,
+ *   currentIter: the current iteration we are on,
+ *   pageId: the page identifier
+ * }
  */
-exports.getTotalIterations = function() {
-  return exports.getFromStorageHelper(exports.KEY_NUM_ITERATIONS);
-};
-
-/**
- * Get the key the user has defined that we will use to access the logs.
- *
- * @return {Promise -> string}
- */
-exports.getLogKey = function() {
-  return exports.getFromStorageHelper(exports.KEY_LOG_KEY);
-};
-
-/**
- * Resolves the current iteration we are performing. This should start at 0 and
- * go up to getTotalIterations() - 1 during the course of a trial.
- * @return {Promise -> integer}
- */
-exports.getCurrentIteration = function() {
-  return exports.getFromStorageHelper(exports.KEY_CURRENT_ITERATION);
-};
-
-/**
- * Resolves the domain and path upon which we are performing the evaluation.
- * This is expected to be retrieved by the Content Script when the page firsts
- * load and act as a safety measure so we refreshingly frantically on every
- * page after we initiate a trial on one page.
- */
-exports.getDomainAndPath = function() {
-  return exports.getFromStorageHelper(exports.KEY_DOMAIN_AND_PATH);
+exports.getParameters = function() {
+  return new Promise(function(resolve) {
+    var keys = [
+      exports.KEY_DOMAIN_AND_PATH,
+      exports.KEY_NUM_ITERATIONS,
+      exports.KEY_CURRENT_ITERATION,
+      exports.KEY_LOG_KEY
+    ];
+    storage.get(keys)
+      .then(getResult => {
+        var result = {
+          key: getResult[exports.KEY_LOG_KEY],
+          numIterations: getResult[exports.KEY_NUM_ITERATIONS],
+          currentIter: getResult[exports.KEY_CURRENT_ITERATION],
+          pageId: getResult[exports.KEY_DOMAIN_AND_PATH]
+        };
+        resolve(result);
+      });
+  });
+  
 };
 
 /**
@@ -243,7 +238,9 @@ exports.deleteStorageHelperValues = function() {
   var keys = [
     exports.KEY_PERFORMING_TRIAL,
     exports.KEY_NUM_ITERATIONS,
-    exports.KEY_CURRENT_ITERATION
+    exports.KEY_CURRENT_ITERATION,
+    exports.KEY_LOG_KEY,
+    exports.KEY_DOMAIN_AND_PATH
   ];
   return storage.remove(keys);
 };
@@ -294,4 +291,36 @@ exports.createMetadataForLog = function() {
     date: date
   };
   return result;
+};
+
+/**
+ * Checks the current state and initiates a trial if necessary.
+ */
+exports.onPageLoadComplete = function() {
+  exports.isPerformingTrial()
+    .then(isTrial => {
+      if (!isTrial) {
+        console.log('Not performing a save page trial.');
+        throw new Error('jump to end');
+      } else {
+        return exports.getParameters();
+      }
+    })
+    .then(params => {
+      var thisPageId = exports.createPageIdentifier(); 
+      if (thisPageId !== params.pageId) {
+        console.log('Running a trial, but not on this page.');
+        throw new Error('jump to end');
+      } else {
+        // We're in a trial
+        return exports.runSavePageIteration(
+          params.currentIter,
+          params.numIterations,
+          params.key
+        );
+      }
+    })
+    .catch(err => {
+      console.log(err);
+    });
 };

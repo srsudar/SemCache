@@ -31,7 +31,8 @@
     "pageCapture",
     "http://*/*",
     "https://*/*",
-    "<all_urls>"
+    "<all_urls>",
+    "storage"
   ],
   "options_ui": {
     "page": "options.html",
