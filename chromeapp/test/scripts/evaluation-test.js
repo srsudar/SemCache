@@ -494,3 +494,132 @@ test('getEvalPagesUrl correct', function(t) {
   t.equal(actual, expected);
   t.end();
 });
+
+test('runLoadPageTrial correct', function(t) {
+  var numIterations = 4;
+  var key = 'loadKey';
+  var captureUrl = 'original_url.html';
+  var captureDate = 'the date it was saved';
+  var mhtmlUrl = 'the_url_to_save_the_page.mhtml';
+  var metadata = { meta: 'data' };
+
+  var loadTimes = [
+    1.1,
+    2.2,
+    3.3,
+    4.4
+  ];
+  var expected = [];
+
+  var runLoadPageIterationSpy = sinon.stub();
+  for (var i = 0; i < numIterations; i++) {
+    var value = loadTimes[i];
+    runLoadPageIterationSpy.onCall(i).resolves(value);
+    expected.push({ resolved: value });
+  }
+  
+  var logTimeSpy = sinon.stub();
+  evaluation.logTime = logTimeSpy;
+  evaluation.runLoadPageIteration = runLoadPageIterationSpy;
+
+  evaluation.runLoadPageTrial(
+    numIterations,
+    key,
+    captureUrl,
+    captureDate,
+    mhtmlUrl,
+    metadata
+  )
+  .then(actual => {
+    t.deepEqual(actual, expected);
+    t.equal(runLoadPageIterationSpy.callCount, numIterations);
+
+    for (var j = 0; j < expected.length; j++) {
+      t.deepEqual(logTimeSpy.args[j], [ key, expected[j].resolved ]);
+    }
+
+    t.end();
+    resetEvaluation(); 
+  });
+});
+
+test('runLoadPageTrialForCache correct', function(t) {
+  var listPagesUrl = 'host:port/list_pages';
+  var numIterations = 3;
+  var key = 'cacheKey';
+
+  var page1 = {
+    captureUrl: 'url1',
+    captureDate: 'date1',
+    accessPath: 'path1',
+    metadata: { mdata: '1' }
+  };
+
+  var page2 = {
+    captureUrl: 'url2',
+    captureDate: 'date2',
+    accessPath: 'path2',
+    metadata: { mdata: '2' }
+  };
+
+  var caches = {
+    cachedPages: [page1, page2]
+  };
+
+  var fetchJsonSpy = sinon.stub().withArgs(listPagesUrl).resolves(caches);
+
+  var pageResults = [
+    'result for page 1',
+    'result for page 2',
+  ];
+
+  var expected = [];
+
+  var runLoadPageTrialSpy = sinon.stub();
+  for (var i = 0; i < caches.cachedPages.length; i++) {
+    var value = pageResults[i];
+    runLoadPageTrialSpy.onCall(i).resolves(value);
+    expected.push({ resolved: value });
+  }
+
+  proxyquireEvaluation({
+    './util': {
+      fetchJson: fetchJsonSpy
+    }
+  });
+  evaluation.runLoadPageTrial = runLoadPageTrialSpy;
+
+  evaluation.runLoadPageTrialForCache(numIterations, key, listPagesUrl)
+  .then(actual => {
+    t.deepEqual(actual, expected);
+    t.equal(runLoadPageTrialSpy.callCount, caches.cachedPages.length);
+
+    t.deepEqual(
+      runLoadPageTrialSpy.args[0],
+      [
+        numIterations,
+        key,
+        page1.captureUrl,
+        page1.captureDate,
+        page1.accessPath,
+        page1.metadata
+      ]
+    );
+
+    t.deepEqual(
+      runLoadPageTrialSpy.args[1],
+      [
+        numIterations,
+        key,
+        page2.captureUrl,
+        page2.captureDate,
+        page2.accessPath,
+        page2.metadata
+      ]
+    );
+
+    t.end();
+    resetEvaluation(); 
+  });
+
+});

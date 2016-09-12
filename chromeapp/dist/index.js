@@ -60870,7 +60870,7 @@ exports.saveMhtmlAndOpen = function(
         var totalTime = end - start;
         evaluation.logTime(streamName, totalTime);
         console.warn('totalTime to fetch: ', totalTime);
-        resolve();
+        resolve(totalTime);
       });
   });
 };
@@ -62968,6 +62968,110 @@ exports.runDiscoverPeerPagesIteration = function(numPeers, numPages) {
     });
   });
 };
+
+/**
+ * Load every page in the cache numIterations results and log the results.
+ *
+ * @param {integer} numIterations the number of times to load each page
+ * @param {string} key the key to which the results will be stored in chrome
+ * storage
+ * @param {string} listPagesUrl the URL of the cache the exposes the JSON end
+ * point with the contents of the cache
+ *
+ * @return {Promise} Promise that resolves with the results of the trial when
+ * it is complete
+ */
+exports.runLoadPageTrialForCache = function(numIterations, key, listPagesUrl) {
+  return new Promise(function(resolve) {
+    util.fetchJson(listPagesUrl)
+      .then(cache => {
+        // We will call runDiscoverPagesIteration and attach them all to a
+        // sequence of Promises, such that they will resolve in order.
+        var numCalls = 0;
+        var nextIter = function() {
+          var cachedPage = cache.cachedPages[numCalls];
+          numCalls += 1;
+          return exports.runLoadPageTrial(
+            numIterations,
+            key,
+            cachedPage.captureUrl,
+            cachedPage.captureDate,
+            cachedPage.accessPath,
+            cachedPage.metadata
+          )
+          .then(iterationResult => {
+            exports.logTime(key, iterationResult);
+            return Promise.resolve(iterationResult);
+          });
+        };
+
+        var promises = [];
+        for (var i = 0; i < cache.cachedPages.length; i++) {
+          promises.push(nextIter);
+        }
+
+        // Now we have an array with all our promises.
+        return exports.fulfillPromises(promises);
+      })
+      .then(results => {
+        resolve(results);
+      });
+  });
+};
+
+exports.runLoadPageIteration = function(
+  captureUrl,
+  captureDate,
+  mhtmlUrl,
+  metadata
+) {
+  return appc.saveMhtmlAndOpen(captureUrl, captureDate, mhtmlUrl, metadata);
+};
+
+exports.runLoadPageTrial = function(
+  numIterations,
+  key,
+  captureUrl,
+  captureDate,
+  mhtmlUrl,
+  metadata
+) {
+  key = key || 'lastLoad';
+  return new Promise(function(resolve) {
+    // We will call runDiscoverPagesIteration and attach them all to a sequence
+    // of Promises, such that they will resolve in order.
+    var nextIter = function() {
+      return exports.runLoadPageIteration(
+        captureUrl,
+        captureDate,
+        mhtmlUrl,
+        metadata
+      )
+      .then(iterationResult => {
+        var toLog = {};
+        toLog.timeToOpen = iterationResult;
+        toLog.captureUrl = captureUrl;
+        toLog.numIterations = numIterations;
+        toLog.mhtmlUrl = mhtmlUrl;
+        toLog.fullUrl = metadata.fullUrl;
+        exports.logTime(key, iterationResult);
+        return Promise.resolve(iterationResult);
+      });
+    };
+
+    var promises = [];
+    for (var i = 0; i < numIterations; i++) {
+      promises.push(nextIter);
+    }
+
+    // Now we have an array with all our promises.
+    exports.fulfillPromises(promises)
+    .then(results => {
+      resolve(results);
+    });
+  });
+};
+
 
 },{"./app-controller":"appController","./chrome-apis/storage":4,"./persistence/datastore":11,"./server/server-api":14,"./util":15}],"extBridge":[function(require,module,exports){
 'use strict';

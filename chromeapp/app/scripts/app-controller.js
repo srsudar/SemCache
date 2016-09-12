@@ -311,7 +311,7 @@ exports.saveMhtmlAndOpen = function(
         var totalTime = end - start;
         evaluation.logTime(streamName, totalTime);
         console.warn('totalTime to fetch: ', totalTime);
-        resolve();
+        resolve(totalTime);
       });
   });
 };
