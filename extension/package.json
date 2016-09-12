@@ -47,5 +47,8 @@
         "single"
       ]
     }
+  },
+  "dependencies": {
+    "json2csv": "^3.6.3"
   }
 }
