@@ -44,7 +44,7 @@ exports.saveCurrentPage = function() {
  */
 exports.saveTab = function(tab) {
   return new Promise(function(resolve, reject) {
-    var tabId = tab.tabId;
+    var tabId = tab.id;
     capture.saveAsMHTML({ tabId: tabId })
     .then(mhtmlBlob => {
       return datastore.savePage(tab, mhtmlBlob);

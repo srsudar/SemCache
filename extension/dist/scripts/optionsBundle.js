@@ -24233,25 +24233,6 @@ exports.sendMessage = function(tabId, message, callback) {
 },{}],32:[function(require,module,exports){
 'use strict';
 
-console.log('in SemCache contentscriptBundle.js');
-
-var api = require('./cs-api');
-var runtime = require('../chrome-apis/runtime');
-var evaluation = require('./cs-evaluation');
-var util = require('../util/util');
-
-window.evaluation = evaluation;
-
-runtime.addOnMessageListener(api.onMessageHandler);
-
-util.getOnCompletePromise()
-  .then(() => {
-    evaluation.onPageLoadComplete();
-  });
-
-},{"../chrome-apis/runtime":30,"../util/util":34,"./cs-api":33,"./cs-evaluation":"cs-eval"}],33:[function(require,module,exports){
-'use strict';
-
 var util = require('../util/util');
 
 /**
@@ -24307,7 +24288,61 @@ exports.getFullLoadTime = function() {
   return result;
 };
 
-},{"../util/util":34}],34:[function(require,module,exports){
+},{"../util/util":34}],33:[function(require,module,exports){
+/* globals alert */
+'use strict';
+
+console.log('In SemCache options.js');
+
+var evaluation = require('./content-script/cs-evaluation');
+var appEval = require('../../../chromeapp/app/scripts/evaluation');
+
+var uiPageId = document.querySelector('#pageIdentifier');
+var uiNumIterations = document.querySelector('#numIterations');
+var uiKey = document.querySelector('#key');
+
+var uiRetrieveKey = document.querySelector('#retrieveKey');
+
+var btnSave = document.querySelector('#save');
+var btnStop = document.querySelector('#stop');
+var btnGet = document.querySelector('#getResult');
+
+function configureExperiment() {
+  var pageId = uiPageId.value;
+  var numIterations = uiNumIterations.value;
+  var key = uiKey.value;
+
+  var intIter = parseInt(numIterations);
+
+  if (!intIter || isNaN(intIter)) {
+    alert('invalid number of iterations');
+    return;
+  }
+
+  evaluation.startSavePageTrial(pageId, intIter, key);
+}
+
+function retrieveKey() {
+  var keyValue = uiRetrieveKey.value;
+  appEval.getTimeValues(keyValue)
+    .then(values => {
+      if (values === null) {
+        console.log('no results saved for key: ', keyValue);
+      } else {
+        console.log(values);
+      }
+    });
+}
+
+function stopExperiment() {
+  evaluation.deleteStorageHelperValues();
+}
+
+btnSave.addEventListener('click', configureExperiment);
+btnStop.addEventListener('click', stopExperiment);
+btnGet.addEventListener('click', retrieveKey);
+
+},{"../../../chromeapp/app/scripts/evaluation":16,"./content-script/cs-evaluation":"cs-eval"}],34:[function(require,module,exports){
 /* globals fetch */
 'use strict';
 
@@ -24707,4 +24742,4 @@ exports.onPageLoadComplete = function() {
     });
 };
 
-},{"../../../../chromeapp/app/scripts/chrome-apis/storage":4,"../../../../chromeapp/app/scripts/evaluation":16,"../chrome-apis/runtime":30,"../util/util":34,"./cs-api":33}]},{},[32]);
+},{"../../../../chromeapp/app/scripts/chrome-apis/storage":4,"../../../../chromeapp/app/scripts/evaluation":16,"../chrome-apis/runtime":30,"../util/util":34,"./cs-api":32}]},{},[33]);

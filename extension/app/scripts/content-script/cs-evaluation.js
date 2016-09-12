@@ -110,7 +110,9 @@ exports.getFromStorageHelper = function(key) {
  */
 exports.createPageIdentifier = function() {
   var window = util.getWindow();
-  var result = window.location.host + '/' + window.location.pathname;
+  // It appears that pathname always begins with /, so we don't need to add our
+  // own separator
+  var result = window.location.host + window.location.pathname;
   return result;
 };
 
@@ -121,26 +123,25 @@ exports.createPageIdentifier = function() {
  * expected that for this to mean anything, the Content Script itself must
  * check onReady and initiate the appropriate functions.
  *
+ * @param {string} pageId the identifier for the page. Should match the results
+ * of exports.createPageIdentifer() when on the given page
  * @param {integer} numIterations the total number of iterations in this trial
  * @param {string} key the key by which your want to access these results
  *
  * @return {Promise} Promise that tries to resolve after the call to reload.
  * This will likely fail in production but facilitates testing.
  */
-exports.startSavePageTrial = function(numIterations, key) {
+exports.startSavePageTrial = function(pageId, numIterations, key) {
   return new Promise(function(resolve) {
-    var win = util.getWindow();
     var setArg = {};
     setArg[exports.KEY_NUM_ITERATIONS] = numIterations;
     setArg[exports.KEY_PERFORMING_TRIAL] = true;
     setArg[exports.KEY_CURRENT_ITERATION] = 0;
-    setArg[exports.KEY_DOMAIN_AND_PATH] = exports.createPageIdentifier();
+    setArg[exports.KEY_DOMAIN_AND_PATH] = pageId;
     setArg[exports.KEY_LOG_KEY] = key;
 
     storage.set(setArg)
       .then(() => {
-        // Everything is prepared--kick it off.
-        win.location.reload(true);
         resolve();
       });
   });

@@ -32,8 +32,8 @@ function resetApi() {
 test('saveTab resolves if all resolve', function(t) {
   var fullUrl = 'https://www.foo.com#money';
   var blob = 'so blobby';
-  var tab = { tabId: 13, url: fullUrl };
-  var captureArg = { tabId: tab.tabId };
+  var tab = { id: 13, url: fullUrl };
+  var captureArg = { tabId: tab.id };
 
   var saveAsMhtmlSpy = sinon.stub().withArgs(captureArg).resolves(blob);
   var savePageSpy = sinon.stub().withArgs(tab, blob).resolves();
@@ -62,8 +62,8 @@ test('saveTab rejects if savePage rejects', function(t) {
   // case.
   var fullUrl = 'https://www.foo.com#money';
   var blob = 'so blobby';
-  var tab = { tabId: 13, url: fullUrl };
-  var captureArg = { tabId: tab.tabId };
+  var tab = { id: 13, url: fullUrl };
+  var captureArg = { tabId: tab.id };
 
   var expected = { msg: 'went wrong as expected' };
 
@@ -88,7 +88,7 @@ test('saveTab rejects if savePage rejects', function(t) {
 });
 
 test('saveCurrentPage resolves if saveTab resolves', function(t) {
-  var tab = { tabId: 13 };
+  var tab = { id: 13 };
 
   var getActiveTabSpy = sinon.stub().resolves(tab);
   var saveTabSpy = sinon.stub().withArgs(tab).resolves();
@@ -111,7 +111,7 @@ test('saveCurrentPage resolves if saveTab resolves', function(t) {
 });
 
 test('saveCurrentPage rejects if saveTab rejects', function(t) {
-  var tab = { tabId: 13 };
+  var tab = { id: 13 };
 
   var expected = { msg: 'went wrong as expected' };
 

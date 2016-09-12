@@ -12,19 +12,58 @@
     <div id="content"> 
       <h1>Run an Experiment</h1>
 
-      <form id="inputForm" action="javascript:createRedirect()" method="">
-        <input class="textBox" id="pageIdentifier" placeholder="www.example.com/path" type="text" maxlength="1000" />
+        <h3>Domain and Path</h3>
+        <input
+        class="textBox"
+        id="pageIdentifier"
+        placeholder="www.example.com/path"
+        type="text"
+        maxlength="1000" />
+
         <br>
-        <input class="textBox" id="numIterations" placeholder="Number of Reloads" type="integer" maxlength="1000" />
+
+        <h3>Number of Iterations</h3>
+        <input
+          class="textBox"
+          id="numIterations"
+          placeholder="Number of Reloads"
+          type="integer"
+          maxlength="1000" />
+
         <br>
-        <input class="textBox" id="key" placeholder="Key" type="integer" maxlength="1000" />
+
+        <h3>Result Key</h3>
+        <input
+          class="textBox"
+          id="key"
+          placeholder="Key"
+          type="integer"
+          maxlength="1000" />
+
         <br>
-        <input class="textBox" id="key" placeholder="retrieve results somehow" type="integer" maxlength="1000" />
+
+        <button id="save" class="btn btn-primary btn-sm">Save</button>
+
         <br>
-        <button id="new" class="btn btn-primary btn-sm">Save</button>
-      </form>
+
+        <button id="stop" class="btn btn-danger btn-sm">Stop Current Experiment</button>
+
+        <br>
+
+        <h1>Retrieve Results for Key</h1>
+
+        <input
+          class="textBox"
+          id="retrieveKey"
+          placeholder="Previous key"
+          type="text"
+          maxlength="1000" />
+
+        <br>
+
+        <button id="getResult" class="btn btn-primary btn-sm">Get!</button>
     </div>
 
-    <script src="scripts/settings.js"></script>
+    <script src="scripts/optionsBundle.js"></script>
   </body>
 </html>

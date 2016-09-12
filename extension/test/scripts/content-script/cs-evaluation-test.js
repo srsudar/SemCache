@@ -336,9 +336,9 @@ test('runSavePageIteration deletes values if no more iterations', function(t) {
 });
 
 test('createPageIdentifier correct', function(t) {
-  var path = 'foo/bar';
+  var path = '/foo/bar';
   var host = 'www.google.com';
-  var expected = host + '/' + path;
+  var expected = host + path;
 
   var windowSpy = {
     location: {
@@ -361,16 +361,8 @@ test('createPageIdentifier correct', function(t) {
 });
 
 test('startSavePageTrial sets variables and reloads', function(t) {
-  var reloadSpy = sinon.stub();
-  var windowStub = {
-    location: {
-      reload: reloadSpy
-    }
-  };
   var pageIdentifier = 'google/path';
 
-  var getWindowSpy = sinon.stub().returns(windowStub);
-  var createPageIdentifierSpy = sinon.stub().returns(pageIdentifier);
   var setSpy = sinon.stub().resolves();
 
   var numIterations = 10;
@@ -387,16 +379,11 @@ test('startSavePageTrial sets variables and reloads', function(t) {
     '../../../../chromeapp/app/scripts/chrome-apis/storage': {
       set: setSpy
     },
-    '../util/util': {
-      getWindow: getWindowSpy
-    }
   });
-  evaluation.createPageIdentifier = createPageIdentifierSpy;
 
-  evaluation.startSavePageTrial(numIterations, key)
+  evaluation.startSavePageTrial(pageIdentifier, numIterations, key)
     .then(() => {
       t.deepEqual(setSpy.args[0], [setArg]);
-      t.deepEqual(reloadSpy.args[0], [true]);
       t.end();
       resetEvaluation();
     });

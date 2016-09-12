@@ -47,6 +47,10 @@ module.exports = function (grunt) {
         src: '<%= config.app %>/scripts/content-script/contentscript.js',
         dest: '<%= config.dist %>/scripts/contentscriptBundle.js'
       },
+      settings: {
+        src: '<%= config.app %>/scripts/options.js',
+        dest: '<%= config.dist %>/scripts/optionsBundle.js'
+      },
     },
 
     tape: {
