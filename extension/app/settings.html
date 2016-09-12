@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <link rel="stylesheet" href="styles/bootstrap.min.css" >
+    <link href="styles/main.css" rel="stylesheet">
+    <link href="styles/settings.css" rel="stylesheet">
+  </head>
+
+  <body>
+    <script src="scripts/common.js"></script>
+    <div id="content"> 
+      <h1>Run an Experiment</h1>
+
+      <form id="inputForm" action="javascript:createRedirect()" method="">
+        <input class="textBox" id="pageIdentifier" placeholder="www.example.com/path" type="text" maxlength="1000" />
+        <br>
+        <input class="textBox" id="numIterations" placeholder="Number of Reloads" type="integer" maxlength="1000" />
+        <br>
+        <input class="textBox" id="key" placeholder="Key" type="integer" maxlength="1000" />
+        <br>
+        <input class="textBox" id="key" placeholder="retrieve results somehow" type="integer" maxlength="1000" />
+        <br>
+        <button id="new" class="btn btn-primary btn-sm">Save</button>
+      </form>
+    </div>
+
+    <script src="scripts/settings.js"></script>
+  </body>
+</html>

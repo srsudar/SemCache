@@ -23,6 +23,20 @@ body {
     transform: rotate(270deg);
   }
 }
+
+#pageIdentifier {
+  width: 80%;
+}
+
+#content { 
+  background-color: #fff;
+  border: 1px solid #ccc;
+  border-radius: 3px;
+  padding: 20px 40px 30px;
+  margin: 40px auto 0;
+  width: 900px;
+}
+
 .path {
   stroke-dasharray: 187;
   stroke-dashoffset: 0;
