@@ -323,7 +323,7 @@ test('runDiscoverPeerPagesIteration rejects if missing peers', function(t) {
   });
 });
 
-test('runDiscoverPeerPagesTrial calls helper', function(t) {
+test.only('runDiscoverPeerPagesTrial calls helper', function(t) {
   var numPeers = 30;
   var numPages = 15;
   var numIterations = 4;
@@ -342,7 +342,7 @@ test('runDiscoverPeerPagesTrial calls helper', function(t) {
   var logTimeSpy = sinon.stub();
   var runDiscoverPeerPagesIterationSpy = sinon.stub();
   for (var i = 0; i < expected.length; i++) {
-    logTimeSpy.onCall(i).resolves(expected[i].resolved);
+    logTimeSpy.onCall(i).resolves();
     runDiscoverPeerPagesIterationSpy.onCall(i).resolves(expected[i].resolved);
   }
   evaluation.logTime = logTimeSpy;
@@ -351,11 +351,23 @@ test('runDiscoverPeerPagesTrial calls helper', function(t) {
   evaluation.runDiscoverPeerPagesTrial(numPeers, numPages, numIterations, key)
   .then(actual => {
     t.deepEqual(actual, expected);
-    // t.equal(fulfillPromisesSpy.callCount, 1);
-    // t.equal(fulfillPromisesSpy.args[0][0].length, numIterations);
 
     for (var j = 0; j < expected.length; j++) {
-      t.deepEqual(logTimeSpy.args[j], [ key, expected[j].resolved ]);
+      console.log('first j: ', j);
+      t.deepEqual(
+        logTimeSpy.args[j],
+        [
+          key,
+          {
+            timing: expected[j].resolved,
+            type: 'discoverPeers',
+            numPeers: numPeers,
+            numPages: numPages,
+            numIterations: numIterations,
+            iteration: j
+          }
+        ]
+      );
     }
 
     t.end();

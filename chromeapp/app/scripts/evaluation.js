@@ -220,10 +220,19 @@ exports.runDiscoverPeerPagesTrial = function(
   return new Promise(function(resolve) {
     // We will call runDiscoverPagesIteration and attach them all to a sequence
     // of Promises, such that they will resolve in order.
+    var iteration = 0;
     var nextIter = function() {
       return exports.runDiscoverPeerPagesIteration(numPeers, numPages)
       .then(iterationResult => {
-        exports.logTime(key, iterationResult);
+        var toLog = {};
+        toLog.timing = iterationResult;
+        toLog.type = 'discoverPeers';
+        toLog.numPeers = numPeers;
+        toLog.numPages = numPages;
+        toLog.numIterations = numIterations;
+        toLog.iteration = iteration;
+        exports.logTime(key, toLog);
+        iteration += 1;
         return Promise.resolve(iterationResult);
       });
     };
@@ -236,6 +245,7 @@ exports.runDiscoverPeerPagesTrial = function(
     // Now we have an array with all our promises.
     exports.fulfillPromises(promises)
     .then(results => {
+      console.warn('Done with trial: ', results);
       resolve(results);
     });
   });
