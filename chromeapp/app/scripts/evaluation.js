@@ -353,7 +353,14 @@ exports.runDiscoverPeerPagesIteration = function(numPeers, numPages) {
  */
 exports.runLoadPageTrialForCache = function(numIterations, key, listPagesUrl) {
   return new Promise(function(resolve) {
-    util.fetchJson(listPagesUrl)
+    // Start by waiting five seconds. This is really just a convenience to keep
+    // us from retching and opening in the console window immediately after we
+    // start the function, which somehow seems
+    // to reliably crash chrome.
+    util.wait(5000)
+      .then(() => {
+        return util.fetchJson(listPagesUrl);
+      })
       .then(cache => {
         // We will call runDiscoverPagesIteration and attach them all to a
         // sequence of Promises, such that they will resolve in order.
@@ -368,11 +375,7 @@ exports.runLoadPageTrialForCache = function(numIterations, key, listPagesUrl) {
             cachedPage.captureDate,
             cachedPage.accessPath,
             cachedPage.metadata
-          )
-          .then(iterationResult => {
-            exports.logTime(key, iterationResult);
-            return Promise.resolve(iterationResult);
-          });
+          );
         };
 
         var promises = [];
@@ -424,7 +427,7 @@ exports.runLoadPageTrial = function(
         toLog.numIterations = numIterations;
         toLog.mhtmlUrl = mhtmlUrl;
         toLog.fullUrl = metadata.fullUrl;
-        exports.logTime(key, iterationResult);
+        exports.logTime(key, toLog);
         return Promise.resolve(iterationResult);
       });
     };

@@ -10515,7 +10515,7 @@ Polymer.AppLayout = Polymer.AppLayout || {};
       var startsAt = parseFloat(effectsConfig.startsAt || 0);
       var endsAt = parseFloat(effectsConfig.endsAt || 1);
       var deltaS = endsAt - startsAt;
-      var noop = function() {};
+      var noop = Function();
       // fast path if possible
       var runFn = (startsAt === 0 && endsAt === 1) ? effectDef.run :
         function(progress, y) {
@@ -12023,7 +12023,7 @@ Polymer({
       /**
        * To be used to express what combination of keys  will trigger the relative
        * callback. e.g. `keyBindings: { 'esc': '_onEscPressed'}`
-       * @type {Object}
+       * @type {!Object}
        */
       keyBindings: {},
 
@@ -16431,6 +16431,15 @@ Polymer({
       },
 
     });
+/**
+@license
+Copyright (c) 2016 The Polymer Project Authors. All rights reserved.
+This code may only be used under the BSD style license found at http://polymer.github.io/LICENSE.txt
+The complete set of authors may be found at http://polymer.github.io/AUTHORS.txt
+The complete set of contributors may be found at http://polymer.github.io/CONTRIBUTORS.txt
+Code distributed by Google as part of the polymer project is also
+subject to an additional IP rights grant found at http://polymer.github.io/PATENTS.txt
+*/
 function MakePromise (asap) {
   function Promise(fn) {
 		if (typeof this !== 'object' || typeof fn !== 'function') throw new TypeError();
@@ -17875,17 +17884,6 @@ Polymer({
     _collection: null,
 
     /**
-     * True if the current item list was rendered for the first time
-     * after attached.
-     */
-    _itemsRendered: false,
-
-    /**
-     * The page that is currently rendered.
-     */
-    _lastPage: null,
-
-    /**
      * The max number of pages to render. One page is equivalent to the height of the list.
      */
     _maxPages: 3,
@@ -17926,6 +17924,11 @@ Polymer({
      * The height of the row in grid layout.
      */
     _rowHeight: 0,
+
+    /**
+     * The cost of stamping a template in ms.
+     */
+    _templateCost: 0,
 
     /**
      * The bottom of the physical content.
@@ -18046,7 +18049,7 @@ Polymer({
     * True if the current list is visible.
     */
     get _isVisible() {
-      return this.scrollTarget && Boolean(this.scrollTarget.offsetWidth || this.scrollTarget.offsetHeight);
+      return Boolean(this.offsetWidth || this.offsetHeight);
     },
 
     /**
@@ -18103,6 +18106,7 @@ Polymer({
     get _defaultScrollTarget() {
       return this;
     },
+
     get _virtualRowCount() {
       return Math.ceil(this._virtualCount / this._itemsPerRow);
     },
@@ -18121,14 +18125,15 @@ Polymer({
 
     attached: function() {
       this.updateViewportBoundaries();
-      this._render();
+      if (this._physicalCount === 0) {
+        this._debounceTemplate(this._render);
+      }
       // `iron-resize` is fired when the list is attached if the event is added
       // before attached causing unnecessary work.
       this.listen(this, 'iron-resize', '_resizeHandler');
     },
 
     detached: function() {
-      this._itemsRendered = false;
       this.unlisten(this, 'iron-resize', '_resizeHandler');
     },
 
@@ -18253,7 +18258,7 @@ Polymer({
       }
 
       if (recycledTiles === 0) {
-        // Try to increase the pool if the list's client height isn't filled up with physical items
+        // Try to increase the pool if the list's client isn't filled up with physical items
         if (physicalBottom < scrollBottom || this._physicalTop > scrollTop) {
           this._increasePoolIfNeeded();
         }
@@ -18270,29 +18275,25 @@ Polymer({
      * @param {!Array<number>=} movingUp
      */
     _update: function(itemSet, movingUp) {
-      // manage focus
       this._manageFocus();
-      // update models
       this._assignModels(itemSet);
-      // measure heights
       this._updateMetrics(itemSet);
-      // adjust offset after measuring
+      // Adjust offset after measuring.
       if (movingUp) {
         while (movingUp.length) {
           var idx = movingUp.pop();
           this._physicalTop -= this._getPhysicalSizeIncrement(idx);
         }
       }
-      // update the position of the items
       this._positionItems();
-      // set the scroller size
       this._updateScrollerSize();
-      // increase the pool of physical items
       this._increasePoolIfNeeded();
     },
 
     /**
      * Creates a pool of DOM elements and attaches them to the local dom.
+     *
+     * @param {number} size Size of the pool
      */
     _createPool: function(size) {
       var physicalItems = new Array(size);
@@ -18302,7 +18303,7 @@ Polymer({
       for (var i = 0; i < size; i++) {
         var inst = this.stamp(null);
         // First element child is item; Safari doesn't support children[0]
-        // on a doc fragment
+        // on a doc fragment.
         physicalItems[i] = inst.root.querySelector('*');
         Polymer.dom(this).appendChild(inst.root);
       }
@@ -18319,30 +18320,37 @@ Polymer({
       if (this._viewportHeight === 0) {
         return false;
       }
-      // Base case 2: If the physical size is optimal and the list's client height is full
+      var self = this;
+      var isClientFull = this._physicalBottom >= this._scrollBottom &&
+          this._physicalTop <= this._scrollPosition;
+
+      // Base case 2: if the physical size is optimal and the list's client height is full
       // with physical items, don't increase the pool.
-      var isClientHeightFull = this._physicalBottom >= this._scrollBottom && this._physicalTop <= this._scrollPosition;
-      if (this._physicalSize >= this._optPhysicalSize && isClientHeightFull) {
+      if (this._physicalSize >= this._optPhysicalSize && isClientFull) {
         return false;
       }
-      // this value should range between [0 <= `currentPage` <= `_maxPages`]
-      var currentPage = Math.floor(this._physicalSize / this._viewportHeight);
-
-      if (currentPage === 0) {
-        // fill the first page
-        this._debounceTemplate(this._increasePool.bind(this, Math.round(this._physicalCount * 0.5)));
-      } else if (this._lastPage !== currentPage && isClientHeightFull) {
-        // paint the page and defer the next increase
-        // wait 16ms which is rough enough to get paint cycle.
-        Polymer.dom.addDebouncer(this.debounce('_debounceTemplate', this._increasePool.bind(this, this._itemsPerRow), 16));
-      } else {
-        // fill the rest of the pages
-        this._debounceTemplate(this._increasePool.bind(this, this._itemsPerRow));
+      var maxPoolSize = Math.round(this._physicalCount * 0.5);
+      // Increase the pool synchronously until the client is filled.
+      if (!isClientFull) {
+        this._debounceTemplate(this._increasePool.bind(this, maxPoolSize));
+        return true;
       }
-
-      this._lastPage = currentPage;
-
+      this._yield(function() {
+        self._increasePool(Math.min(maxPoolSize, Math.max(1, Math.round(50 / self._templateCost))));
+      });
       return true;
+    },
+
+    _yield: function(cb) {
+      var g = window;
+      var handle = g.requestIdleCallback ? g.requestIdleCallback(cb) : g.setTimeout(cb, 16);
+      // Polymer/issues/3895
+      Polymer.dom.addDebouncer(/** @type {!Polymer.Debouncer} */({
+        complete: function() {
+          g.cancelIdleCallback ? g.cancelIdleCallback(handle) : g.clearTimeout(handle);
+          cb();
+        }
+      }));
     },
 
     /**
@@ -18356,17 +18364,16 @@ Polymer({
         );
       var prevPhysicalCount = this._physicalCount;
       var delta = nextPhysicalCount - prevPhysicalCount;
+      var ts = window.performance.now();
 
       if (delta <= 0) {
         return;
       }
-
+      // Concat arrays in place.
       [].push.apply(this._physicalItems, this._createPool(delta));
       [].push.apply(this._physicalSizes, new Array(delta));
-
       this._physicalCount = prevPhysicalCount + delta;
-
-      // update the physical start if we need to preserve the model of the focused item.
+      // Update the physical start if it needs to preserve the model of the focused item.
       // In this situation, the focused item is currently rendered and its model would
       // have changed after increasing the pool if the physical start remained unchanged.
       if (this._physicalStart > this._physicalEnd &&
@@ -18375,19 +18382,19 @@ Polymer({
         this._physicalStart = this._physicalStart + delta;
       }
       this._update();
+      this._templateCost = (window.performance.now() - ts) / delta;
     },
 
     /**
-     * Render a new list of items. This method does exactly the same as `update`,
-     * but it also ensures that only one `update` cycle is created.
+     * Render a new list of items.
      */
     _render: function() {
-      var requiresUpdate = this._virtualCount > 0 || this._physicalCount > 0;
-
-      if (this.isAttached && !this._itemsRendered && this._isVisible && requiresUpdate) {
-        this._lastPage = 0;
-        this._update();
-        this._itemsRendered = true;
+      if (this.isAttached && this._isVisible) {
+        if (this._physicalCount === 0) {
+          this._increasePool(DEFAULT_PHYSICAL_COUNT);
+        } else {
+          this._update();
+        }
       }
     },
 
@@ -18403,7 +18410,6 @@ Polymer({
         props[this.indexAs] = true;
         props[this.selectedAs] = true;
         props.tabIndex = true;
-
         this._instanceProps = props;
         this._userTemplate = Polymer.dom(this).querySelector('template');
 
@@ -18504,7 +18510,6 @@ Polymer({
      */
     _itemsChanged: function(change) {
       if (change.path === 'items') {
-        // reset items
         this._virtualStart = 0;
         this._physicalTop = 0;
         this._virtualCount = this.items ? this.items.length : 0;
@@ -18512,31 +18517,22 @@ Polymer({
         this._physicalIndexForKey = {};
         this._firstVisibleIndexVal = null;
         this._lastVisibleIndexVal = null;
-
+        this._physicalCount = this._physicalCount || 0;
+        this._physicalItems = this._physicalItems || [];
+        this._physicalSizes = this._physicalSizes || [];
+        this._physicalStart = 0;
         this._resetScrollPosition(0);
         this._removeFocusedItem();
-        // create the initial physical items
-        if (!this._physicalItems) {
-          this._physicalCount = Math.max(1, Math.min(DEFAULT_PHYSICAL_COUNT, this._virtualCount));
-          this._physicalItems = this._createPool(this._physicalCount);
-          this._physicalSizes = new Array(this._physicalCount);
-        }
-
-        this._physicalStart = 0;
+        this._debounceTemplate(this._render);
 
       } else if (change.path === 'items.splices') {
-
         this._adjustVirtualIndex(change.value.indexSplices);
         this._virtualCount = this.items ? this.items.length : 0;
+        this._debounceTemplate(this._render);
 
       } else {
-        // update a single item
         this._forwardItemPath(change.path.split('.').slice(1).join('.'), change.value);
-        return;
       }
-
-      this._itemsRendered = false;
-      this._debounceTemplate(this._render);
     },
 
     /**
@@ -18649,7 +18645,7 @@ Polymer({
      */
      _updateMetrics: function(itemSet) {
       // Make sure we distributed all the physical items
-      // so we can measure them
+      // so we can measure them.
       Polymer.dom.flush();
 
       var newPhysicalSize = 0;
@@ -18674,7 +18670,7 @@ Polymer({
         this._physicalSize = this._physicalSize + newPhysicalSize - oldPhysicalSize;
       }
 
-      // update the average if we measured something
+      // Update the average if it measured something.
       if (this._physicalAverageCount !== prevAvgCount) {
         this._physicalAverage = Math.round(
             ((prevPhysicalAvg * prevAvgCount) + newPhysicalSize) /
@@ -18705,23 +18701,17 @@ Polymer({
         var rowOffset = (this._viewportWidth - totalItemWidth) / 2;
 
         this._iterateItems(function(pidx, vidx) {
-
           var modulus = vidx % this._itemsPerRow;
           var x = Math.floor((modulus * this._itemWidth) + rowOffset);
-
           this.translate3d(x + 'px', y + 'px', 0, this._physicalItems[pidx]);
-
           if (this._shouldRenderNextRow(vidx)) {
             y += this._rowHeight;
           }
-
         });
       } else {
         this._iterateItems(function(pidx, vidx) {
-
           this.translate3d(0, y + 'px', 0, this._physicalItems[pidx]);
           y += this._physicalSizes[pidx];
-
         });
       }
     },
@@ -18791,7 +18781,7 @@ Polymer({
       forceUpdate = forceUpdate || this._scrollPosition >= this._estScrollHeight - this._physicalSize;
       forceUpdate = forceUpdate || this.grid && this.$.items.style.height < this._estScrollHeight;
 
-      // amortize height adjustment, so it won't trigger repaints very often
+      // Amortize height adjustment, so it won't trigger large repaints too often.
       if (forceUpdate || Math.abs(this._estScrollHeight - this._scrollHeight) >= this._optPhysicalSize) {
         this.$.items.style.height = this._estScrollHeight + 'px';
         this._scrollHeight = this._estScrollHeight;
@@ -18822,43 +18812,36 @@ Polymer({
       }
 
       Polymer.dom.flush();
-
+      // Items should have been rendered prior scrolling to an index.
+      if (this._physicalCount === 0) {
+        return;
+      }
       idx = Math.min(Math.max(idx, 0), this._virtualCount-1);
-      // update the virtual start only when needed
+      // Update the virtual start only when needed.
       if (!this._isIndexRendered(idx) || idx >= this._maxVirtualStart) {
         this._virtualStart = this.grid ? (idx - this._itemsPerRow * 2) : (idx - 1);
       }
-      // manage focus
       this._manageFocus();
-      // assign new models
       this._assignModels();
-      // measure the new sizes
       this._updateMetrics();
-
-      // estimate new physical offset
-      var estPhysicalTop = Math.floor(this._virtualStart / this._itemsPerRow)  * this._physicalAverage;
-      this._physicalTop = estPhysicalTop;
+      // Estimate new physical offset.
+      this._physicalTop = Math.floor(this._virtualStart / this._itemsPerRow)  * this._physicalAverage;
 
       var currentTopItem = this._physicalStart;
       var currentVirtualItem = this._virtualStart;
       var targetOffsetTop = 0;
       var hiddenContentSize = this._hiddenContentSize;
-
-      // scroll to the item as much as we can
+      // scroll to the item as much as we can.
       while (currentVirtualItem < idx && targetOffsetTop <= hiddenContentSize) {
         targetOffsetTop = targetOffsetTop + this._getPhysicalSizeIncrement(currentTopItem);
         currentTopItem = (currentTopItem + 1) % this._physicalCount;
         currentVirtualItem++;
       }
-      // update the scroller size
       this._updateScrollerSize(true);
-      // update the position of the items
       this._positionItems();
-      // set the new scroll position
       this._resetScrollPosition(this._physicalTop + this._scrollerPaddingTop + targetOffsetTop);
-      // increase the pool of physical items if needed
       this._increasePoolIfNeeded();
-      // clear cached visible index
+      // clear cached visible index.
       this._firstVisibleIndexVal = null;
       this._lastVisibleIndexVal = null;
     },
@@ -18887,7 +18870,7 @@ Polymer({
         this.updateViewportBoundaries();
         this._render();
 
-        if (this._itemsRendered && this._physicalItems && this._isVisible) {
+        if (this._physicalCount > 0 && this._isVisible) {
           this._resetAverage();
           this.scrollToIndex(this.firstVisibleIndex);
         }
@@ -19032,9 +19015,10 @@ Polymer({
       model.tabIndex = SECRET_TABINDEX;
       activeElTabIndex = activeEl ? activeEl.tabIndex : -1;
       model.tabIndex = modelTabIndex;
+
       // Only select the item if the tap wasn't on a focusable child
       // or the element bound to `tabIndex`
-      if (activeEl && physicalItem.contains(activeEl) && activeElTabIndex !== SECRET_TABINDEX) {
+      if (activeEl && physicalItem !== activeEl && physicalItem.contains(activeEl) && activeElTabIndex !== SECRET_TABINDEX) {
         return;
       }
       this.toggleSelectionForItem(model[this.as]);
@@ -19531,7 +19515,8 @@ Polymer({
       },
 
       _resolveSrc: function(testSrc) {
-        return Polymer.ResolveUrl.resolveUrl(testSrc, this.ownerDocument.baseURI);
+        var baseURI = /** @type {string} */(this.ownerDocument.baseURI);
+        return (new URL(Polymer.ResolveUrl.resolveUrl(testSrc, baseURI), baseURI)).href;
       }
     });
 Polymer({
@@ -42100,6 +42085,17 @@ exports.fetch = function(url) {
   return fetch(url);
 };
 
+/**
+ * Returns a promise that resolves after the given time (in ms).
+ *
+ * @param {integer} ms the number of milliseconds to wait before resolving
+ */
+exports.wait = function(ms) {
+  return new Promise(resolve => {
+    setTimeout(() => resolve(), ms);
+  });
+};
+
 },{}],16:[function(require,module,exports){
 (function (global){
 /*! http://mths.be/base64 v0.1.0 by @mathias | MIT license */
@@ -62983,7 +62979,14 @@ exports.runDiscoverPeerPagesIteration = function(numPeers, numPages) {
  */
 exports.runLoadPageTrialForCache = function(numIterations, key, listPagesUrl) {
   return new Promise(function(resolve) {
-    util.fetchJson(listPagesUrl)
+    // Start by waiting five seconds. This is really just a convenience to keep
+    // us from retching and opening in the console window immediately after we
+    // start the function, which somehow seems
+    // to reliably crash chrome.
+    util.wait(5000)
+      .then(() => {
+        return util.fetchJson(listPagesUrl);
+      })
       .then(cache => {
         // We will call runDiscoverPagesIteration and attach them all to a
         // sequence of Promises, such that they will resolve in order.
@@ -62998,11 +63001,7 @@ exports.runLoadPageTrialForCache = function(numIterations, key, listPagesUrl) {
             cachedPage.captureDate,
             cachedPage.accessPath,
             cachedPage.metadata
-          )
-          .then(iterationResult => {
-            exports.logTime(key, iterationResult);
-            return Promise.resolve(iterationResult);
-          });
+          );
         };
 
         var promises = [];
@@ -63054,7 +63053,7 @@ exports.runLoadPageTrial = function(
         toLog.numIterations = numIterations;
         toLog.mhtmlUrl = mhtmlUrl;
         toLog.fullUrl = metadata.fullUrl;
-        exports.logTime(key, iterationResult);
+        exports.logTime(key, toLog);
         return Promise.resolve(iterationResult);
       });
     };
@@ -63478,7 +63477,7 @@ exports.getDirectory = function(dirEntry, options, name) {
 
 },{}],"moment":[function(require,module,exports){
 //! moment.js
-//! version : 2.14.1
+//! version : 2.15.0
 //! authors : Tim Wood, Iskren Chernev, Moment.js contributors
 //! license : MIT
 //! momentjs.com
@@ -63506,7 +63505,9 @@ exports.getDirectory = function(dirEntry, options, name) {
     }
 
     function isObject(input) {
-        return Object.prototype.toString.call(input) === '[object Object]';
+        // IE8 will treat undefined and null as object if it wasn't for
+        // input != null
+        return input != null && Object.prototype.toString.call(input) === '[object Object]';
     }
 
     function isObjectEmpty(obj) {
@@ -63605,7 +63606,7 @@ exports.getDirectory = function(dirEntry, options, name) {
             var parsedParts = some.call(flags.parsedDateParts, function (i) {
                 return i != null;
             });
-            m._isValid = !isNaN(m._d.getTime()) &&
+            var isNowValid = !isNaN(m._d.getTime()) &&
                 flags.overflow < 0 &&
                 !flags.empty &&
                 !flags.invalidMonth &&
@@ -63616,10 +63617,17 @@ exports.getDirectory = function(dirEntry, options, name) {
                 (!flags.meridiem || (flags.meridiem && parsedParts));
 
             if (m._strict) {
-                m._isValid = m._isValid &&
+                isNowValid = isNowValid &&
                     flags.charsLeftOver === 0 &&
                     flags.unusedTokens.length === 0 &&
                     flags.bigHour === undefined;
+            }
+
+            if (Object.isFrozen == null || !Object.isFrozen(m)) {
+                m._isValid = isNowValid;
+            }
+            else {
+                return isNowValid;
             }
         }
         return m._isValid;
@@ -63761,7 +63769,22 @@ exports.getDirectory = function(dirEntry, options, name) {
                 utils_hooks__hooks.deprecationHandler(null, msg);
             }
             if (firstTime) {
-                warn(msg + '\nArguments: ' + Array.prototype.slice.call(arguments).join(', ') + '\n' + (new Error()).stack);
+                var args = [];
+                var arg;
+                for (var i = 0; i < arguments.length; i++) {
+                    arg = '';
+                    if (typeof arguments[i] === 'object') {
+                        arg += '\n[' + i + '] ';
+                        for (var key in arguments[0]) {
+                            arg += key + ': ' + arguments[0][key] + ', ';
+                        }
+                        arg = arg.slice(0, -2); // Remove trailing comma and space
+                    } else {
+                        arg = arguments[i];
+                    }
+                    args.push(arg);
+                }
+                warn(msg + '\nArguments: ' + Array.prototype.slice.call(args).join('') + '\n' + (new Error()).stack);
                 firstTime = false;
             }
             return fn.apply(this, arguments);
@@ -64288,12 +64311,18 @@ exports.getDirectory = function(dirEntry, options, name) {
     var MONTHS_IN_FORMAT = /D[oD]?(\[[^\[\]]*\]|\s+)+MMMM?/;
     var defaultLocaleMonths = 'January_February_March_April_May_June_July_August_September_October_November_December'.split('_');
     function localeMonths (m, format) {
+        if (!m) {
+            return this._months;
+        }
         return isArray(this._months) ? this._months[m.month()] :
             this._months[(this._months.isFormat || MONTHS_IN_FORMAT).test(format) ? 'format' : 'standalone'][m.month()];
     }
 
     var defaultLocaleMonthsShort = 'Jan_Feb_Mar_Apr_May_Jun_Jul_Aug_Sep_Oct_Nov_Dec'.split('_');
     function localeMonthsShort (m, format) {
+        if (!m) {
+            return this._monthsShort;
+        }
         return isArray(this._monthsShort) ? this._monthsShort[m.month()] :
             this._monthsShort[MONTHS_IN_FORMAT.test(format) ? 'format' : 'standalone'][m.month()];
     }
@@ -64790,18 +64819,21 @@ exports.getDirectory = function(dirEntry, options, name) {
 
     var defaultLocaleWeekdays = 'Sunday_Monday_Tuesday_Wednesday_Thursday_Friday_Saturday'.split('_');
     function localeWeekdays (m, format) {
+        if (!m) {
+            return this._weekdays;
+        }
         return isArray(this._weekdays) ? this._weekdays[m.day()] :
             this._weekdays[this._weekdays.isFormat.test(format) ? 'format' : 'standalone'][m.day()];
     }
 
     var defaultLocaleWeekdaysShort = 'Sun_Mon_Tue_Wed_Thu_Fri_Sat'.split('_');
     function localeWeekdaysShort (m) {
-        return this._weekdaysShort[m.day()];
+        return (m) ? this._weekdaysShort[m.day()] : this._weekdaysShort;
     }
 
     var defaultLocaleWeekdaysMin = 'Su_Mo_Tu_We_Th_Fr_Sa'.split('_');
     function localeWeekdaysMin (m) {
-        return this._weekdaysMin[m.day()];
+        return (m) ? this._weekdaysMin[m.day()] : this._weekdaysMin;
     }
 
     function day_of_week__handleStrictParse(weekdayName, format, strict) {
@@ -65237,10 +65269,10 @@ exports.getDirectory = function(dirEntry, options, name) {
         var oldLocale = null;
         // TODO: Find a better way to register and load all the locales in Node
         if (!locales[name] && (typeof module !== 'undefined') &&
-                module && module.exports) {
+                module && module.require) {
             try {
                 oldLocale = globalLocale._abbr;
-                require('./locale/' + name);
+                module.require('./locale/' + name);
                 // because defineLocale currently also sets the global locale, we
                 // want to undo that for lazy loaded locales
                 locale_locales__getSetGlobalLocale(oldLocale);
@@ -65496,9 +65528,9 @@ exports.getDirectory = function(dirEntry, options, name) {
     }
 
     utils_hooks__hooks.createFromInputFallback = deprecate(
-        'moment construction falls back to js Date. This is ' +
-        'discouraged and will be removed in upcoming major ' +
-        'release. Please refer to ' +
+        'value provided is not in a recognized ISO format. moment construction falls back to js Date(), ' +
+        'which is not reliable across all browsers and versions. Non ISO date formats are ' +
+        'discouraged and will be removed in an upcoming major release. Please refer to ' +
         'http://momentjs.com/guides/#/warnings/js-date/ for more info.',
         function (config) {
             config._d = new Date(config._i + (config._useUTC ? ' UTC' : ''));
@@ -65997,6 +66029,14 @@ exports.getDirectory = function(dirEntry, options, name) {
         return obj instanceof Duration;
     }
 
+    function absRound (number) {
+        if (number < 0) {
+            return Math.round(-1 * number) * -1;
+        } else {
+            return Math.round(number);
+        }
+    }
+
     // FORMATTING
 
     function offset (token, separator) {
@@ -66147,7 +66187,13 @@ exports.getDirectory = function(dirEntry, options, name) {
         if (this._tzm) {
             this.utcOffset(this._tzm);
         } else if (typeof this._i === 'string') {
-            this.utcOffset(offsetFromString(matchOffset, this._i));
+            var tZone = offsetFromString(matchOffset, this._i);
+
+            if (tZone === 0) {
+                this.utcOffset(0, true);
+            } else {
+                this.utcOffset(offsetFromString(matchOffset, this._i));
+            }
         }
         return this;
     }
@@ -66202,7 +66248,7 @@ exports.getDirectory = function(dirEntry, options, name) {
     }
 
     // ASP.NET json date format regex
-    var aspNetRegex = /^(\-)?(?:(\d*)[. ])?(\d+)\:(\d+)(?:\:(\d+)\.?(\d{3})?\d*)?$/;
+    var aspNetRegex = /^(\-)?(?:(\d*)[. ])?(\d+)\:(\d+)(?:\:(\d+)(\.\d*)?)?$/;
 
     // from http://docs.closure-library.googlecode.com/git/closure_goog_date_date.js.source.html
     // somewhat more in line with 4.4.3.2 2004 spec, but allows decimal anywhere
@@ -66234,11 +66280,11 @@ exports.getDirectory = function(dirEntry, options, name) {
             sign = (match[1] === '-') ? -1 : 1;
             duration = {
                 y  : 0,
-                d  : toInt(match[DATE])        * sign,
-                h  : toInt(match[HOUR])        * sign,
-                m  : toInt(match[MINUTE])      * sign,
-                s  : toInt(match[SECOND])      * sign,
-                ms : toInt(match[MILLISECOND]) * sign
+                d  : toInt(match[DATE])                         * sign,
+                h  : toInt(match[HOUR])                         * sign,
+                m  : toInt(match[MINUTE])                       * sign,
+                s  : toInt(match[SECOND])                       * sign,
+                ms : toInt(absRound(match[MILLISECOND] * 1000)) * sign // the millisecond decimal point is included in the match
             };
         } else if (!!(match = isoRegex.exec(input))) {
             sign = (match[1] === '-') ? -1 : 1;
@@ -66311,14 +66357,6 @@ exports.getDirectory = function(dirEntry, options, name) {
         }
 
         return res;
-    }
-
-    function absRound (number) {
-        if (number < 0) {
-            return Math.round(-1 * number) * -1;
-        } else {
-            return Math.round(number);
-        }
     }
 
     // TODO: remove 'name' arg after deprecation is removed
@@ -67635,7 +67673,7 @@ exports.getDirectory = function(dirEntry, options, name) {
     // Side effect imports
 
 
-    utils_hooks__hooks.version = '2.14.1';
+    utils_hooks__hooks.version = '2.15.0';
 
     setHookCallback(local__createLocal);
 

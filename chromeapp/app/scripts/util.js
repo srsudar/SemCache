@@ -27,3 +27,14 @@ exports.fetchJson = function(url) {
 exports.fetch = function(url) {
   return fetch(url);
 };
+
+/**
+ * Returns a promise that resolves after the given time (in ms).
+ *
+ * @param {integer} ms the number of milliseconds to wait before resolving
+ */
+exports.wait = function(ms) {
+  return new Promise(resolve => {
+    setTimeout(() => resolve(), ms);
+  });
+};

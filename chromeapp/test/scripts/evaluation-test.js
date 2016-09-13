@@ -501,7 +501,7 @@ test('runLoadPageTrial correct', function(t) {
   var captureUrl = 'original_url.html';
   var captureDate = 'the date it was saved';
   var mhtmlUrl = 'the_url_to_save_the_page.mhtml';
-  var metadata = { meta: 'data' };
+  var metadata = { meta: 'data', fullUrl: 'full url' };
 
   var loadTimes = [
     1.1,
@@ -535,7 +535,19 @@ test('runLoadPageTrial correct', function(t) {
     t.equal(runLoadPageIterationSpy.callCount, numIterations);
 
     for (var j = 0; j < expected.length; j++) {
-      t.deepEqual(logTimeSpy.args[j], [ key, expected[j].resolved ]);
+      t.deepEqual(
+        logTimeSpy.args[j],
+        [
+          key,
+          {
+            timeToOpen: expected[j].resolved,
+            captureUrl: captureUrl,
+            numIterations: numIterations,
+            mhtmlUrl: mhtmlUrl,
+            fullUrl: metadata.fullUrl
+          } 
+        ]
+      );
     }
 
     t.end();
@@ -584,7 +596,8 @@ test('runLoadPageTrialForCache correct', function(t) {
 
   proxyquireEvaluation({
     './util': {
-      fetchJson: fetchJsonSpy
+      fetchJson: fetchJsonSpy,
+      wait: sinon.stub().resolves()
     }
   });
   evaluation.runLoadPageTrial = runLoadPageTrialSpy;
