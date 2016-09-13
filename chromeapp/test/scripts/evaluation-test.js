@@ -323,7 +323,7 @@ test('runDiscoverPeerPagesIteration rejects if missing peers', function(t) {
   });
 });
 
-test.only('runDiscoverPeerPagesTrial calls helper', function(t) {
+test('runDiscoverPeerPagesTrial calls helper', function(t) {
   var numPeers = 30;
   var numPages = 15;
   var numIterations = 4;
@@ -556,7 +556,8 @@ test('runLoadPageTrial correct', function(t) {
             captureUrl: captureUrl,
             numIterations: numIterations,
             mhtmlUrl: mhtmlUrl,
-            fullUrl: metadata.fullUrl
+            fullUrl: metadata.fullUrl,
+            type: 'loadPage'
           } 
         ]
       );

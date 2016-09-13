@@ -439,6 +439,7 @@ exports.runLoadPageTrial = function(
         toLog.numIterations = numIterations;
         toLog.mhtmlUrl = mhtmlUrl;
         toLog.fullUrl = metadata.fullUrl;
+        toLog.type = 'loadPage';
         exports.logTime(key, toLog);
         return Promise.resolve(iterationResult);
       });
