@@ -4,6 +4,8 @@
  * Functionality useful to evaluating SemCache.
  */
 
+var json2csv = require('json2csv');
+
 var datastore = require('./persistence/datastore');
 var api = require('./server/server-api');
 var storage = require('./chrome-apis/storage');
@@ -445,3 +447,19 @@ exports.runLoadPageTrial = function(
   });
 };
 
+/**
+ * @param {string} key the key of time results to download as csv
+ */
+exports.downloadKeyAsCsv = function(key) {
+  exports.getTimeValues(key)
+  .then(values => {
+    if (values === null) {
+      console.log('no results saved for key: ', key);
+    } else {
+      console.log(values);
+      // And now download a CSV.
+      var csv = json2csv({data: values, flatten: true});
+      util.downloadText(csv, key + '.csv');
+    }
+  });
+};

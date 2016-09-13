@@ -51,17 +51,18 @@ function configureExperiment() {
 
 function retrieveKey() {
   var keyValue = uiRetrieveKey.value;
-  appEval.getTimeValues(keyValue)
-    .then(values => {
-      if (values === null) {
-        console.log('no results saved for key: ', keyValue);
-      } else {
-        console.log(values);
-        // And now download a CSV.
-        var csv = json2csv({data: values, flatten: true});
-        downloadText(csv, keyValue + '.csv');
-      }
-    });
+  appEval.downloadKeyAsCsv(keyValue);
+  // appEval.getTimeValues(keyValue)
+  //   .then(values => {
+  //     if (values === null) {
+  //       console.log('no results saved for key: ', keyValue);
+  //     } else {
+  //       console.log(values);
+  //       // And now download a CSV.
+  //       var csv = json2csv({data: values, flatten: true});
+  //       downloadText(csv, keyValue + '.csv');
+  //     }
+  //   });
 }
 
 function stopExperiment() {

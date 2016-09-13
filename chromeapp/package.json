@@ -3,6 +3,7 @@
   "version": "0.0.0",
   "dependencies": {
     "base-64": "^0.1.0",
+    "json2csv": "^3.6.3",
     "lodash": "^4.15.0",
     "npm": "^3.10.6",
     "underscore": "^1.8.3"
