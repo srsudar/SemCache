@@ -336,8 +336,11 @@ test('runDiscoverPeerPagesTrial calls helper', function(t) {
     { resolved: 'fum' }
   ];
 
-  // var fulfillPromisesSpy = sinon.stub().resolves(expected);
-  // evaluation.fulfillPromises = fulfillPromisesSpy;
+  proxyquireEvaluation({
+    './util': {
+      wait: sinon.stub().resolves()
+    }
+  });
   
   var logTimeSpy = sinon.stub();
   var runDiscoverPeerPagesIterationSpy = sinon.stub();

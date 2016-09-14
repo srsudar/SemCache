@@ -25,7 +25,7 @@ exports.DNSSD_MULTICAST_GROUP = DNSSD_MULTICAST_GROUP;
 exports.DNSSD_PORT = DNSSD_PORT;
 exports.DNSSD_SERVICE_NAME = DNSSD_SERVICE_NAME;
 
-exports.DEBUG = false;
+exports.DEBUG = true;
 
 exports.NEXT_PACKET_ID = 1;
 
