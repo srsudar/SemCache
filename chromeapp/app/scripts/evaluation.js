@@ -222,17 +222,23 @@ exports.runDiscoverPeerPagesTrial = function(
     // of Promises, such that they will resolve in order.
     var iteration = 0;
     var nextIter = function() {
+      var toLog = {};
+      toLog.type = 'discoverPeers';
+      toLog.numPeers = numPeers;
+      toLog.numPages = numPages;
+      toLog.numIterations = numIterations;
+      toLog.iteration = iteration;
+      iteration += 1;
+      
       return exports.runDiscoverPeerPagesIteration(numPeers, numPages)
-      .then(iterationResult => {
-        var toLog = {};
+      .then(function resolved(iterationResult) {
         toLog.timing = iterationResult;
-        toLog.type = 'discoverPeers';
-        toLog.numPeers = numPeers;
-        toLog.numPages = numPages;
-        toLog.numIterations = numIterations;
-        toLog.iteration = iteration;
         exports.logTime(key, toLog);
-        iteration += 1;
+        return Promise.resolve(iterationResult);
+      },
+      function rejected(iterationResult) {
+        toLog.timing = iterationResult;
+        exports.logTime(key, toLog);
         return Promise.resolve(iterationResult);
       });
     };
