@@ -532,6 +532,12 @@ test('runLoadPageTrial correct', function(t) {
     runLoadPageIterationSpy.onCall(i).resolves(value);
     expected.push({ resolved: value });
   }
+
+  proxyquireEvaluation({
+    './util': {
+      wait: sinon.stub().resolves()
+    }
+  });
   
   var logTimeSpy = sinon.stub();
   evaluation.logTime = logTimeSpy;
@@ -560,7 +566,8 @@ test('runLoadPageTrial correct', function(t) {
             numIterations: numIterations,
             mhtmlUrl: mhtmlUrl,
             fullUrl: metadata.fullUrl,
-            type: 'loadPage'
+            type: 'loadPage',
+            iteration: j
           } 
         ]
       );

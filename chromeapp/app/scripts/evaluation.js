@@ -411,6 +411,7 @@ exports.runLoadPageTrialForCache = function(numIterations, key, listPagesUrl) {
         return exports.fulfillPromises(promises);
       })
       .then(results => {
+        console.warn('Trial for cache complete: ', results);
         resolve(results);
       });
   });
@@ -437,21 +438,33 @@ exports.runLoadPageTrial = function(
   return new Promise(function(resolve) {
     // We will call runDiscoverPagesIteration and attach them all to a sequence
     // of Promises, such that they will resolve in order.
+    var iteration = 0;
     var nextIter = function() {
-      return exports.runLoadPageIteration(
-        captureUrl,
-        captureDate,
-        mhtmlUrl,
-        metadata
-      )
-      .then(iterationResult => {
-        var toLog = {};
+      var toLog = {};
+      toLog.captureUrl = captureUrl;
+      toLog.numIterations = numIterations;
+      toLog.mhtmlUrl = mhtmlUrl;
+      toLog.fullUrl = metadata.fullUrl;
+      toLog.type = 'loadPage';
+      toLog.iteration = iteration;
+
+      iteration += 1;
+
+      return util.wait(250)
+      .then(() => {
+        return exports.runLoadPageIteration(
+          captureUrl,
+          captureDate,
+          mhtmlUrl,
+          metadata
+        );
+      })
+      .then(function resolved(iterationResult) {
         toLog.timeToOpen = iterationResult;
-        toLog.captureUrl = captureUrl;
-        toLog.numIterations = numIterations;
-        toLog.mhtmlUrl = mhtmlUrl;
-        toLog.fullUrl = metadata.fullUrl;
-        toLog.type = 'loadPage';
+        exports.logTime(key, toLog);
+        return Promise.resolve(iterationResult);
+      }, function caught(iterationResult) {
+        toLog.timeToOpen = iterationResult;
         exports.logTime(key, toLog);
         return Promise.resolve(iterationResult);
       });
