@@ -966,3 +966,37 @@ test('clearAllRecords removes all records', function(t) {
   t.deepEqual(dnsController.getRecords(), {});
   t.end();
 });
+
+test('stop clears state', function(t) {
+  var closeAllSocketsSpy = sinon.stub();
+  var clearAllRecordsSpy = sinon.stub();
+
+  var mockedController = proxyquire(
+    '../../../app/scripts/dnssd/dns-controller.js',
+    {
+      '../chrome-apis/udp': {
+        closeAllSockets: closeAllSocketsSpy
+      }
+    }
+  );
+
+  mockedController.socket = 'foo';
+  mockedController.getIPv4Interfaces().push('old interface');
+  mockedController.clearAllRecords = clearAllRecordsSpy;
+
+  mockedController.stop();
+
+  // We should delete the existing interfaces.
+  t.deepEqual(mockedController.getIPv4Interfaces(), []);
+
+  t.true(closeAllSocketsSpy.calledOnce);
+  t.deepEqual(closeAllSocketsSpy.args[0], []);
+
+  t.true(clearAllRecordsSpy.calledOnce);
+  t.deepEqual(clearAllRecordsSpy.args[0], []);
+
+  t.equal(mockedController.socket, null);
+
+  t.end();
+  resetDnsController();
+});

@@ -485,6 +485,10 @@ exports.stop = function() {
       console.log('Stopping: no socket found');
     }
   }
+
+  // Now clear the caches and local state.
+  ipv4Interfaces.splice(0);
+  exports.clearAllRecords();
 };
 
 /**

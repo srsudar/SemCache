@@ -198,7 +198,7 @@ exports.startServersAndRegister = function() {
  */
 exports.stopServers = function() {
   exports.getServerController().stop();
-  dnsController.clearAllRecords();
+  dnsController.stop();
   exports.SERVERS_STARTED = false;
 };
 

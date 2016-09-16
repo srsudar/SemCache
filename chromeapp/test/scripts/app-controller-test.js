@@ -357,12 +357,12 @@ test('networkIsActive false if not started', function(t) {
 });
 
 test('stopServers restores state', function(t) {
-  var clearAllRecordsSpy = sinon.spy();
   var stopSpy = sinon.spy();
+  var stopDnsControllerSpy = sinon.spy();
 
   var appc = proxyquire('../../app/scripts/app-controller', {
     './dnssd/dns-controller': {
-      clearAllRecords: clearAllRecordsSpy
+      stop: stopDnsControllerSpy
     }
   });
   appc.getServerController = sinon.stub().returns({
@@ -371,7 +371,11 @@ test('stopServers restores state', function(t) {
 
   appc.stopServers();
   t.true(stopSpy.calledOnce);
-  t.true(clearAllRecordsSpy.calledOnce);
+  t.deepEqual(stopSpy.args[0], []);
+
+  t.true(stopDnsControllerSpy.calledOnce);
+  t.deepEqual(stopDnsControllerSpy.args[0], []);
+
   t.false(appc.networkIsActive());
   t.end();
   resetAppController();
