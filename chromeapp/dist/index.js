@@ -40709,18 +40709,6 @@ exports.getLocalSuffix = function() {
 };
 
 /**
- * Return a random integer between [min, max).
- *
- * @param {integer} min
- * @param {integer} max
- *
- * @return {integer} random value >= min and < max
- */
-exports.randomInt = function(min, max) {
-  return Math.floor(Math.random() * (max - min)) + min;
-};
-
-/**
  * Converts a domain name to a byte array. Despite the name, this can serialize
  * any '.' separated string. _semcache._http.local is not a domain name, eg,
  * but it is serializable in the same fashion. The name 'domain' is retained to
@@ -42109,6 +42097,32 @@ exports.wait = function(ms) {
   return new Promise(resolve => {
     setTimeout(() => resolve(), ms);
   });
+};
+
+/**
+ * Returns a Promise that resolves at a random time within the given range.
+ *
+ * @param {integer} min the minimum number of milliseconds to wait
+ * @param {integer} max the maximum number of milliseconds to wait, inclusive
+ *
+ * @return {Promise} Promise that resolves after the wait
+ */
+exports.waitInRange = function(min, max) {
+  // + 1 because we specify inclusive, but randomInt is exclusive.
+  var waitTime = exports.randomInt(min, max + 1);
+  return exports.wait(waitTime);
+};
+
+/**
+ * Return a random integer between [min, max).
+ *
+ * @param {integer} min
+ * @param {integer} max
+ *
+ * @return {integer} random value >= min and < max
+ */
+exports.randomInt = function(min, max) {
+  return Math.floor(Math.random() * (max - min)) + min;
 };
 
 /**
@@ -63941,6 +63955,7 @@ exports.browseForSemCacheInstances = function() {
 /* globals Promise */
 'use strict';
 
+var util = require('../util');
 var chromeUdp = require('../chrome-apis/udp');
 var dnsUtil = require('./dns-util');
 var dnsPacket = require('./dns-packet');
@@ -64177,7 +64192,16 @@ exports.handleIncomingPacket = function(packet, remoteAddress, remotePort) {
       sendAddr = remoteAddress;
       sendPort = remotePort;
     }
-    exports.sendPacket(responsePacket, sendAddr, sendPort);
+    // Section 6 of the RFC covers responding, including when to delay
+    // responses. In the event that multiple peers may respond simultaneously,
+    // collision and thus dropped packets are a possibility. To circumvent
+    // this, the RFC specifies that responses where more than a single response
+    // is requested should be delayed by a random value between 20 and 120ms.
+    // We will delay in all cases, as there is no large price to pay for this.
+    util.waitInRange(20, 120)
+    .then(() => {
+      exports.sendPacket(responsePacket, sendAddr, sendPort);
+    });
   });
 };
 
@@ -64558,7 +64582,7 @@ exports.addRecord = function(name, record) {
   existingRecords.push(record);
 };
 
-},{"../chrome-apis/udp":"chromeUdp","./byte-array":5,"./dns-codes":6,"./dns-packet":7,"./dns-util":8,"./question-section":9}],"dnssd":[function(require,module,exports){
+},{"../chrome-apis/udp":"chromeUdp","../util":15,"./byte-array":5,"./dns-codes":6,"./dns-packet":7,"./dns-util":8,"./question-section":9}],"dnssd":[function(require,module,exports){
 /*jshint esnext:true*/
 /* globals Promise */
 'use strict';
@@ -64584,6 +64608,7 @@ exports.addRecord = function(name, record) {
 
 var _ = require('lodash');
 
+var util = require('../util');
 var dnsUtil = require('./dns-util');
 var dnsController = require('./dns-controller');
 var dnsCodes = require('./dns-codes');
@@ -64616,24 +64641,13 @@ exports.LOCAL_SUFFIX = 'local';
 exports.DEBUG = true;
 
 /**
- * Returns a promise that resolves after the given time (in ms).
- *
- * @param {integer} ms the number of milliseconds to wait before resolving
- */
-exports.wait = function(ms) {
-  return new Promise(resolve => {
-    setTimeout(() => resolve(), ms);
-  });
-};
-
-/**
  * Returns a Promise that resolves after 0-250 ms (inclusive).
  *
  * @return {Promise}
  */
 exports.waitForProbeTime = function() {
   // +1 because randomInt is by default [min, max)
-  return exports.wait(dnsUtil.randomInt(0, MAX_PROBE_WAIT + 1));
+  return util.wait(util.randomInt(0, MAX_PROBE_WAIT + 1));
 };
 
 /**
@@ -64905,7 +64919,7 @@ exports.issueProbe = function(queryName, queryType, queryClass) {
           queryType,
           queryClass
         );
-        return exports.wait(MAX_PROBE_WAIT);
+        return util.wait(MAX_PROBE_WAIT);
       }).then(function success() {
         if (exports.receivedResponsePacket(
           packets, queryName, queryType, queryClass
@@ -64917,7 +64931,7 @@ exports.issueProbe = function(queryName, queryType, queryClass) {
             queryType,
             queryClass
           );
-          return exports.wait(MAX_PROBE_WAIT);
+          return util.wait(MAX_PROBE_WAIT);
         }
       })
       .then(function success() {
@@ -64931,7 +64945,7 @@ exports.issueProbe = function(queryName, queryType, queryClass) {
             queryType,
             queryClass
           );
-          return exports.wait(MAX_PROBE_WAIT);
+          return util.wait(MAX_PROBE_WAIT);
         }
       })
       .then(function success() {
@@ -65371,7 +65385,7 @@ exports.queryForResponses = function(
 
     var queryAndWait = function() {
       dnsController.query(qName, qType, qClass);
-      exports.wait(timeoutOrWait)
+      util.wait(timeoutOrWait)
         .then(() => {
           if (resolved) {
             // Already handled. Do nothing.
@@ -65397,7 +65411,7 @@ exports.queryForResponses = function(
   });
 };
 
-},{"./dns-codes":6,"./dns-controller":"dnsc","./dns-packet":7,"./dns-util":8,"./resource-record":10,"lodash":25}],"eval":[function(require,module,exports){
+},{"../util":15,"./dns-codes":6,"./dns-controller":"dnsc","./dns-packet":7,"./dns-util":8,"./resource-record":10,"lodash":25}],"eval":[function(require,module,exports){
 'use strict';
 
 /**

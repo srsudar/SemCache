@@ -11,16 +11,28 @@ var dnsUtil = require('../../../app/scripts/dnssd/dns-util');
 var dnsCodes = require('../../../app/scripts/dnssd/dns-codes');
 var qSection = require('../../../app/scripts/dnssd/question-section');
 var dnsController = require('../../../app/scripts/dnssd/dns-controller');
+var dnssd = require('../../../app/scripts/dnssd/dns-sd');
 
 /**
  * Manipulating the object directly leads to polluting the require cache. Any
  * test that modifies the required object should call this method to get a
  * fresh version
  */
-function resetDnsSdSem() {
+function resetDnsSd() {
   delete require.cache[
     require.resolve('../../../app/scripts/dnssd/dns-sd')
   ];
+  dnssd = require('../../../app/scripts/dnssd/dns-sd');
+}
+
+/**
+ * Proxyquire the dnssd object with proxies passed as the proxied modules.
+ */
+function proxyquireDnsSd(proxies) {
+  dnssd = proxyquire(
+    '../../../app/scripts/dnssd/dns-sd',
+    proxies
+  );
 }
 
 /**
@@ -33,9 +45,7 @@ function resetDnsSdSem() {
  * @param {string} expected the user friendly name expected as a result
  */
 function verifyUserFriendlyNameHelper(instanceTypeDomain, expected, t) {
-  var dnssdSem = require('../../../app/scripts/dnssd/dns-sd');
-
-  var actual = dnssdSem.getUserFriendlyName(instanceTypeDomain);
+  var actual = dnssd.getUserFriendlyName(instanceTypeDomain);
   t.equal(actual, expected);
   t.end();
 }
@@ -44,7 +54,6 @@ function verifyUserFriendlyNameHelper(instanceTypeDomain, expected, t) {
  * Helper for asserting the queryFor* methods are invoked correctly.
  */
 function callsQueryForResponsesHelper(
-  dnssdSem,
   qName,
   qType,
   qClass,
@@ -53,13 +62,21 @@ function callsQueryForResponsesHelper(
   numRetries,
   packets,
   result,
-  method,
+  methodName,
   t
 ) {
+  dnssd = proxyquire(
+    '../../../app/scripts/dnssd/dns-sd',
+    {
+      '../util': {
+        wait: sinon.stub().resolves()
+      }
+    }
+  );
   var queryForResponsesSpy = sinon.stub().resolves(packets);
-  dnssdSem.queryForResponses = queryForResponsesSpy;
+  dnssd.queryForResponses = queryForResponsesSpy;
 
-  method(qName, timeout, numRetries)
+  dnssd[methodName](qName, timeout, numRetries)
     .then(function resolved(services) {
       var qNameArg = queryForResponsesSpy.args[0][0];
       var qTypeArg = queryForResponsesSpy.args[0][1];
@@ -78,7 +95,7 @@ function callsQueryForResponsesHelper(
       t.deepEqual(services, result);
       t.end();
 
-      resetDnsSdSem();
+      resetDnsSd();
     });
 }
 
@@ -105,22 +122,20 @@ function queryForResponsesNoPacketsHelper(numRetries, t) {
   var packetIsForQuerySpy = sinon.stub().returns(true);
   var waitSpy = sinon.stub().resolves();
 
-  var dnssdSem = proxyquire(
-    '../../../app/scripts/dnssd/dns-sd',
-    {
-      './dns-controller':
-      {
-        addOnReceiveCallback: addOnReceiveCallbackSpy,
-        removeOnReceiveCallback: removeOnReceiveCallbackSpy,
-        query: querySpy
-      }
+  proxyquireDnsSd({
+    './dns-controller': {
+      addOnReceiveCallback: addOnReceiveCallbackSpy,
+      removeOnReceiveCallback: removeOnReceiveCallbackSpy,
+      query: querySpy
+    },
+    '../util': {
+      wait: waitSpy
     }
-  );
-  dnssdSem.wait = waitSpy;
-  dnssdSem.packetIsForQuery = packetIsForQuerySpy;
+  });
+  dnssd.packetIsForQuery = packetIsForQuerySpy;
 
   var totalQueries = numRetries + 1;
-  dnssdSem.queryForResponses(qName, qType, qClass, true, qTime, numRetries)
+  dnssd.queryForResponses(qName, qType, qClass, true, qTime, numRetries)
   .then(function success(records) {
     // Assertions
     t.equal(addOnReceiveCallbackSpy.callCount, 1);
@@ -184,21 +199,19 @@ function queryForResponsesSinglePacketHelper(numRetries, resolveOnNum, t) {
   var waitSpy = sinon.stub().resolves();
   var packetIsForQuerySpy = sinon.stub().returns(true);
 
-  var dnssdSem = proxyquire(
-    '../../../app/scripts/dnssd/dns-sd',
-    {
-      './dns-controller':
-      {
-        addOnReceiveCallback: addOnReceiveCallbackSpy,
-        removeOnReceiveCallback: removeOnReceiveCallbackSpy,
-        query: querySpy
-      }
+  proxyquireDnsSd({
+    './dns-controller': {
+      addOnReceiveCallback: addOnReceiveCallbackSpy,
+      removeOnReceiveCallback: removeOnReceiveCallbackSpy,
+      query: querySpy
+    },
+    '../util': {
+      wait: waitSpy
     }
-  );
-  dnssdSem.wait = waitSpy;
-  dnssdSem.packetIsForQuery = packetIsForQuerySpy;
+  });
+  dnssd.packetIsForQuery = packetIsForQuerySpy;
 
-  dnssdSem.queryForResponses(qName, qType, qClass, false, qTime, numRetries)
+  dnssd.queryForResponses(qName, qType, qClass, false, qTime, numRetries)
   .then(function success(records) {
     // Assertions
     t.equal(addOnReceiveCallbackCount, 1);
@@ -238,22 +251,19 @@ function probeRejectsHelper(returnTrueAfterCall, t) {
     }
   };
 
-  var dnssdSem = proxyquire(
-    '../../../app/scripts/dnssd/dns-sd',
-    {
-      './dns-controller':
-      {
-        addOnReceiveCallback: addOnReceiveCallbackSpy,
-        removeOnReceiveCallback: removeOnReceiveCallbackSpy,
-        query: sinon.stub()
-      }
+  proxyquireDnsSd({
+    './dns-controller': {
+      addOnReceiveCallback: addOnReceiveCallbackSpy,
+      removeOnReceiveCallback: removeOnReceiveCallbackSpy,
+      query: sinon.stub()
+    },
+    '../util': {
+      wait: sinon.stub().resolves()
     }
-  );
+  });
+  dnssd.receivedResponsePacket = receivedResponsePacketSpy;
 
-  dnssdSem.receivedResponsePacket = receivedResponsePacketSpy;
-  dnssdSem.wait = sinon.stub().resolves();
-
-  var issuePromise = dnssdSem.issueProbe('queryname', 4, 5);
+  var issuePromise = dnssd.issueProbe('queryname', 4, 5);
   issuePromise.catch(function failure() {
     // our promise didn't resolve, meaning we failed.
     // We should have been called one more than we were permitting (i.e. a call
@@ -262,7 +272,7 @@ function probeRejectsHelper(returnTrueAfterCall, t) {
     t.equal(addOnReceiveCallbackSpy.callCount, 1);
     t.equal(removeOnReceiveCallbackSpy.callCount, 1);
     t.end();
-    resetDnsSdSem();
+    resetDnsSd();
   });
 }
 
@@ -337,27 +347,26 @@ test('issueProbe succeeds correctly', function(t) {
   var removeOnReceiveCallbackSpy = sinon.spy();
   var receivedResponsePacketSpy = sinon.stub().returns(false);
 
-  var dnssdSem = proxyquire(
-    '../../../app/scripts/dnssd/dns-sd',
+  proxyquireDnsSd({
+    './dns-controller':
     {
-      './dns-controller':
-      {
-        addOnReceiveCallback: addOnReceiveCallbackSpy,
-        removeOnReceiveCallback: removeOnReceiveCallbackSpy,
-        query: sinon.stub()
-      }
+      addOnReceiveCallback: addOnReceiveCallbackSpy,
+      removeOnReceiveCallback: removeOnReceiveCallbackSpy,
+      query: sinon.stub()
+    },
+    '../util': {
+      wait: sinon.stub().resolves()
     }
-  );
+  });
 
-  dnssdSem.receivedResponsePacket = receivedResponsePacketSpy;
-  dnssdSem.wait = sinon.stub().resolves();
+  dnssd.receivedResponsePacket = receivedResponsePacketSpy;
 
-  var issuePromise = dnssdSem.issueProbe('queryname', 4, 5);
+  var issuePromise = dnssd.issueProbe('queryname', 4, 5);
   issuePromise.then(function success() {
     t.equal(receivedResponsePacketSpy.callCount, 3);
     t.true(addOnReceiveCallbackSpy.calledOnce);
     t.true(removeOnReceiveCallbackSpy.calledOnce);
-    resetDnsSdSem();
+    resetDnsSd();
     t.end();
   });
 });
@@ -386,17 +395,14 @@ test('packetIsForQuery true if appropriate resource', function(t) {
 
   var filterSpy = sinon.stub().returns([aRecord]);
 
-  var dnssdSem = proxyquire(
-    '../../../app/scripts/dnssd/dns-sd',
+  proxyquireDnsSd({
+    './dns-controller':
     {
-      './dns-controller':
-      {
-        filterResourcesForQuery: filterSpy
-      }
+      filterResourcesForQuery: filterSpy
     }
-  );
+  });
 
-  var actual = dnssdSem.packetIsForQuery(
+  var actual = dnssd.packetIsForQuery(
     packet, qName, aRecord.recordType, qClass
   );
 
@@ -419,17 +425,14 @@ test('packetIsForQuery false if resource does not match query', function(t) {
 
   var filterSpy = sinon.stub().returns([]);
 
-  var dnssdSem = proxyquire(
-    '../../../app/scripts/dnssd/dns-sd',
+  proxyquireDnsSd({
+    './dns-controller':
     {
-      './dns-controller':
-      {
-        filterResourcesForQuery: filterSpy
-      }
+      filterResourcesForQuery: filterSpy
     }
-  );
+  });
 
-  var actual = dnssdSem.packetIsForQuery(
+  var actual = dnssd.packetIsForQuery(
     packet, qName, aRecord.recordType, qClass
   );
 
@@ -442,10 +445,8 @@ test('packetIsForQuery false if resource does not match query', function(t) {
 });
 
 test('receivedPacket calls packetIsForQuery on each packet', function(t) {
-  var dnssdSem = require('../../../app/scripts/dnssd/dns-sd');
-
   var packetIsForQuerySpy = sinon.spy();
-  dnssdSem.packetIsForQuery = packetIsForQuerySpy;
+  dnssd.packetIsForQuery = packetIsForQuerySpy;
 
   var first = 'a';
   var second = 'b';
@@ -458,7 +459,7 @@ test('receivedPacket calls packetIsForQuery on each packet', function(t) {
   var qName = 'foobar';
   var qType = 1234;
   var qClass = 5432;
-  dnssdSem.receivedResponsePacket(packets, qName, qType, qClass);
+  dnssd.receivedResponsePacket(packets, qName, qType, qClass);
 
   t.equal(packetIsForQuerySpy.callCount, packets.length);
   t.true(packetIsForQuerySpy.calledWith(first, qName, qType, qClass));
@@ -466,15 +467,13 @@ test('receivedPacket calls packetIsForQuery on each packet', function(t) {
   t.true(packetIsForQuerySpy.calledWith(third, qName, qType, qClass));
   t.end();
 
-  resetDnsSdSem();
+  resetDnsSd();
 });
 
 test('receivedResponsePacket true based on resources', function(t) {
-  var dnssdSem = require('../../../app/scripts/dnssd/dns-sd');
-
   var packetIsForQuerySpy = sinon.stub().returns(true);
 
-  dnssdSem.packetIsForQuery = packetIsForQuerySpy;
+  dnssd.packetIsForQuery = packetIsForQuerySpy;
 
   var isResponsePacket = new dnsPacket.DnsPacket(
     0,
@@ -494,7 +493,7 @@ test('receivedResponsePacket true based on resources', function(t) {
   var qType = 3;
   var qClass = 1;
 
-  var actual = dnssdSem.receivedResponsePacket(packets, qName, qType, qClass);
+  var actual = dnssd.receivedResponsePacket(packets, qName, qType, qClass);
   t.true(actual);
   t.deepEqual(packetIsForQuerySpy.args[0][0], isResponsePacket);
   t.equal(packetIsForQuerySpy.args[0][1], qName);
@@ -502,7 +501,7 @@ test('receivedResponsePacket true based on resources', function(t) {
   t.equal(packetIsForQuerySpy.args[0][3], qClass);
   t.end();
 
-  resetDnsSdSem();
+  resetDnsSd();
 });
 
 test('receivedResponsePacket false correctly', function(t) {
@@ -512,17 +511,13 @@ test('receivedResponsePacket false correctly', function(t) {
   // 3) received a packet for the query that is NOT a response
   // Should be false if the packet is not for the query and it is a query
   // packet
-  var dnssdSem = require('../../../app/scripts/dnssd/dns-sd');
-
-  // var packetIsForQueryStub = sinon.stub().returns(false);
-  // dnssdSem.packetIsForQuery = packetIsForQueryStub;
 
   var packets = [];
 
   var queryName = 'foo';
 
   // 1) received no packets
-  var actualForNoPackets = dnssdSem.receivedResponsePacket(packets, queryName);
+  var actualForNoPackets = dnssd.receivedResponsePacket(packets, queryName);
   t.false(actualForNoPackets);
 
   // 2) received packet NOT for this query
@@ -544,7 +539,7 @@ test('receivedResponsePacket false correctly', function(t) {
   );
   packetNotForQuery.addQuestion(questionForOtherQuery);
   packets = [packetNotForQuery];
-  var actualForOtherQuery = dnssdSem.receivedResponsePacket(
+  var actualForOtherQuery = dnssd.receivedResponsePacket(
     packets,
     queryName
   );
@@ -568,34 +563,37 @@ test('receivedResponsePacket false correctly', function(t) {
   );
   packetForQuery.addQuestion(questionForThisQuery);
   packets = [packetForQuery];
-  var actualForQuestion = dnssdSem.receivedResponsePacket(
+  var actualForQuestion = dnssd.receivedResponsePacket(
     [packetForQuery],
     queryName
   );
   t.false(actualForQuestion);
 
   t.end();
-  resetDnsSdSem();
+  resetDnsSd();
 });
 
 test('register rejects if host taken', function(t) {
-  var dnssdSem = require('../../../app/scripts/dnssd/dns-sd');
-  
   var host = 'hostname.local';
   var instanceName = 'my instance';
   var type = '_semcache._tcp';
   var port = 1234;
 
+  proxyquireDnsSd({
+    '../util': {
+      wait: sinon.stub().resolves()
+    }
+  });
+
   var issueProbeSpy = sinon.stub().rejects('auto reject of probe');
-  dnssdSem.issueProbe = issueProbeSpy;
-  dnssdSem.wait = sinon.stub().resolves();
+  dnssd.issueProbe = issueProbeSpy;
 
   var createHostRecordsSpy = sinon.spy();
   var createServiceRecordsSpy = sinon.spy();
-  dnssdSem.createHostRecords = createHostRecordsSpy;
-  dnssdSem.createServiceRecords = createServiceRecordsSpy;
+  dnssd.createHostRecords = createHostRecordsSpy;
+  dnssd.createServiceRecords = createServiceRecordsSpy;
 
-  var resultPromise = dnssdSem.register(host, instanceName, type, port);
+  var resultPromise = dnssd.register(host, instanceName, type, port);
   resultPromise.catch(failObj => {
     // We rejected, as expected because the host was taken.
     // Make sure we called issueProbe with the host
@@ -608,13 +606,11 @@ test('register rejects if host taken', function(t) {
     t.equal(createServiceRecordsSpy.callCount, 0);
     t.true(true);
     t.end();
-    resetDnsSdSem();
+    resetDnsSd();
   });
 });
 
 test('register rejects if instance taken', function(t) {
-  var dnssdSem = require('../../../app/scripts/dnssd/dns-sd');
-  
   var host = 'hostname.local';
   var instanceName = 'my instance';
   var type = '_semcache._tcp';
@@ -623,9 +619,9 @@ test('register rejects if instance taken', function(t) {
   var issueProbeSpy = sinon.stub();
   issueProbeSpy.onCall(0).resolves('auto resolve of probe');
   issueProbeSpy.onCall(1).rejects('auto reject of probe');
-  dnssdSem.issueProbe = issueProbeSpy;
+  dnssd.issueProbe = issueProbeSpy;
 
-  var resultPromise = dnssdSem.register(host, instanceName, type, port);
+  var resultPromise = dnssd.register(host, instanceName, type, port);
 
   resultPromise.catch(failObj => {
     // We rejected, as expected because the instance was taken.
@@ -637,21 +633,18 @@ test('register rejects if instance taken', function(t) {
     t.equal(issueProbeSpy.callCount, 2);
     t.true(true);
     t.end();
-    resetDnsSdSem();
+    resetDnsSd();
   });
 });
 
 test('createServiceRecords creates and returns', function(t) {
   var addRecordSpy = sinon.spy();
-  var dnssdSem = proxyquire(
-    '../../../app/scripts/dnssd/dns-sd',
+  proxyquireDnsSd({
+    './dns-controller':
     {
-      './dns-controller':
-      {
-        addRecord: addRecordSpy
-      }
+      addRecord: addRecordSpy
     }
-  );
+  });
   
   var name = 'fancy name';
   var type = '_semcache._tcp';
@@ -676,7 +669,7 @@ test('createServiceRecords creates and returns', function(t) {
   );
 
   var targetReturn = [expectedSrvRecord, expectedPtrRecord];
-  var actualReturn = dnssdSem.createServiceRecords(name, type, port, domain);
+  var actualReturn = dnssd.createServiceRecords(name, type, port, domain);
   t.deepEqual(actualReturn, targetReturn);
 
   t.equal(addRecordSpy.callCount, 2);
@@ -691,7 +684,7 @@ test('createServiceRecords creates and returns', function(t) {
   t.deepEqual(secondArgs[1], expectedPtrRecord);
 
   t.end();
-  resetDnsSdSem();
+  resetDnsSd();
 });
 
 test('createHostRecords calls to create records correctly', function(t) {
@@ -715,34 +708,29 @@ test('createHostRecords calls to create records correctly', function(t) {
     t.deepEqual(recordParam, expectedRecord);
   };
 
-  var dnssdSem = proxyquire(
-    '../../../app/scripts/dnssd/dns-sd',
+  proxyquireDnsSd({
+    './dns-controller':
     {
-      './dns-controller':
-      {
-        addRecord: addRecordSpy,
-        getIPv4Interfaces: sinon.stub().returns([iface])
-      }
+      addRecord: addRecordSpy,
+      getIPv4Interfaces: sinon.stub().returns([iface])
     }
-  );
+  });
 
-  var actualReturn = dnssdSem.createHostRecords(host);
+  var actualReturn = dnssd.createHostRecords(host);
   var expectedReturn = [expectedRecord];
   t.deepEqual(actualReturn, expectedReturn);
   t.end();
-  resetDnsSdSem();
+  resetDnsSd();
 });
 
 test('register resolves if name and host probe succeed', function(t) {
-  var dnssdSem = require('../../../app/scripts/dnssd/dns-sd');
-  
   var host = 'hostname.local';
   var instanceName = 'my instance';
   var type = '_semcache._tcp';
   var port = 1234;
 
   var issueProbeSpy = sinon.stub().resolves('auto succeed in spy');
-  dnssdSem.issueProbe = issueProbeSpy;
+  dnssd.issueProbe = issueProbeSpy;
 
   var hostRecord = ['a'];
   var createHostRecordsSpy = sinon.stub().returns(hostRecord);
@@ -754,11 +742,11 @@ test('register resolves if name and host probe succeed', function(t) {
 
   var advertiseServiceSpy = sinon.spy();
 
-  dnssdSem.createHostRecords = createHostRecordsSpy;
-  dnssdSem.createServiceRecords = createServiceRecordsSpy;
-  dnssdSem.advertiseService = advertiseServiceSpy;
+  dnssd.createHostRecords = createHostRecordsSpy;
+  dnssd.createServiceRecords = createServiceRecordsSpy;
+  dnssd.advertiseService = advertiseServiceSpy;
 
-  var resultPromise = dnssdSem.register(host, instanceName, type, port);
+  var resultPromise = dnssd.register(host, instanceName, type, port);
 
   var expected = {
     serviceName: instanceName,
@@ -789,22 +777,18 @@ test('register resolves if name and host probe succeed', function(t) {
     t.true(advertiseServiceSpy.calledOnce);
     t.deepEqual(advertiseServiceSpy.args[0][0], allRecords);
 
-    resetDnsSdSem();
+    resetDnsSd();
     t.end();
   });
 });
 
 test('advertiseService advertises', function(t) {
   var sendPacketSpy = sinon.spy();
-  var dnssdSem = proxyquire(
-    '../../../app/scripts/dnssd/dns-sd',
-    {
-      './dns-controller':
-      {
-        sendPacket: sendPacketSpy
-      }
+  proxyquireDnsSd({
+    './dns-controller': {
+      sendPacket: sendPacketSpy
     }
-  );
+  });
 
   var aRecord = new resRec.ARecord('domain', 11, '123.4.5.6', 5);
   var srvRecord = new resRec.SrvRecord(
@@ -831,7 +815,7 @@ test('advertiseService advertises', function(t) {
     expectedPacket.addAnswer(record);
   });
 
-  dnssdSem.advertiseService(records);
+  dnssd.advertiseService(records);
 
   var expectedArgs = [
     expectedPacket,
@@ -842,7 +826,7 @@ test('advertiseService advertises', function(t) {
   t.deepEqual(sendPacketSpy.args[0], expectedArgs);
   t.end();
   
-  resetDnsSdSem();
+  resetDnsSd();
 });
 
 test('queryForResponses times out for if no responses', function(t) {
@@ -853,7 +837,7 @@ test('queryForResponses times out for if no responses', function(t) {
   queryForResponsesNoPacketsHelper(3, t);
 
   t.end();
-  resetDnsSdSem();
+  resetDnsSd();
 });
 
 test('queryForResponses handles retry attempts for single', function(t) {
@@ -867,7 +851,7 @@ test('queryForResponses handles retry attempts for single', function(t) {
   queryForResponsesSinglePacketHelper(4, 1, t);
 
   t.end();
-  resetDnsSdSem();
+  resetDnsSd();
 });
 
 test('queryForResponses correct for multiple', function(t) {
@@ -902,21 +886,19 @@ test('queryForResponses correct for multiple', function(t) {
   var waitSpy = sinon.stub().resolves();
   var packetIsForQuerySpy = sinon.stub().resolves(true);
 
-  var dnssdSem = proxyquire(
-    '../../../app/scripts/dnssd/dns-sd',
-    {
-      './dns-controller':
-      {
-        addOnReceiveCallback: addOnReceiveCallbackSpy,
-        removeOnReceiveCallback: removeOnReceiveCallbackSpy,
-        query: querySpy
-      }
+  proxyquireDnsSd({
+    './dns-controller': {
+      addOnReceiveCallback: addOnReceiveCallbackSpy,
+      removeOnReceiveCallback: removeOnReceiveCallbackSpy,
+      query: querySpy
+    },
+    '../util': {
+      wait: waitSpy
     }
-  );
-  dnssdSem.wait = waitSpy;
-  dnssdSem.packetIsForQuery = packetIsForQuerySpy;
+  });
+  dnssd.packetIsForQuery = packetIsForQuerySpy;
 
-  dnssdSem.queryForResponses(qName, qType, qClass, true, qTime, 0)
+  dnssd.queryForResponses(qName, qType, qClass, true, qTime, 0)
   .then(function success(records) {
     // Assertions
     t.equal(addOnReceiveCallbackCount, 1);
@@ -927,12 +909,11 @@ test('queryForResponses correct for multiple', function(t) {
     t.equal(packetIsForQuerySpy.callCount, 2);
     t.deepEqual(records, expectedPackets);
     t.end();
-    resetDnsSdSem();
+    resetDnsSd();
   });
 });
 
 test('queryForServiceInstances correct', function(t) {
-  var dnssdSem = require('../../../app/scripts/dnssd/dns-sd');
   var serviceType = '_semcache._tcp';
 
   var packet1 = new dnsPacket.DnsPacket(
@@ -973,7 +954,6 @@ test('queryForServiceInstances correct', function(t) {
   ];
 
   callsQueryForResponsesHelper(
-    dnssdSem,
     serviceType,
     dnsCodes.RECORD_TYPES.PTR,
     dnsCodes.CLASS_CODES.IN,
@@ -982,14 +962,13 @@ test('queryForServiceInstances correct', function(t) {
     2,
     packets,
     expected,
-    dnssdSem.queryForServiceInstances,
+    'queryForServiceInstances',
     t
   );
 });
 
 
 test('queryForIpAddress correct', function(t) {
-  var dnssdSem = require('../../../app/scripts/dnssd/dns-sd');
   var domainName = 'www.example.com';
 
   var packet1 = new dnsPacket.DnsPacket(
@@ -1015,7 +994,6 @@ test('queryForIpAddress correct', function(t) {
   ];
 
   callsQueryForResponsesHelper(
-    dnssdSem,
     domainName,
     dnsCodes.RECORD_TYPES.A,
     dnsCodes.CLASS_CODES.IN,
@@ -1024,13 +1002,12 @@ test('queryForIpAddress correct', function(t) {
     4,
     packets,
     expected,
-    dnssdSem.queryForIpAddress,
+    'queryForIpAddress',
     t
   );
 });
 
 test('queryForInstanceInfo correct', function(t) {
-  var dnssdSem = require('../../../app/scripts/dnssd/dns-sd');
   var instanceName = 'Sams Cache._semcache._tcp.local';
 
   var packet1 = new dnsPacket.DnsPacket(
@@ -1057,7 +1034,6 @@ test('queryForInstanceInfo correct', function(t) {
   ];
 
   callsQueryForResponsesHelper(
-    dnssdSem,
     instanceName,
     dnsCodes.RECORD_TYPES.SRV,
     dnsCodes.CLASS_CODES.IN,
@@ -1066,7 +1042,7 @@ test('queryForInstanceInfo correct', function(t) {
     12,
     packets,
     expected,
-    dnssdSem.queryForInstanceInfo,
+    'queryForInstanceInfo',
     t
   );
 });
@@ -1108,13 +1084,12 @@ test('browseServiceInstances handles dropped SRV', function(t) {
   getUserFriendlyNameSpy.withArgs(records[2].srv.instanceName)
     .returns(records[2].friendlyName);
 
-  var dnssdSem = require('../../../app/scripts/dnssd/dns-sd');
-  dnssdSem.queryForServiceInstances = queryForServiceInstancesSpy;
-  dnssdSem.queryForIpAddress = queryForIpAddressSpy;
-  dnssdSem.queryForInstanceInfo = queryForInstanceInfoSpy;
-  dnssdSem.getUserFriendlyName = getUserFriendlyNameSpy;
+  dnssd.queryForServiceInstances = queryForServiceInstancesSpy;
+  dnssd.queryForIpAddress = queryForIpAddressSpy;
+  dnssd.queryForInstanceInfo = queryForInstanceInfoSpy;
+  dnssd.getUserFriendlyName = getUserFriendlyNameSpy;
 
-  var resultPromise = dnssdSem.browseServiceInstances(serviceType);
+  var resultPromise = dnssd.browseServiceInstances(serviceType);
   resultPromise.then(function gotInstances(instances) {
     // Each spy called the appropriate number of times with the appropriate
     // arguments
@@ -1131,8 +1106,8 @@ test('browseServiceInstances handles dropped SRV', function(t) {
       queryForServiceInstancesSpy.args[0],
       [
         serviceType,
-        dnssdSem.DEFAULT_QUERY_WAIT_TIME,
-        dnssdSem.DEFAULT_NUM_PTR_RETRIES
+        dnssd.DEFAULT_QUERY_WAIT_TIME,
+        dnssd.DEFAULT_NUM_PTR_RETRIES
       ]
     );
 
@@ -1142,8 +1117,8 @@ test('browseServiceInstances handles dropped SRV', function(t) {
         queryForInstanceInfoSpy.args[srvQueryIter],
         [
           records[srvQueryIter].ptr.serviceName,
-          dnssdSem.DEFAULT_QUERY_WAIT_TIME,
-          dnssdSem.DEFAULT_NUM_RETRIES
+          dnssd.DEFAULT_QUERY_WAIT_TIME,
+          dnssd.DEFAULT_NUM_RETRIES
         ]
       );
     }
@@ -1153,22 +1128,22 @@ test('browseServiceInstances handles dropped SRV', function(t) {
       queryForIpAddressSpy.args[0],
       [
         records[0].srv.domain, 
-        dnssdSem.DEFAULT_QUERY_WAIT_TIME,
-        dnssdSem.DEFAULT_NUM_RETRIES
+        dnssd.DEFAULT_QUERY_WAIT_TIME,
+        dnssd.DEFAULT_NUM_RETRIES
       ]
     );
     t.deepEqual(
       queryForIpAddressSpy.args[1],
       [
         records[2].srv.domain, 
-        dnssdSem.DEFAULT_QUERY_WAIT_TIME,
-        dnssdSem.DEFAULT_NUM_RETRIES
+        dnssd.DEFAULT_QUERY_WAIT_TIME,
+        dnssd.DEFAULT_NUM_RETRIES
       ]
     );
 
     // Result promise resolves with the correct objects.
     t.deepEqual(instances, [records[0].expected, records[2].expected]);
-    resetDnsSdSem();
+    resetDnsSd();
     t.end();
   });
 });
@@ -1211,13 +1186,12 @@ test('browseServiceInstances handles dropped A', function(t) {
   getUserFriendlyNameSpy.withArgs(records[1].srv.instanceName)
     .returns(records[1].friendlyName);
 
-  var dnssdSem = require('../../../app/scripts/dnssd/dns-sd');
-  dnssdSem.queryForServiceInstances = queryForServiceInstancesSpy;
-  dnssdSem.queryForIpAddress = queryForIpAddressSpy;
-  dnssdSem.queryForInstanceInfo = queryForInstanceInfoSpy;
-  dnssdSem.getUserFriendlyName = getUserFriendlyNameSpy;
+  dnssd.queryForServiceInstances = queryForServiceInstancesSpy;
+  dnssd.queryForIpAddress = queryForIpAddressSpy;
+  dnssd.queryForInstanceInfo = queryForInstanceInfoSpy;
+  dnssd.getUserFriendlyName = getUserFriendlyNameSpy;
 
-  var resultPromise = dnssdSem.browseServiceInstances(serviceType);
+  var resultPromise = dnssd.browseServiceInstances(serviceType);
   resultPromise.then(function gotInstances(instances) {
     // Each spy called the appropriate number of times with the appropriate
     // arguments
@@ -1234,8 +1208,8 @@ test('browseServiceInstances handles dropped A', function(t) {
       queryForServiceInstancesSpy.args[0],
       [
         serviceType,
-        dnssdSem.DEFAULT_QUERY_WAIT_TIME,
-        dnssdSem.DEFAULT_NUM_PTR_RETRIES
+        dnssd.DEFAULT_QUERY_WAIT_TIME,
+        dnssd.DEFAULT_NUM_PTR_RETRIES
       ]
     );
 
@@ -1245,8 +1219,8 @@ test('browseServiceInstances handles dropped A', function(t) {
         queryForInstanceInfoSpy.args[srvQueryIter],
         [
           records[srvQueryIter].ptr.serviceName,
-          dnssdSem.DEFAULT_QUERY_WAIT_TIME,
-          dnssdSem.DEFAULT_NUM_RETRIES
+          dnssd.DEFAULT_QUERY_WAIT_TIME,
+          dnssd.DEFAULT_NUM_RETRIES
         ]
       );
     }
@@ -1256,22 +1230,22 @@ test('browseServiceInstances handles dropped A', function(t) {
       queryForIpAddressSpy.args[0],
       [
         records[0].srv.domain, 
-        dnssdSem.DEFAULT_QUERY_WAIT_TIME,
-        dnssdSem.DEFAULT_NUM_RETRIES
+        dnssd.DEFAULT_QUERY_WAIT_TIME,
+        dnssd.DEFAULT_NUM_RETRIES
       ]
     );
     t.deepEqual(
       queryForIpAddressSpy.args[1],
       [
         records[1].srv.domain, 
-        dnssdSem.DEFAULT_QUERY_WAIT_TIME,
-        dnssdSem.DEFAULT_NUM_RETRIES
+        dnssd.DEFAULT_QUERY_WAIT_TIME,
+        dnssd.DEFAULT_NUM_RETRIES
       ]
     );
 
     // Result promise resolves with the correct objects.
     t.deepEqual(instances, [records[0].expected, records[1].expected]);
-    resetDnsSdSem();
+    resetDnsSd();
     t.end();
   });
 });
@@ -1306,13 +1280,12 @@ test('browseServiceInstances queries all types and returns', function(t) {
   getUserFriendlyNameSpy.withArgs(records[1].ptr.serviceName)
     .returns(records[1].friendlyName);
 
-  var dnssdSem = require('../../../app/scripts/dnssd/dns-sd');
-  dnssdSem.queryForServiceInstances = queryForServiceInstancesSpy;
-  dnssdSem.queryForIpAddress = queryForIpAddressSpy;
-  dnssdSem.queryForInstanceInfo = queryForInstanceInfoSpy;
-  dnssdSem.getUserFriendlyName = getUserFriendlyNameSpy;
+  dnssd.queryForServiceInstances = queryForServiceInstancesSpy;
+  dnssd.queryForIpAddress = queryForIpAddressSpy;
+  dnssd.queryForInstanceInfo = queryForInstanceInfoSpy;
+  dnssd.getUserFriendlyName = getUserFriendlyNameSpy;
 
-  var resultPromise = dnssdSem.browseServiceInstances(serviceType);
+  var resultPromise = dnssd.browseServiceInstances(serviceType);
   resultPromise.then(function gotInstances(instances) {
     // Each spy called the appropriate number of times with the appropriate
     // arguments
@@ -1327,8 +1300,8 @@ test('browseServiceInstances queries all types and returns', function(t) {
       queryForServiceInstancesSpy.args[0],
       [
         serviceType,
-        dnssdSem.DEFAULT_QUERY_WAIT_TIME,
-        dnssdSem.DEFAULT_NUM_PTR_RETRIES  
+        dnssd.DEFAULT_QUERY_WAIT_TIME,
+        dnssd.DEFAULT_NUM_PTR_RETRIES  
       ]
     );
 
@@ -1338,8 +1311,8 @@ test('browseServiceInstances queries all types and returns', function(t) {
         queryForInstanceInfoSpy.args[recordIter],
         [
           records[recordIter].ptr.serviceName,
-          dnssdSem.DEFAULT_QUERY_WAIT_TIME,
-          dnssdSem.DEFAULT_NUM_RETRIES
+          dnssd.DEFAULT_QUERY_WAIT_TIME,
+          dnssd.DEFAULT_NUM_RETRIES
         ]
       );
 
@@ -1348,15 +1321,15 @@ test('browseServiceInstances queries all types and returns', function(t) {
         queryForIpAddressSpy.args[recordIter],
         [
           records[recordIter].srv.domain, 
-          dnssdSem.DEFAULT_QUERY_WAIT_TIME,
-          dnssdSem.DEFAULT_NUM_RETRIES
+          dnssd.DEFAULT_QUERY_WAIT_TIME,
+          dnssd.DEFAULT_NUM_RETRIES
         ]
       );
     }
 
     // Result promise resolves with the correct objects.
     t.deepEqual(instances, [records[0].expected, records[1].expected]);
-    resetDnsSdSem();
+    resetDnsSd();
     t.end();
   });
 });
@@ -1390,9 +1363,7 @@ test('getUserFriendlyName handles multi-level domains', function(t) {
   var name = 'My Music Library';
   var instanceTypeDomain = [name, serviceType, domain].join('.');
 
-  var dnssdSem = require('../../../app/scripts/dnssd/dns-sd');
-
-  var actual = dnssdSem.getUserFriendlyName(instanceTypeDomain);
+  var actual = dnssd.getUserFriendlyName(instanceTypeDomain);
   t.equal(actual, name);
   t.end();
 });

@@ -59,6 +59,17 @@ function helperTestForSendAddress(t, isUnicast, address, port) {
     0,
     0
   );
+
+  var waitInRangeSpy = sinon.stub().resolves();
+  dnsController = proxyquire(
+    '../../../app/scripts/dnssd/dns-controller',
+    {
+      '../util': {
+        waitInRange: waitInRangeSpy
+      }
+    }
+  );
+
   // We will return a response packet regardless of the other parameters.
   question1.unicastResponseRequested = sinon.stub().returns(isUnicast);
   dnsController.createResponsePacket = sinon.stub().returns(responsePacket);
@@ -67,17 +78,18 @@ function helperTestForSendAddress(t, isUnicast, address, port) {
   var aRecord = new resRec.ARecord('domainname', 10, '123.42.61.123', 2);
   dnsController.getResourcesForQuery = sinon.stub().returns([aRecord]);
 
-  var sendSpy = sinon.spy();
-  dnsController.sendPacket = sendSpy;
+  dnsController.sendPacket = function(packetArg, addrArg, portArg) {
+    // We are going to ignore the first parameter, as we trust other methods to
+    // test the content of the packet. We're interested only in the address and
+    // port.
+    t.notNull(packetArg);
+    t.deepEqual(addrArg, address);
+    t.deepEqual(portArg, port);
+  };
 
   dnsController.handleIncomingPacket(queryPacket, address, port);
 
-  // We are going to ignore the first parameter, as we trust other methods to
-  // test the content of the packet. We're interested only in the address and
-  // port.
-  t.equal(sendSpy.callCount, 1);
-  t.deepEqual(sendSpy.args[0][1], address);
-  t.deepEqual(sendSpy.args[0][2], port);
+  t.deepEqual(waitInRangeSpy.args[0], [20, 120]);
 
   resetDnsController();
   t.end();
@@ -575,6 +587,36 @@ test('handleIncomingPacket sends packet for each question', function(t) {
     0
   );
 
+  var address = '9.8.7.6';
+  var port = 1111;
+
+  var callCount = 0;
+  var sendPacketSpy = function(packetArg, addrArg, portArg) {
+    if (callCount === 0) {
+      t.deepEqual(packetArg, responsePacket1);
+      t.deepEqual(addrArg, address);
+      t.deepEqual(portArg, port);
+    } else if (callCount === 1) {
+      t.deepEqual(packetArg, responsePacket2);
+      t.deepEqual(addrArg, address);
+      t.deepEqual(portArg, port);
+    } else {
+      t.fail('called sendPacket more times than expected');
+    }
+    callCount += 1;
+  };
+  var waitInRangeSpy = sinon.stub().resolves();
+
+  dnsController = proxyquire(
+    '../../../app/scripts/dnssd/dns-controller',
+    {
+      '../util': {
+        waitInRange: waitInRangeSpy
+      }
+    }
+  );
+  dnsController.sendPacket = sendPacketSpy;
+
   var createResponsePacketSpy = sinon.stub();
   createResponsePacketSpy.onCall(0).returns(responsePacket1);
   createResponsePacketSpy.onCall(1).returns(responsePacket2);
@@ -591,12 +633,7 @@ test('handleIncomingPacket sends packet for each question', function(t) {
   getResourcesForQuerySpy.onCall(1).returns([q2record1, q2record2]);
   dnsController.getResourcesForQuery = getResourcesForQuerySpy;
 
-  var sendSpy = sinon.spy();
-  dnsController.sendPacket = sendSpy;
-
   // After all this setup, make the call we're actually testing.
-  var address = '9.8.7.6';
-  var port = 1111;
   dnsController.handleIncomingPacket(queryPacket, address, port);
 
   // And now for the asserstions.
@@ -605,19 +642,9 @@ test('handleIncomingPacket sends packet for each question', function(t) {
   t.deepEqual(createResponsePacketSpy.args[0], [queryPacket]);
   t.deepEqual(createResponsePacketSpy.args[1], [queryPacket]);
 
-  // Send should have been called with two packets--both to the multicast
-  var sendArgs1 = sendSpy.args[0];
-  var sendArgs2 = sendSpy.args[1];
-
-  // First call
-  t.deepEqual(sendArgs1[0], responsePacket1);
-  t.deepEqual(sendArgs1[1], address);
-  t.deepEqual(sendArgs1[2], port);
-
-  // Second call
-  t.deepEqual(sendArgs2[0], responsePacket2);
-  t.deepEqual(sendArgs2[1], address);
-  t.deepEqual(sendArgs2[2], port);
+  t.equal(waitInRangeSpy.callCount, 2);
+  t.deepEqual(waitInRangeSpy.args[0], [20, 120]);
+  t.deepEqual(waitInRangeSpy.args[1], [20, 120]);
 
   t.end();
   resetDnsController();

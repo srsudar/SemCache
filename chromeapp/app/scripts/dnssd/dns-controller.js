@@ -2,6 +2,7 @@
 /* globals Promise */
 'use strict';
 
+var util = require('../util');
 var chromeUdp = require('../chrome-apis/udp');
 var dnsUtil = require('./dns-util');
 var dnsPacket = require('./dns-packet');
@@ -238,7 +239,16 @@ exports.handleIncomingPacket = function(packet, remoteAddress, remotePort) {
       sendAddr = remoteAddress;
       sendPort = remotePort;
     }
-    exports.sendPacket(responsePacket, sendAddr, sendPort);
+    // Section 6 of the RFC covers responding, including when to delay
+    // responses. In the event that multiple peers may respond simultaneously,
+    // collision and thus dropped packets are a possibility. To circumvent
+    // this, the RFC specifies that responses where more than a single response
+    // is requested should be delayed by a random value between 20 and 120ms.
+    // We will delay in all cases, as there is no large price to pay for this.
+    util.waitInRange(20, 120)
+    .then(() => {
+      exports.sendPacket(responsePacket, sendAddr, sendPort);
+    });
   });
 };
 

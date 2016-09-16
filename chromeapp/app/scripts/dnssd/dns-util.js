@@ -25,18 +25,6 @@ exports.getLocalSuffix = function() {
 };
 
 /**
- * Return a random integer between [min, max).
- *
- * @param {integer} min
- * @param {integer} max
- *
- * @return {integer} random value >= min and < max
- */
-exports.randomInt = function(min, max) {
-  return Math.floor(Math.random() * (max - min)) + min;
-};
-
-/**
  * Converts a domain name to a byte array. Despite the name, this can serialize
  * any '.' separated string. _semcache._http.local is not a domain name, eg,
  * but it is serializable in the same fashion. The name 'domain' is retained to

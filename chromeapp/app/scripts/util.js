@@ -40,6 +40,32 @@ exports.wait = function(ms) {
 };
 
 /**
+ * Returns a Promise that resolves at a random time within the given range.
+ *
+ * @param {integer} min the minimum number of milliseconds to wait
+ * @param {integer} max the maximum number of milliseconds to wait, inclusive
+ *
+ * @return {Promise} Promise that resolves after the wait
+ */
+exports.waitInRange = function(min, max) {
+  // + 1 because we specify inclusive, but randomInt is exclusive.
+  var waitTime = exports.randomInt(min, max + 1);
+  return exports.wait(waitTime);
+};
+
+/**
+ * Return a random integer between [min, max).
+ *
+ * @param {integer} min
+ * @param {integer} max
+ *
+ * @return {integer} random value >= min and < max
+ */
+exports.randomInt = function(min, max) {
+  return Math.floor(Math.random() * (max - min)) + min;
+};
+
+/**
  * Download a file as text. Note that this requires a DOM, so it is not
  * strictly node compliant.
  *

@@ -23,6 +23,7 @@
 
 var _ = require('lodash');
 
+var util = require('../util');
 var dnsUtil = require('./dns-util');
 var dnsController = require('./dns-controller');
 var dnsCodes = require('./dns-codes');
@@ -55,24 +56,13 @@ exports.LOCAL_SUFFIX = 'local';
 exports.DEBUG = true;
 
 /**
- * Returns a promise that resolves after the given time (in ms).
- *
- * @param {integer} ms the number of milliseconds to wait before resolving
- */
-exports.wait = function(ms) {
-  return new Promise(resolve => {
-    setTimeout(() => resolve(), ms);
-  });
-};
-
-/**
  * Returns a Promise that resolves after 0-250 ms (inclusive).
  *
  * @return {Promise}
  */
 exports.waitForProbeTime = function() {
   // +1 because randomInt is by default [min, max)
-  return exports.wait(dnsUtil.randomInt(0, MAX_PROBE_WAIT + 1));
+  return util.wait(util.randomInt(0, MAX_PROBE_WAIT + 1));
 };
 
 /**
@@ -344,7 +334,7 @@ exports.issueProbe = function(queryName, queryType, queryClass) {
           queryType,
           queryClass
         );
-        return exports.wait(MAX_PROBE_WAIT);
+        return util.wait(MAX_PROBE_WAIT);
       }).then(function success() {
         if (exports.receivedResponsePacket(
           packets, queryName, queryType, queryClass
@@ -356,7 +346,7 @@ exports.issueProbe = function(queryName, queryType, queryClass) {
             queryType,
             queryClass
           );
-          return exports.wait(MAX_PROBE_WAIT);
+          return util.wait(MAX_PROBE_WAIT);
         }
       })
       .then(function success() {
@@ -370,7 +360,7 @@ exports.issueProbe = function(queryName, queryType, queryClass) {
             queryType,
             queryClass
           );
-          return exports.wait(MAX_PROBE_WAIT);
+          return util.wait(MAX_PROBE_WAIT);
         }
       })
       .then(function success() {
@@ -810,7 +800,7 @@ exports.queryForResponses = function(
 
     var queryAndWait = function() {
       dnsController.query(qName, qType, qClass);
-      exports.wait(timeoutOrWait)
+      util.wait(timeoutOrWait)
         .then(() => {
           if (resolved) {
             // Already handled. Do nothing.
