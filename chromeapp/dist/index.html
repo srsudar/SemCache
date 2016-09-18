@@ -1684,17 +1684,17 @@ attributes or use child nodes to define additional metadata.
 Now I can access that element (and it's metadata) from any iron-meta instance
 via the byKey method, e.g.
 
-    meta.byKey('info').getAttribute('value');
+    meta.byKey('info');
 
 Pure imperative form would be like:
 
-    document.createElement('iron-meta').byKey('info').getAttribute('value');
+    document.createElement('iron-meta').byKey('info');
 
 Or, in a Polymer element, you can include a meta in your template:
 
     <iron-meta id="meta"></iron-meta>
     ...
-    this.$.meta.byKey('info').getAttribute('value');
+    this.$.meta.byKey('info');
 
 @group Iron Elements
 @demo demo/index.html
@@ -1767,6 +1767,7 @@ The following custom properties are available for styling:
 
 Custom property | Description | Default
 ----------------|-------------|----------
+`--iron-icon` | Mixin applied to the icon | {}
 `--iron-icon-width` | Width of the icon | `24px`
 `--iron-icon-height` | Height of the icon | `24px`
 `--iron-icon-fill-color` | Fill color of the svg icon | `currentcolor`
@@ -1794,6 +1795,7 @@ Custom property | Description | Default
 
         width: var(--iron-icon-width, 24px);
         height: var(--iron-icon-height, 24px);
+        @apply(--iron-icon);
       }
     </style>
   </template>
@@ -3251,6 +3253,14 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
   </dom-module>
 <!--
 @license
+Copyright (c) 2016 The Polymer Project Authors. All rights reserved.
+This code may only be used under the BSD style license found at http://polymer.github.io/LICENSE.txt
+The complete set of authors may be found at http://polymer.github.io/AUTHORS.txt
+The complete set of contributors may be found at http://polymer.github.io/CONTRIBUTORS.txt
+Code distributed by Google as part of the polymer project is also
+subject to an additional IP rights grant found at http://polymer.github.io/PATENTS.txt
+--><!--
+@license
 Copyright (c) 2015 The Polymer Project Authors. All rights reserved.
 This code may only be used under the BSD style license found at http://polymer.github.io/LICENSE.txt
 The complete set of authors may be found at http://polymer.github.io/AUTHORS.txt
@@ -4347,10 +4357,92 @@ be reused with a new model at any time. Particularly, any state that may change
 as the result of a user interaction with the list item must be bound to the model
 to avoid view state inconsistency.
 
-__Important:__ `iron-list` must either be explicitly sized, or delegate scrolling to an
+### Sizing iron-list
+
+`iron-list` must either be explicitly sized, or delegate scrolling to an
 explicitly sized parent. By "explicitly sized", we mean it either has an explicit
 CSS `height` property set via a class or inline style, or else is sized by other
 layout means (e.g. the `flex` or `fit` classes).
+
+#### Flexbox - [jsbin](http://jsbin.com/kokaki/edit?html,output)
+
+```html
+<template is="x-list">
+  <style>
+    :host {
+      display: block;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    iron-list {
+      flex: 1 1 auto;
+    }
+  </style>
+
+  <app-toolbar>App name</app-toolbar>
+  <iron-list items="[[items]]">
+    <template>
+      ...
+    </template>
+  </iron-list>
+</template>
+```
+#### Explicit size - [jsbin](http://jsbin.com/pibefo/edit?html,output)
+```html
+<template is="x-list">
+  <style>
+    :host {
+      display: block;
+    }
+
+    iron-list {
+      height: 100vh; /* don't use % values unless the parent element is sized. */
+    }
+  </style>
+  <iron-list items="[[items]]">
+    <template>
+      ...
+    </template>
+  </iron-list>
+</template>
+```
+#### Main document scrolling - [jsbin](http://jsbin.com/cojuli/edit?html,output)
+```html
+<head>
+  <style>
+    body {
+      height: 100vh;
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+    }
+
+    app-toolbar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+    }
+
+    iron-list {
+      /* add padding since the app-toolbar is fixed at the top */
+      padding-top: 64px;
+    }
+  </style>
+</head>
+<body>
+  <template is="dom-bind">
+    <app-toolbar>App name</app-toolbar>
+    <iron-list target="document" items="[[items]]">
+      <template>
+        ...
+      </template>
+    </iron-list>
+  </template>
+</body>
+```
 
 ### Template model
 
@@ -5120,7 +5212,7 @@ Code distributed by Google as part of the polymer project is also
 subject to an additional IP rights grant found at http://polymer.github.io/PATENTS.txt
 --><!--
 `<paper-input-container>` is a container for a `<label>`, an `<input is="iron-input">` or
-`<iron-autogrow-textarea>` and optional add-on elements such as an error message or character
+`<textarea>` and optional add-on elements such as an error message or character
 counter, used to implement Material Design text fields.
 
 For example:

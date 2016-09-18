@@ -233,7 +233,7 @@ exports.runDiscoverPeerPagesTrial = function(
       // We are seeing different results between clicking the button manually
       // (highly reliable) and automating it (unreliable). We're going to wait
       // a spell to try and narrow down differences.
-      return util.wait(3000)
+      return util.wait(8000)
       .then(() => {
         return exports.runDiscoverPeerPagesIteration(numPeers, numPages);
       })
