@@ -65856,7 +65856,7 @@ exports.runLoadPageTrial = function(
 
       iteration += 1;
 
-      return util.wait(250)
+      return util.wait(1000)
       .then(() => {
         return exports.runLoadPageIteration(
           captureUrl,
