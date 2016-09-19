@@ -186,6 +186,8 @@ exports.runSavePageIteration = function(numIter, totalIterations, key) {
       .then(timingInfo => {
         var metadata = exports.createMetadataForLog();
         timingInfo.metadata = metadata;
+        timingInfo.totalIterations = totalIterations;
+        timingInfo.iteration = numIter;
         return appEval.logTime(key, timingInfo);
       })
       .then(() => {

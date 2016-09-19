@@ -6,7 +6,6 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
  * The main controlling piece of the app. It composes the other modules.
  */
 
-var chromeUdp = require('./chrome-apis/udp');
 var datastore = require('./persistence/datastore');
 var extBridge = require('./extension-bridge/messaging');
 var fileSystem = require('./persistence/file-system');
@@ -16,9 +15,9 @@ var serverApi = require('./server/server-api');
 var dnsController = require('./dnssd/dns-controller');
 var evaluation = require('./evaluation');
 
-var LISTENING_HTTP_INTERFACE = null;
-
 var ABS_PATH_TO_BASE_DIR = null;
+
+exports.LISTENING_HTTP_INTERFACE = null;
 
 exports.SERVERS_STARTED = false;
 
@@ -42,10 +41,10 @@ exports.getServerController = function() {
  * }
  */
 exports.getListeningHttpInterface = function() {
-  if (!LISTENING_HTTP_INTERFACE) {
+  if (!exports.LISTENING_HTTP_INTERFACE) {
     console.warn('listening http interface not set, is app started?');
   }
-  return LISTENING_HTTP_INTERFACE;
+  return exports.LISTENING_HTTP_INTERFACE;
 };
 
 /**
@@ -123,6 +122,10 @@ exports.getBrowseableCaches = function() {
   // First we'll construct our own cache info. Some of these variables may not
   // be set if we are initializing for the first time and settings haven't been
   // created.
+  if (!exports.SERVERS_STARTED) {
+    return Promise.resolve([]);
+  }
+
   var thisCache = exports.getOwnCache();
 
   var result = [thisCache];
@@ -176,9 +179,16 @@ exports.startServersAndRegister = function() {
       return;
     }
 
-    exports.updateCachesForSettings();
     dnsController.start()
     .then(() => {
+      var ifaces = dnsController.getIPv4Interfaces();
+      if (ifaces.length === 0) {
+        throw new Error('No network interfaces in dns-controller');
+      }
+      exports.LISTENING_HTTP_INTERFACE = ifaces[0];
+      exports.LISTENING_HTTP_INTERFACE.port = serverPort;
+      exports.updateCachesForSettings();
+
       return dnssdSem.registerSemCache(hostName, instanceName, serverPort);
     })
     .then(registerResult => {
@@ -199,7 +209,8 @@ exports.startServersAndRegister = function() {
  */
 exports.stopServers = function() {
   exports.getServerController().stop();
-  dnsController.clearAllRecords();
+  dnsController.stop();
+  exports.LISTENING_HTTP_INTERFACE = null;
   exports.SERVERS_STARTED = false;
 };
 
@@ -212,25 +223,7 @@ exports.start = function() {
   extBridge.attachListeners();
 
   return new Promise(function(resolve) {
-    chromeUdp.getNetworkInterfaces()
-      .then(interfaces => {
-        var ipv4Interfaces = [];
-        interfaces.forEach(nwIface => {
-          if (nwIface.address.indexOf(':') === -1) {
-            // ipv4
-            ipv4Interfaces.push(nwIface);
-          }
-        });
-        if (ipv4Interfaces.length === 0) {
-          console.log('Could not find ipv4 interface: ', interfaces);
-        } else {
-          var iface = ipv4Interfaces[0];
-          LISTENING_HTTP_INTERFACE = iface;
-        }
-      })
-      .then(() => {
-        return settings.init();
-      })
+      settings.init()
       .then(settingsObj => {
         console.log('initialized settings: ', settingsObj);
         exports.updateCachesForSettings();
@@ -244,7 +237,6 @@ exports.start = function() {
  */
 exports.updateCachesForSettings = function() {
   exports.setAbsPathToBaseDir(settings.getAbsPath());
-  LISTENING_HTTP_INTERFACE.port = settings.getServerPort();
 };
 
 /**
@@ -317,7 +309,7 @@ exports.saveMhtmlAndOpen = function(
   });
 };
 
-},{"./chrome-apis/udp":5,"./dnssd/dns-controller":9,"./dnssd/dns-sd-semcache":11,"./evaluation":16,"./extension-bridge/messaging":17,"./persistence/datastore":18,"./persistence/file-system":20,"./server/server-api":23,"./server/server-controller":24,"./settings":25}],2:[function(require,module,exports){
+},{"./dnssd/dns-controller":9,"./dnssd/dns-sd-semcache":11,"./evaluation":16,"./extension-bridge/messaging":17,"./persistence/datastore":18,"./persistence/file-system":20,"./server/server-api":23,"./server/server-controller":24,"./settings":25}],2:[function(require,module,exports){
 /* globals Promise, chrome */
 'use strict';
 
@@ -1236,6 +1228,7 @@ function defineType(values) {
 /* globals Promise */
 'use strict';
 
+var util = require('../util');
 var chromeUdp = require('../chrome-apis/udp');
 var dnsUtil = require('./dns-util');
 var dnsPacket = require('./dns-packet');
@@ -1472,7 +1465,16 @@ exports.handleIncomingPacket = function(packet, remoteAddress, remotePort) {
       sendAddr = remoteAddress;
       sendPort = remotePort;
     }
-    exports.sendPacket(responsePacket, sendAddr, sendPort);
+    // Section 6 of the RFC covers responding, including when to delay
+    // responses. In the event that multiple peers may respond simultaneously,
+    // collision and thus dropped packets are a possibility. To circumvent
+    // this, the RFC specifies that responses where more than a single response
+    // is requested should be delayed by a random value between 20 and 120ms.
+    // We will delay in all cases, as there is no large price to pay for this.
+    util.waitInRange(20, 120)
+    .then(() => {
+      exports.sendPacket(responsePacket, sendAddr, sendPort);
+    });
   });
 };
 
@@ -1665,7 +1667,7 @@ exports.start = function() {
   return new Promise(function(resolve, reject) {
     exports.getSocket()
     .then(function startedSocket() {
-      exports.initializeNetworkInterfaceCache();
+      return exports.initializeNetworkInterfaceCache();
     })
     .then(function initializedInterfaces() {
       resolve();
@@ -1719,6 +1721,10 @@ exports.stop = function() {
       console.log('Stopping: no socket found');
     }
   }
+
+  // Now clear the caches and local state.
+  ipv4Interfaces.splice(0);
+  exports.clearAllRecords();
 };
 
 /**
@@ -1849,7 +1855,7 @@ exports.addRecord = function(name, record) {
   existingRecords.push(record);
 };
 
-},{"../chrome-apis/udp":5,"./byte-array":7,"./dns-codes":8,"./dns-packet":10,"./dns-util":13,"./question-section":14}],10:[function(require,module,exports){
+},{"../chrome-apis/udp":5,"../util":26,"./byte-array":7,"./dns-codes":8,"./dns-packet":10,"./dns-util":13,"./question-section":14}],10:[function(require,module,exports){
 /*jshint esnext:true, bitwise:false */
 
 /**
@@ -2336,6 +2342,7 @@ exports.browseForSemCacheInstances = function() {
 
 var _ = require('lodash');
 
+var util = require('../util');
 var dnsUtil = require('./dns-util');
 var dnsController = require('./dns-controller');
 var dnsCodes = require('./dns-codes');
@@ -2368,24 +2375,13 @@ exports.LOCAL_SUFFIX = 'local';
 exports.DEBUG = true;
 
 /**
- * Returns a promise that resolves after the given time (in ms).
- *
- * @param {integer} ms the number of milliseconds to wait before resolving
- */
-exports.wait = function(ms) {
-  return new Promise(resolve => {
-    setTimeout(() => resolve(), ms);
-  });
-};
-
-/**
  * Returns a Promise that resolves after 0-250 ms (inclusive).
  *
  * @return {Promise}
  */
 exports.waitForProbeTime = function() {
   // +1 because randomInt is by default [min, max)
-  return exports.wait(dnsUtil.randomInt(0, MAX_PROBE_WAIT + 1));
+  return util.wait(util.randomInt(0, MAX_PROBE_WAIT + 1));
 };
 
 /**
@@ -2657,7 +2653,7 @@ exports.issueProbe = function(queryName, queryType, queryClass) {
           queryType,
           queryClass
         );
-        return exports.wait(MAX_PROBE_WAIT);
+        return util.wait(MAX_PROBE_WAIT);
       }).then(function success() {
         if (exports.receivedResponsePacket(
           packets, queryName, queryType, queryClass
@@ -2669,7 +2665,7 @@ exports.issueProbe = function(queryName, queryType, queryClass) {
             queryType,
             queryClass
           );
-          return exports.wait(MAX_PROBE_WAIT);
+          return util.wait(MAX_PROBE_WAIT);
         }
       })
       .then(function success() {
@@ -2683,7 +2679,7 @@ exports.issueProbe = function(queryName, queryType, queryClass) {
             queryType,
             queryClass
           );
-          return exports.wait(MAX_PROBE_WAIT);
+          return util.wait(MAX_PROBE_WAIT);
         }
       })
       .then(function success() {
@@ -3123,7 +3119,7 @@ exports.queryForResponses = function(
 
     var queryAndWait = function() {
       dnsController.query(qName, qType, qClass);
-      exports.wait(timeoutOrWait)
+      util.wait(timeoutOrWait)
         .then(() => {
           if (resolved) {
             // Already handled. Do nothing.
@@ -3149,7 +3145,7 @@ exports.queryForResponses = function(
   });
 };
 
-},{"./dns-codes":8,"./dns-controller":9,"./dns-packet":10,"./dns-util":13,"./resource-record":15,"lodash":34}],13:[function(require,module,exports){
+},{"../util":26,"./dns-codes":8,"./dns-controller":9,"./dns-packet":10,"./dns-util":13,"./resource-record":15,"lodash":34}],13:[function(require,module,exports){
 'use strict';
 
 var byteArray = require('./byte-array');
@@ -3174,18 +3170,6 @@ exports.DEFAULT_WEIGHT = 0;
  */
 exports.getLocalSuffix = function() {
   return '.local';
-};
-
-/**
- * Return a random integer between [min, max).
- *
- * @param {integer} min
- * @param {integer} max
- *
- * @return {integer} random value >= min and < max
- */
-exports.randomInt = function(min, max) {
-  return Math.floor(Math.random() * (max - min)) + min;
 };
 
 /**
@@ -4221,10 +4205,31 @@ exports.runDiscoverPeerPagesTrial = function(
   return new Promise(function(resolve) {
     // We will call runDiscoverPagesIteration and attach them all to a sequence
     // of Promises, such that they will resolve in order.
+    var iteration = 0;
     var nextIter = function() {
-      return exports.runDiscoverPeerPagesIteration(numPeers, numPages)
-      .then(iterationResult => {
-        exports.logTime(key, iterationResult);
+      var toLog = {};
+      toLog.type = 'discoverPeers';
+      toLog.numPeers = numPeers;
+      toLog.numPages = numPages;
+      toLog.numIterations = numIterations;
+      toLog.iteration = iteration;
+      iteration += 1;
+      
+      // We are seeing different results between clicking the button manually
+      // (highly reliable) and automating it (unreliable). We're going to wait
+      // a spell to try and narrow down differences.
+      return util.wait(8000)
+      .then(() => {
+        return exports.runDiscoverPeerPagesIteration(numPeers, numPages);
+      })
+      .then(function resolved(iterationResult) {
+        toLog.timing = iterationResult;
+        exports.logTime(key, toLog);
+        return Promise.resolve(iterationResult);
+      },
+      function rejected(iterationResult) {
+        toLog.timing = iterationResult;
+        exports.logTime(key, toLog);
         return Promise.resolve(iterationResult);
       });
     };
@@ -4237,6 +4242,7 @@ exports.runDiscoverPeerPagesTrial = function(
     // Now we have an array with all our promises.
     exports.fulfillPromises(promises)
     .then(results => {
+      console.warn('Done with trial: ', results);
       resolve(results);
     });
   });
@@ -4390,6 +4396,7 @@ exports.runLoadPageTrialForCache = function(numIterations, key, listPagesUrl) {
         return exports.fulfillPromises(promises);
       })
       .then(results => {
+        console.warn('Trial for cache complete: ', results);
         resolve(results);
       });
   });
@@ -4416,20 +4423,33 @@ exports.runLoadPageTrial = function(
   return new Promise(function(resolve) {
     // We will call runDiscoverPagesIteration and attach them all to a sequence
     // of Promises, such that they will resolve in order.
+    var iteration = 0;
     var nextIter = function() {
-      return exports.runLoadPageIteration(
-        captureUrl,
-        captureDate,
-        mhtmlUrl,
-        metadata
-      )
-      .then(iterationResult => {
-        var toLog = {};
+      var toLog = {};
+      toLog.captureUrl = captureUrl;
+      toLog.numIterations = numIterations;
+      toLog.mhtmlUrl = mhtmlUrl;
+      toLog.fullUrl = metadata.fullUrl;
+      toLog.type = 'loadPage';
+      toLog.iteration = iteration;
+
+      iteration += 1;
+
+      return util.wait(250)
+      .then(() => {
+        return exports.runLoadPageIteration(
+          captureUrl,
+          captureDate,
+          mhtmlUrl,
+          metadata
+        );
+      })
+      .then(function resolved(iterationResult) {
         toLog.timeToOpen = iterationResult;
-        toLog.captureUrl = captureUrl;
-        toLog.numIterations = numIterations;
-        toLog.mhtmlUrl = mhtmlUrl;
-        toLog.fullUrl = metadata.fullUrl;
+        exports.logTime(key, toLog);
+        return Promise.resolve(iterationResult);
+      }, function caught(iterationResult) {
+        toLog.timeToOpen = iterationResult;
         exports.logTime(key, toLog);
         return Promise.resolve(iterationResult);
       });
@@ -5803,6 +5823,32 @@ exports.wait = function(ms) {
   return new Promise(resolve => {
     setTimeout(() => resolve(), ms);
   });
+};
+
+/**
+ * Returns a Promise that resolves at a random time within the given range.
+ *
+ * @param {integer} min the minimum number of milliseconds to wait
+ * @param {integer} max the maximum number of milliseconds to wait, inclusive
+ *
+ * @return {Promise} Promise that resolves after the wait
+ */
+exports.waitInRange = function(min, max) {
+  // + 1 because we specify inclusive, but randomInt is exclusive.
+  var waitTime = exports.randomInt(min, max + 1);
+  return exports.wait(waitTime);
+};
+
+/**
+ * Return a random integer between [min, max).
+ *
+ * @param {integer} min
+ * @param {integer} max
+ *
+ * @return {integer} random value >= min and < max
+ */
+exports.randomInt = function(min, max) {
+  return Math.floor(Math.random() * (max - min)) + min;
 };
 
 /**
