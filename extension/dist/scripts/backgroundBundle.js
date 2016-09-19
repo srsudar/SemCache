@@ -27671,6 +27671,17 @@ exports.getToday = function() {
   return new Date();
 };
 
+/**
+ * Returns a promise that resolves after the given time (in ms).
+ *
+ * @param {integer} ms the number of milliseconds to wait before resolving
+ */
+exports.wait = function(ms) {
+  return new Promise(resolve => {
+    setTimeout(() => resolve(), ms);
+  });
+};
+
 },{"../chrome-apis/tabs":41}],46:[function(require,module,exports){
 exports.endianness = function () { return 'LE' };
 
@@ -27873,10 +27884,15 @@ exports.KEY_NUM_ITERATIONS = 'evalCS_numIterations';
 exports.KEY_CURRENT_ITERATION = 'evalCS_currentIteration';
 
 /**
- * A key into chrome.storage indicating the domain and path on which we are
- * performing the trial.
+ * A key into chrome.storage indicating list of URLs for which we are
+ * performing the reload trial.
  */
-exports.KEY_DOMAIN_AND_PATH = 'evalCS_domainAndPath';
+exports.KEY_URL_LIST = 'evalCS_urlList';
+
+/**
+ * The index into the URL list pointing to the URL we are currently evaluating.
+ */
+exports.KEY_URL_LIST_INDEX = 'evalCS_urlListIndex';
 
 exports.KEY_LOG_KEY = 'evalCS_logKey';
 
@@ -27905,24 +27921,41 @@ exports.isPerformingTrial = function() {
  *   key: user defined key,
  *   numIterations: number we are running,
  *   currentIter: the current iteration we are on,
- *   pageId: the page identifier
+ *   urlList: the list of URLs we are evaluating,
+ *   urlListIndex: index into the urlList pointing at the active list,
+ *   activeUrl: an element in urlList that is the current URL we are
+ *       evaluating. This is determined by urlList[urlListIndex] and is
+ *       included for convenience. The value is null if the trial is complete,
+ *       and all URLs have been evaluated.
  * }
  */
 exports.getParameters = function() {
   return new Promise(function(resolve) {
     var keys = [
-      exports.KEY_DOMAIN_AND_PATH,
       exports.KEY_NUM_ITERATIONS,
       exports.KEY_CURRENT_ITERATION,
-      exports.KEY_LOG_KEY
+      exports.KEY_LOG_KEY,
+      exports.KEY_URL_LIST,
+      exports.KEY_URL_LIST_INDEX
     ];
     storage.get(keys)
       .then(getResult => {
+        var urlList = getResult[exports.KEY_URL_LIST];
+        var urlListIndex = getResult[exports.KEY_URL_LIST_INDEX];
+        // Start out null to indicate the end of the trial. We'll update the
+        // value below if we haven't moved past the end of the array.
+        var activeUrl = null;
+        if (urlListIndex < urlList.length) {
+          // Then we haven't yet finished the trial.
+          activeUrl = urlList[urlListIndex];
+        }
         var result = {
           key: getResult[exports.KEY_LOG_KEY],
           numIterations: getResult[exports.KEY_NUM_ITERATIONS],
           currentIter: getResult[exports.KEY_CURRENT_ITERATION],
-          pageId: getResult[exports.KEY_DOMAIN_AND_PATH]
+          urlList: getResult[exports.KEY_URL_LIST],
+          urlListIndex: urlListIndex,
+          activeUrl: activeUrl
         };
         resolve(result);
       });
@@ -27948,39 +27981,31 @@ exports.getFromStorageHelper = function(key) {
 };
 
 /**
- * @return {string} the string we will use to define this page
- */
-exports.createPageIdentifier = function() {
-  var window = util.getWindow();
-  // It appears that pathname always begins with /, so we don't need to add our
-  // own separator
-  var result = window.location.host + window.location.pathname;
-  return result;
-};
-
-/**
  * Start a trial for loading and saving the page. This trial consists of
  * reloading the page and saving it, measuring the time it takes to accomplish
  * both. This sets the page-level variables and reloads the page. It is
  * expected that for this to mean anything, the Content Script itself must
  * check onReady and initiate the appropriate functions.
  *
- * @param {string} pageId the identifier for the page. Should match the results
- * of exports.createPageIdentifer() when on the given page
+ * @param {Array<string>} urls the Array of URLs we want to load. These should
+ * be directly equivalent to window.location.href when the page is loaded.
+ * Redirects, hashes or query parameters added during a load, etc, are not
+ * expected to be handled
  * @param {integer} numIterations the total number of iterations in this trial
  * @param {string} key the key by which your want to access these results
  *
  * @return {Promise} Promise that tries to resolve after the call to reload.
  * This will likely fail in production but facilitates testing.
  */
-exports.startSavePageTrial = function(pageId, numIterations, key) {
+exports.startSavePageTrial = function(urls, numIterations, key) {
   return new Promise(function(resolve) {
     var setArg = {};
     setArg[exports.KEY_NUM_ITERATIONS] = numIterations;
     setArg[exports.KEY_PERFORMING_TRIAL] = true;
     setArg[exports.KEY_CURRENT_ITERATION] = 0;
-    setArg[exports.KEY_DOMAIN_AND_PATH] = pageId;
     setArg[exports.KEY_LOG_KEY] = key;
+    setArg[exports.KEY_URL_LIST] = urls;
+    setArg[exports.KEY_URL_LIST_INDEX] = 0;
 
     storage.set(setArg)
       .then(() => {
@@ -28017,45 +28042,17 @@ exports.requestSavePage = function() {
  * run
  * @param {string} key the key to which we are saving the results of runs
  *
- * @return {Promise} Promise that resolves when the iteration is complete. This
- * will not occur during any except the final trial in production, as the
- * window will be reloaded
+ * @return {Promise} Promise that resolves when the iteration is complete.
  */
-exports.runSavePageIteration = function(numIter, totalIterations, key) {
+exports.runSavePageIteration = function() {
   return new Promise(function(resolve) {
-    var doneWithTrial = false;
-    exports.savePage()
+    // wait a short while just to try and not overload things.
+    util.wait(1000)
+      .then(() => {
+        return exports.savePage();
+      })
       .then(timingInfo => {
-        var metadata = exports.createMetadataForLog();
-        timingInfo.metadata = metadata;
-        return appEval.logTime(key, timingInfo);
-      })
-      .then(() => {
-        // Now handle the state that we need to take care of.
-        console.log('in next iter');
-        var nextIter = numIter + 1;
-        if (nextIter < totalIterations) {
-          // We have another iteration to run.
-          // Persist the nextIter value and reload the page without the cache.
-          var setArg = {};
-          setArg[exports.KEY_CURRENT_ITERATION] = nextIter;
-          return storage.set(setArg);
-        } else {
-          // We're done. 
-          // Delete the storage variables.
-          doneWithTrial = true;
-          return exports.deleteStorageHelperValues();
-        }
-      })
-      .then(() => {
-        if (doneWithTrial) {
-          console.log('complete with trial');
-          exports.logResult();
-          resolve();
-        } else {
-          util.getWindow().location.reload(true);
-          resolve();
-        }
+        resolve(timingInfo);
       });
   });
 };
@@ -28083,7 +28080,8 @@ exports.deleteStorageHelperValues = function() {
     exports.KEY_NUM_ITERATIONS,
     exports.KEY_CURRENT_ITERATION,
     exports.KEY_LOG_KEY,
-    exports.KEY_DOMAIN_AND_PATH
+    exports.KEY_URL_LIST,
+    exports.KEY_URL_LIST_INDEX
   ];
   return storage.remove(keys);
 };
@@ -28137,35 +28135,105 @@ exports.createMetadataForLog = function() {
 };
 
 /**
+ * @return {string} result of window.location.href
+ */
+exports.getHref = function() {
+  return util.getWindow().location.href;
+};
+
+/**
  * Checks the current state and initiates a trial if necessary.
+ *
+ * @return {Promise} Promise that resolves when the current iteration logic is
+ * complete for this page (unless the page reloads or navigates to a new page,
+ * in which the Promise won't have a chance to resolve)
  */
 exports.onPageLoadComplete = function() {
-  exports.isPerformingTrial()
-    .then(isTrial => {
-      if (!isTrial) {
-        console.log('Not performing a save page trial.');
-        throw new Error('jump to end');
-      } else {
-        return exports.getParameters();
-      }
-    })
-    .then(params => {
-      var thisPageId = exports.createPageIdentifier(); 
-      if (thisPageId !== params.pageId) {
-        console.log('Running a trial, but not on this page.');
-        throw new Error('jump to end');
-      } else {
-        // We're in a trial
-        return exports.runSavePageIteration(
-          params.currentIter,
-          params.numIterations,
-          params.key
-        );
-      }
-    })
-    .catch(err => {
-      console.log(err);
-    });
+  return new Promise(function(resolve, reject) {
+    var params = null;
+    var doneWithAllUrls = false;
+    exports.isPerformingTrial()
+      .then(isTrial => {
+        if (!isTrial) {
+          console.log('Not performing a save page trial.');
+          throw new Error('jump to end');
+        } else {
+          return exports.getParameters();
+        }
+      })
+      .then(returnedParams => {
+        params = returnedParams;
+        var href = exports.getHref(); 
+        // Some pages are adding '/' on the end, which should be fine, so also
+        // check for this.
+        var activeUrlSlash = params.activeUrl + '/';
+        if (href !== params.activeUrl && href !== activeUrlSlash) {
+          console.log('Running a trial, but not on this page.');
+          throw new Error('jump to end');
+        } else {
+          // We're in a trial
+          return exports.runSavePageIteration(
+            params.currentIter,
+            params.numIterations,
+            params.key
+          );
+        }
+      })
+      .then(timingInfo => {
+        // Log the results
+        var toLog = {};
+        toLog.timing = timingInfo;
+        toLog.metadata = exports.createMetadataForLog();
+        toLog.iteration = params.currentIter;
+        toLog.numIterations = params.numIterations;
+        toLog.url = params.activeUrl;
+        toLog.urlListIndex = params.urlListIndex;
+        return appEval.logTime(params.key, toLog); 
+      })
+      .then(() => {
+        // Update the variables.
+        var setArg = {};
+        var nextIter = params.currentIter + 1;
+        setArg[exports.KEY_CURRENT_ITERATION] = nextIter;
+        if (nextIter >= params.numIterations) {
+          // We're done with this page. Increment the url list index.
+          params.currentIter = 0;
+          params.urlListIndex = params.urlListIndex + 1;
+          setArg[exports.KEY_CURRENT_ITERATION] = params.currentIter;
+          setArg[exports.KEY_URL_LIST_INDEX] = params.urlListIndex;
+        }
+        if (params.urlListIndex >= params.urlList.length) {
+          // We're done. Delete all our variables and stop.
+          doneWithAllUrls = true;
+          return exports.deleteStorageHelperValues();
+        }
+        // Set the helper parameters.
+        return storage.set(setArg); 
+      })
+      .then(() => {
+        if (doneWithAllUrls) {
+          return Promise.resolve();
+        }
+        // If we're on the first iteration, navigate to the page.
+        if (params.currentIter === 0) {
+          var nextUrl = params.urlList[params.urlListIndex];
+          util.getWindow().location.href = nextUrl;
+          return Promise.resolve();
+        } else {
+          // We're just re-running our usual trial. Refresh without the cache.
+          util.getWindow().location.reload(true);
+          return Promise.resolve();
+        }
+      })
+      .then(() => {
+        exports.logResult(params.key);
+        resolve();
+      })
+      .catch(err => {
+        console.log(err);
+        reject(err);
+      });
+  });
 };
 
 },{"../../../../chromeapp/app/scripts/chrome-apis/storage":4,"../../../../chromeapp/app/scripts/evaluation":16,"../chrome-apis/runtime":40,"../util/util":45,"./cs-api":42}]},{},[37]);

@@ -6,7 +6,7 @@ console.log('In SemCache options.js');
 var evaluation = require('./content-script/cs-evaluation');
 var appEval = require('../../../chromeapp/app/scripts/evaluation');
 
-var uiPageId = document.querySelector('#pageIdentifier');
+var uiUrlList = document.querySelector('#urls');
 var uiNumIterations = document.querySelector('#numIterations');
 var uiKey = document.querySelector('#key');
 
@@ -18,7 +18,9 @@ var btnGet = document.querySelector('#getResult');
 
 
 function configureExperiment() {
-  var pageId = uiPageId.value;
+  var rawUrls = uiUrlList.value.trim();
+  var urls = rawUrls.split('\n');
+  console.log('recovered the following URLs: ', urls);
   var numIterations = uiNumIterations.value;
   var key = uiKey.value;
 
@@ -29,7 +31,7 @@ function configureExperiment() {
     return;
   }
 
-  evaluation.startSavePageTrial(pageId, intIter, key);
+  evaluation.startSavePageTrial(urls, intIter, key);
 }
 
 function retrieveKey() {

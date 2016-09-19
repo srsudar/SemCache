@@ -85,21 +85,25 @@ test('getParameters returns results', function(t) {
     key: 'logKey',
     numIterations: 15,
     currentIter: 2,
-    pageId: 'google/path'
+    urlList: ['url0', 'url1', 'url2'],
+    urlListIndex: 1,
+    activeUrl: 'url1'
   };
 
   var expectedGetArg = [
-    evaluation.KEY_DOMAIN_AND_PATH,
     evaluation.KEY_NUM_ITERATIONS,
     evaluation.KEY_CURRENT_ITERATION,
-    evaluation.KEY_LOG_KEY
+    evaluation.KEY_LOG_KEY,
+    exports.KEY_URL_LIST,
+    exports.KEY_URL_LIST_INDEX
   ];
 
   var getResult = {};
-  getResult[evaluation.KEY_DOMAIN_AND_PATH] = expected.pageId;
   getResult[evaluation.KEY_NUM_ITERATIONS] = expected.numIterations;
   getResult[evaluation.KEY_CURRENT_ITERATION] = expected.currentIter;
   getResult[evaluation.KEY_LOG_KEY] = expected.key;
+  getResult[evaluation.KEY_URL_LIST] = expected.urlList;
+  getResult[evaluation.KEY_URL_LIST_INDEX] = expected.urlListIndex;
 
   var getSpy = sinon.stub().withArgs(expectedGetArg).resolves(getResult);
   proxyquireEvaluation({
@@ -222,7 +226,8 @@ test('deleteStorageHelperValues deletes and resolves', function(t) {
             evaluation.KEY_NUM_ITERATIONS,
             evaluation.KEY_CURRENT_ITERATION,
             evaluation.KEY_LOG_KEY,
-            evaluation.KEY_DOMAIN_AND_PATH
+            evaluation.KEY_URL_LIST,
+            evaluation.KEY_URL_LIST_INDEX
           ]
         ]
       );
@@ -231,68 +236,71 @@ test('deleteStorageHelperValues deletes and resolves', function(t) {
     });
 });
 
-test('runSavePageIteration reloads if more iterations', function(t) {
-  var key = 'googleCom';
-  var numIter = 8;
-  var totalIterations = 10;
+test('runSavePageIteration returns save result', function(t) {
+  // var key = 'googleCom';
+  // var numIter = 8;
+  // var totalIterations = 10;
 
   var timingInfo = {
     time: 'for tea'
   };
-  var metadata = {
-    soMeta: '#hashtag'
-  };
+  // var metadata = {
+  //   soMeta: '#hashtag'
+  // };
 
-  var expectedLogArg = {
-    time: timingInfo.time,
-    metadata: metadata
-  };
-  var expectedSetArg = {};
-  expectedSetArg[evaluation.KEY_CURRENT_ITERATION] = numIter + 1;
+  // var expectedLogArg = {
+  //   time: timingInfo.time,
+  //   metadata: metadata
+  // };
+  // var expectedSetArg = {};
+  // expectedSetArg[evaluation.KEY_CURRENT_ITERATION] = numIter + 1;
 
   var savePageSpy = sinon.stub().resolves(timingInfo);
-  var createMetadataForLogSpy = sinon.stub().returns(metadata);
-  var logTimeSpy = sinon.stub();
-  var setSpy = sinon.stub().resolves();
-  var reloadSpy = sinon.stub();
-  var getWindowSpy = sinon.stub().returns({
-    location: {
-      reload: reloadSpy
-    }
-  });
+  // var createMetadataForLogSpy = sinon.stub().returns(metadata);
+  // var logTimeSpy = sinon.stub();
+  // var setSpy = sinon.stub().resolves();
+  // var reloadSpy = sinon.stub();
+  // var getWindowSpy = sinon.stub().returns({
+  //   location: {
+  //     reload: reloadSpy
+  //   }
+  // });
 
   proxyquireEvaluation({
-    '../../../../chromeapp/app/scripts/chrome-apis/storage': {
-      set: setSpy
-    },
     '../util/util': {
-      getWindow: getWindowSpy
+      wait: sinon.stub().resolves()
     },
-    '../../../../chromeapp/app/scripts/evaluation': {
-      logTime: logTimeSpy
-    }
   });
-  evaluation.createMetadataForLog = createMetadataForLogSpy;
   evaluation.savePage = savePageSpy;
 
-  evaluation.runSavePageIteration(numIter, totalIterations, key)
+  evaluation.runSavePageIteration()
   .then(actual => {
-    // We expect no resolved value
-    t.equal(actual, undefined);
-    t.deepEqual(logTimeSpy.args[0], [key, expectedLogArg]);
-    t.deepEqual(setSpy.args[0], [expectedSetArg]);
-    t.deepEqual(reloadSpy.args[0], [true]);
+    t.equal(actual, timingInfo);
     t.end();
     resetEvaluation();
   });
 });
 
-test('runSavePageIteration deletes values if no more iterations', function(t) {
+test('onPageLoadComplete deletes values if no more iterations', function(t) {
   var key = 'googleCom';
   // this will be the last iteration
   var numIter = 9;
   var totalIterations = 10;
 
+  var urlList = ['url0', 'url1', 'url2'];
+  var urlListIndex = 2; // the last one
+  var activeUrl = urlList[urlListIndex];
+
+  var params = {
+    key: key,
+    numIterations: totalIterations,
+    currentIter: numIter,
+    urlList: urlList,
+    urlListIndex: urlListIndex,
+    activeUrl: activeUrl
+  };
+  var getParametersSpy = sinon.stub().resolves(params);
+
   var timingInfo = {
     time: 'for tea'
   };
@@ -301,17 +309,19 @@ test('runSavePageIteration deletes values if no more iterations', function(t) {
   };
 
   var expectedLogArg = {
-    time: timingInfo.time,
-    metadata: metadata
+    timing: timingInfo,
+    metadata: metadata,
+    iteration: params.currentIter,
+    numIterations: params.numIterations,
+    url: params.activeUrl,
+    urlListIndex: params.urlListIndex
   };
-  var expectedSetArg = {};
-  expectedSetArg[evaluation.KEY_CURRENT_ITERATION] = numIter + 1;
 
-  var savePageSpy = sinon.stub().resolves(timingInfo);
   var createMetadataForLogSpy = sinon.stub().returns(metadata);
   var logTimeSpy = sinon.stub();
   var deleteStorageHelperValuesSpy = sinon.stub().resolves();
   var logResultSpy = sinon.stub();
+  var runSavePageIterationSpy = sinon.stub().resolves(timingInfo);
 
   proxyquireEvaluation({
     '../../../../chromeapp/app/scripts/evaluation': {
@@ -319,49 +329,202 @@ test('runSavePageIteration deletes values if no more iterations', function(t) {
     }
   });
   evaluation.createMetadataForLog = createMetadataForLogSpy;
-  evaluation.savePage = savePageSpy;
   evaluation.deleteStorageHelperValues = deleteStorageHelperValuesSpy;
   evaluation.logResult = logResultSpy;
+  evaluation.getParameters = getParametersSpy;
+  evaluation.runSavePageIteration = runSavePageIterationSpy;
+  evaluation.isPerformingTrial = sinon.stub().resolves(true);
+  evaluation.getHref = sinon.stub().returns(activeUrl);
 
-  evaluation.runSavePageIteration(numIter, totalIterations, key)
+  evaluation.onPageLoadComplete()
   .then(actual => {
     // We expect no resolved value
     t.equal(actual, undefined);
     t.deepEqual(deleteStorageHelperValuesSpy.args[0], []);
+    t.true(deleteStorageHelperValuesSpy.calledOnce);
     t.deepEqual(logTimeSpy.args[0], [key, expectedLogArg]);
-    t.deepEqual(logResultSpy.args[0], []);
+    t.deepEqual(logResultSpy.args[0], [key]);
     t.end();
     resetEvaluation();
   });
 });
 
-test('createPageIdentifier correct', function(t) {
-  var path = '/foo/bar';
-  var host = 'www.google.com';
-  var expected = host + path;
+test('onPageLoadComplete increments iteration variables', function(t) {
+  var key = 'googleCom';
+  // this will be the last iteration
+  var numIter = 8;
+  var totalIterations = 10;
 
-  var windowSpy = {
+  var urlList = ['url0', 'url1', 'url2'];
+  var urlListIndex = 2; // the last one
+  var activeUrl = urlList[urlListIndex];
+
+  var params = {
+    key: key,
+    numIterations: totalIterations,
+    currentIter: numIter,
+    urlList: urlList,
+    urlListIndex: urlListIndex,
+    activeUrl: activeUrl
+  };
+  var getParametersSpy = sinon.stub().resolves(params);
+
+  var timingInfo = {
+    time: 'for tea'
+  };
+  var metadata = {
+    soMeta: '#hashtag'
+  };
+
+  var expectedLogArg = {
+    timing: timingInfo,
+    metadata: metadata,
+    iteration: params.currentIter,
+    numIterations: params.numIterations,
+    url: params.activeUrl,
+    urlListIndex: params.urlListIndex
+  };
+
+  var createMetadataForLogSpy = sinon.stub().returns(metadata);
+  var logTimeSpy = sinon.stub();
+  var logResultSpy = sinon.stub();
+  var runSavePageIterationSpy = sinon.stub().resolves(timingInfo);
+  var setSpy = sinon.stub().resolves();
+  var deleteStorageHelperValuesSpy = sinon.stub().resolves();
+
+  var reloadSpy = sinon.stub();
+  var windowObj = {
     location: {
-      host: host,
-      pathname: path
+      reload: reloadSpy
     }
   };
-  var getWindowSpy = sinon.stub().returns(windowSpy);
+  var getWindowSpy = sinon.stub().returns(windowObj);
 
   proxyquireEvaluation({
+    '../../../../chromeapp/app/scripts/chrome-apis/storage': {
+      set: setSpy
+    },
+    '../../../../chromeapp/app/scripts/evaluation': {
+      logTime: logTimeSpy
+    },
     '../util/util': {
       getWindow: getWindowSpy
-    },
+    }
   });
+  evaluation.createMetadataForLog = createMetadataForLogSpy;
+  evaluation.logResult = logResultSpy;
+  evaluation.getParameters = getParametersSpy;
+  evaluation.runSavePageIteration = runSavePageIterationSpy;
+  evaluation.isPerformingTrial = sinon.stub().resolves(true);
+  evaluation.getHref = sinon.stub().returns(activeUrl);
+  evaluation.deleteStorageHelperValues = deleteStorageHelperValuesSpy;
 
-  var actual = evaluation.createPageIdentifier();
-  t.deepEqual(actual, expected);
-  t.end();
-  resetEvaluation();
+  var setArg = {};
+  setArg[evaluation.KEY_CURRENT_ITERATION] = numIter + 1;
+
+  evaluation.onPageLoadComplete()
+  .then(actual => {
+    // We expect no resolved value
+    t.equal(actual, undefined);
+    t.deepEqual(setSpy.args[0], [setArg]);
+    t.deepEqual(logTimeSpy.args[0], [key, expectedLogArg]);
+    t.deepEqual(logResultSpy.args[0], [key]);
+    t.deepEqual(reloadSpy.args[0], [true]);
+    t.equal(deleteStorageHelperValuesSpy.callCount, 0);
+    t.end();
+    resetEvaluation();
+  });
+});
+
+test('onPageLoadComplete moves to next url', function(t) {
+  var key = 'googleCom';
+  // this will be the last iteration
+  var numIter = 9;
+  var totalIterations = 10;
+
+  var urlList = ['url0', 'url1', 'url2'];
+  var urlListIndex = 1;
+  var activeUrl = urlList[urlListIndex];
+
+  var params = {
+    key: key,
+    numIterations: totalIterations,
+    currentIter: numIter,
+    urlList: urlList,
+    urlListIndex: urlListIndex,
+    activeUrl: activeUrl
+  };
+  var getParametersSpy = sinon.stub().resolves(params);
+
+  var timingInfo = {
+    time: 'for tea'
+  };
+  var metadata = {
+    soMeta: '#hashtag'
+  };
+
+  var expectedLogArg = {
+    timing: timingInfo,
+    metadata: metadata,
+    iteration: params.currentIter,
+    numIterations: params.numIterations,
+    url: params.activeUrl,
+    urlListIndex: params.urlListIndex
+  };
+
+  var createMetadataForLogSpy = sinon.stub().returns(metadata);
+  var logTimeSpy = sinon.stub();
+  var logResultSpy = sinon.stub();
+  var runSavePageIterationSpy = sinon.stub().resolves(timingInfo);
+  var setSpy = sinon.stub().resolves();
+  var deleteStorageHelperValuesSpy = sinon.stub().resolves();
+
+  var windowObj = {
+    location: {
+      href: null
+    }
+  };
+  var getWindowSpy = sinon.stub().returns(windowObj);
+
+  proxyquireEvaluation({
+    '../../../../chromeapp/app/scripts/chrome-apis/storage': {
+      set: setSpy
+    },
+    '../../../../chromeapp/app/scripts/evaluation': {
+      logTime: logTimeSpy
+    },
+    '../util/util': {
+      getWindow: getWindowSpy
+    }
+  });
+  evaluation.createMetadataForLog = createMetadataForLogSpy;
+  evaluation.logResult = logResultSpy;
+  evaluation.getParameters = getParametersSpy;
+  evaluation.runSavePageIteration = runSavePageIterationSpy;
+  evaluation.isPerformingTrial = sinon.stub().resolves(true);
+  evaluation.getHref = sinon.stub().returns(activeUrl);
+  evaluation.deleteStorageHelperValues = deleteStorageHelperValuesSpy;
+
+  var setArg = {};
+  setArg[evaluation.KEY_CURRENT_ITERATION] = 0;
+  setArg[evaluation.KEY_URL_LIST_INDEX] = urlListIndex + 1;
+
+  evaluation.onPageLoadComplete()
+  .then(actual => {
+    // We expect no resolved value
+    t.equal(actual, undefined);
+    t.deepEqual(setSpy.args[0], [setArg]);
+    t.deepEqual(logTimeSpy.args[0], [key, expectedLogArg]);
+    t.deepEqual(logResultSpy.args[0], [key]);
+    t.deepEqual(windowObj.location.href, urlList[urlListIndex + 1]);
+    t.equal(deleteStorageHelperValuesSpy.callCount, 0);
+    t.end();
+    resetEvaluation();
+  });
 });
 
 test('startSavePageTrial sets variables and reloads', function(t) {
-  var pageIdentifier = 'google/path';
+  var urls = ['url0', 'url1'];
 
   var setSpy = sinon.stub().resolves();
 
@@ -372,16 +535,20 @@ test('startSavePageTrial sets variables and reloads', function(t) {
   setArg[evaluation.KEY_NUM_ITERATIONS] = numIterations;
   setArg[evaluation.KEY_PERFORMING_TRIAL] = true;
   setArg[evaluation.KEY_CURRENT_ITERATION] = 0;
-  setArg[evaluation.KEY_DOMAIN_AND_PATH] = pageIdentifier;
   setArg[evaluation.KEY_LOG_KEY] = key;
+  setArg[evaluation.KEY_URL_LIST] = urls;
+  setArg[evaluation.KEY_URL_LIST_INDEX] = 0;
 
   proxyquireEvaluation({
     '../../../../chromeapp/app/scripts/chrome-apis/storage': {
       set: setSpy
     },
+    '../util/util': {
+      wait: sinon.stub().resolves()
+    }
   });
 
-  evaluation.startSavePageTrial(pageIdentifier, numIterations, key)
+  evaluation.startSavePageTrial(urls, numIterations, key)
     .then(() => {
       t.deepEqual(setSpy.args[0], [setArg]);
       t.end();
