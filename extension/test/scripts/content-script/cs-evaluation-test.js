@@ -146,14 +146,16 @@ test('requestSavePage sends message and resolves', function(t) {
 test('savePage resolves as expected', function(t) {
   var loadTime = 10101.2;
   var savePageResult = { timeToWrite: 1982.2 };
+  var totalTime = loadTime + savePageResult.timeToWrite;
 
   var getFullLoadTimeSpy = sinon.stub().returns(loadTime);
   var requestSavePageSpy = sinon.stub().resolves(savePageResult);
   var getOnCompletePromiseSpy = sinon.stub().resolves();
 
   var expected = {
-    totalLoadTime: loadTime,
-    timeToWrite: savePageResult.timeToWrite
+    domCompleteTime: loadTime,
+    timeToWrite: savePageResult.timeToWrite,
+    totalTime: totalTime
   };
 
   proxyquireEvaluation({

@@ -27615,9 +27615,11 @@ exports.savePage = function() {
       })
       .then(response => {
         var domCompleteTime = csApi.getFullLoadTime();
+        var totalTime = domCompleteTime + response.timeToWrite;
         var result = {
-          totalLoadTime: domCompleteTime,
-          timeToWrite: response.timeToWrite
+          domCompleteTime: domCompleteTime,
+          timeToWrite: response.timeToWrite,
+          totalTime: totalTime
         };
         resolve(result);
       });
