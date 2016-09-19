@@ -63390,7 +63390,6 @@ process.umask = function() { return 0; };
  * The main controlling piece of the app. It composes the other modules.
  */
 
-var chromeUdp = require('./chrome-apis/udp');
 var datastore = require('./persistence/datastore');
 var extBridge = require('./extension-bridge/messaging');
 var fileSystem = require('./persistence/file-system');
@@ -63400,9 +63399,9 @@ var serverApi = require('./server/server-api');
 var dnsController = require('./dnssd/dns-controller');
 var evaluation = require('./evaluation');
 
-var LISTENING_HTTP_INTERFACE = null;
-
 var ABS_PATH_TO_BASE_DIR = null;
+
+exports.LISTENING_HTTP_INTERFACE = null;
 
 exports.SERVERS_STARTED = false;
 
@@ -63426,10 +63425,10 @@ exports.getServerController = function() {
  * }
  */
 exports.getListeningHttpInterface = function() {
-  if (!LISTENING_HTTP_INTERFACE) {
+  if (!exports.LISTENING_HTTP_INTERFACE) {
     console.warn('listening http interface not set, is app started?');
   }
-  return LISTENING_HTTP_INTERFACE;
+  return exports.LISTENING_HTTP_INTERFACE;
 };
 
 /**
@@ -63507,6 +63506,10 @@ exports.getBrowseableCaches = function() {
   // First we'll construct our own cache info. Some of these variables may not
   // be set if we are initializing for the first time and settings haven't been
   // created.
+  if (!exports.SERVERS_STARTED) {
+    return Promise.resolve([]);
+  }
+
   var thisCache = exports.getOwnCache();
 
   var result = [thisCache];
@@ -63560,9 +63563,16 @@ exports.startServersAndRegister = function() {
       return;
     }
 
-    exports.updateCachesForSettings();
     dnsController.start()
     .then(() => {
+      var ifaces = dnsController.getIPv4Interfaces();
+      if (ifaces.length === 0) {
+        throw new Error('No network interfaces in dns-controller');
+      }
+      exports.LISTENING_HTTP_INTERFACE = ifaces[0];
+      exports.LISTENING_HTTP_INTERFACE.port = serverPort;
+      exports.updateCachesForSettings();
+
       return dnssdSem.registerSemCache(hostName, instanceName, serverPort);
     })
     .then(registerResult => {
@@ -63584,6 +63594,7 @@ exports.startServersAndRegister = function() {
 exports.stopServers = function() {
   exports.getServerController().stop();
   dnsController.stop();
+  exports.LISTENING_HTTP_INTERFACE = null;
   exports.SERVERS_STARTED = false;
 };
 
@@ -63596,25 +63607,7 @@ exports.start = function() {
   extBridge.attachListeners();
 
   return new Promise(function(resolve) {
-    chromeUdp.getNetworkInterfaces()
-      .then(interfaces => {
-        var ipv4Interfaces = [];
-        interfaces.forEach(nwIface => {
-          if (nwIface.address.indexOf(':') === -1) {
-            // ipv4
-            ipv4Interfaces.push(nwIface);
-          }
-        });
-        if (ipv4Interfaces.length === 0) {
-          console.log('Could not find ipv4 interface: ', interfaces);
-        } else {
-          var iface = ipv4Interfaces[0];
-          LISTENING_HTTP_INTERFACE = iface;
-        }
-      })
-      .then(() => {
-        return settings.init();
-      })
+      settings.init()
       .then(settingsObj => {
         console.log('initialized settings: ', settingsObj);
         exports.updateCachesForSettings();
@@ -63628,7 +63621,6 @@ exports.start = function() {
  */
 exports.updateCachesForSettings = function() {
   exports.setAbsPathToBaseDir(settings.getAbsPath());
-  LISTENING_HTTP_INTERFACE.port = settings.getServerPort();
 };
 
 /**
@@ -63701,7 +63693,7 @@ exports.saveMhtmlAndOpen = function(
   });
 };
 
-},{"./chrome-apis/udp":"chromeUdp","./dnssd/dns-controller":"dnsc","./dnssd/dns-sd-semcache":"dnsSem","./evaluation":"eval","./extension-bridge/messaging":"extBridge","./persistence/datastore":11,"./persistence/file-system":"fileSystem","./server/server-api":14,"./server/server-controller":"serverController","./settings":"settings"}],"binaryUtils":[function(require,module,exports){
+},{"./dnssd/dns-controller":"dnsc","./dnssd/dns-sd-semcache":"dnsSem","./evaluation":"eval","./extension-bridge/messaging":"extBridge","./persistence/datastore":11,"./persistence/file-system":"fileSystem","./server/server-api":14,"./server/server-controller":"serverController","./settings":"settings"}],"binaryUtils":[function(require,module,exports){
 /*jshint esnext:true*/
 /*
  * https://github.com/justindarc/dns-sd.js
@@ -64440,7 +64432,7 @@ exports.start = function() {
   return new Promise(function(resolve, reject) {
     exports.getSocket()
     .then(function startedSocket() {
-      exports.initializeNetworkInterfaceCache();
+      return exports.initializeNetworkInterfaceCache();
     })
     .then(function initializedInterfaces() {
       resolve();

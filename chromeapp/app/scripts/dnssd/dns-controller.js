@@ -441,7 +441,7 @@ exports.start = function() {
   return new Promise(function(resolve, reject) {
     exports.getSocket()
     .then(function startedSocket() {
-      exports.initializeNetworkInterfaceCache();
+      return exports.initializeNetworkInterfaceCache();
     })
     .then(function initializedInterfaces() {
       resolve();

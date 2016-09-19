@@ -126,6 +126,10 @@ test('startServersAndRegisters rejects if missing host', function(t) {
 test('startServersAndRegister rejects if register rejects', function(t) {
   var expectedErr = {message: 'reject in test plz'};
   var registerSemCacheSpy = sinon.stub().rejects(expectedErr);
+  var iface = {
+    address: '4.4.4.4',
+    port: 8888
+  };
 
   var instanceName = 'my instance';
   var port = '1234';
@@ -143,7 +147,8 @@ test('startServersAndRegister rejects if register rejects', function(t) {
       registerSemCache: registerSemCacheSpy
     },
     './dnssd/dns-controller': {
-      start: sinon.stub().resolves()
+      start: sinon.stub().resolves(),
+      getIPv4Interfaces: sinon.stub().returns([iface])
     }
   });
   appc.getServerController = sinon.stub().returns({
@@ -159,14 +164,10 @@ test('startServersAndRegister rejects if register rejects', function(t) {
     t.end();
     resetAppController();
   });
-
 });
 
-test('startServersAndRegister resolves if register resolves', function(t) {
-  var expectedRegisterResult = {foo: 'foo'};
-  var registerSemCacheSpy = sinon.stub().resolves(expectedRegisterResult);
-  var httpStartSpy = sinon.spy();
-  var dnsControllerStartSpy = sinon.stub().resolves();
+test('startServersAndRegister rejects if no ifaces', function(t) {
+  var expectedErr = 'No network interfaces in dns-controller';
 
   var instanceName = 'my instance';
   var port = '1234';
@@ -180,25 +181,78 @@ test('startServersAndRegister resolves if register resolves', function(t) {
       getBaseDirId: sinon.stub().returns(baseDirId),
       getHostName: sinon.stub().returns(hostName)
     },
+    './dnssd/dns-controller': {
+      start: sinon.stub().resolves()
+    }
+  });
+  appc.updateCachesForSettings = sinon.stub();
+
+  appc.startServersAndRegister()
+  .catch(actualErr => {
+    t.equal(actualErr.message, expectedErr);
+    t.false(appc.networkIsActive());
+    t.end();
+    resetAppController();
+  });
+
+});
+
+test('startServersAndRegister resolves if register resolves', function(t) {
+  var expectedRegisterResult = {foo: 'foo'};
+  var instanceName = 'my instance';
+  var port = '1234';
+  var baseDirId = 'zyx';
+  var hostName = 'laptop.local';
+
+  var iface = {
+    address: '1.2.3.fromDnsController',
+    port: port
+  };
+
+  var registerSemCacheSpy = sinon.stub().resolves(expectedRegisterResult);
+  var httpStartSpy = sinon.spy();
+  var dnsControllerStartSpy = sinon.stub().resolves();
+  var getIPv4InterfacesSpy = sinon.stub().returns([iface]);
+  var updateCachesForSettingsSpy = sinon.stub();
+
+  var appc = proxyquire('../../app/scripts/app-controller', {
+    './settings': {
+      getInstanceName: sinon.stub().returns(instanceName),
+      getServerPort: sinon.stub().returns(port),
+      getBaseDirId: sinon.stub().returns(baseDirId),
+      getHostName: sinon.stub().returns(hostName)
+    },
     './dnssd/dns-sd-semcache': {
       registerSemCache: registerSemCacheSpy
     },
     './dnssd/dns-controller': {
-      start: dnsControllerStartSpy
+      start: dnsControllerStartSpy,
+      getIPv4Interfaces: getIPv4InterfacesSpy
     }
   });
   appc.getServerController = sinon.stub().returns({
     start: httpStartSpy
   });
-  appc.updateCachesForSettings = sinon.stub();
+  appc.updateCachesForSettings = updateCachesForSettingsSpy;
+
+  // Set the listening interface to a value we don't want, like the stale value
+  // that occurs after changing networks.
+  appc.LISTENING_HTTP_INTERFACE = {
+    address: '9.8.7.staleInterface',
+    port: 'oldport'
+  };
 
   appc.startServersAndRegister()
   .then(actualResult => {
     t.deepEqual(registerSemCacheSpy.args[0], [hostName, instanceName, port]);
     t.deepEqual(actualResult, expectedRegisterResult);
     t.deepEqual(httpStartSpy.args[0], ['0.0.0.0', port]);
+    t.deepEqual(appc.LISTENING_HTTP_INTERFACE, iface);
+    
+    t.true(updateCachesForSettingsSpy.calledOnce);
     t.true(dnsControllerStartSpy.calledOnce);
     t.true(appc.networkIsActive());
+    
     t.end();
     resetAppController();
   });
@@ -277,7 +331,7 @@ test('getBrowseableCaches does not query network if not started', function(t) {
   appc.getOwnCache = sinon.stub().returns(ownCache);
   appc.networkIsActive = sinon.stub().returns(false);
 
-  var expected = [ownCache];
+  var expected = [];
 
   appc.getBrowseableCaches()
     .then(caches => {
@@ -326,6 +380,7 @@ test('getBrowseableCaches dedupes and returns correct list', function(t) {
   appc.getListeningHttpInterface = getHttpIfaceSpy;
   appc.getOwnCache = getOwnCacheSpy;
   appc.networkIsActive = sinon.stub().returns(true);
+  appc.SERVERS_STARTED = true;
 
   // We should always be first, followed by the other caches sorted by instance
   // name.
@@ -368,10 +423,13 @@ test('stopServers restores state', function(t) {
   appc.getServerController = sinon.stub().returns({
     stop: stopSpy
   });
+  appc.LISTENING_HTTP_INTERFACE = 'old iface';
 
   appc.stopServers();
   t.true(stopSpy.calledOnce);
   t.deepEqual(stopSpy.args[0], []);
+
+  t.equal(appc.LISTENING_HTTP_INTERFACE, null);
 
   t.true(stopDnsControllerSpy.calledOnce);
   t.deepEqual(stopDnsControllerSpy.args[0], []);
