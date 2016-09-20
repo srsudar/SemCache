@@ -89,7 +89,10 @@ function helperTestForSendAddress(t, isUnicast, address, port) {
 
   dnsController.handleIncomingPacket(queryPacket, address, port);
 
-  t.deepEqual(waitInRangeSpy.args[0], [20, 120]);
+  t.deepEqual(
+    waitInRangeSpy.args[0],
+    [dnsController.RESPONSE_WAIT_MIN, dnsController.RESPONSE_WAIT_MAX]
+  );
 
   resetDnsController();
   t.end();
@@ -643,8 +646,14 @@ test('handleIncomingPacket sends packet for each question', function(t) {
   t.deepEqual(createResponsePacketSpy.args[1], [queryPacket]);
 
   t.equal(waitInRangeSpy.callCount, 2);
-  t.deepEqual(waitInRangeSpy.args[0], [20, 120]);
-  t.deepEqual(waitInRangeSpy.args[1], [20, 120]);
+  t.deepEqual(
+    waitInRangeSpy.args[0],
+    [dnsController.RESPONSE_WAIT_MIN, dnsController.RESPONSE_WAIT_MAX]
+  );
+  t.deepEqual(
+    waitInRangeSpy.args[1],
+    [dnsController.RESPONSE_WAIT_MIN, dnsController.RESPONSE_WAIT_MAX]
+  );
 
   t.end();
   resetDnsController();

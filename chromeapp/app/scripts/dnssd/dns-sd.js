@@ -31,7 +31,7 @@ var resRec = require('./resource-record');
 var dnsPacket = require('./dns-packet');
 
 var MAX_PROBE_WAIT = 250;
-var DEFAULT_QUERY_WAIT_TIME = 2000;
+var DEFAULT_QUERY_WAIT_TIME = 3000;
 
 exports.DEFAULT_QUERY_WAIT_TIME = DEFAULT_QUERY_WAIT_TIME;
 
@@ -49,7 +49,7 @@ exports.DEFAULT_NUM_RETRIES = 2;
  * additional queries will always be issued, so the number should be increased
  * more cautiously than DEFAULT_NUM_RETRIES.
  */
-exports.DEFAULT_NUM_PTR_RETRIES = 1;
+exports.DEFAULT_NUM_PTR_RETRIES = 2;
 
 exports.LOCAL_SUFFIX = 'local';
 

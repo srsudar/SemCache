@@ -63975,6 +63975,16 @@ exports.DEBUG = true;
 
 exports.NEXT_PACKET_ID = 1;
 
+
+// Section 6 of the RFC covers responding, including when to delay responses.
+// In the event that multiple peers may respond simultaneously, collision and
+// thus dropped packets are a possibility. To circumvent this, the RFC
+// specifies that responses where more than a single response is requested
+// should be delayed by a random value between 20 and 120ms. Using these values
+// we saw many dropped packets, so we are increasing the range.
+exports.RESPONSE_WAIT_MIN = 200;
+exports.RESPONSE_WAIT_MAX = 600;
+
 /**
  * These are the records owned by this module. They are maintained in an object
  * of domain name to array of records, e.g. { 'www.example.com': [Object,
@@ -64190,7 +64200,7 @@ exports.handleIncomingPacket = function(packet, remoteAddress, remotePort) {
     // this, the RFC specifies that responses where more than a single response
     // is requested should be delayed by a random value between 20 and 120ms.
     // We will delay in all cases, as there is no large price to pay for this.
-    util.waitInRange(20, 120)
+    util.waitInRange(exports.RESPONSE_WAIT_MIN, exports.RESPONSE_WAIT_MAX)
     .then(() => {
       exports.sendPacket(responsePacket, sendAddr, sendPort);
     });
@@ -64608,7 +64618,7 @@ var resRec = require('./resource-record');
 var dnsPacket = require('./dns-packet');
 
 var MAX_PROBE_WAIT = 250;
-var DEFAULT_QUERY_WAIT_TIME = 2000;
+var DEFAULT_QUERY_WAIT_TIME = 3000;
 
 exports.DEFAULT_QUERY_WAIT_TIME = DEFAULT_QUERY_WAIT_TIME;
 
@@ -64626,7 +64636,7 @@ exports.DEFAULT_NUM_RETRIES = 2;
  * additional queries will always be issued, so the number should be increased
  * more cautiously than DEFAULT_NUM_RETRIES.
  */
-exports.DEFAULT_NUM_PTR_RETRIES = 1;
+exports.DEFAULT_NUM_PTR_RETRIES = 2;
 
 exports.LOCAL_SUFFIX = 'local';
 
