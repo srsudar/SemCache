@@ -676,7 +676,8 @@ exports.getUserFriendlyName = function(instanceTypeDomain) {
  * representing services, like the following:
  * {
  *   serviceType: '_semcache._tcp',
- *   serviceName: 'Magic Cache'
+ *   friendlyName: 'Magic Cache',
+ *   serviceName: 'Magic Cache._semcache._tcp.local'
  * }
  */
 exports.queryForServiceInstances = function(
@@ -701,10 +702,14 @@ exports.queryForServiceInstances = function(
       packets.forEach(packet => {
         packet.answers.forEach(answer => {
           if (answer.recordType === rType && answer.recordClass === rClass) {
+            var friendlyName = exports.getUserFriendlyName(
+              answer.instanceName
+            );
             result.push(
               {
                 serviceType: answer.serviceType,
-                serviceName: answer.instanceName
+                serviceName: answer.instanceName,
+                friendlyName: friendlyName
               }
             );
           }

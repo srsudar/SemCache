@@ -63,6 +63,7 @@ function callsQueryForResponsesHelper(
   packets,
   result,
   methodName,
+  getUserFriendlyNameSpy,
   t
 ) {
   dnssd = proxyquire(
@@ -75,6 +76,9 @@ function callsQueryForResponsesHelper(
   );
   var queryForResponsesSpy = sinon.stub().resolves(packets);
   dnssd.queryForResponses = queryForResponsesSpy;
+  if (getUserFriendlyNameSpy) {
+    dnssd.getUserFriendlyName = getUserFriendlyNameSpy;
+  }
 
   dnssd[methodName](qName, timeout, numRetries)
     .then(function resolved(services) {
@@ -926,11 +930,16 @@ test('queryForServiceInstances correct', function(t) {
   var aRecord = new resRec.ARecord(
     'www.eg.com', 100, '1.2.3.4', dnsCodes.CLASS_CODES.IN
   );
+
+  var friendlyName1 = 'Sam Cache';
+  var friendlyName2 = 'Felix';
+  var serviceName1 = friendlyName1 + '.' + serviceType + '.local';
+  var serviceName2 = friendlyName2 + '.' + serviceType + '.local';
   var ptrRecord1 = new resRec.PtrRecord(
-    serviceType, 10, 'Sam Cache', dnsCodes.CLASS_CODES.IN
+    serviceType, 10, serviceName1, dnsCodes.CLASS_CODES.IN
   );
   var ptrRecord2 = new resRec.PtrRecord(
-    serviceType, 10, 'Felix', dnsCodes.CLASS_CODES.IN
+    serviceType, 10, serviceName2, dnsCodes.CLASS_CODES.IN
   );
 
   packet1.addAnswer(aRecord);
@@ -945,13 +954,20 @@ test('queryForServiceInstances correct', function(t) {
   var expected = [
     {
       serviceType: serviceType,
-      serviceName: ptrRecord1.instanceName
+      serviceName: ptrRecord1.instanceName,
+      friendlyName: friendlyName1
     },
     {
       serviceType: serviceType,
-      serviceName: ptrRecord2.instanceName
+      serviceName: ptrRecord2.instanceName,
+      friendlyName: friendlyName2
     }
   ];
+  var getUserFriendlyNameSpy = sinon.stub();
+  getUserFriendlyNameSpy.withArgs(serviceName1).returns(friendlyName1);
+  getUserFriendlyNameSpy.withArgs(serviceName2).returns(friendlyName2);
+
+  console.log(expected);
 
   callsQueryForResponsesHelper(
     serviceType,
@@ -963,6 +979,7 @@ test('queryForServiceInstances correct', function(t) {
     packets,
     expected,
     'queryForServiceInstances',
+    getUserFriendlyNameSpy,
     t
   );
 });
@@ -1003,6 +1020,7 @@ test('queryForIpAddress correct', function(t) {
     packets,
     expected,
     'queryForIpAddress',
+    null,
     t
   );
 });
@@ -1043,6 +1061,7 @@ test('queryForInstanceInfo correct', function(t) {
     packets,
     expected,
     'queryForInstanceInfo',
+    null,
     t
   );
 });
