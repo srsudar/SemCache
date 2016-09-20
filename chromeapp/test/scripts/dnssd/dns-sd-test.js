@@ -1367,3 +1367,161 @@ test('getUserFriendlyName handles multi-level domains', function(t) {
   t.equal(actual, name);
   t.end();
 });
+
+test('resolveService resolves if all correct', function(t) {
+  var serviceType = '_semcache._tcp';
+  var records = generateFakeRecords(serviceType, 1);
+  var serviceName = records[0].ptr.serviceName;
+
+  // SRV records
+  var queryForInstanceInfoSpy = sinon.stub();
+  queryForInstanceInfoSpy.withArgs(records[0].ptr.serviceName)
+    .resolves([records[0].srv]);
+
+  // A records
+  var queryForIpAddressSpy = sinon.stub();
+  queryForIpAddressSpy.withArgs(records[0].srv.domain)
+    .resolves([records[0].aRec]);
+
+  var getUserFriendlyNameSpy = sinon.stub();
+  getUserFriendlyNameSpy.withArgs(records[0].ptr.serviceName)
+    .returns(records[0].friendlyName);
+
+  dnssd.queryForIpAddress = queryForIpAddressSpy;
+  dnssd.queryForInstanceInfo = queryForInstanceInfoSpy;
+  dnssd.getUserFriendlyName = getUserFriendlyNameSpy;
+
+  var expected = {
+    friendlyName: records[0].friendlyName,
+    instanceName: records[0].ptr.serviceName,
+    domainName: records[0].srv.domain,
+    ipAddress: records[0].aRec.ipAddress,
+    port: records[0].srv.port
+  };
+
+  dnssd.resolveService(serviceName)
+  .then(operationalInfo => {
+    // Each spy called the appropriate number of times with the appropriate
+    // arguments
+    // 2 instances, thus 2 address resolutions required
+    t.equal(queryForIpAddressSpy.callCount, 1);
+    t.equal(queryForInstanceInfoSpy.callCount, 1);
+
+    // SRV records
+    t.deepEqual(
+      queryForInstanceInfoSpy.args[0],
+      [
+        records[0].ptr.serviceName,
+        dnssd.DEFAULT_QUERY_WAIT_TIME,
+        dnssd.DEFAULT_NUM_RETRIES
+      ]
+    );
+
+    // A records
+    t.deepEqual(
+      queryForIpAddressSpy.args[0],
+      [
+        records[0].srv.domain, 
+        dnssd.DEFAULT_QUERY_WAIT_TIME,
+        dnssd.DEFAULT_NUM_RETRIES
+      ]
+    );
+
+    // Result promise resolves with the correct objects.
+    t.deepEqual(operationalInfo, expected);
+    resetDnsSd();
+    t.end();
+  });
+});
+
+test('resolveService rejects if missing SRV', function(t) {
+  var serviceType = '_semcache._tcp';
+  var records = generateFakeRecords(serviceType, 1);
+  var serviceName = records[0].ptr.serviceName;
+
+  // SRV records should return nothing.
+  var queryForInstanceInfoSpy = sinon.stub();
+  queryForInstanceInfoSpy.withArgs(records[0].ptr.serviceName)
+    .resolves([]);
+
+  dnssd.queryForInstanceInfo = queryForInstanceInfoSpy;
+
+  var expected = 'did not find SRV record for service: ' + serviceName;
+
+  dnssd.resolveService(serviceName)
+  .catch(actual => {
+    t.equal(queryForInstanceInfoSpy.callCount, 1);
+
+    // SRV records
+    t.deepEqual(
+      queryForInstanceInfoSpy.args[0],
+      [
+        records[0].ptr.serviceName,
+        dnssd.DEFAULT_QUERY_WAIT_TIME,
+        dnssd.DEFAULT_NUM_RETRIES
+      ]
+    );
+
+    t.deepEqual(actual, expected);
+    console.log(actual);
+    resetDnsSd();
+    t.end();
+  });
+});
+
+test('resolveService rejects if missing A', function(t) {
+  var serviceType = '_semcache._tcp';
+  var records = generateFakeRecords(serviceType, 1);
+  var serviceName = records[0].ptr.serviceName;
+
+  // SRV records
+  var queryForInstanceInfoSpy = sinon.stub();
+  queryForInstanceInfoSpy.withArgs(records[0].ptr.serviceName)
+    .resolves([records[0].srv]);
+
+  // A records return nothing
+  var queryForIpAddressSpy = sinon.stub();
+  queryForIpAddressSpy.withArgs(records[0].srv.domain)
+    .resolves([]);
+
+  dnssd.queryForIpAddress = queryForIpAddressSpy;
+  dnssd.queryForInstanceInfo = queryForInstanceInfoSpy;
+
+  var expected = 'did not find A record for SRV: ' +
+    JSON.stringify(records[0].srv);
+
+  dnssd.resolveService(serviceName)
+  .catch(actual => {
+    // Each spy called the appropriate number of times with the appropriate
+    // arguments
+    // 2 instances, thus 2 address resolutions required
+    t.equal(queryForIpAddressSpy.callCount, 1);
+    t.equal(queryForInstanceInfoSpy.callCount, 1);
+
+    // SRV records
+    t.deepEqual(
+      queryForInstanceInfoSpy.args[0],
+      [
+        records[0].ptr.serviceName,
+        dnssd.DEFAULT_QUERY_WAIT_TIME,
+        dnssd.DEFAULT_NUM_RETRIES
+      ]
+    );
+
+    // A records
+    t.deepEqual(
+      queryForIpAddressSpy.args[0],
+      [
+        records[0].srv.domain, 
+        dnssd.DEFAULT_QUERY_WAIT_TIME,
+        dnssd.DEFAULT_NUM_RETRIES
+      ]
+    );
+
+    // Result promise resolves with the correct objects.
+    t.deepEqual(actual, expected);
+    console.log(actual);
+    resetDnsSd();
+    t.end();
+  });
+});

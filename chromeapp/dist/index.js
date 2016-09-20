@@ -64970,12 +64970,113 @@ exports.issueProbe = function(queryName, queryType, queryClass) {
 };
 
 /**
+ * Get operational info for the given service instance. This essentially
+ * provides the combined results of both a SRV and A record request.
+ *
+ * @param {string} serviceName the service name contained in a PTR record. This
+ * should be the full name, not just the user friendly portion of the name.
+ * E.g. `Tyrion's Cache._semcache._tcp.local`, not `Tyrion's Cache`.
+ *
+ * @return {Promise} Promise that resolves with an object like the following if
+ * resolution succeeds:
+ * {
+ *   friendlyName: 'Sam Cache',
+ *   instanceName: 'Sam Cache._semcache._tcp.local',
+ *   domainName: 'laptop.local',
+ *   ipAddress: '123.4.5.6',
+ *   port: 8888
+ * }
+ * The Promise rejects if resolution cannot complete (e.g. if a SRV or A
+ * records is not found) or if an error occurs.
+ */
+exports.resolveService = function(serviceName) {
+  console.log('resolveService: ', serviceName);
+  return new Promise(function(resolve, reject) {
+    var srvRec = null;
+    var aRec = null;
+    exports.queryForInstanceInfo(
+        serviceName,
+        exports.DEFAULT_QUERY_WAIT_TIME,
+        exports.DEFAULT_NUM_RETRIES
+    )
+    .then(srvInfos => {
+      if (exports.DEBUG) {
+        console.log('srvInfos: ', srvInfos);
+      }
+      if (!srvInfos || srvInfos.length === 0) {
+        reject('did not find SRV record for service: ' + serviceName);
+        return;
+      }
+      srvRec = srvInfos[0];
+      
+      return exports.queryForIpAddress(
+        srvRec.domain,
+        exports.DEFAULT_QUERY_WAIT_TIME,
+        exports.DEFAULT_NUM_RETRIES
+      );
+    })
+    .then(aInfos => {
+      if (exports.DEBUG) {
+        console.log('aInfos: ', aInfos);
+      }
+      if (!aInfos || aInfos.length === 0) {
+        reject('did not find A record for SRV: ' + JSON.stringify(srvRec));
+        return;
+      }
+      aRec = aInfos[0];
+      var friendlyName = exports.getUserFriendlyName(serviceName);
+
+      var result = {
+        friendlyName: friendlyName,
+        instanceName: serviceName,
+        domainName: srvRec.domain,
+        ipAddress: aRec.ipAddress,
+        port: srvRec.port
+      };
+      resolve(result); 
+    })
+    .catch(err => {
+      reject(err);
+    });
+  });
+
+};
+
+/**
  * Get operational information on all services of a given type on the network.
  *
  * This is a convenience method for issuing a series of requests--for PTR
  * records to find the specific instances providing a service, SRV records for
  * finding the port and host name of those instances, and finally A records for
  * determining the IP addresses of the hosts.
+ *
+ * NB: This is a convenience method that disregards DNSSD best practices. It
+ * generates a significant amount of mDNS/UDP traffic that in real world tests
+ * with multiple peers has resulted in some routers being overwhelmed and
+ * dropping packets, hurting discovery. In general, only the service name (as
+ * stored in PTR records), is safe for long term cache. One of the objectives
+ * of DNSSD is to provide a zero configuration setting that is safe to cache
+ * even across IP changes. It accomplishes this by saving only a user-friendly
+ * name, resolving the IP address and port on each use of the servce. From
+ * Apple's documentation:
+ *
+ *     Service discovery typically takes place only once in a while—for
+ *     example, when a user first selects a printer. This operation saves the
+ *     service instance name, the intended stable identifier for any given
+ *     instance of a service. Port numbers, IP addresses, and even host names
+ *     can change from day to day, but a user should not need to reselect a
+ *     printer every time this happens. Accordingly, resolution from a service
+ *     name to socket information does not happen until the service is actually
+ *     used.
+ *
+ *     https://developer.apple.com/library/content/documentation/Cocoa/
+ *     Conceptual/NetServices/Articles/NetServicesArchitecture.html
+ *
+ * This method encourages the mass resolution and caching of all services on a
+ * network. In addition to generating a large amount of traffic, this method
+ * also violates the design goal above. It is useful for debugging and a
+ * general purpose solution, but it should not be used as a general discovery
+ * mechanism.
  *
  * @param {string} serviceType the type of the service to browse for
  *
