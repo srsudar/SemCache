@@ -17,54 +17,180 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
     <script src="../../../../web-component-tester/browser.js"></script>
 
     <!-- Step 1: import the element to test -->
-    <link rel="import" href="../../../app/polymer-ui/elements/seed-element.html">
+    <link rel="import" href="../../../app/polymer-ui/elements/cache-page-list.html">
   </head>
   <body>
 
     <!-- You can use the document as a place to set up your fixtures. -->
-    <test-fixture id="seed-element-fixture">
-      <template>
-        <seed-element>
-          <h2>seed-element</h2>
-        </seed-element>
+    <test-fixture id="cpl-fixture">
+      <template is="dom-template">
+        <cache-page-list
+          service-name="{{serviceName}}">
+        <cache-page-list>
       </template>
     </test-fixture>
 
     <script>
-      suite('<seed-element>', function() {
+      suite('<cache-page-list>', function() {
 
         var myEl;
 
+        var serviceName = 'Example Cache._semcache._tcp.local';
+        var boundData = {
+          serviceName: serviceName
+        };
+
+        // A mock result from a call to resolveCache
+        var cacheInfo = {
+          domainName: 'laptop.local',
+          friendlyName: 'My Cache',
+          instanceName: 'My Cache._semcache._tcp.local',
+          ipAddress: '1.2.3.4',
+          port: 1111,
+          listUrl: 'http://1.2.3.4:1111/list_pages'
+        };
+
+        // Testing of iron-ajax is based on this excellent video from the
+        // Polymer team: https://www.youtube.com/watch?v=_9qARcdCAn4
+        var responseHeaders = {
+          json: { 'Content-Type': 'application/json' }
+        };
+
+        // An example result we might expect from listUrl
+        var cacheJson = {
+          metadata: { version: 0 },
+          cachedPages: [
+            {
+              captureUrl: 'url0.com',
+              captureDate: 'date0',
+              accessPath: 'access/path/for/url0.mhtml',
+              metadata: { mdata: 'mdata0' }
+            },
+            {
+              captureUrl: 'url1.com',
+              captureDate: 'date1',
+              accessPath: 'access/path/for/url1.mhtml',
+              metadata: { mdata: 'mdata1' }
+            }
+          ]
+        };
+
+        var resolveCacheSpy = sinon.stub();
+        resolveCacheSpy.withArgs(serviceName).returns(
+          Promise.resolve(cacheInfo)
+        );
+        var getAppControllerModuleSpy = sinon.stub().returns({
+          resolveCache: resolveCacheSpy
+        });
+
         setup(function() {
-          myEl = fixture('seed-element-fixture');
+          myEl = fixture('cpl-fixture', boundData);
+          myEl.getAppControllerModule = getAppControllerModuleSpy;
         });
 
-        test('defines the "author" property', function() {
-          assert.equal(myEl.author.name, 'Dimitri Glazkov');
-          assert.equal(myEl.author.image, 'http://addyosmani.com/blog/wp-content/uploads/2013/04/unicorn.jpg');
+        test('has serviceName value', function() {
+          assert.equal(myEl.serviceName, serviceName);
         });
 
-        test('says hello', function() {
-          assert.equal(myEl.sayHello(), 'seed-element says, Hello World!');
+        test('refresh correct for success', function(done) {
+          // We should show and hide the loading animation
+          var showLoadingSpy = sinon.stub();
+          var hideLoadingSpy = sinon.stub();
+          myEl.showLoading = showLoadingSpy;
+          myEl.hideLoading = hideLoadingSpy;
 
-          var greetings = myEl.sayHello('greetings Earthlings');
-          assert.equal(greetings, 'seed-element says, greetings Earthlings');
+          var server = sinon.fakeServer.create();
+          server.respondWith(
+            'GET',
+            cacheInfo.listUrl,
+            [
+              200,
+              responseHeaders.json,
+              JSON.stringify(cacheJson)
+            ]
+          );
+          // Given that our functionality is included within a promise, we
+          // can't rely on the server.respond() function
+          server.respondImmediately = true;
+
+          myEl.refresh()
+            .then(() => {
+              var ajaxAssertionsComplete = false;
+              var promiseAssertionsComplete = false;
+              
+              assert.equal(showLoadingSpy.callCount, 1);
+              assert.equal(hideLoadingSpy.callCount, 1);
+
+              // Refresh set set up the url property
+              assert.equal(myEl.url, cacheInfo.listUrl);
+              promiseAssertionsComplete = true;
+
+              // We should have generated a request, but this executes
+              // asynchronously. Listen to the 'response' event, which will
+              // fire upon completion and do our assertions there.
+              myEl.$.ajax.addEventListener('response', function() {
+                assert.deepEqual(myEl.$.ajax.lastResponse, cacheJson);
+                ajaxAssertionsComplete = true;
+
+                if (ajaxAssertionsComplete && promiseAssertionsComplete) {
+                  done();
+                }
+              });
+
+              // We should have populated the response pages
+              if (ajaxAssertionsComplete && promiseAssertionsComplete) {
+                done();
+              }
+            });
         });
 
-        test('fires lasers', function(done) {
-          myEl.addEventListener('seed-element-lasers', function(event) {
-            assert.equal(event.detail.sound, 'Pew pew!');
-            done();
+        test('hides loading if resolve cache errors', function(done) {
+          // We should show and hide the loading animation
+          var showLoadingSpy = sinon.stub();
+          var hideLoadingSpy = sinon.stub();
+          myEl.showLoading = showLoadingSpy;
+          myEl.hideLoading = hideLoadingSpy;
+
+          var resolveCacheSpy = sinon.stub();
+          resolveCacheSpy.returns(Promise.reject('expected err for test'));
+
+          getAppControllerModuleSpy = sinon.stub().returns({
+            resolveCache: resolveCacheSpy
           });
-          myEl.fireLasers();
+          myEl.getAppControllerModule = getAppControllerModuleSpy;
+
+          myEl.refresh()
+            .then(() => {
+              assert.equal(showLoadingSpy.callCount, 1);
+              assert.equal(hideLoadingSpy.callCount, 1);
+
+              done();
+            });
         });
 
-        test('distributed children', function() {
-          var els = myEl.getContentChildren();
-          assert.equal(els.length, 1, 'one distributed node');
-          assert.equal(els[0], myEl.querySelector('h2'), 'content distributed correctly');
-        });
+        test('hides loading if no list url', function(done) {
+          // We should show and hide the loading animation
+          var showLoadingSpy = sinon.stub();
+          var hideLoadingSpy = sinon.stub();
+          myEl.showLoading = showLoadingSpy;
+          myEl.hideLoading = hideLoadingSpy;
 
+          var resolveCacheSpy = sinon.stub();
+          resolveCacheSpy.returns(Promise.resolve({ weird: 'object' }));
+
+          getAppControllerModuleSpy = sinon.stub().returns({
+            resolveCache: resolveCacheSpy
+          });
+          myEl.getAppControllerModule = getAppControllerModuleSpy;
+
+          myEl.refresh()
+            .then(() => {
+              assert.equal(showLoadingSpy.callCount, 1);
+              assert.equal(hideLoadingSpy.callCount, 1);
+
+              done();
+            });
+        });
       });
     </script>
 

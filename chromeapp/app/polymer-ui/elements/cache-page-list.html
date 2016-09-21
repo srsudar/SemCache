@@ -81,7 +81,10 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
     is: 'cache-page-list',
 
     properties: {
-      url: String,
+      url: {
+        type: String,
+        notify: true
+      },
       serviceName: {
         type: String,
         reflectToAttribute: true,
@@ -95,38 +98,52 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
     },
 
     refresh: function() {
-      console.log('CLICKED FAB');
-      if (!this.serviceName) {
-        console.log('Service name is not defined!');
-        return;
-      }
       var thisEl = this;
-      this.$.loading.classList.remove('hide');
-      Promise.resolve()
-        .then(() => {
-          return thisEl.getAppControllerModule();
-        })
-        .then(appc => {
-          return appc.resolveCache(this.serviceName)
-        })
-        .then(cacheInfo => {
-          if (!cacheInfo || !cacheInfo.listUrl) {
-            console.log('no listUrl for cache. cache: ', cacheInfo);
-          } else {
-            thisEl.url = cacheInfo.listUrl;
-            this.$.ajax.generateRequest();
-          }
+      return new Promise(function(resolve) {
+        console.log('CLICKED FAB');
+        if (!thisEl.serviceName) {
+          console.log('Service name is not defined!');
+          return;
+        }
+        thisEl.showLoading();
+        Promise.resolve()
+          .then(() => {
+            return thisEl.getAppControllerModule();
+          })
+          .then(appc => {
+            console.log('appc: ');
+            console.log(appc);
+            console.log('thisEl.serviceName');
+            console.log(thisEl.serviceName);
+            return appc.resolveCache(thisEl.serviceName)
+          })
+          .then(cacheInfo => {
+            console.log('cacheInfo');
+            console.log(cacheInfo);
+            if (!cacheInfo || !cacheInfo.listUrl) {
+              console.log('no listUrl for cache. cache: ', cacheInfo);
+              thisEl.hideLoading();
+            } else {
+              thisEl.url = cacheInfo.listUrl;
+              thisEl.$.ajax.generateRequest();
+            }
+            resolve();
+          })
+          .catch(err => {
+            console.log('refresh went wrong: ' + err);
+            thisEl.hideLoading();
+            resolve();
+          });
+      });
+    },
 
-        })
-        .catch(err => {
-          console.log('refresh went wrong: ', err);
-          thisEl.hideLoading();
-        });
+    showLoading: function() {
+      this.$.loading.classList.remove('hide');
     },
 
     hideLoading: function() {
       this.$.loading.classList.add('hide');
-    }
+    },
   });
   </script>
 </dom-module>
