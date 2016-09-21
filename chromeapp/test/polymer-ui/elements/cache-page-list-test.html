@@ -130,6 +130,14 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
               // fire upon completion and do our assertions there.
               myEl.$.ajax.addEventListener('response', function() {
                 assert.deepEqual(myEl.$.ajax.lastResponse, cacheJson);
+
+                // Ideally here we would like to make sure we have two
+                // cached-page-summary nodes, but I'm struggling to access
+                // these via the DOM api, so for now I'm ignoring them.
+                // var els = myEl.$$('cached-page-summary');
+                // var els =
+                // Polymer.dom(myEl.root).querySelectorAll('.pagesummary');
+
                 ajaxAssertionsComplete = true;
 
                 if (ajaxAssertionsComplete && promiseAssertionsComplete) {
