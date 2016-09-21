@@ -51,8 +51,8 @@ Example:
       <template is="dom-repeat" items="{{caches}}">
         <cache-page-list
           name="view{{index}}" 
-          url="{{item.listUrl}}">
-        </my-view1>
+          service-name="{{item.serviceName}}">
+        </cache-page-list>
       </template>
 
       <settings-view name="settings"></settings-view>

@@ -6441,9 +6441,9 @@ Example:
     <iron-pages role="main" selected="{{incoming}}" attr-for-selected="name">
 
       <template is="dom-repeat" items="{{caches}}">
-        <cache-page-list name="view{{index}}" url="{{item.listUrl}}">
-        
-      </cache-page-list></template>
+        <cache-page-list name="view{{index}}" service-name="{{item.serviceName}}">
+        </cache-page-list>
+      </template>
 
       <settings-view name="settings"></settings-view>
 

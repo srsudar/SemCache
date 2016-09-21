@@ -81,13 +81,49 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
     is: 'cache-page-list',
 
     properties: {
-      url: String
+      url: String,
+      serviceName: {
+        type: String,
+        reflectToAttribute: true,
+        notify: true,
+      }
     },
+
+    getAppControllerModule: function() {
+      var appc = require('appController');
+      return appc;
+    },
+
     refresh: function() {
-      this.$.ajax.generateRequest();
-      this.$.loading.classList.remove('hide');
       console.log('CLICKED FAB');
+      if (!this.serviceName) {
+        console.log('Service name is not defined!');
+        return;
+      }
+      var thisEl = this;
+      this.$.loading.classList.remove('hide');
+      Promise.resolve()
+        .then(() => {
+          return thisEl.getAppControllerModule();
+        })
+        .then(appc => {
+          return appc.resolveCache(this.serviceName)
+        })
+        .then(cacheInfo => {
+          if (!cacheInfo || !cacheInfo.listUrl) {
+            console.log('no listUrl for cache. cache: ', cacheInfo);
+          } else {
+            thisEl.url = cacheInfo.listUrl;
+            this.$.ajax.generateRequest();
+          }
+
+        })
+        .catch(err => {
+          console.log('refresh went wrong: ', err);
+          thisEl.hideLoading();
+        });
     },
+
     hideLoading: function() {
       this.$.loading.classList.add('hide');
     }

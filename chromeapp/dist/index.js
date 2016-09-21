@@ -17612,13 +17612,49 @@ Polymer({
     is: 'cache-page-list',
 
     properties: {
-      url: String
+      url: String,
+      serviceName: {
+        type: String,
+        reflectToAttribute: true,
+        notify: true,
+      }
     },
+
+    getAppControllerModule: function() {
+      var appc = require('appController');
+      return appc;
+    },
+
     refresh: function() {
-      this.$.ajax.generateRequest();
-      this.$.loading.classList.remove('hide');
       console.log('CLICKED FAB');
+      if (!this.serviceName) {
+        console.log('Service name is not defined!');
+        return;
+      }
+      var thisEl = this;
+      this.$.loading.classList.remove('hide');
+      Promise.resolve()
+        .then(() => {
+          return thisEl.getAppControllerModule();
+        })
+        .then(appc => {
+          return appc.resolveCache(this.serviceName)
+        })
+        .then(cacheInfo => {
+          if (!cacheInfo || !cacheInfo.listUrl) {
+            console.log('no listUrl for cache. cache: ', cacheInfo);
+          } else {
+            thisEl.url = cacheInfo.listUrl;
+            this.$.ajax.generateRequest();
+          }
+
+        })
+        .catch(err => {
+          console.log('refresh went wrong: ', err);
+          thisEl.hideLoading();
+        });
     },
+
     hideLoading: function() {
       this.$.loading.classList.add('hide');
     }
@@ -22132,7 +22168,7 @@ Polymer({
         var appc = this.getAppControllerModule();
         var _this = this;
         this.$.loading.classList.remove('hide');
-        appc.getBrowseableCaches()
+        appc.getPeerCacheNames()
           .then(browsedCaches => {
             _this.caches = browsedCaches;
             _this.$.loading.classList.add('hide');
@@ -22172,41 +22208,15 @@ Polymer({
       is: 'cache-display',
 
       properties: {
-        caches: Array,
+        caches: {
+          type: Array,
+          reflectToAttribute: true,
+          notify: true
+        },
         incoming: {
           type: String,
           reflectToAttribute: true,
           notify: true
-        },
-        /**
-         * `fancy` indicates that the element should don a monocle and tophat,
-         * while checking its pocket watch.
-         */
-        fancy: Boolean,
-
-        /**
-         * Describes the author of the element, but is really just an excuse to
-         * show off JSDoc annotations.
-         *
-         * @type {{name: string, image: string}}
-         */
-        author: {
-          type: Object,
-          // Use `value` to provide a default value for a property, by setting it
-          // on your element's prototype.
-          //
-          // If you provide a function, as we do here, Polymer will call that
-          // _per element instance_.
-          //
-          // We do that to ensure that each element gets its own copy of the
-          // value, rather than having it shared across all instances (via the
-          // prototype).
-          value: function() {
-            return {
-              name:  'Dimitri Glazkov',
-              image: 'http://addyosmani.com/blog/wp-content/uploads/2013/04/unicorn.jpg',
-            };
-          }
         },
       },
 
@@ -22236,36 +22246,6 @@ Polymer({
         //
         // Use this to clean up anything you did in `attached`.
       },
-
-      // Element Behavior
-
-      /**
-       * Sometimes it's just nice to say hi.
-       *
-       * @param {string} greeting A positive greeting.
-       * @return {string} The full greeting.
-       */
-      sayHello: function(greeting) {
-        var response = greeting || 'Hello World!';
-        return 'seed-element says, ' + response;
-      },
-
-      /**
-       * The `seed-element-lasers` event is fired whenever `fireLasers` is called.
-       *
-       * @event seed-element-lasers
-       * @detail {{sound: String}}
-       */
-
-      /**
-       * Attempt to destroy this element's enemies with a beam of light!
-       *
-       * Or, at least, dispatch an event in the vain hope that someone else will
-       * do the zapping.
-       */
-      fireLasers: function() {
-        this.fire('seed-element-lasers', {sound: 'Pew pew!'});
-      }
     });
 Polymer({
 
