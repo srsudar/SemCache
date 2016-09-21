@@ -87,7 +87,7 @@ Provide the list of caches for other elements to consume.
         var appc = this.getAppControllerModule();
         var _this = this;
         this.$.loading.classList.remove('hide');
-        appc.getBrowseableCaches()
+        appc.getPeerCacheNames()
           .then(browsedCaches => {
             _this.caches = browsedCaches;
             _this.$.loading.classList.add('hide');
