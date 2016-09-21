@@ -19,9 +19,11 @@ function resetAppController() {
 /**
  * Create an object as is returned by getBrowseableCaches.
  */
-function createCacheObj(domainName, instanceName, ipAddress, port, listUrl) {
+function createCacheObj(domainName, friendlyName, ipAddress, port, listUrl) {
+  var instanceName = friendlyName + '._semcache._tcp.local';
   var result = {
     domainName: domainName,
+    friendlyName: friendlyName,
     instanceName: instanceName,
     ipAddress: ipAddress,
     port: port,
@@ -46,6 +48,30 @@ function rejectIfMissingSettingHelper(instanceName, port, dirId, host, t) {
     t.end();
     resetAppController();
   });
+}
+
+/**
+ * Create service names as returned by getPeerCacheNames.
+ *
+ * @param {string} serviceType
+ * @param {integer} numCaches the number of caches to create
+ *
+ * @return {Array<Object>} Array of objects as returned by getPeerCacheNames
+ */
+function createCacheNames(serviceType, numCaches) {
+  var baseName = 'Cache No ';
+  var result = [];
+  for (var i = 0; i < numCaches; i++) {
+    var friendlyName = baseName + i;
+    var fullName = friendlyName + '.' + serviceType + '.local';
+    var cacheName = {
+      serviceType: serviceType,
+      serviceName: fullName,
+      friendlyName: friendlyName
+    };
+    result.push(cacheName);
+  }
+  return result;
 }
 
 test('saveMhtmlAndOpen persists and opens', function(t) {
@@ -278,12 +304,12 @@ test('getListUrlForSelf is sensible', function(t) {
 test('getOwnCache returns correct info', function(t) {
   var hostName = 'myself.local';
   var serverPort = 4444;
-  var instanceName = 'My Cache';
+  var friendlyName = 'My Cache';
   var ipAddress = '4.3.2.1';
 
   var listUrl = 'list url';
   
-  var getInstanceNameSpy = sinon.stub().returns(instanceName);
+  var getInstanceNameSpy = sinon.stub().returns(friendlyName);
   var getServerPortSpy = sinon.stub().returns(serverPort);
   var getHostNameSpy = sinon.stub().returns(hostName);
   var getHttpIfaceSpy = sinon.stub().returns({ address: ipAddress });
@@ -302,13 +328,99 @@ test('getOwnCache returns correct info', function(t) {
   appc.getListeningHttpInterface = getHttpIfaceSpy;
 
   var expected = createCacheObj(
-    hostName, instanceName, ipAddress, serverPort, listUrl
+    hostName, friendlyName, ipAddress, serverPort, listUrl
   );
   var actual = appc.getOwnCache();
 
   t.deepEqual(actual, expected);
   t.end();
   resetAppController();
+});
+
+test('getOwnCacheName correct', function(t) {
+  var friendlyName = 'Sam Cache';
+  var fullName = 'Sam Cache._semcache._tcp.local';
+  var serviceType = '_semcache._tcp';
+
+  var expected = {
+    serviceType: serviceType,
+    friendlyName: friendlyName,
+    serviceName: fullName
+  };
+
+  var getInstanceNameSpy = sinon.stub().returns(friendlyName);
+  var appc = proxyquire('../../app/scripts/app-controller', {
+    './settings': {
+      getInstanceName: getInstanceNameSpy,
+    }
+  });
+
+  var actual = appc.getOwnCacheName();
+  t.deepEqual(expected, actual);
+  t.end();
+});
+
+test('getPeerCacheNames does not query network if not started', function(t) {
+  var appc = require('../../app/scripts/app-controller');
+  appc.SERVERS_STARTED = false;
+  var expected = [];
+
+  appc.getPeerCacheNames()
+    .then(actual => {
+      t.deepEqual(actual, expected); 
+      t.end();
+      resetAppController();
+    });
+});
+
+test('getPeerCacheNames does not query network if no network', function(t) {
+  var cacheName = { friendlyName: 'my name' };
+  var getOwnCacheNameSpy = sinon.stub().returns(cacheName);
+
+  var appc = require('../../app/scripts/app-controller');
+  appc.SERVERS_STARTED = true;
+  appc.getOwnCacheName = getOwnCacheNameSpy;
+  appc.networkIsActive = sinon.stub().returns(false);
+
+  var expected = [cacheName];
+
+  appc.getPeerCacheNames()
+    .then(actual => {
+      t.deepEqual(actual, expected); 
+      t.end();
+      resetAppController();
+    });
+});
+
+test('getPeerCacheNames resolves if running', function(t) {
+  var serviceType = '_semcache._tcp';
+  var cacheNames = createCacheNames(serviceType, 6);
+
+  var self = cacheNames[0];
+  // We want to find all the other caches, in reverse order, with ourselves
+  // included.
+  var foundCaches = cacheNames.slice(0);
+  foundCaches.reverse();
+
+  var browseForSemCacheInstanceNamesSpy = sinon.stub().resolves(foundCaches);
+  var getOwnCacheNameSpy = sinon.stub().returns(self);
+  var networkIsActiveSpy = sinon.stub().returns(true);
+
+  var appc = proxyquire('../../app/scripts/app-controller', {
+    './dnssd/dns-sd-semcache': {
+      browseForSemCacheInstanceNames: browseForSemCacheInstanceNamesSpy
+    }
+  });
+  appc.getOwnCacheName = getOwnCacheNameSpy;
+  appc.networkIsActive = networkIsActiveSpy;
+  appc.SERVERS_STARTED = true;
+
+  appc.getPeerCacheNames()
+    .then(actual => {
+      t.deepEqual(actual, cacheNames);
+      t.end();
+      resetAppController();
+    });
 });
 
 test('getBrowseableCaches does not query network if not started', function(t) {
@@ -437,4 +549,84 @@ test('stopServers restores state', function(t) {
   t.false(appc.networkIsActive());
   t.end();
   resetAppController();
+});
+
+test('resolveCache does not use network for self', function(t) {
+  var friendlyName = 'friendly name';
+  var ownCache = createCacheObj(
+    'me.local', friendlyName, '1.2.3.4', 7777, 'http://me.local:7777/list'
+  );
+  var fullName = ownCache.instanceName;
+
+  var resolveCacheSpy = sinon.stub().resolves();
+  var getOwnCacheSpy = sinon.stub().returns(ownCache);
+
+  var appc = proxyquire('../../app/scripts/app-controller', {
+    './dnssd/dns-sd-semcache': {
+      resolveCache: resolveCacheSpy
+    },
+  });
+  appc.getOwnCache = getOwnCacheSpy;
+
+  appc.resolveCache(fullName)
+    .then(actual => {
+      t.deepEqual(actual, ownCache);
+      t.equal(resolveCacheSpy.callCount, 0);
+      t.end();
+      resetAppController();
+    });
+});
+
+test('resolveCache queries network if needed and resolves', function(t) {
+  var ownCache = createCacheObj(
+    'me.local', 'own cache', '1.2.3.4', 7777, 'http://me.local:7777/list'
+  );
+
+  var friendlyName = 'friendly name';
+  var expected = createCacheObj(
+    'expected.local', friendlyName, '123.456.789.0', 9999, 'http://list.json'
+  );
+  var fullName = expected.instanceName;
+
+  var resolveCacheSpy = sinon.stub().withArgs(fullName).resolves(expected);
+  var getOwnCacheSpy = sinon.stub().returns(ownCache);
+
+  var appc = proxyquire('../../app/scripts/app-controller', {
+    './dnssd/dns-sd-semcache': {
+      resolveCache: resolveCacheSpy
+    },
+  });
+  appc.getOwnCache = getOwnCacheSpy;
+
+  appc.resolveCache(fullName)
+    .then(actual => {
+      t.deepEqual(actual, expected);
+      t.end();
+      resetAppController();
+    });
+});
+
+test('resolveCache rejects if query fails', function(t) {
+  var ownCache = createCacheObj(
+    'me.local', 'own cache', '1.2.3.4', 7777, 'http://me.local:7777/list'
+  );
+  var fullName = 'missingRecords';
+  var expected = { msg: 'something went wrong '};
+
+  var resolveCacheSpy = sinon.stub().withArgs(fullName).rejects(expected);
+  var getOwnCacheSpy = sinon.stub().returns(ownCache);
+
+  var appc = proxyquire('../../app/scripts/app-controller', {
+    './dnssd/dns-sd-semcache': {
+      resolveCache: resolveCacheSpy
+    },
+  });
+  appc.getOwnCache = getOwnCacheSpy;
+
+  appc.resolveCache(fullName)
+    .catch(actual => {
+      t.deepEqual(actual, expected);
+      t.end();
+      resetAppController();
+    });
 });

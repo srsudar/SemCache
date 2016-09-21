@@ -23837,7 +23837,8 @@ exports.getListUrlForSelf = function() {
  * @return {object} the cache object that represents this machine's own cache.
  */
 exports.getOwnCache = function() {
-  var instanceName = settings.getInstanceName();
+  var friendlyName = settings.getInstanceName();
+  var instanceName = dnssdSem.getFullName(friendlyName);
   var serverPort = settings.getServerPort();
   var hostName = settings.getHostName();
   var ipAddress = exports.getListeningHttpInterface().address;
@@ -23846,6 +23847,7 @@ exports.getOwnCache = function() {
   var result = {
     domainName: hostName,
     instanceName: instanceName,
+    friendlyName: friendlyName,
     port: serverPort,
     ipAddress: ipAddress,
     listUrl: listUrl
@@ -23858,6 +23860,121 @@ exports.getOwnCache = function() {
  */
 exports.networkIsActive = function() {
   return exports.SERVERS_STARTED;
+};
+
+/**
+ * This should return the same object that getPeerCaches should return.
+ * However, we don't want to query the network to get this information, as
+ * people should be able to browse on their own machine even if the network
+ * doesn't support UDP.
+ *
+ * @return {object} Object identical to that returned by getPeerCacheNames, but
+ * for this device
+ */
+exports.getOwnCacheName = function() {
+  var friendlyName = settings.getInstanceName();
+  var fullName = dnssdSem.getFullName(friendlyName);
+  var serviceType = dnssdSem.getSemCacheServiceString();
+
+  var result = {
+    serviceType: serviceType,
+    friendlyName: friendlyName,
+    serviceName: fullName
+  };
+  
+  return result;
+};
+
+/**
+ * Obtain the operational information to use the cache. Does not use the
+ * network if we are requesting our own information. Otherwise, queries the
+ * network for the SRV and A records needed to resolve the service and resolves
+ * with the operational information needed to connect to the service.
+ *
+ * @param {string} fullName the full <instance>.<type>.<domain> name of the
+ * service
+ *
+ * @return {Promise} Promise that resolves with an object like the following,
+ * or rejects if something went wrong.
+ * {
+ *   domainName: 'laptop.local',
+ *   friendlyName: 'My Cache',
+ *   instanceName: 'My Cache._semcache._tcp.local',
+ *   ipAddress: '1.2.3.4',
+ *   port: 1111,
+ *   listUrl: 'http://1.2.3.4:1111/list_pages'
+ * }
+ */
+exports.resolveCache = function(fullName) {
+  return new Promise(function(resolve, reject) {
+    var ownCache = exports.getOwnCache();
+    if (fullName === ownCache.instanceName) {
+      // We're looking for ourselves--don't both querying the network.
+      resolve(ownCache);
+      return;
+    }
+    // We need to hit the network.
+    dnssdSem.resolveCache(fullName)
+      .then(cache => {
+        resolve(cache);
+      })
+      .catch(err => {
+        reject(err);
+      });
+  });
+};
+
+/**
+ * Obtain an Array of all the cache names that can be browsed on the current
+ * local network.
+ *
+ * Unlike getBrowseableCaches, this method only returns the information
+ * contained in a PTR request and is safe for caching. An additional call will
+ * be required to obtain operational information (like the IP address) of these
+ * caches.
+ *
+ * @return {Promise} Promise that resolves a list of objects like the
+ * following:
+ * {
+ *   serviceType: '_semcache._tcp',
+ *   friendlyName: 'Magic Cache',
+ *   serviceName: 'Magic Cache._semcache._tcp.local'
+ * }
+ */
+exports.getPeerCacheNames = function() {
+  if (!exports.SERVERS_STARTED) {
+    return Promise.resolve([]);
+  }
+
+  // First we'll construct our own cache info. Some of these variables may not
+  // be set if we are initializing for the first time and settings haven't been
+  // created.
+  var thisCacheName = exports.getOwnCacheName();
+
+  var result = [thisCacheName];
+
+  if (!exports.networkIsActive()) {
+    // When we shouldn't query the network.
+    return Promise.resolve(result);
+  }
+
+  return new Promise(function(resolve) {
+    dnssdSem.browseForSemCacheInstanceNames()
+      .then(instanceNames => {
+        // sort by instance name.
+        instanceNames.sort(function(a, b) {
+          return a.serviceName.localeCompare(b.serviceName);
+        });
+        instanceNames.forEach(instance => {
+          if (instance.serviceName === thisCacheName.serviceName) {
+            // We've found ourselves. Don't add it.
+            return;
+          }
+          result.push(instance);
+        });
+        resolve(result);
+      });
+  });
 };
 
 /**
@@ -24317,6 +24434,7 @@ exports.getNetworkInterfaces = function() {
  */
 
 var dnssd = require('./dns-sd');
+var serverApi = require('../server/server-api');
 
 var SEMCACHE_SERVICE_STRING = '_semcache._tcp';
 
@@ -24325,6 +24443,22 @@ var SEMCACHE_SERVICE_STRING = '_semcache._tcp';
  */
 exports.getSemCacheServiceString = function() {
   return SEMCACHE_SERVICE_STRING;
+};
+
+/**
+ * Get the fully qualified name for an instance from its friendly name. E.g.
+ * convert from `Tyrion's Cache` to `Tyrion's Cache._semcache._tcp.local`.
+ *
+ * @param {string} friendlyName the user friendly name of the SemCache instance
+ *
+ * @return {string} the fully qualified <instance>.<type>.<domain> name
+ */
+exports.getFullName = function(friendlyName) {
+  return dnssd.createSrvName(
+    friendlyName,
+    exports.getSemCacheServiceString(),
+    dnssd.LOCAL_SUFFIX
+  );
 };
 
 /**
@@ -24346,6 +24480,65 @@ exports.registerSemCache = function(host, name, port) {
 };
 
 /**
+ * Browse for all the SemCache instance names on the local network. This does
+ * not return the operational information (e.g. IP address and port) for the
+ * caches--it only returns a list of names on the network. Operational
+ * information should be resolved as needed using the resolveCache() function.
+ *
+ * @return {Promise} Promise that resolves with an Array of objects as returned
+ * from dnssd.queryForServiceInstances
+ */
+exports.browseForSemCacheInstanceNames = function() {
+  return dnssd.queryForServiceInstances(
+    exports.getSemCacheServiceString(),
+    dnssd.DEFAULT_QUERY_WAIT_TIME,
+    dnssd.DEFAULT_NUM_PTR_RETRIES
+  );
+};
+
+/**
+ * Obtain the operational information necessary to connect to the cache with
+ * the given name.
+ *
+ * This is the method responsible for querying the network for SRV and A
+ * records to resolve the port and IP address of the service. Beyond just
+ * surfacing the data from the SRV and A records, it also computes the URL
+ * required to connect to the list of pages in the cache.
+ *
+ * @param {string} fullName the full name of the cache, e.g. `Tyrion's
+ * Cache._semcache._tcp.local`
+ *
+ * @return {Promise} that resolves with an object like the following. The
+ * promise rejects if the resolution does not succeed (e.g. from a missing SRV
+ * or A record).
+ * {
+ *   friendlyName: 'Sam Cache',
+ *   instanceName: 'Sam Cache._semcache._tcp.local',
+ *   domainName: 'laptop.local',
+ *   ipAddress: '123.4.5.6',
+ *   port: 8888,
+ *   listUrl: 'http://123.4.5.6:8888/list_pages'
+ * }
+ */
+exports.resolveCache = function(fullName) {
+  return new Promise(function(resolve, reject) {
+    dnssd.resolveService(fullName)
+      .then(info => {
+        var listUrl = serverApi.getListPageUrlForCache(
+          info.ipAddress, info.port
+        );
+        info.listUrl = listUrl;
+        resolve(info);
+      })
+      .catch(err => {
+        // something went wrong.
+        reject(err);
+      });
+  });
+
+};
+
+/**
  * Browse for SemCache instances on the local network. Returns a Promise that
  * resolves with a list of objects like the following:
  *
@@ -24363,7 +24556,7 @@ exports.browseForSemCacheInstances = function() {
   return result;
 };
 
-},{"./dns-sd":"dnssd"}],"dnsc":[function(require,module,exports){
+},{"../server/server-api":14,"./dns-sd":"dnssd"}],"dnsc":[function(require,module,exports){
 /*jshint esnext:true*/
 /* globals Promise */
 'use strict';
@@ -25684,7 +25877,8 @@ exports.getUserFriendlyName = function(instanceTypeDomain) {
  * representing services, like the following:
  * {
  *   serviceType: '_semcache._tcp',
- *   serviceName: 'Magic Cache'
+ *   friendlyName: 'Magic Cache',
+ *   serviceName: 'Magic Cache._semcache._tcp.local'
  * }
  */
 exports.queryForServiceInstances = function(
@@ -25709,10 +25903,14 @@ exports.queryForServiceInstances = function(
       packets.forEach(packet => {
         packet.answers.forEach(answer => {
           if (answer.recordType === rType && answer.recordClass === rClass) {
+            var friendlyName = exports.getUserFriendlyName(
+              answer.instanceName
+            );
             result.push(
               {
                 serviceType: answer.serviceType,
-                serviceName: answer.instanceName
+                serviceName: answer.instanceName,
+                friendlyName: friendlyName
               }
             );
           }
