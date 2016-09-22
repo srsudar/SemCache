@@ -317,12 +317,13 @@ exports.resolvePeers = function(cacheNames, resolveDelay, toLog) {
     var nextIter = function() {
       var cacheName = cacheNames[iteration];
       var serviceName = cacheName.serviceName;
-      var startResolve = exports.getNow();
+      var startResolve = null;
       iteration += 1;
 
       return new Promise(function(resolve, reject) {
         util.wait(resolveDelay)
           .then(() => {
+            startResolve = exports.getNow();
             return appc.resolveCache(serviceName);
           })
           .then(cache => {
