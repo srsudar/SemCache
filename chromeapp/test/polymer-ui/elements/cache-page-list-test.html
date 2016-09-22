@@ -131,18 +131,32 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
               myEl.$.ajax.addEventListener('response', function() {
                 assert.deepEqual(myEl.$.ajax.lastResponse, cacheJson);
 
-                // Ideally here we would like to make sure we have two
-                // cached-page-summary nodes, but I'm struggling to access
-                // these via the DOM api, so for now I'm ignoring them.
-                // var els = myEl.$$('cached-page-summary');
-                // var els =
-                // Polymer.dom(myEl.root).querySelectorAll('.pagesummary');
+                flush(function() {
+                  // We are using flush to ensure that dom-repeat has had time
+                  // to add the cached-page-summary elements. Note that this is
+                  // NOT intending to test that dom-repeat works, which could
+                  // be a criticism of these assertions. Rather we are using
+                  // these assertions to ensure we are configuring the repeat
+                  // elements correctly.
+                  var repeatedEls = Polymer.dom(myEl.root).querySelectorAll(
+                    'cached-page-summary'
+                  );
+                  var expectedPages = cacheJson.cachedPages;
+                  for (var i = 0; i < expectedPages.length; i++) {
+                    var expected = expectedPages[i];
+                    var actual = repeatedEls[i];
+                    assert.equal(actual.captureUrl, expected.captureUrl);
+                    assert.equal(actual.captureDate, expected.captureDate);
+                    assert.equal(actual.accessPath, expected.accessPath);
+                    assert.deepEqual(actual.metadata, expected.metadata);
+                  }
 
-                ajaxAssertionsComplete = true;
+                  ajaxAssertionsComplete = true;
+                  if (ajaxAssertionsComplete && promiseAssertionsComplete) {
+                    done();
+                  }
+                });
 
-                if (ajaxAssertionsComplete && promiseAssertionsComplete) {
-                  done();
-                }
               });
 
               // We should have populated the response pages
