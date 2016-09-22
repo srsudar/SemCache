@@ -25618,7 +25618,9 @@ exports.resolveService = function(serviceName) {
         console.log('srvInfos: ', srvInfos);
       }
       if (!srvInfos || srvInfos.length === 0) {
-        reject('did not find SRV record for service: ' + serviceName);
+        var msg = 'did not find SRV record for service: ' + serviceName;
+        console.warn(msg);
+        reject(msg);
         return;
       }
       srvRec = srvInfos[0];
@@ -25634,7 +25636,9 @@ exports.resolveService = function(serviceName) {
         console.log('aInfos: ', aInfos);
       }
       if (!aInfos || aInfos.length === 0) {
-        reject('did not find A record for SRV: ' + JSON.stringify(srvRec));
+        var msg = 'did not find A record for SRV: ' + JSON.stringify(srvRec);
+        console.warn(msg);
+        reject(msg);
         return;
       }
       aRec = aInfos[0];
@@ -26512,7 +26516,8 @@ exports.runDiscoverPeerPagesIterationLazy = function(
     var finishBrowsePeers = null;
     var finishBrowsePages = null;
     var logInfo = {};
-    logInfo.type = 'disocverPeersLazy';
+    logInfo.resolveErrs = [];
+    logInfo.type = 'discoverPeersLazy';
     appc.getPeerCacheNames()
     .then(cacheNames => {
       console.log('found peer cache names: ', cacheNames);
@@ -26538,6 +26543,7 @@ exports.runDiscoverPeerPagesIterationLazy = function(
       cacheResults.forEach(cacheResult => {
         if (!cacheResult.resolved) {
           // probably caught
+          logInfo.resolveErrs.push(cacheResult);
           return;
         }
         var cache = cacheResult.resolved;

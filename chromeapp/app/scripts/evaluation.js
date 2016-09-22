@@ -376,7 +376,8 @@ exports.runDiscoverPeerPagesIterationLazy = function(
     var finishBrowsePeers = null;
     var finishBrowsePages = null;
     var logInfo = {};
-    logInfo.type = 'disocverPeersLazy';
+    logInfo.resolveErrs = [];
+    logInfo.type = 'discoverPeersLazy';
     appc.getPeerCacheNames()
     .then(cacheNames => {
       console.log('found peer cache names: ', cacheNames);
@@ -402,6 +403,7 @@ exports.runDiscoverPeerPagesIterationLazy = function(
       cacheResults.forEach(cacheResult => {
         if (!cacheResult.resolved) {
           // probably caught
+          logInfo.resolveErrs.push(cacheResult);
           return;
         }
         var cache = cacheResult.resolved;
