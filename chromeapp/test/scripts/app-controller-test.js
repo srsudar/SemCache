@@ -4,6 +4,7 @@ var test = require('tape');
 var proxyquire = require('proxyquire');
 var sinon = require('sinon');
 require('sinon-as-promised');
+var testUtil = require('./test-util');
 
 /**
  * Manipulating the object directly leads to polluting the require cache. Any
@@ -14,22 +15,6 @@ function resetAppController() {
   delete require.cache[
     require.resolve('../../app/scripts/app-controller')
   ];
-}
-
-/**
- * Create an object as is returned by getBrowseableCaches.
- */
-function createCacheObj(domainName, friendlyName, ipAddress, port, listUrl) {
-  var instanceName = friendlyName + '._semcache._tcp.local';
-  var result = {
-    domainName: domainName,
-    friendlyName: friendlyName,
-    instanceName: instanceName,
-    ipAddress: ipAddress,
-    port: port,
-    listUrl: listUrl
-  };
-  return result;
 }
 
 function rejectIfMissingSettingHelper(instanceName, port, dirId, host, t) {
@@ -48,30 +33,6 @@ function rejectIfMissingSettingHelper(instanceName, port, dirId, host, t) {
     t.end();
     resetAppController();
   });
-}
-
-/**
- * Create service names as returned by getPeerCacheNames.
- *
- * @param {string} serviceType
- * @param {integer} numCaches the number of caches to create
- *
- * @return {Array<Object>} Array of objects as returned by getPeerCacheNames
- */
-function createCacheNames(serviceType, numCaches) {
-  var baseName = 'Cache No ';
-  var result = [];
-  for (var i = 0; i < numCaches; i++) {
-    var friendlyName = baseName + i;
-    var fullName = friendlyName + '.' + serviceType + '.local';
-    var cacheName = {
-      serviceType: serviceType,
-      serviceName: fullName,
-      friendlyName: friendlyName
-    };
-    result.push(cacheName);
-  }
-  return result;
 }
 
 test('saveMhtmlAndOpen persists and opens', function(t) {
@@ -327,7 +288,7 @@ test('getOwnCache returns correct info', function(t) {
   });
   appc.getListeningHttpInterface = getHttpIfaceSpy;
 
-  var expected = createCacheObj(
+  var expected = testUtil.createCacheObj(
     hostName, friendlyName, ipAddress, serverPort, listUrl
   );
   var actual = appc.getOwnCache();
@@ -394,7 +355,7 @@ test('getPeerCacheNames does not query network if no network', function(t) {
 
 test('getPeerCacheNames resolves if running', function(t) {
   var serviceType = '_semcache._tcp';
-  var cacheNames = createCacheNames(serviceType, 6);
+  var cacheNames = testUtil.createCacheNames(serviceType, 6);
 
   var self = cacheNames[0];
   // We want to find all the other caches, in reverse order, with ourselves
@@ -430,7 +391,7 @@ test('getBrowseableCaches does not query network if not started', function(t) {
   var ipAddress = '4.3.2.1';
   var listUrl = 'list url';
 
-  var ownCache = createCacheObj(
+  var ownCache = testUtil.createCacheObj(
     hostName, instanceName, ipAddress, serverPort, listUrl
   );
   var browseSpy = sinon.spy();
@@ -462,13 +423,13 @@ test('getBrowseableCaches dedupes and returns correct list', function(t) {
 
   var listUrl = 'list url';
 
-  var ownCache = createCacheObj(
+  var ownCache = testUtil.createCacheObj(
     hostName, instanceName, ipAddress, serverPort, listUrl
   );
-  var firstCache = createCacheObj(
+  var firstCache = testUtil.createCacheObj(
     'someone.local', 'aaa cache', '5.5.5.5', 1234, listUrl
   );
-  var lastCache = createCacheObj(
+  var lastCache = testUtil.createCacheObj(
     'elseone.local', 'zzz cache', '8.8.8.8', 9999, listUrl
   );
 
@@ -553,7 +514,7 @@ test('stopServers restores state', function(t) {
 
 test('resolveCache does not use network for self', function(t) {
   var friendlyName = 'friendly name';
-  var ownCache = createCacheObj(
+  var ownCache = testUtil.createCacheObj(
     'me.local', friendlyName, '1.2.3.4', 7777, 'http://me.local:7777/list'
   );
   var fullName = ownCache.instanceName;
@@ -578,12 +539,12 @@ test('resolveCache does not use network for self', function(t) {
 });
 
 test('resolveCache queries network if needed and resolves', function(t) {
-  var ownCache = createCacheObj(
+  var ownCache = testUtil.createCacheObj(
     'me.local', 'own cache', '1.2.3.4', 7777, 'http://me.local:7777/list'
   );
 
   var friendlyName = 'friendly name';
-  var expected = createCacheObj(
+  var expected = testUtil.createCacheObj(
     'expected.local', friendlyName, '123.456.789.0', 9999, 'http://list.json'
   );
   var fullName = expected.instanceName;
@@ -607,7 +568,7 @@ test('resolveCache queries network if needed and resolves', function(t) {
 });
 
 test('resolveCache rejects if query fails', function(t) {
-  var ownCache = createCacheObj(
+  var ownCache = testUtil.createCacheObj(
     'me.local', 'own cache', '1.2.3.4', 7777, 'http://me.local:7777/list'
   );
   var fullName = 'missingRecords';

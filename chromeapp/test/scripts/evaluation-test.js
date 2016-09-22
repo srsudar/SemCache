@@ -4,6 +4,7 @@ var test = require('tape');
 var sinon = require('sinon');
 var proxyquire = require('proxyquire');
 require('sinon-as-promised');
+var testUtil = require('./test-util');
 
 var evaluation = require('../../app/scripts/evaluation');
 
@@ -26,6 +27,68 @@ function proxyquireEvaluation(proxies) {
     '../../app/scripts/evaluation',
     proxies
   );
+}
+
+function discoverPeerPagesHelper(doLazy, t) {
+  var numPeers = 30;
+  var numPages = 15;
+  var numIterations = 4;
+  var key = 'testKey';
+
+  var expected = [
+    { resolved: 'fee' },
+    { resolved: 'fi' },
+    { resolved: 'fo' },
+    { resolved: 'fum' }
+  ];
+
+  proxyquireEvaluation({
+    './util': {
+      wait: sinon.stub().resolves()
+    }
+  });
+  
+  var logTimeSpy = sinon.stub();
+  var runIterationSpy = sinon.stub();
+  for (var i = 0; i < expected.length; i++) {
+    logTimeSpy.onCall(i).resolves();
+    runIterationSpy.onCall(i).resolves(expected[i].resolved);
+  }
+  evaluation.logTime = logTimeSpy;
+
+  if (doLazy) {
+    evaluation.runDiscoverPeerPagesIterationLazy = runIterationSpy;
+  } else {
+    evaluation.runDiscoverPeerPagesIteration = runIterationSpy;
+  }
+
+  var resolveDelay = 4444;
+  evaluation.runDiscoverPeerPagesTrial(
+    numPeers, numPages, numIterations, key, doLazy, resolveDelay
+  )
+  .then(actual => {
+    t.deepEqual(actual, expected);
+
+    for (var j = 0; j < expected.length; j++) {
+      t.deepEqual(
+        logTimeSpy.args[j],
+        [
+          key,
+          {
+            timing: expected[j].resolved,
+            type: 'discoverPeers',
+            numPeers: numPeers,
+            numPages: numPages,
+            numIterations: numIterations,
+            iteration: j
+          }
+        ]
+      );
+    }
+
+    t.end();
+    resetEvaluation(); 
+  });
 }
 
 test('getTimeValues returns result of get', function(t) {
@@ -324,58 +387,11 @@ test('runDiscoverPeerPagesIteration rejects if missing peers', function(t) {
 });
 
 test('runDiscoverPeerPagesTrial calls helper', function(t) {
-  var numPeers = 30;
-  var numPages = 15;
-  var numIterations = 4;
-  var key = 'testKey';
+  discoverPeerPagesHelper(false, t);
+});
 
-  var expected = [
-    { resolved: 'fee' },
-    { resolved: 'fi' },
-    { resolved: 'fo' },
-    { resolved: 'fum' }
-  ];
-
-  proxyquireEvaluation({
-    './util': {
-      wait: sinon.stub().resolves()
-    }
-  });
-  
-  var logTimeSpy = sinon.stub();
-  var runDiscoverPeerPagesIterationSpy = sinon.stub();
-  for (var i = 0; i < expected.length; i++) {
-    logTimeSpy.onCall(i).resolves();
-    runDiscoverPeerPagesIterationSpy.onCall(i).resolves(expected[i].resolved);
-  }
-  evaluation.logTime = logTimeSpy;
-  evaluation.runDiscoverPeerPagesIteration = runDiscoverPeerPagesIterationSpy;
-
-  evaluation.runDiscoverPeerPagesTrial(numPeers, numPages, numIterations, key)
-  .then(actual => {
-    t.deepEqual(actual, expected);
-
-    for (var j = 0; j < expected.length; j++) {
-      console.log('first j: ', j);
-      t.deepEqual(
-        logTimeSpy.args[j],
-        [
-          key,
-          {
-            timing: expected[j].resolved,
-            type: 'discoverPeers',
-            numPeers: numPeers,
-            numPages: numPages,
-            numIterations: numIterations,
-            iteration: j
-          }
-        ]
-      );
-    }
-
-    t.end();
-    resetEvaluation(); 
-  });
+test('runDiscoverPeerPagesTrialLazy calls helper', function(t) {
+  discoverPeerPagesHelper(true, t);
 });
 
 test('logTime calls storage correctly if new stream', function(t) {
@@ -657,5 +673,60 @@ test('runLoadPageTrialForCache correct', function(t) {
     t.end();
     resetEvaluation(); 
   });
+});
 
+test('resolvePeers correct', function(t) {
+  var cacheNames = testUtil.createCacheNames('_semcache._tcp', 3);
+  var caches = testUtil.createCacheObjsFromNames(cacheNames);
+  var toLog = {};
+
+  var expectedErr = { msg: 'something went wrong' };
+
+  var resolveCacheSpy = sinon.stub();
+  resolveCacheSpy.withArgs(cacheNames[0].serviceName).resolves(caches[0]);
+  resolveCacheSpy.withArgs(cacheNames[1].serviceName).resolves(caches[1]);
+  resolveCacheSpy.withArgs(cacheNames[2].serviceName).rejects(expectedErr);
+
+  var resolveDelay = 12345;
+
+  var getNowSpy = sinon.stub();
+  getNowSpy.onCall(0).returns(10);
+  getNowSpy.onCall(1).returns(15);
+  getNowSpy.onCall(2).returns(10);
+  getNowSpy.onCall(3).returns(20);
+
+  var expectedResolves = [ 5, 10 ];  // 15 - 10, 20 - 10
+  var expectedServiceNames = [
+    cacheNames[0].serviceName, 
+    cacheNames[1].serviceName
+  ];
+
+  var waitSpy = sinon.stub().withArgs(resolveDelay).resolves();
+
+  var expected = [
+    { resolved: caches[0] },
+    { resolved: caches[1] },
+    { caught: expectedErr }
+  ];
+
+  proxyquireEvaluation({
+    './util': {
+      wait: waitSpy
+    },
+    './app-controller': {
+      resolveCache: resolveCacheSpy
+    }
+  });
+  evaluation.getNow = getNowSpy;
+
+  evaluation.resolvePeers(cacheNames, resolveDelay, toLog)
+    .then(actual => {
+      t.deepEqual(actual, expected);
+      t.deepEqual(toLog.serviceNames, expectedServiceNames);
+      t.deepEqual(toLog.resolves, expectedResolves);
+      t.equal(waitSpy.callCount, caches.length);
+
+      t.end();
+      resetEvaluation();
+    });
 });

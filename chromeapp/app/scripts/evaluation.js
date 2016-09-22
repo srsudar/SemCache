@@ -205,6 +205,9 @@ exports.fulfillPromises = function(promises) {
  * @param {integer} numIterations the number of times you wish to run the
  * trial
  * @param {string} key the key to which the trials will be logged in storage
+ * @param {boolean} lazyResolve if true, resolve the peers lazily
+ * @param {integer} resolveDelay the number of ms to wait between resolutions
+ * if doing a lazy resolve
  *
  * @return {Promise -> Array} Promise that resolves when all the trials
  * are complete. Resolves with an Array of the resolved results of the
@@ -214,7 +217,9 @@ exports.runDiscoverPeerPagesTrial = function(
   numPeers,
   numPages,
   numIterations,
-  key
+  key,
+  lazyResolve,
+  resolveDelay
   ) {
   key = key || 'lastEval';
   return new Promise(function(resolve) {
@@ -235,7 +240,13 @@ exports.runDiscoverPeerPagesTrial = function(
       // a spell to try and narrow down differences.
       return util.wait(8000)
       .then(() => {
-        return exports.runDiscoverPeerPagesIteration(numPeers, numPages);
+        if (lazyResolve) {
+          return exports.runDiscoverPeerPagesIterationLazy(
+            numPeers, numPages, resolveDelay
+          );
+        } else {
+          return exports.runDiscoverPeerPagesIteration(numPeers, numPages);
+        }
       })
       .then(function resolved(iterationResult) {
         toLog.timing = iterationResult;
@@ -281,6 +292,160 @@ exports.getEvalPagesUrl = function(ipAddress, port, numPages) {
     '?numPages=' +
     numPages;
   return result;
+};
+
+/**
+ * Resolve all peers with timing information.
+ *
+ * @param {Array<Object>} cacheNames an Array of objects as returned by
+ * appc.getPeerCacheNames()
+ * @param {integer} resolveDelay the number of seconds to delay a resolve
+ * request, in ms. Attempts to ease the burden on the network.
+ * @param {Object} toLog an object that will be logged at the end of the trial
+ *
+ * @return {Promise -> Array<Object>} Promise that resolves with an Array of
+ * objects as returned by fulfillPromises. Resolved objects will be Objects as
+ * returned by appc.resolveCache(). The rejected objects will the errors
+ * rejecting in resolveCache().
+ */
+exports.resolvePeers = function(cacheNames, resolveDelay, toLog) {
+  return new Promise(function(resolve) {
+    toLog.resolves = [];
+    toLog.serviceNames = [];
+
+    var iteration = 0;
+    var nextIter = function() {
+      var cacheName = cacheNames[iteration];
+      var serviceName = cacheName.serviceName;
+      var startResolve = exports.getNow();
+      iteration += 1;
+
+      return new Promise(function(resolve, reject) {
+        util.wait(resolveDelay)
+          .then(() => {
+            return appc.resolveCache(serviceName);
+          })
+          .then(cache => {
+            var endResolve = exports.getNow();
+            var totalResolve = endResolve - startResolve;
+            toLog.resolves.push(totalResolve);
+            toLog.serviceNames.push(serviceName);
+            resolve(cache);
+          })
+          .catch(err => {
+            reject(err); 
+          });
+      });
+    };
+
+    var promises = [];
+    for (var i = 0; i < cacheNames.length; i++) {
+      promises.push(nextIter);
+    }
+
+    exports.fulfillPromises(promises)
+      .then(results => {
+        resolve(results);
+      });
+  });
+};
+
+
+/**
+ * Run a single iteration of a discover peers trial. Unlike the non-lazy
+ * version of this method, however, it only resolves caches as it uses them.
+ * This is less likely to overwhelm the network and better respects the DNSSD
+ * spec, which suggests only resolving IP address and port lazily, as needed.
+ *
+ * @param {integer} numPeers the number of peers you expect
+ * @param {integer} numPages the number of pages expected to be on each peer
+ * @param {integer} resolveDelay the number of milliseconds to wait between
+ * resolving each peer.
+ *
+ * @return {Promise} Promise that resolves with the timing information of the
+ * trial
+ */
+exports.runDiscoverPeerPagesIterationLazy = function(
+    numPeers, 
+    numPages,
+    resolveDelay
+) {
+  return new Promise(function(resolve, reject) {
+    var startBrowse = exports.getNow();
+    var finishBrowsePeers = null;
+    var finishBrowsePages = null;
+    var logInfo = {};
+    logInfo.type = 'disocverPeersLazy';
+    appc.getPeerCacheNames()
+    .then(cacheNames => {
+      console.log('found peer cache names: ', cacheNames);
+
+      if (cacheNames.length !== numPeers) {
+        var message = 'missing peer: found ' +
+          cacheNames.length +
+          ', expected ' +
+          numPeers;
+        reject({
+          err: message
+        });
+      }
+
+      finishBrowsePeers = exports.getNow();
+
+      return exports.resolvePeers(cacheNames, resolveDelay, logInfo);
+    })
+    .then(cacheResults => {
+      
+      // We'll create a fetch for each listUrl.
+      var promises = [];
+      cacheResults.forEach(cacheResult => {
+        if (!cacheResult.resolved) {
+          // probably caught
+          return;
+        }
+        var cache = cacheResult.resolved;
+        var evalUrl = exports.getEvalPagesUrl(
+          cache.ipAddress,
+          cache.port,
+          numPages
+        );
+        var prom = util.fetchJson(evalUrl);
+        promises.push(prom);
+      });
+
+      return Promise.all(promises);
+    })
+    .then(cacheJsons => {
+      console.log('found caches: ', cacheJsons);
+
+      cacheJsons.forEach(cacheJson => {
+        if (cacheJson.cachedPages.length !== numPages) {
+          var message = 'missing pages: found ' +
+            cacheJson.cachedPages.length +
+            ', expected ' +
+            numPages;
+          reject({
+            err: message
+          });
+        }
+      });
+      finishBrowsePages = exports.getNow();
+    })
+    .then(() => {
+      var timeBrowsePeers = finishBrowsePeers - startBrowse;
+      var timeBrowsePages = finishBrowsePages - finishBrowsePeers;
+      var totalTime = finishBrowsePages - startBrowse;
+
+      var result = {
+        timeBrowsePeers: timeBrowsePeers,
+        timeBrowsePages: timeBrowsePages,
+        totalTime: totalTime,
+        peerResolves: logInfo
+      };
+
+      resolve(result);
+    });
+  });
 };
 
 /**
