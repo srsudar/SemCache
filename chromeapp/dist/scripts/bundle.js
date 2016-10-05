@@ -691,12 +691,29 @@ var dnsCodes = require('./dns-codes');
 var byteArray = require('./byte-array');
 var qSection = require('./question-section');
 
+// These constants are defined by the number of bits allowed for each value in
+// the DNS spec. Section 4.1.1 of RFC 1035 has a good summary.
+// https://www.ietf.org/rfc/rfc1035.txt
+
+/**
+ * The maximum valid ID of a DNS Packet, defined by the 32 bits allowed in the
+ * spec.
+ */
 var MAX_ID = 65535;
+
+/** The maximum OPCODE is defined by the 4 bits allowed in the spec. */
 var MAX_OPCODE = 15;
+
+/** The maximum RCODE is defined by the 4 bits allowed in the spec. */
 var MAX_RETURN_CODE = 15;
 
+/** The number of octets in the ID of the DNS Packet as defined in the spec. */
 var NUM_OCTETS_ID = 2;
+
+/** The number of octets in the ID of the DNS Packet as defined in the spec. */
 var NUM_OCTETS_FLAGS = 2;
+
+/** The number of octets in the ID of the DNS Packet as defined in the spec. */
 var NUM_OCTETS_SECTION_LENGTHS = 2;
 
 /**
@@ -709,7 +726,7 @@ var NUM_OCTETS_SECTION_LENGTHS = 2;
  *
  * @return {Array<resource record>} an Array of the parsed resource records
  */
-function parseResourceRecordsFromReader(reader, numRecords) {
+exports.parseResourceRecordsFromReader = function(reader, numRecords) {
   var result = [];
   for (var i = 0; i < numRecords; i++) {
     var recordType = resRec.peekTypeInReader(reader);
@@ -733,7 +750,7 @@ function parseResourceRecordsFromReader(reader, numRecords) {
   }
 
   return result;
-}
+};
 
 /**
  * Create a DNS packet. This creates the packet with various flag values. The
@@ -934,9 +951,13 @@ exports.createPacketFromReader = function(reader) {
     result.addQuestion(question);
   }
 
-  var answers = parseResourceRecordsFromReader(reader, numAnswers);
-  var authorities = parseResourceRecordsFromReader(reader, numAuthority);
-  var infos = parseResourceRecordsFromReader(reader, numAdditionalInfo);
+  var answers = exports.parseResourceRecordsFromReader(reader, numAnswers);
+  var authorities = exports.parseResourceRecordsFromReader(
+    reader, numAuthority
+  );
+  var infos = exports.parseResourceRecordsFromReader(
+    reader, numAdditionalInfo
+  );
 
   answers.forEach(answer => {
     result.addAnswer(answer);
@@ -1249,7 +1270,7 @@ exports.getDomainFromByteArrayReader = function(reader) {
 exports.getIpStringAsByteArray = function(ipAddress) {
   var parts = ipAddress.split('.');
 
-  if (parts.length < 4) {
+  if (parts.length !== 4) {
     throw new Error('IP string does not have 4 parts: ' + ipAddress);
   }
 
@@ -1407,7 +1428,7 @@ var NUM_OCTETS_CLASS = 2;
 var NUM_OCTETS_TTL = 4;
 var NUM_OCTETS_RESOURCE_DATA_LENGTH = 2;
 
-/** An A Record has for bytes, all representing an IP address. */
+/** An A Record has four bytes, all representing an IP address. */
 var NUM_OCTETS_RESOURCE_DATA_A_RECORD = 4;
 
 var NUM_OCTETS_PRIORITY = 2;
@@ -2846,175 +2867,7 @@ function unflatten(target, opts) {
   return result
 }
 
-},{"is-buffer":20}],18:[function(require,module,exports){
-exports.endianness = function () { return 'LE' };
-
-exports.hostname = function () {
-    if (typeof location !== 'undefined') {
-        return location.hostname
-    }
-    else return '';
-};
-
-exports.loadavg = function () { return [] };
-
-exports.uptime = function () { return 0 };
-
-exports.freemem = function () {
-    return Number.MAX_VALUE;
-};
-
-exports.totalmem = function () {
-    return Number.MAX_VALUE;
-};
-
-exports.cpus = function () { return [] };
-
-exports.type = function () { return 'Browser' };
-
-exports.release = function () {
-    if (typeof navigator !== 'undefined') {
-        return navigator.appVersion;
-    }
-    return '';
-};
-
-exports.networkInterfaces
-= exports.getNetworkInterfaces
-= function () { return {} };
-
-exports.arch = function () { return 'javascript' };
-
-exports.platform = function () { return 'browser' };
-
-exports.tmpdir = exports.tmpDir = function () {
-    return '/tmp';
-};
-
-exports.EOL = '\n';
-
-},{}],19:[function(require,module,exports){
-// shim for using process in browser
-
-var process = module.exports = {};
-
-// cached from whatever global is present so that test runners that stub it
-// don't break things.  But we need to wrap it in a try catch in case it is
-// wrapped in strict mode code which doesn't define any globals.  It's inside a
-// function because try/catches deoptimize in certain engines.
-
-var cachedSetTimeout;
-var cachedClearTimeout;
-
-(function () {
-  try {
-    cachedSetTimeout = setTimeout;
-  } catch (e) {
-    cachedSetTimeout = function () {
-      throw new Error('setTimeout is not defined');
-    }
-  }
-  try {
-    cachedClearTimeout = clearTimeout;
-  } catch (e) {
-    cachedClearTimeout = function () {
-      throw new Error('clearTimeout is not defined');
-    }
-  }
-} ())
-var queue = [];
-var draining = false;
-var currentQueue;
-var queueIndex = -1;
-
-function cleanUpNextTick() {
-    if (!draining || !currentQueue) {
-        return;
-    }
-    draining = false;
-    if (currentQueue.length) {
-        queue = currentQueue.concat(queue);
-    } else {
-        queueIndex = -1;
-    }
-    if (queue.length) {
-        drainQueue();
-    }
-}
-
-function drainQueue() {
-    if (draining) {
-        return;
-    }
-    var timeout = cachedSetTimeout(cleanUpNextTick);
-    draining = true;
-
-    var len = queue.length;
-    while(len) {
-        currentQueue = queue;
-        queue = [];
-        while (++queueIndex < len) {
-            if (currentQueue) {
-                currentQueue[queueIndex].run();
-            }
-        }
-        queueIndex = -1;
-        len = queue.length;
-    }
-    currentQueue = null;
-    draining = false;
-    cachedClearTimeout(timeout);
-}
-
-process.nextTick = function (fun) {
-    var args = new Array(arguments.length - 1);
-    if (arguments.length > 1) {
-        for (var i = 1; i < arguments.length; i++) {
-            args[i - 1] = arguments[i];
-        }
-    }
-    queue.push(new Item(fun, args));
-    if (queue.length === 1 && !draining) {
-        cachedSetTimeout(drainQueue, 0);
-    }
-};
-
-// v8 likes predictible objects
-function Item(fun, array) {
-    this.fun = fun;
-    this.array = array;
-}
-Item.prototype.run = function () {
-    this.fun.apply(null, this.array);
-};
-process.title = 'browser';
-process.browser = true;
-process.env = {};
-process.argv = [];
-process.version = ''; // empty string to avoid regexp issues
-process.versions = {};
-
-function noop() {}
-
-process.on = noop;
-process.addListener = noop;
-process.once = noop;
-process.off = noop;
-process.removeListener = noop;
-process.removeAllListeners = noop;
-process.emit = noop;
-
-process.binding = function (name) {
-    throw new Error('process.binding is not supported');
-};
-
-process.cwd = function () { return '/' };
-process.chdir = function (dir) {
-    throw new Error('process.chdir is not supported');
-};
-process.umask = function() { return 0; };
-
-},{}],20:[function(require,module,exports){
+},{"is-buffer":18}],18:[function(require,module,exports){
 /*!
  * Determine if an object is a Buffer
  *
@@ -3037,7 +2890,7 @@ function isSlowBuffer (obj) {
   return typeof obj.readFloatLE === 'function' && typeof obj.slice === 'function' && isBuffer(obj.slice(0, 0))
 }
 
-},{}],21:[function(require,module,exports){
+},{}],19:[function(require,module,exports){
 (function (process){
 /**
  * Module dependencies.
@@ -3282,7 +3135,7 @@ function createColumnContent(params, str) {
 }
 
 }).call(this,require('_process'))
-},{"_process":19,"flat":17,"lodash.flatten":22,"lodash.get":23,"lodash.uniq":24,"os":18}],22:[function(require,module,exports){
+},{"_process":25,"flat":17,"lodash.flatten":20,"lodash.get":21,"lodash.uniq":22,"os":24}],20:[function(require,module,exports){
 (function (global){
 /**
  * lodash (Custom Build) <https://lodash.com/>
@@ -3635,7 +3488,7 @@ function isObjectLike(value) {
 module.exports = flatten;
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],23:[function(require,module,exports){
+},{}],21:[function(require,module,exports){
 (function (global){
 /**
  * lodash (Custom Build) <https://lodash.com/>
@@ -4570,7 +4423,7 @@ function get(object, path, defaultValue) {
 module.exports = get;
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],24:[function(require,module,exports){
+},{}],22:[function(require,module,exports){
 (function (global){
 /**
  * lodash (Custom Build) <https://lodash.com/>
@@ -5470,7 +5323,7 @@ function noop() {
 module.exports = uniq;
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],25:[function(require,module,exports){
+},{}],23:[function(require,module,exports){
 (function (global){
 /**
  * @license
@@ -22207,6 +22060,235 @@ module.exports = uniq;
 }.call(this));
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
+},{}],24:[function(require,module,exports){
+exports.endianness = function () { return 'LE' };
+
+exports.hostname = function () {
+    if (typeof location !== 'undefined') {
+        return location.hostname
+    }
+    else return '';
+};
+
+exports.loadavg = function () { return [] };
+
+exports.uptime = function () { return 0 };
+
+exports.freemem = function () {
+    return Number.MAX_VALUE;
+};
+
+exports.totalmem = function () {
+    return Number.MAX_VALUE;
+};
+
+exports.cpus = function () { return [] };
+
+exports.type = function () { return 'Browser' };
+
+exports.release = function () {
+    if (typeof navigator !== 'undefined') {
+        return navigator.appVersion;
+    }
+    return '';
+};
+
+exports.networkInterfaces
+= exports.getNetworkInterfaces
+= function () { return {} };
+
+exports.arch = function () { return 'javascript' };
+
+exports.platform = function () { return 'browser' };
+
+exports.tmpdir = exports.tmpDir = function () {
+    return '/tmp';
+};
+
+exports.EOL = '\n';
+
+},{}],25:[function(require,module,exports){
+// shim for using process in browser
+var process = module.exports = {};
+
+// cached from whatever global is present so that test runners that stub it
+// don't break things.  But we need to wrap it in a try catch in case it is
+// wrapped in strict mode code which doesn't define any globals.  It's inside a
+// function because try/catches deoptimize in certain engines.
+
+var cachedSetTimeout;
+var cachedClearTimeout;
+
+function defaultSetTimout() {
+    throw new Error('setTimeout has not been defined');
+}
+function defaultClearTimeout () {
+    throw new Error('clearTimeout has not been defined');
+}
+(function () {
+    try {
+        if (typeof setTimeout === 'function') {
+            cachedSetTimeout = setTimeout;
+        } else {
+            cachedSetTimeout = defaultSetTimout;
+        }
+    } catch (e) {
+        cachedSetTimeout = defaultSetTimout;
+    }
+    try {
+        if (typeof clearTimeout === 'function') {
+            cachedClearTimeout = clearTimeout;
+        } else {
+            cachedClearTimeout = defaultClearTimeout;
+        }
+    } catch (e) {
+        cachedClearTimeout = defaultClearTimeout;
+    }
+} ())
+function runTimeout(fun) {
+    if (cachedSetTimeout === setTimeout) {
+        //normal enviroments in sane situations
+        return setTimeout(fun, 0);
+    }
+    // if setTimeout wasn't available but was latter defined
+    if ((cachedSetTimeout === defaultSetTimout || !cachedSetTimeout) && setTimeout) {
+        cachedSetTimeout = setTimeout;
+        return setTimeout(fun, 0);
+    }
+    try {
+        // when when somebody has screwed with setTimeout but no I.E. maddness
+        return cachedSetTimeout(fun, 0);
+    } catch(e){
+        try {
+            // When we are in I.E. but the script has been evaled so I.E. doesn't trust the global object when called normally
+            return cachedSetTimeout.call(null, fun, 0);
+        } catch(e){
+            // same as above but when it's a version of I.E. that must have the global object for 'this', hopfully our context correct otherwise it will throw a global error
+            return cachedSetTimeout.call(this, fun, 0);
+        }
+    }
+
+
+}
+function runClearTimeout(marker) {
+    if (cachedClearTimeout === clearTimeout) {
+        //normal enviroments in sane situations
+        return clearTimeout(marker);
+    }
+    // if clearTimeout wasn't available but was latter defined
+    if ((cachedClearTimeout === defaultClearTimeout || !cachedClearTimeout) && clearTimeout) {
+        cachedClearTimeout = clearTimeout;
+        return clearTimeout(marker);
+    }
+    try {
+        // when when somebody has screwed with setTimeout but no I.E. maddness
+        return cachedClearTimeout(marker);
+    } catch (e){
+        try {
+            // When we are in I.E. but the script has been evaled so I.E. doesn't  trust the global object when called normally
+            return cachedClearTimeout.call(null, marker);
+        } catch (e){
+            // same as above but when it's a version of I.E. that must have the global object for 'this', hopfully our context correct otherwise it will throw a global error.
+            // Some versions of I.E. have different rules for clearTimeout vs setTimeout
+            return cachedClearTimeout.call(this, marker);
+        }
+    }
+
+
+
+}
+var queue = [];
+var draining = false;
+var currentQueue;
+var queueIndex = -1;
+
+function cleanUpNextTick() {
+    if (!draining || !currentQueue) {
+        return;
+    }
+    draining = false;
+    if (currentQueue.length) {
+        queue = currentQueue.concat(queue);
+    } else {
+        queueIndex = -1;
+    }
+    if (queue.length) {
+        drainQueue();
+    }
+}
+
+function drainQueue() {
+    if (draining) {
+        return;
+    }
+    var timeout = runTimeout(cleanUpNextTick);
+    draining = true;
+
+    var len = queue.length;
+    while(len) {
+        currentQueue = queue;
+        queue = [];
+        while (++queueIndex < len) {
+            if (currentQueue) {
+                currentQueue[queueIndex].run();
+            }
+        }
+        queueIndex = -1;
+        len = queue.length;
+    }
+    currentQueue = null;
+    draining = false;
+    runClearTimeout(timeout);
+}
+
+process.nextTick = function (fun) {
+    var args = new Array(arguments.length - 1);
+    if (arguments.length > 1) {
+        for (var i = 1; i < arguments.length; i++) {
+            args[i - 1] = arguments[i];
+        }
+    }
+    queue.push(new Item(fun, args));
+    if (queue.length === 1 && !draining) {
+        runTimeout(drainQueue);
+    }
+};
+
+// v8 likes predictible objects
+function Item(fun, array) {
+    this.fun = fun;
+    this.array = array;
+}
+Item.prototype.run = function () {
+    this.fun.apply(null, this.array);
+};
+process.title = 'browser';
+process.browser = true;
+process.env = {};
+process.argv = [];
+process.version = ''; // empty string to avoid regexp issues
+process.versions = {};
+
+function noop() {}
+
+process.on = noop;
+process.addListener = noop;
+process.once = noop;
+process.off = noop;
+process.removeListener = noop;
+process.removeAllListeners = noop;
+process.emit = noop;
+
+process.binding = function (name) {
+    throw new Error('process.binding is not supported');
+};
+
+process.cwd = function () { return '/' };
+process.chdir = function (dir) {
+    throw new Error('process.chdir is not supported');
+};
+process.umask = function() { return 0; };
+
 },{}],26:[function(require,module,exports){
 //     Underscore.js 1.8.3
 //     http://underscorejs.org
@@ -24574,15 +24656,43 @@ var qSection = require('./question-section');
  * responsible for issuing DNS requests.
  */
 
+/**
+ * This is the IPv4 address specified by RFC 6762 to be used for mDNS.
+ */
 var DNSSD_MULTICAST_GROUP = '224.0.0.251';
-var DNSSD_PORT = 53531;
+
+/**
+ * The port we use for mDNS.
+ *
+ * RFC 6762 indicates that port 5353 should be used for mDNS. However, Chrome
+ * binds to 5353 (presumably for cloud print or ChromeCast functionality) and
+ * does not expose an API to advertise using its internal mDNS machinery. The
+ * Chrome App socket API does not provide a way to bind a socket using
+ * SO_REUSEADDR, SO_REUSEPORT, or an equivalent, despite the fact that RFC 6762
+ * recommends doing so in Section 15.1.
+ *
+ * Since we cannot bind the conventional port, 5353, we instead are choosing a
+ * new port, and deciding on 5353. This can change as long as peers share the
+ * port. Ideally we would be using 5353.
+ */
+var MDNS_PORT = 53531;
+
+/**
+ * The special service string used to indicate that callers wish to enumerate
+ * all available services, not just services of a particular type.
+ *
+ * In Section 9, RFC 6763 defines this string. Callers are normally expected to
+ * issue DNSSD queries for a particular type, e.g. printers using a protocol
+ * they can interact with. This string instead allows callers to enumerate all
+ * services.
+ */
 var DNSSD_SERVICE_NAME = '_services._dns-sd._udp.local';
 
 /** True if the service has started. */
 var started = false;
 
 exports.DNSSD_MULTICAST_GROUP = DNSSD_MULTICAST_GROUP;
-exports.DNSSD_PORT = DNSSD_PORT;
+exports.MDNS_PORT = MDNS_PORT;
 exports.DNSSD_SERVICE_NAME = DNSSD_SERVICE_NAME;
 
 exports.DEBUG = true;
@@ -24606,7 +24716,7 @@ exports.RESPONSE_WAIT_MAX = 600;
  */
 var records = {};
 
-var onReceiveCallbacks = [];
+var onReceiveCallbacks = new Set();
 
 /**
  * The IPv4 interfaces for this machine, cached to provide synchronous calls.
@@ -24627,7 +24737,7 @@ exports.getRecords = function() {
  * Returns all the callbacks currently registered to be invoked with incoming
  * packets.
  *
- * @return {Array<function>} all the onReceive callbacks that have been
+ * @return {Set<function>} all the onReceive callbacks that have been
  * registered
  */
 exports.getOnReceiveCallbacks = function() {
@@ -24664,7 +24774,9 @@ exports.isStarted = function() {
  */
 exports.getIPv4Interfaces = function() {
   if (!exports.isStarted()) {
-    console.log('Called getIPv4Interfaces when controller was not started');
+    throw new Error(
+      'Called getIPv4Interfaces when controller was not started'
+    );
   }
   if (!ipv4Interfaces) {
     return [];
@@ -24679,7 +24791,7 @@ exports.getIPv4Interfaces = function() {
  * @param {function} callback a callback to be invoked with received packets.
  */
 exports.addOnReceiveCallback = function(callback) {
-  onReceiveCallbacks.push(callback);
+  onReceiveCallbacks.add(callback);
 };
 
 /**
@@ -24689,10 +24801,7 @@ exports.addOnReceiveCallback = function(callback) {
  * should already have been added via a call to addOnReceiveCallback().
  */
 exports.removeOnReceiveCallback = function(callback) {
-  var index = onReceiveCallbacks.indexOf(callback);
-  if (index >= 0) {
-    onReceiveCallbacks.splice(index, 1);
-  }
+  onReceiveCallbacks.delete(callback);
 };
 
 /**
@@ -24760,10 +24869,9 @@ exports.handleIncomingPacket = function(packet, remoteAddress, remotePort) {
   // need to respond to it.
 
   // First, invoke all the callbacks.
-  for (var i = 0; i < onReceiveCallbacks.length; i++) {
-    var fn = onReceiveCallbacks[i];
-    fn(packet);
-  }
+  onReceiveCallbacks.forEach(callback => {
+    callback(packet);
+  });
 
   // Second, see if it's a query. If it is, get the requested records,
   // construct a packet, and send the packet.
@@ -24803,7 +24911,7 @@ exports.handleIncomingPacket = function(packet, remoteAddress, remotePort) {
 
     // We may be multicasting, or we may be unicast responding.
     var sendAddr = DNSSD_MULTICAST_GROUP;
-    var sendPort = DNSSD_PORT;
+    var sendPort = MDNS_PORT;
     if (question.unicastResponseRequested()) {
       sendAddr = remoteAddress;
       sendPort = remotePort;
@@ -24973,7 +25081,7 @@ exports.getSocket = function() {
       return info;
     })
     .then(info => {
-      return chromeUdp.bind(info.socketId, '0.0.0.0', DNSSD_PORT);
+      return chromeUdp.bind(info.socketId, '0.0.0.0', MDNS_PORT);
     })
     .then(function success() {
       // We've bound to the DNSSD port successfully.
@@ -25126,7 +25234,7 @@ exports.query = function(queryName, queryType, queryClass) {
   );
   packet.addQuestion(question);
 
-  exports.sendPacket(packet, DNSSD_MULTICAST_GROUP, DNSSD_PORT);
+  exports.sendPacket(packet, DNSSD_MULTICAST_GROUP, MDNS_PORT);
 };
 
 /**
@@ -25231,7 +25339,20 @@ var dnsCodes = require('./dns-codes');
 var resRec = require('./resource-record');
 var dnsPacket = require('./dns-packet');
 
+/**
+ * In Section 8.1, RFC 6762 uses 250ms as the length of time clients should
+ * wait when probing the network for responses when attempting to determine
+ * records (e.g. host names) are already claimed by other devices. In order to
+ * remain compliant with the RFC, It should not be changed.
+ */
 var MAX_PROBE_WAIT = 250;
+
+/**
+ * This is the default time we will wait for a response to a DNS query before
+ * timing out.
+ *
+ * This is a best effort value and may be tuned.
+ */
 var DEFAULT_QUERY_WAIT_TIME = 3000;
 
 exports.DEFAULT_QUERY_WAIT_TIME = DEFAULT_QUERY_WAIT_TIME;
@@ -25243,6 +25364,13 @@ exports.DEFAULT_QUERY_WAIT_TIME = DEFAULT_QUERY_WAIT_TIME;
  * the first query, the query will be issued up to this many additional times.
  */
 exports.DEFAULT_NUM_RETRIES = 2;
+
+/**
+ * In Section 3, RFC 6762 reserves the top-level domain 'local' for hosts on
+ * the local network. This value is 'local' without any leading or trailing
+ * periods.
+ */
+exports.LOCAL_SUFFIX = 'local';
 
 /**
  * The default number of initial scans for PTR requests. Since PTR requests
@@ -25344,7 +25472,8 @@ exports.advertiseService = function(resourceRecords) {
  * @param {integer} port the port the service is available on
  */
 exports.register = function(host, name, type, port) {
-  // Registration is a multi-step process. According to the RFC, section 8.
+  // Registration is a multi-step process. It is described in Section 8 of the
+  // RFC.
   //
   // 8.1 indicates that the first step is to send an mDNS query of type ANY
   // (255) for a given domain name.
@@ -26137,7 +26266,7 @@ exports.queryForResponses = function(
   });
 };
 
-},{"../util":15,"./dns-codes":5,"./dns-controller":"dnsc","./dns-packet":6,"./dns-util":7,"./resource-record":9,"lodash":25}],"eval":[function(require,module,exports){
+},{"../util":15,"./dns-codes":5,"./dns-controller":"dnsc","./dns-packet":6,"./dns-util":7,"./resource-record":9,"lodash":23}],"eval":[function(require,module,exports){
 'use strict';
 
 /**
@@ -26808,7 +26937,7 @@ exports.downloadKeyAsCsv = function(key) {
   });
 };
 
-},{"./app-controller":"appController","./chrome-apis/storage":3,"./persistence/datastore":11,"./server/server-api":14,"./util":15,"json2csv":21}],"extBridge":[function(require,module,exports){
+},{"./app-controller":"appController","./chrome-apis/storage":3,"./persistence/datastore":11,"./server/server-api":14,"./util":15,"json2csv":19}],"extBridge":[function(require,module,exports){
 'use strict';
 
 var chromeRuntime = require('../chrome-apis/runtime');
@@ -27213,7 +27342,7 @@ exports.getDirectory = function(dirEntry, options, name) {
 
 },{}],"moment":[function(require,module,exports){
 //! moment.js
-//! version : 2.14.1
+//! version : 2.15.0
 //! authors : Tim Wood, Iskren Chernev, Moment.js contributors
 //! license : MIT
 //! momentjs.com
@@ -27241,7 +27370,9 @@ exports.getDirectory = function(dirEntry, options, name) {
     }
 
     function isObject(input) {
-        return Object.prototype.toString.call(input) === '[object Object]';
+        // IE8 will treat undefined and null as object if it wasn't for
+        // input != null
+        return input != null && Object.prototype.toString.call(input) === '[object Object]';
     }
 
     function isObjectEmpty(obj) {
@@ -27340,7 +27471,7 @@ exports.getDirectory = function(dirEntry, options, name) {
             var parsedParts = some.call(flags.parsedDateParts, function (i) {
                 return i != null;
             });
-            m._isValid = !isNaN(m._d.getTime()) &&
+            var isNowValid = !isNaN(m._d.getTime()) &&
                 flags.overflow < 0 &&
                 !flags.empty &&
                 !flags.invalidMonth &&
@@ -27351,10 +27482,17 @@ exports.getDirectory = function(dirEntry, options, name) {
                 (!flags.meridiem || (flags.meridiem && parsedParts));
 
             if (m._strict) {
-                m._isValid = m._isValid &&
+                isNowValid = isNowValid &&
                     flags.charsLeftOver === 0 &&
                     flags.unusedTokens.length === 0 &&
                     flags.bigHour === undefined;
+            }
+
+            if (Object.isFrozen == null || !Object.isFrozen(m)) {
+                m._isValid = isNowValid;
+            }
+            else {
+                return isNowValid;
             }
         }
         return m._isValid;
@@ -27496,7 +27634,22 @@ exports.getDirectory = function(dirEntry, options, name) {
                 utils_hooks__hooks.deprecationHandler(null, msg);
             }
             if (firstTime) {
-                warn(msg + '\nArguments: ' + Array.prototype.slice.call(arguments).join(', ') + '\n' + (new Error()).stack);
+                var args = [];
+                var arg;
+                for (var i = 0; i < arguments.length; i++) {
+                    arg = '';
+                    if (typeof arguments[i] === 'object') {
+                        arg += '\n[' + i + '] ';
+                        for (var key in arguments[0]) {
+                            arg += key + ': ' + arguments[0][key] + ', ';
+                        }
+                        arg = arg.slice(0, -2); // Remove trailing comma and space
+                    } else {
+                        arg = arguments[i];
+                    }
+                    args.push(arg);
+                }
+                warn(msg + '\nArguments: ' + Array.prototype.slice.call(args).join('') + '\n' + (new Error()).stack);
                 firstTime = false;
             }
             return fn.apply(this, arguments);
@@ -28023,12 +28176,18 @@ exports.getDirectory = function(dirEntry, options, name) {
     var MONTHS_IN_FORMAT = /D[oD]?(\[[^\[\]]*\]|\s+)+MMMM?/;
     var defaultLocaleMonths = 'January_February_March_April_May_June_July_August_September_October_November_December'.split('_');
     function localeMonths (m, format) {
+        if (!m) {
+            return this._months;
+        }
         return isArray(this._months) ? this._months[m.month()] :
             this._months[(this._months.isFormat || MONTHS_IN_FORMAT).test(format) ? 'format' : 'standalone'][m.month()];
     }
 
     var defaultLocaleMonthsShort = 'Jan_Feb_Mar_Apr_May_Jun_Jul_Aug_Sep_Oct_Nov_Dec'.split('_');
     function localeMonthsShort (m, format) {
+        if (!m) {
+            return this._monthsShort;
+        }
         return isArray(this._monthsShort) ? this._monthsShort[m.month()] :
             this._monthsShort[MONTHS_IN_FORMAT.test(format) ? 'format' : 'standalone'][m.month()];
     }
@@ -28525,18 +28684,21 @@ exports.getDirectory = function(dirEntry, options, name) {
 
     var defaultLocaleWeekdays = 'Sunday_Monday_Tuesday_Wednesday_Thursday_Friday_Saturday'.split('_');
     function localeWeekdays (m, format) {
+        if (!m) {
+            return this._weekdays;
+        }
         return isArray(this._weekdays) ? this._weekdays[m.day()] :
             this._weekdays[this._weekdays.isFormat.test(format) ? 'format' : 'standalone'][m.day()];
     }
 
     var defaultLocaleWeekdaysShort = 'Sun_Mon_Tue_Wed_Thu_Fri_Sat'.split('_');
     function localeWeekdaysShort (m) {
-        return this._weekdaysShort[m.day()];
+        return (m) ? this._weekdaysShort[m.day()] : this._weekdaysShort;
     }
 
     var defaultLocaleWeekdaysMin = 'Su_Mo_Tu_We_Th_Fr_Sa'.split('_');
     function localeWeekdaysMin (m) {
-        return this._weekdaysMin[m.day()];
+        return (m) ? this._weekdaysMin[m.day()] : this._weekdaysMin;
     }
 
     function day_of_week__handleStrictParse(weekdayName, format, strict) {
@@ -28972,10 +29134,10 @@ exports.getDirectory = function(dirEntry, options, name) {
         var oldLocale = null;
         // TODO: Find a better way to register and load all the locales in Node
         if (!locales[name] && (typeof module !== 'undefined') &&
-                module && module.exports) {
+                module && module.require) {
             try {
                 oldLocale = globalLocale._abbr;
-                require('./locale/' + name);
+                module.require('./locale/' + name);
                 // because defineLocale currently also sets the global locale, we
                 // want to undo that for lazy loaded locales
                 locale_locales__getSetGlobalLocale(oldLocale);
@@ -29231,9 +29393,9 @@ exports.getDirectory = function(dirEntry, options, name) {
     }
 
     utils_hooks__hooks.createFromInputFallback = deprecate(
-        'moment construction falls back to js Date. This is ' +
-        'discouraged and will be removed in upcoming major ' +
-        'release. Please refer to ' +
+        'value provided is not in a recognized ISO format. moment construction falls back to js Date(), ' +
+        'which is not reliable across all browsers and versions. Non ISO date formats are ' +
+        'discouraged and will be removed in an upcoming major release. Please refer to ' +
         'http://momentjs.com/guides/#/warnings/js-date/ for more info.',
         function (config) {
             config._d = new Date(config._i + (config._useUTC ? ' UTC' : ''));
@@ -29732,6 +29894,14 @@ exports.getDirectory = function(dirEntry, options, name) {
         return obj instanceof Duration;
     }
 
+    function absRound (number) {
+        if (number < 0) {
+            return Math.round(-1 * number) * -1;
+        } else {
+            return Math.round(number);
+        }
+    }
+
     // FORMATTING
 
     function offset (token, separator) {
@@ -29882,7 +30052,13 @@ exports.getDirectory = function(dirEntry, options, name) {
         if (this._tzm) {
             this.utcOffset(this._tzm);
         } else if (typeof this._i === 'string') {
-            this.utcOffset(offsetFromString(matchOffset, this._i));
+            var tZone = offsetFromString(matchOffset, this._i);
+
+            if (tZone === 0) {
+                this.utcOffset(0, true);
+            } else {
+                this.utcOffset(offsetFromString(matchOffset, this._i));
+            }
         }
         return this;
     }
@@ -29937,7 +30113,7 @@ exports.getDirectory = function(dirEntry, options, name) {
     }
 
     // ASP.NET json date format regex
-    var aspNetRegex = /^(\-)?(?:(\d*)[. ])?(\d+)\:(\d+)(?:\:(\d+)\.?(\d{3})?\d*)?$/;
+    var aspNetRegex = /^(\-)?(?:(\d*)[. ])?(\d+)\:(\d+)(?:\:(\d+)(\.\d*)?)?$/;
 
     // from http://docs.closure-library.googlecode.com/git/closure_goog_date_date.js.source.html
     // somewhat more in line with 4.4.3.2 2004 spec, but allows decimal anywhere
@@ -29969,11 +30145,11 @@ exports.getDirectory = function(dirEntry, options, name) {
             sign = (match[1] === '-') ? -1 : 1;
             duration = {
                 y  : 0,
-                d  : toInt(match[DATE])        * sign,
-                h  : toInt(match[HOUR])        * sign,
-                m  : toInt(match[MINUTE])      * sign,
-                s  : toInt(match[SECOND])      * sign,
-                ms : toInt(match[MILLISECOND]) * sign
+                d  : toInt(match[DATE])                         * sign,
+                h  : toInt(match[HOUR])                         * sign,
+                m  : toInt(match[MINUTE])                       * sign,
+                s  : toInt(match[SECOND])                       * sign,
+                ms : toInt(absRound(match[MILLISECOND] * 1000)) * sign // the millisecond decimal point is included in the match
             };
         } else if (!!(match = isoRegex.exec(input))) {
             sign = (match[1] === '-') ? -1 : 1;
@@ -30046,14 +30222,6 @@ exports.getDirectory = function(dirEntry, options, name) {
         }
 
         return res;
-    }
-
-    function absRound (number) {
-        if (number < 0) {
-            return Math.round(-1 * number) * -1;
-        } else {
-            return Math.round(number);
-        }
     }
 
     // TODO: remove 'name' arg after deprecation is removed
@@ -31370,7 +31538,7 @@ exports.getDirectory = function(dirEntry, options, name) {
     // Side effect imports
 
 
-    utils_hooks__hooks.version = '2.14.1';
+    utils_hooks__hooks.version = '2.15.0';
 
     setHookCallback(local__createLocal);
 
