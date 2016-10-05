@@ -39,8 +39,17 @@ test('registerSemCache returns dnssd.register result', function(t) {
     }
   });
 
-  var actualReturn = dnssdSem.registerSemCache('myname', 1111);
+  var host = 'myhost.local';
+  var name = 'my instance name';
+  var port = 1111;
+  var actualReturn = dnssdSem.registerSemCache(host, name, port);
   t.equal(actualReturn, returnResult);
+  t.deepEqual(
+    registerMock.args[0],
+    [
+      host, name, dnssdSem.getSemCacheServiceString(), port
+    ]
+  );
 
   t.end();
 });

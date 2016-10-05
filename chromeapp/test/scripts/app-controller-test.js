@@ -169,7 +169,8 @@ test('startServersAndRegister rejects if no ifaces', function(t) {
       getHostName: sinon.stub().returns(hostName)
     },
     './dnssd/dns-controller': {
-      start: sinon.stub().resolves()
+      start: sinon.stub().resolves(),
+      getIPv4Interfaces: sinon.stub().returns([])
     }
   });
   appc.updateCachesForSettings = sinon.stub();

@@ -51,6 +51,23 @@ function verifyUserFriendlyNameHelper(instanceTypeDomain, expected, t) {
 }
 
 /**
+ * Helper for asserting that getUserFriendlyName() returns the expected user
+ * friendly name. Calls getUserFriendlyName() and asserts that the result is
+ * equal to expected
+ *
+ * @param {string} instanceTypeDomain the argument that will be passed to
+ * getUserFriendlyName()
+ * @param {string} expected the user friendly name expected as a result
+ */
+function verifyUserFriendlyNameHelper(instanceTypeDomain, expected, t) {
+  var dnssdSem = require('../../../app/scripts/dnssd/dns-sd');
+
+  var actual = dnssdSem.getUserFriendlyName(instanceTypeDomain);
+  t.equal(actual, expected);
+  t.end();
+}
+
+/**
  * Helper for asserting the queryFor* methods are invoked correctly.
  */
 function callsQueryForResponsesHelper(
@@ -1543,4 +1560,40 @@ test('resolveService rejects if missing A', function(t) {
     resetDnsSd();
     t.end();
   });
+});
+
+test('getUserFriendlyName handles basic input', function(t) {
+  // The most basic example is something like the following, no special
+  // characters and only the .local suffix.
+  var serviceType = '_music._tcp';
+  var domain = 'local';
+  var name = 'My Music Library';
+  var instanceTypeDomain = [name, serviceType, domain].join('.');
+
+  verifyUserFriendlyNameHelper(instanceTypeDomain, name, t);
+});
+
+test('getUserFriendlyName handles special characters in name', function(t) {
+  // We need to be able to handle special characters in the instance name
+  var serviceType = '_semcache._tcp';
+  var domain = 'local';
+  var name = 'Joe\'s fancy.cache_fancy!';
+  var instanceTypeDomain = [name, serviceType, domain].join('.');
+
+  verifyUserFriendlyNameHelper(instanceTypeDomain, name, t);
+});
+
+test('getUserFriendlyName handles multi-level domains', function(t) {
+  // Although not relevant for multicast applications, the spec suggests we
+  // should also support multi level domains.
+  var serviceType = '_music._tcp';
+  var domain = 'www.example.com';
+  var name = 'My Music Library';
+  var instanceTypeDomain = [name, serviceType, domain].join('.');
+
+  var dnssdSem = require('../../../app/scripts/dnssd/dns-sd');
+
+  var actual = dnssdSem.getUserFriendlyName(instanceTypeDomain);
+  t.equal(actual, name);
+  t.end();
 });

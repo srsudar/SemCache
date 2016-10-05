@@ -168,7 +168,7 @@ exports.getDomainFromByteArrayReader = function(reader) {
 exports.getIpStringAsByteArray = function(ipAddress) {
   var parts = ipAddress.split('.');
 
-  if (parts.length < 4) {
+  if (parts.length !== 4) {
     throw new Error('IP string does not have 4 parts: ' + ipAddress);
   }
 

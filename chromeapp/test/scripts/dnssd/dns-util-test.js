@@ -14,6 +14,28 @@ function getCharAsCode(char) {
 }
 
 /**
+ * Serialize and deserialize domain, asserting that they are equivalent. Does
+ * not invoke t.end().
+ */
+function assertCanRecoverDomainHelper(domain, t) {
+  var byteArray = dnsUtil.getDomainAsByteArray(domain);
+  var actual = dnsUtil.getDomainFromByteArray(byteArray);
+  t.equal(actual, domain);
+}
+
+/**
+ * Asserts that ipString causes getIpStringAsByteArray to throw an Error. Does
+ * not invoke t.end().
+ */
+function assertIllegalIpThrows(illegalIp, t) {
+  var shouldThrow = function() {
+    dnsUtil.getIpStringAsByteArray(illegalIp);
+  };
+
+  t.throws(shouldThrow, Error);
+}
+
+/**
  * Return the byte array for the EXAMPLE_URL. Created by hand.
  */
 function getByteArrayForExample() {
@@ -52,7 +74,6 @@ function getByteArrayForExample() {
 
   return expected;
 }
-
 
 test('getDomainAsByteArray outputs correct bytes for example', function(t) {
   // This is the domain name example given in the Stevens TCP/IP book.
@@ -96,6 +117,66 @@ test('getDomainFromByteArray respects start bytes', function(t) {
   t.end();
 });
 
+test('serialize and deserialize tiny domain', function(t) {
+  var domain = 't.co';
+  assertCanRecoverDomainHelper(domain, t);
+  t.end();
+});
+
+test('serialize and deserialize huge domain', function(t) {
+  // This is a real URL.
+  var domain =
+    'www.thelongestdomainnameintheworldandthensomeandthensomemoreandmore.com';
+  assertCanRecoverDomainHelper(domain, t);
+  t.end();
+});
+
+test('getDomainAsByteArray throws with label >63 characters', function(t) {
+  var invalidLabel = 'a'.repeat(64);
+  var invalidDomain = 'www.' + invalidLabel + '.com';
+  var shouldThrow = function() {
+    dnsUtil.getDomainAsByteArray(invalidDomain);
+  };
+  t.throws(shouldThrow, Error);
+  t.end();
+});
+
+test('getDomainFromByteArray throws with label >63 characters', function(t) {
+  var byteArr = new byteArray.ByteArray();
+
+  // We will break it with www.a*64.com
+  // We're going to populate the byte array by hand to not rely on the
+  // serialization implementation.
+  byteArr.push(3, 1);
+  byteArr.push(getCharAsCode('w'), 1);
+  byteArr.push(getCharAsCode('w'), 1);
+  byteArr.push(getCharAsCode('w'), 1);
+
+  for (var i = 0; i < 64; i++) {
+    byteArr.push(getCharAsCode('a'), 1);
+  }
+
+  byteArr.push(3, 1);
+  byteArr.push(getCharAsCode('c'), 1);
+  byteArr.push(getCharAsCode('o'), 1);
+  byteArr.push(getCharAsCode('m'), 1);
+
+  var shouldThrow = function() {
+    dnsUtil.getDomainFromByteArray(byteArray);
+  };
+
+  t.throws(shouldThrow, Error);
+  t.end();
+});
+
+test('getDomainFromByteArray throws if first arg not ByteArray', function(t) {
+  var shouldThrow = function() {
+    dnsUtil.getDomainFromByteArray('illegal', 0);
+  };
+  t.throws(shouldThrow, Error);
+  t.end();
+});
+
 test('getDomainFromByteArrayReader returns with correct offset', function(t) {
   // We want the reader to start at the current reader position, recover the
   // domain, and leave the reader at the correct offset.
@@ -120,6 +201,28 @@ test('getDomainFromByteArrayReader returns with correct offset', function(t) {
   t.equal(recoveredDomain, EXAMPLE_URL);
   t.equal(recoveredLastValue, lastValue);
   
+  t.end();
+});
+
+test('getIpStringAsByteArray throws if >4 parts', function(t) {
+  var illegalIp = '1.2.3.4.5';
+  assertIllegalIpThrows(illegalIp, t);
+  t.end();
+});
+
+test('getIpStringAsByteArray throws if <4 parts', function(t) {
+  var illegalIp = '1.2.3';
+  assertIllegalIpThrows(illegalIp, t);
+  t.end();
+});
+
+test('getIpStringAsByteArray throws with part >255 and <0', function(t) {
+  var tooBig = '1.2.3.256';
+  var tooSmall = '1.2.3.-1';
+
+  assertIllegalIpThrows(tooBig, t);
+  assertIllegalIpThrows(tooSmall, t);
+
   t.end();
 });
 
