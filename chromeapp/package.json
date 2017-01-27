@@ -6,7 +6,8 @@
     "json2csv": "^3.6.3",
     "lodash": "^4.15.0",
     "npm": "^3.10.6",
-    "underscore": "^1.8.3"
+    "underscore": "^1.8.3",
+    "webrtc-adapter": "^3.1.0"
   },
   "devDependencies": {
     "grunt": "~0.4.1",

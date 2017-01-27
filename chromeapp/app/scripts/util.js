@@ -88,3 +88,14 @@ exports.downloadText = function(text, fileName) {
   element.click();
   document.body.removeChild(element);
 };
+
+/**
+ * Utility logging function.
+ *
+ * Based on:
+ * https://github.com/webrtc/samples/blob/gh-pages/src/js/common.js
+ */
+exports.trace = function trace(arg) {
+  var now = (window.performance.now() / 1000).toFixed(3);
+  console.log(now + ': ', arg);
+};

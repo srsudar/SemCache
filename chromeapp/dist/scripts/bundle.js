@@ -2379,6 +2379,56 @@ _.extend(exports.CachedPageHandler.prototype,
   WSC.BaseHandler.prototype
 );
 
+exports.WebRtcOfferHandler = function() {
+  if (!WSC) {
+    console.warn('WebRtcOfferHandler: WSC global object not present');
+    return;
+  }
+  WSC.BaseHandler.prototype.constructor.call(this);
+};
+
+_.extend(exports.WebRtcOfferHandler.prototype,
+  {
+    get: function() {
+      var fileName = api.getCachedFileNameFromPath(this.request.path);
+
+      fileSystem.getDirectoryForCacheEntries()
+        .then(cacheDir => {
+          return fsUtil.getFile(
+            cacheDir, 
+            {
+              create: false,
+              exclusive: false
+            },
+            fileName
+          );
+        })
+        .then(fileEntry => {
+          fileEntry.file(file => {
+            var that = this;
+            var fileReader = new FileReader();
+
+            fileReader.onload = function(evt) {
+              // set mime types etc?
+              that.write(evt.target.result);
+            };
+
+            fileReader.onerror = function(evt) {
+              console.error('error reading', evt.target.error);
+              that.request.connection.close();
+            };
+
+            fileReader.readAsArrayBuffer(file);
+          });
+        })
+        .catch(err => {
+          console.log('Error reading file: ', err);
+        });
+    }
+  },
+  WSC.BaseHandler.prototype
+);
+
 },{"../persistence/file-system":"fileSystem","../persistence/file-system-util":"fsUtil","./server-api":14,"underscore":26}],14:[function(require,module,exports){
 'use strict';
 
@@ -2589,6 +2639,17 @@ exports.downloadText = function(text, fileName) {
   document.body.appendChild(element);
   element.click();
   document.body.removeChild(element);
+};
+
+/**
+ * Utility logging function.
+ *
+ * Based on:
+ * https://github.com/webrtc/samples/blob/gh-pages/src/js/common.js
+ */
+exports.trace = function trace(arg) {
+  var now = (window.performance.now() / 1000).toFixed(3);
+  console.log(now + ': ', arg);
 };
 
 },{}],16:[function(require,module,exports){
@@ -31931,4 +31992,73 @@ exports.promptAndSetNewBaseDir = function() {
   });
 };
 
-},{"./chrome-apis/file-system":1,"./chrome-apis/storage":3,"./persistence/file-system":"fileSystem"}]},{},[10]);
+},{"./chrome-apis/file-system":1,"./chrome-apis/storage":3,"./persistence/file-system":"fileSystem"}],"webrtc":[function(require,module,exports){
+/* globals RTCPeerConnection */
+'use strict';
+
+var util = require('../util');
+
+var pc;
+var localDesc;
+
+exports.getConnection = function() {
+  return pc;
+};
+
+/**
+ * This is taken largely from:
+ * https://github.com/webrtc/samples/blob/gh-pages/src/content/datachannel/filetransfer/js/main.js
+ */
+
+exports.createConnection = function() {
+  pc = new RTCPeerConnection(null, null); 
+
+  var requestChannel = pc.createDataChannel('requestChannel');
+  requestChannel.binaryType = 'arraybuffer';
+
+  requestChannel.onopen = exports.onChannelStateChange;
+  requestChannel.onclose = exports.onChannelStateChange;
+
+  pc.onicecandidate = function(e) {
+    exports.onIceCandidate(pc, e);
+  };
+
+  pc.createOffer().then(
+    exports.gotDescription,
+    exports.onCreateDescriptionError
+  );
+};
+
+exports.onCreateDescriptionError = function(err) {
+  util.trace('Failed to create session description: ' + err.toString());
+};
+
+exports.onChannelStateChange = function(e) {
+  util.trace(e);
+};
+
+exports.onIceCandidate = function(pc, e) {
+  if (e.candidate === null) {
+    // supposedly all candidates complete
+    util.trace('done with candidates');
+    util.trace('desc after ICE candidate: ' + pc);
+
+  }
+  // } else {
+  //   pc.addIceCandidate(e.candidate)
+  //   .then(() => {
+  //     util.trace('add success');
+  //   })
+  //   .catch(err => {
+  //     util.trace('add ICE candidate error: ' + err);
+  //   });
+  // }
+};
+
+exports.gotDescription = function(desc) {
+  util.trace('Got description: ' + desc.toString());
+  localDesc = desc;
+  pc.setLocalDescription(desc);  
+};
+
+},{"../util":15}]},{},[10]);

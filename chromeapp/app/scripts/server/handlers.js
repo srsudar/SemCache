@@ -88,3 +88,53 @@ _.extend(exports.CachedPageHandler.prototype,
   },
   WSC.BaseHandler.prototype
 );
+
+exports.WebRtcOfferHandler = function() {
+  if (!WSC) {
+    console.warn('WebRtcOfferHandler: WSC global object not present');
+    return;
+  }
+  WSC.BaseHandler.prototype.constructor.call(this);
+};
+
+_.extend(exports.WebRtcOfferHandler.prototype,
+  {
+    get: function() {
+      var fileName = api.getCachedFileNameFromPath(this.request.path);
+
+      fileSystem.getDirectoryForCacheEntries()
+        .then(cacheDir => {
+          return fsUtil.getFile(
+            cacheDir, 
+            {
+              create: false,
+              exclusive: false
+            },
+            fileName
+          );
+        })
+        .then(fileEntry => {
+          fileEntry.file(file => {
+            var that = this;
+            var fileReader = new FileReader();
+
+            fileReader.onload = function(evt) {
+              // set mime types etc?
+              that.write(evt.target.result);
+            };
+
+            fileReader.onerror = function(evt) {
+              console.error('error reading', evt.target.error);
+              that.request.connection.close();
+            };
+
+            fileReader.readAsArrayBuffer(file);
+          });
+        })
+        .catch(err => {
+          console.log('Error reading file: ', err);
+        });
+    }
+  },
+  WSC.BaseHandler.prototype
+);
