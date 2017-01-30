@@ -5,6 +5,7 @@ var _ = require('underscore');
 var api = require('./server-api');
 var fileSystem = require('../persistence/file-system');
 var fsUtil = require('../persistence/file-system-util');
+var binUtil = require('../dnssd/binary-utils').BinaryUtils;
 
 /**
  * Handlers for the webserver backing SemCache. The idea for handlers is based
@@ -99,7 +100,26 @@ exports.WebRtcOfferHandler = function() {
 
 _.extend(exports.WebRtcOfferHandler.prototype,
   {
+    post: function() {
+      console.log('IN POST');
+    },
+
+    put: function() {
+      console.log('IN PUT');
+      console.log(this);
+      window.req = this;
+
+      var bodyStr = binUtil.arrayBufferToString(this.request.body);
+      console.log('bodyStr: ' + bodyStr);
+
+      var jsonResp = { foo: 'response from PUT' };
+      var jsonBin = binUtil.stringToArrayBuffer(JSON.stringify(jsonResp));
+      this.write(jsonBin);
+
+    },
+
     get: function() {
+      console.log('IN GET');
       var fileName = api.getCachedFileNameFromPath(this.request.path);
 
       fileSystem.getDirectoryForCacheEntries()

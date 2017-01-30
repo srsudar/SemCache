@@ -24,8 +24,8 @@ exports.fetchJson = function(url) {
  *
  * @return {Promise} Promise returned by fetch()
  */
-exports.fetch = function(url) {
-  return fetch(url);
+exports.fetch = function() {
+  return fetch.apply(null, arguments);
 };
 
 /**

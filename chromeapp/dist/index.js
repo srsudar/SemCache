@@ -44612,6 +44612,7 @@ var _ = require('underscore');
 var api = require('./server-api');
 var fileSystem = require('../persistence/file-system');
 var fsUtil = require('../persistence/file-system-util');
+var binUtil = require('../dnssd/binary-utils').BinaryUtils;
 
 /**
  * Handlers for the webserver backing SemCache. The idea for handlers is based
@@ -44706,7 +44707,26 @@ exports.WebRtcOfferHandler = function() {
 
 _.extend(exports.WebRtcOfferHandler.prototype,
   {
+    post: function() {
+      console.log('IN POST');
+    },
+
+    put: function() {
+      console.log('IN PUT');
+      console.log(this);
+      window.req = this;
+
+      var bodyStr = binUtil.arrayBufferToString(this.request.body);
+      console.log('bodyStr: ' + bodyStr);
+
+      var jsonResp = { foo: 'response from PUT' };
+      var jsonBin = binUtil.stringToArrayBuffer(JSON.stringify(jsonResp));
+      this.write(jsonBin);
+
+    },
+
     get: function() {
+      console.log('IN GET');
       var fileName = api.getCachedFileNameFromPath(this.request.path);
 
       fileSystem.getDirectoryForCacheEntries()
@@ -44746,7 +44766,7 @@ _.extend(exports.WebRtcOfferHandler.prototype,
   WSC.BaseHandler.prototype
 );
 
-},{"../persistence/file-system":"fileSystem","../persistence/file-system-util":"fsUtil","./server-api":14,"underscore":26}],14:[function(require,module,exports){
+},{"../dnssd/binary-utils":"binaryUtils","../persistence/file-system":"fileSystem","../persistence/file-system-util":"fsUtil","./server-api":14,"underscore":26}],14:[function(require,module,exports){
 'use strict';
 
 /**
@@ -44767,6 +44787,7 @@ var PATH_LIST_PAGE_CACHE = 'list_pages';
 var PATH_GET_CACHED_PAGE = 'pages';
 /** The path we use for mimicking the list_pages endpoing during evaluation. */
 var PATH_EVAL_LIST_PAGE_CACHE = 'eval_list';
+var PATH_RECEIVE_WRTC_OFFER = 'receive_wrtc';
 
 /**
  * Create the metadata object that is returned in server responses.
@@ -44794,7 +44815,8 @@ exports.getApiEndpoints = function() {
   return {
     pageCache: PATH_GET_CACHED_PAGE,
     listPageCache: PATH_LIST_PAGE_CACHE,
-    evalListPages: PATH_EVAL_LIST_PAGE_CACHE
+    evalListPages: PATH_EVAL_LIST_PAGE_CACHE,
+    receiveWrtcOffer: PATH_RECEIVE_WRTC_OFFER
   };
 };
 
@@ -44893,8 +44915,8 @@ exports.fetchJson = function(url) {
  *
  * @return {Promise} Promise returned by fetch()
  */
-exports.fetch = function(url) {
-  return fetch(url);
+exports.fetch = function() {
+  return fetch.apply(null, arguments);
 };
 
 /**
@@ -74011,6 +74033,10 @@ exports.start = function(host, port) {
     [
       endpoints.evalListPages,
       evalHandlers.EvaluationHandler
+    ],
+    [
+      endpoints.receiveWrtcOffer,
+      handlers.WebRtcOfferHandler
     ]
   ];
 
@@ -74314,6 +74340,9 @@ exports.promptAndSetNewBaseDir = function() {
 'use strict';
 
 var util = require('../util');
+var settings = require('../settings');
+var binUtil = require('../dnssd/binary-utils');
+var serverApi = require('../server/server-api');
 
 var pc;
 var localDesc;
@@ -74361,21 +74390,38 @@ exports.onIceCandidate = function(pc, e) {
     util.trace('desc after ICE candidate: ' + pc);
 
   }
-  // } else {
-  //   pc.addIceCandidate(e.candidate)
-  //   .then(() => {
-  //     util.trace('add success');
-  //   })
-  //   .catch(err => {
-  //     util.trace('add ICE candidate error: ' + err);
-  //   });
-  // }
 };
 
 exports.gotDescription = function(desc) {
   util.trace('Got description: ' + desc.toString());
   localDesc = desc;
   pc.setLocalDescription(desc);  
+
+  // Now we set up a request.
+  var port = settings.getServerPort();
+  var addr = '127.0.0.1';
+  var fullAddr = 'http://' +
+    addr +
+    ':' +
+    port +
+    '/' +
+    serverApi.getApiEndpoints().receiveWrtcOffer;
+
+  util.fetch(
+    fullAddr,
+    {
+      method: 'PUT',
+      body: binUtil.BinaryUtils.stringToArrayBuffer(JSON.stringify(desc))
+    }
+  )
+  .then(resp => {
+    console.log('got response from fetch, window.putResp: ' + resp);
+    window.putResp = resp;
+    return resp.json();
+  })
+  .then(json => {
+    console.log('retrieved json: ' + json);
+  });
 };
 
-},{"../util":15}]},{},[1]);
+},{"../dnssd/binary-utils":"binaryUtils","../server/server-api":14,"../settings":"settings","../util":15}]},{},[1]);

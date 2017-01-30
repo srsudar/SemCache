@@ -55,6 +55,10 @@ exports.start = function(host, port) {
     [
       endpoints.evalListPages,
       evalHandlers.EvaluationHandler
+    ],
+    [
+      endpoints.receiveWrtcOffer,
+      handlers.WebRtcOfferHandler
     ]
   ];
 

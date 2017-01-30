@@ -2,6 +2,9 @@
 'use strict';
 
 var util = require('../util');
+var settings = require('../settings');
+var binUtil = require('../dnssd/binary-utils');
+var serverApi = require('../server/server-api');
 
 var pc;
 var localDesc;
@@ -55,4 +58,30 @@ exports.gotDescription = function(desc) {
   util.trace('Got description: ' + desc.toString());
   localDesc = desc;
   pc.setLocalDescription(desc);  
+
+  // Now we set up a request.
+  var port = settings.getServerPort();
+  var addr = '127.0.0.1';
+  var fullAddr = 'http://' +
+    addr +
+    ':' +
+    port +
+    '/' +
+    serverApi.getApiEndpoints().receiveWrtcOffer;
+
+  util.fetch(
+    fullAddr,
+    {
+      method: 'PUT',
+      body: binUtil.BinaryUtils.stringToArrayBuffer(JSON.stringify(desc))
+    }
+  )
+  .then(resp => {
+    console.log('got response from fetch, window.putResp: ' + resp);
+    window.putResp = resp;
+    return resp.json();
+  })
+  .then(json => {
+    console.log('retrieved json: ' + json);
+  });
 };
