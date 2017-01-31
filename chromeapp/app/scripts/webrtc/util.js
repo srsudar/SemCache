@@ -1,16 +1,25 @@
-/* globals RTCPeerConnection */
+/* globals RTCPeerConnection, RTCSessionDescription, RTCIceCandidate */
 'use strict';
 
 var util = require('../util');
 var settings = require('../settings');
-var binUtil = require('../dnssd/binary-utils');
+var binUtil = require('../dnssd/binary-utils').BinaryUtils;
 var serverApi = require('../server/server-api');
+var cxnMgr = require('./connection-manager');
 
 var pc;
 var localDesc;
+var requestChannel;
+var iceCandidates;
+
+exports.optionalCreateArgs = { };
 
 exports.getConnection = function() {
   return pc;
+};
+
+exports.getRequestChannel = function() {
+  return requestChannel;
 };
 
 /**
@@ -19,9 +28,10 @@ exports.getConnection = function() {
  */
 
 exports.createConnection = function() {
-  pc = new RTCPeerConnection(null, null); 
+  iceCandidates = [];
+  pc = new RTCPeerConnection(null, exports.optionalCreateArgs); 
 
-  var requestChannel = pc.createDataChannel('requestChannel');
+  requestChannel = pc.createDataChannel('requestChannel');
   requestChannel.binaryType = 'arraybuffer';
 
   requestChannel.onopen = exports.onChannelStateChange;
@@ -50,15 +60,14 @@ exports.onIceCandidate = function(pc, e) {
     // supposedly all candidates complete
     util.trace('done with candidates');
     util.trace('desc after ICE candidate: ' + pc);
-
+    exports.sendOffer();
+  } else {
+    console.log('got ice candidate: ', e);
+    iceCandidates.push(e.candidate);
   }
 };
 
-exports.gotDescription = function(desc) {
-  util.trace('Got description: ' + desc.toString());
-  localDesc = desc;
-  pc.setLocalDescription(desc);  
-
+exports.sendOffer = function() {
   // Now we set up a request.
   var port = settings.getServerPort();
   var addr = '127.0.0.1';
@@ -69,11 +78,16 @@ exports.gotDescription = function(desc) {
     '/' +
     serverApi.getApiEndpoints().receiveWrtcOffer;
 
+  var bodyJson = {
+    description: localDesc,
+    iceCandidates: iceCandidates
+  };
+
   util.fetch(
     fullAddr,
     {
       method: 'PUT',
-      body: binUtil.BinaryUtils.stringToArrayBuffer(JSON.stringify(desc))
+      body: binUtil.stringToArrayBuffer(JSON.stringify(bodyJson))
     }
   )
   .then(resp => {
@@ -83,5 +97,34 @@ exports.gotDescription = function(desc) {
   })
   .then(json => {
     console.log('retrieved json: ' + json);
+    var calleeDesc = new RTCSessionDescription(json.description);
+    pc.setRemoteDescription(calleeDesc);
+
+    json.iceCandidates.forEach(candidateStr => {
+      var candidate = new RTCIceCandidate(candidateStr);
+      pc.addIceCandidate(candidate);
+    });
+
+    pc.ondatachannel = exports.channelCallback;
+    cxnMgr.local = pc;
   });
+};
+
+exports.gotDescription = function(desc) {
+  util.trace('Got description: ' + desc.toString());
+  localDesc = desc;
+  pc.setLocalDescription(desc);  
+};
+
+exports.channelCallback = function(event) {
+  util.trace('Channel Callback');
+  var channel = event.channel;
+  channel.binaryType = 'arraybuffer';
+  channel.onmessage = exports.onReceiveMessageCallback;
+};
+
+exports.onReceiveMessageCallback = function(event) {
+  var dataBin = event.data;
+  var dataJson = binUtil.arrayBufferToString(dataBin);
+  console.log('received message: ', dataJson);
 };

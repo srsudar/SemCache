@@ -59,6 +59,7 @@ module.exports = function (grunt) {
           './<%= config.app %>/scripts/settings:settings',
           './<%= config.app %>/scripts/evaluation:eval',
           './<%= config.app %>/scripts/webrtc/util:webrtc',
+          './<%= config.app %>/scripts/webrtc/connection-manager:rtccm',
           'moment:moment',
         ],
       },

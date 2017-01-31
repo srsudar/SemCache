@@ -2288,7 +2288,7 @@ _.extend(exports.EvaluationHandler.prototype, {
 }, WSC.BaseHandler.prototype);
 
 },{"../evaluation":"eval"}],13:[function(require,module,exports){
-/* globals WSC */
+/* globals WSC, RTCPeerConnection, RTCSessionDescription, RTCIceCandidate */
 'use strict';
 
 var _ = require('underscore');
@@ -2296,6 +2296,8 @@ var api = require('./server-api');
 var fileSystem = require('../persistence/file-system');
 var fsUtil = require('../persistence/file-system-util');
 var binUtil = require('../dnssd/binary-utils').BinaryUtils;
+var rtcConnMgr = require('../webrtc/connection-manager');
+var webrtcUtil = require('../webrtc/util');
 
 /**
  * Handlers for the webserver backing SemCache. The idea for handlers is based
@@ -2399,12 +2401,67 @@ _.extend(exports.WebRtcOfferHandler.prototype,
       console.log(this);
       window.req = this;
 
+      var that = this;
+
       var bodyStr = binUtil.arrayBufferToString(this.request.body);
       console.log('bodyStr: ' + bodyStr);
 
-      var jsonResp = { foo: 'response from PUT' };
-      var jsonBin = binUtil.stringToArrayBuffer(JSON.stringify(jsonResp));
-      this.write(jsonBin);
+      var bodyJson = JSON.parse(bodyStr);
+
+      var pc = new RTCPeerConnection(null, webrtcUtil.optionalCreateArgs);
+      pc.onicecandidate = onIceCandidate;
+      var remoteDescription = new RTCSessionDescription(bodyJson.description);
+      pc.setRemoteDescription(remoteDescription);
+      rtcConnMgr.remote = pc;
+
+      bodyJson.iceCandidates.forEach(candidateStr => {
+        var candidate = new RTCIceCandidate(candidateStr);
+        pc.addIceCandidate(candidate);
+      });
+
+      var iceCandidates = [];
+      var description = null;
+      var doneWithIce = false;
+
+      function onIceCandidate(e) {
+        if (e.candidate === null) {
+          console.log('Found all candidates');
+          doneWithIce = true;
+          maybeRespond();
+        } else {
+          iceCandidates.push(e.candidate);
+        }
+      }
+
+      function maybeRespond() {
+        if (doneWithIce && description) {
+          console.log('responding');
+          var respJson = {
+            description: description,
+            iceCandidates: iceCandidates
+          };
+          var respStr = JSON.stringify(respJson);
+          var respBin = binUtil.stringToArrayBuffer(respStr);
+          that.write(respBin);
+        }
+      }
+
+      pc.createAnswer()
+      .then(desc => {
+        description = desc;
+        console.log('responding with description: ', desc);
+        pc.setLocalDescription(desc);
+
+        pc.ondatachannel = webrtcUtil.channelCallback;
+
+        maybeRespond();
+
+        // var descJson = JSON.stringify(desc);
+        // var descBin = binUtil.stringToArrayBuffer(descJson);
+        // that.write(descBin);
+      }, err => {
+        console.log('err creating desc: ', err);
+      });
 
     },
 
@@ -2449,7 +2506,7 @@ _.extend(exports.WebRtcOfferHandler.prototype,
   WSC.BaseHandler.prototype
 );
 
-},{"../dnssd/binary-utils":"binaryUtils","../persistence/file-system":"fileSystem","../persistence/file-system-util":"fsUtil","./server-api":14,"underscore":26}],14:[function(require,module,exports){
+},{"../dnssd/binary-utils":"binaryUtils","../persistence/file-system":"fileSystem","../persistence/file-system-util":"fsUtil","../webrtc/connection-manager":"rtccm","../webrtc/util":"webrtc","./server-api":14,"underscore":26}],14:[function(require,module,exports){
 'use strict';
 
 /**
@@ -31658,6 +31715,12 @@ exports.getDirectory = function(dirEntry, options, name) {
     return _moment;
 
 }));
+},{}],"rtccm":[function(require,module,exports){
+/* globals RTCPeerConnection, RTCSessionDescription */
+
+exports.remote = null;
+exports.local = null;
+
 },{}],"serverController":[function(require,module,exports){
 /* global WSC, DummyHandler */
 'use strict';
@@ -32019,19 +32082,28 @@ exports.promptAndSetNewBaseDir = function() {
 };
 
 },{"./chrome-apis/file-system":1,"./chrome-apis/storage":3,"./persistence/file-system":"fileSystem"}],"webrtc":[function(require,module,exports){
-/* globals RTCPeerConnection */
+/* globals RTCPeerConnection, RTCSessionDescription, RTCIceCandidate */
 'use strict';
 
 var util = require('../util');
 var settings = require('../settings');
-var binUtil = require('../dnssd/binary-utils');
+var binUtil = require('../dnssd/binary-utils').BinaryUtils;
 var serverApi = require('../server/server-api');
+var cxnMgr = require('./connection-manager');
 
 var pc;
 var localDesc;
+var requestChannel;
+var iceCandidates;
+
+exports.optionalCreateArgs = { };
 
 exports.getConnection = function() {
   return pc;
+};
+
+exports.getRequestChannel = function() {
+  return requestChannel;
 };
 
 /**
@@ -32040,9 +32112,10 @@ exports.getConnection = function() {
  */
 
 exports.createConnection = function() {
-  pc = new RTCPeerConnection(null, null); 
+  iceCandidates = [];
+  pc = new RTCPeerConnection(null, exports.optionalCreateArgs); 
 
-  var requestChannel = pc.createDataChannel('requestChannel');
+  requestChannel = pc.createDataChannel('requestChannel');
   requestChannel.binaryType = 'arraybuffer';
 
   requestChannel.onopen = exports.onChannelStateChange;
@@ -32071,15 +32144,14 @@ exports.onIceCandidate = function(pc, e) {
     // supposedly all candidates complete
     util.trace('done with candidates');
     util.trace('desc after ICE candidate: ' + pc);
-
+    exports.sendOffer();
+  } else {
+    console.log('got ice candidate: ', e);
+    iceCandidates.push(e.candidate);
   }
 };
 
-exports.gotDescription = function(desc) {
-  util.trace('Got description: ' + desc.toString());
-  localDesc = desc;
-  pc.setLocalDescription(desc);  
-
+exports.sendOffer = function() {
   // Now we set up a request.
   var port = settings.getServerPort();
   var addr = '127.0.0.1';
@@ -32090,11 +32162,16 @@ exports.gotDescription = function(desc) {
     '/' +
     serverApi.getApiEndpoints().receiveWrtcOffer;
 
+  var bodyJson = {
+    description: localDesc,
+    iceCandidates: iceCandidates
+  };
+
   util.fetch(
     fullAddr,
     {
       method: 'PUT',
-      body: binUtil.BinaryUtils.stringToArrayBuffer(JSON.stringify(desc))
+      body: binUtil.stringToArrayBuffer(JSON.stringify(bodyJson))
     }
   )
   .then(resp => {
@@ -32104,7 +32181,36 @@ exports.gotDescription = function(desc) {
   })
   .then(json => {
     console.log('retrieved json: ' + json);
+    var calleeDesc = new RTCSessionDescription(json.description);
+    pc.setRemoteDescription(calleeDesc);
+
+    json.iceCandidates.forEach(candidateStr => {
+      var candidate = new RTCIceCandidate(candidateStr);
+      pc.addIceCandidate(candidate);
+    });
+
+    pc.ondatachannel = exports.channelCallback;
+    cxnMgr.local = pc;
   });
 };
 
-},{"../dnssd/binary-utils":"binaryUtils","../server/server-api":14,"../settings":"settings","../util":15}]},{},[10]);
+exports.gotDescription = function(desc) {
+  util.trace('Got description: ' + desc.toString());
+  localDesc = desc;
+  pc.setLocalDescription(desc);  
+};
+
+exports.channelCallback = function(event) {
+  util.trace('Channel Callback');
+  var channel = event.channel;
+  channel.binaryType = 'arraybuffer';
+  channel.onmessage = exports.onReceiveMessageCallback;
+};
+
+exports.onReceiveMessageCallback = function(event) {
+  var dataBin = event.data;
+  var dataJson = binUtil.arrayBufferToString(dataBin);
+  console.log('received message: ', dataJson);
+};
+
+},{"../dnssd/binary-utils":"binaryUtils","../server/server-api":14,"../settings":"settings","../util":15,"./connection-manager":"rtccm"}]},{},[10]);

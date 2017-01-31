@@ -1,4 +1,4 @@
-/* globals WSC */
+/* globals WSC, RTCPeerConnection, RTCSessionDescription, RTCIceCandidate */
 'use strict';
 
 var _ = require('underscore');
@@ -6,6 +6,8 @@ var api = require('./server-api');
 var fileSystem = require('../persistence/file-system');
 var fsUtil = require('../persistence/file-system-util');
 var binUtil = require('../dnssd/binary-utils').BinaryUtils;
+var rtcConnMgr = require('../webrtc/connection-manager');
+var webrtcUtil = require('../webrtc/util');
 
 /**
  * Handlers for the webserver backing SemCache. The idea for handlers is based
@@ -109,12 +111,67 @@ _.extend(exports.WebRtcOfferHandler.prototype,
       console.log(this);
       window.req = this;
 
+      var that = this;
+
       var bodyStr = binUtil.arrayBufferToString(this.request.body);
       console.log('bodyStr: ' + bodyStr);
 
-      var jsonResp = { foo: 'response from PUT' };
-      var jsonBin = binUtil.stringToArrayBuffer(JSON.stringify(jsonResp));
-      this.write(jsonBin);
+      var bodyJson = JSON.parse(bodyStr);
+
+      var pc = new RTCPeerConnection(null, webrtcUtil.optionalCreateArgs);
+      pc.onicecandidate = onIceCandidate;
+      var remoteDescription = new RTCSessionDescription(bodyJson.description);
+      pc.setRemoteDescription(remoteDescription);
+      rtcConnMgr.remote = pc;
+
+      bodyJson.iceCandidates.forEach(candidateStr => {
+        var candidate = new RTCIceCandidate(candidateStr);
+        pc.addIceCandidate(candidate);
+      });
+
+      var iceCandidates = [];
+      var description = null;
+      var doneWithIce = false;
+
+      function onIceCandidate(e) {
+        if (e.candidate === null) {
+          console.log('Found all candidates');
+          doneWithIce = true;
+          maybeRespond();
+        } else {
+          iceCandidates.push(e.candidate);
+        }
+      }
+
+      function maybeRespond() {
+        if (doneWithIce && description) {
+          console.log('responding');
+          var respJson = {
+            description: description,
+            iceCandidates: iceCandidates
+          };
+          var respStr = JSON.stringify(respJson);
+          var respBin = binUtil.stringToArrayBuffer(respStr);
+          that.write(respBin);
+        }
+      }
+
+      pc.createAnswer()
+      .then(desc => {
+        description = desc;
+        console.log('responding with description: ', desc);
+        pc.setLocalDescription(desc);
+
+        pc.ondatachannel = webrtcUtil.channelCallback;
+
+        maybeRespond();
+
+        // var descJson = JSON.stringify(desc);
+        // var descBin = binUtil.stringToArrayBuffer(descJson);
+        // that.write(descBin);
+      }, err => {
+        console.log('err creating desc: ', err);
+      });
 
     },
 
