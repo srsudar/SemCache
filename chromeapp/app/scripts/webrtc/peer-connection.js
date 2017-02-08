@@ -1,5 +1,7 @@
 'use strict';
 
+var Buffer = require('buffer').Buffer;
+
 var binUtil = require('../dnssd/binary-utils').BinaryUtils;
 var message = require('./message');
 
@@ -51,8 +53,8 @@ exports.PeerConnection.prototype.getList = function() {
 
   return new Promise(function(resolve, reject) {
     exports.sendAndGetResponse(rawConnection, msg)
-    .then(arrayBuffer => {
-      var str = binUtil.arrayBufferToString(arrayBuffer);
+    .then(buff => {
+      var str = buff.toString();
       var result = JSON.parse(str);
       resolve(result);
     })
@@ -101,6 +103,11 @@ exports.sendAndGetResponse = function(pc, msg) {
       var channel = pc.createDataChannel(msg.channelName);
       channel.binaryType = 'arraybuffer';
 
+      var streamInfo = null;
+      var chunksReceived = 0;
+      var receivingChunks = false;
+      var receivedChunks = [];
+
       channel.onopen = function() {
         // After we've opened the channel, send our message.
         var msgBin = binUtil.stringToArrayBuffer(JSON.stringify(msg));
@@ -119,8 +126,26 @@ exports.sendAndGetResponse = function(pc, msg) {
 
       channel.onmessage = function(event) {
         var dataBin = event.data;
-        resolve(dataBin);
-        channel.close();
+
+        // We expect a JSON msg about our stream as the first message.
+        if (!receivingChunks) {
+          streamInfo = JSON.parse(Buffer.from(dataBin).toString());
+          // Now that we have the streamInfo we transition to expecting chunks
+          // of binary data.
+          receivingChunks = true;
+          channel.send(Buffer.from(JSON.stringify({ message: 'next' })));
+          return;
+        }
+
+        receivedChunks.push(Buffer.from(dataBin));
+        chunksReceived++;
+
+        if (chunksReceived === streamInfo.numChunks) {
+          channel.close();
+          resolve(Buffer.concat(receivedChunks));
+        } else {
+          channel.send(Buffer.from(JSON.stringify({ message: 'next' })));
+        }
       };
     } catch (err) {
       reject(err);
