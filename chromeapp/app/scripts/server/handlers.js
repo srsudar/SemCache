@@ -8,6 +8,7 @@ var fsUtil = require('../persistence/file-system-util');
 var binUtil = require('../dnssd/binary-utils').BinaryUtils;
 var rtcConnMgr = require('../webrtc/connection-manager');
 var webrtcUtil = require('../webrtc/util');
+var wrtcResponder = require('../webrtc/responder');
 
 /**
  * Handlers for the webserver backing SemCache. The idea for handlers is based
@@ -162,7 +163,9 @@ _.extend(exports.WebRtcOfferHandler.prototype,
         console.log('responding with description: ', desc);
         pc.setLocalDescription(desc);
 
-        pc.ondatachannel = webrtcUtil.channelCallback;
+
+        pc.ondatachannel = wrtcResponder.onDataChannelHandler;
+        // pc.ondatachannel = webrtcUtil.channelCallback;
 
         maybeRespond();
 

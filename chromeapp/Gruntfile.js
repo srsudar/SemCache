@@ -59,7 +59,7 @@ module.exports = function (grunt) {
           './<%= config.app %>/scripts/settings:settings',
           './<%= config.app %>/scripts/evaluation:eval',
           './<%= config.app %>/scripts/webrtc/util:webrtc',
-          './<%= config.app %>/scripts/webrtc/connection-manager:rtccm',
+          './<%= config.app %>/scripts/webrtc/connection-manager:cmgr',
           'moment:moment',
         ],
       },
@@ -245,17 +245,6 @@ module.exports = function (grunt) {
     // },
 
     // The following *-min tasks produce minified files in the dist folder
-    imagemin: {
-      dist: {
-        files: [{
-          expand: true,
-          cwd: '<%= config.app %>/images',
-          src: '{,*/}*.{gif,jpeg,jpg,png}',
-          dest: '<%= config.dist %>/images'
-        }]
-      }
-    },
-
     svgmin: {
       dist: {
         files: [{
@@ -283,7 +272,7 @@ module.exports = function (grunt) {
             'scripts/server/dummy-handler.js',
             'index.js',
            '*.{ico,png,txt}',
-            'images/{,*/}*.{webp,gif}',
+            'images/{,*/}*.{webp,gif,png}',
             'styles/fonts/{,*/}*.*',
             '_locales/{,*/}*.json',
             'manifest.json',
@@ -309,7 +298,6 @@ module.exports = function (grunt) {
       ],
       dist: [
         'copy:styles',
-        'imagemin',
         'svgmin'
       ],
       test: [

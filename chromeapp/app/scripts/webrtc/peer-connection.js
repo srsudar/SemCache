@@ -1,5 +1,8 @@
 'use strict';
 
+var binUtil = require('../dnssd/binary-utils').BinaryUtils;
+var message = require('./message');
+
 /**
  * Handles a connection to a SemCache peer. 
  */
@@ -30,8 +33,8 @@ exports.PeerConnection.prototype.getRawConnection = function() {
 /**
  * Get the list of available files from the peer.
  *
- * @return {Promise -> JSON} Promise that resolves with the JSON list of the
- * directory contents
+ * @return {Promise.<JSON, Error>} Promise that resolves with the JSON list of
+ * the directory contents
  */
 exports.PeerConnection.prototype.getList = function() {
   // TODO: implement
@@ -43,46 +46,84 @@ exports.PeerConnection.prototype.getList = function() {
   // This means that a single message can be processed without worrying about
   // piecing it together from other messages. It is a simplification, but one
   // that seems reasonable.
+  var msg = message.createListMessage();
+  var rawConnection = this.getRawConnection();
+
+  return new Promise(function(resolve, reject) {
+    exports.sendAndGetResponse(rawConnection, msg)
+    .then(arrayBuffer => {
+      var str = binUtil.arrayBufferToString(arrayBuffer);
+      var result = JSON.parse(str);
+      resolve(result);
+    })
+    .catch(err => {
+      reject(err);
+    });
+  });
 };
 
 /**
- * Get the file from the peer.
+ * Get a file from the peer.
  *
  * @param {String} remotePath the identifier on the remote machine
- * @param {String} savePath the local path to which the file will be saved
  *
- * @return {Promise} Promise that resolves when the get is complete
+ * @return {Promise.<ArrayBuffer, Error>} Promise that resolves when the get is
+ * complete
  */
-exports.PeerConnection.prototype.getFile = function(remotePath, savePath) {
+exports.PeerConnection.prototype.getFile = function(remotePath) {
   // TODO: implement
   // TODO: should we stream this?
+  var msg = message.createFileMessage(remotePath);
+  var rawConnection = this.getRawConnection();
+  return exports.sendAndGetResponse(rawConnection, msg);
 };
 
 /**
- * Handler for the connection's ondatachannel event.
- */
-exports.onDataChannelHandler = function(event) {
-  // TODO: implement
-};
-
-/**
- * Handler that responds to a list request
+ * Helper for common functionality of creating a channel, sending a request
+ * message, and resolving after a response is received.
  *
- * Sends the listed directory contents to the peer.
+ * After the response is received, the channel that was used to send the
+ * message will be closed. The response is resolved after the first message is
+ * received.
+ *
+ * @param {RTCPeerConnection} pc the connection over which to send the message
+ * @param {JSON} msg the message to send to the peer
  * 
- * @param {object} request object representing the request.
+ * @return {Promise.<ArrayBuffer, Error>} Promise that resolves with the
+ * ArrayBuffer message received on the channel or with an Error if something
+ * went wrong. Callers are responsible for any parsing of the ArrayBuffer
+ * object, eg to reclaim a JSON response.
  */
-exports.onList = function(request) {
-  // TODO: implement
-};
+exports.sendAndGetResponse = function(pc, msg) {
+  return new Promise(function(resolve, reject) {
+    try {
+      var resolved = false;
+      var channel = pc.createDataChannel(msg.channelName);
+      channel.binaryType = 'arraybuffer';
 
-/**
- * Handler that responds to a request for a file.
- *
- * Sends the contents of the file to the peer.
- *
- * @param {object} request object representing the request
- */
-exports.onFile = function(request) {
-  // TODO: implement
+      channel.onopen = function() {
+        // After we've opened the channel, send our message.
+        var msgBin = binUtil.stringToArrayBuffer(JSON.stringify(msg));
+        channel.send(msgBin);
+      };
+
+      channel.onclose = function() {
+        if (exports.DEBUG) {
+          console.log('closed channel: ' + msg.channelName);
+        }
+        if (!resolved) {
+          resolved = true;
+          resolve();
+        }
+      };
+
+      channel.onmessage = function(event) {
+        var dataBin = event.data;
+        resolve(dataBin);
+        channel.close();
+      };
+    } catch (err) {
+      reject(err);
+    }
+  });
 };
