@@ -8,7 +8,8 @@
     "lodash": "^4.15.0",
     "npm": "^4.1.2",
     "underscore": "^1.8.3",
-    "webrtc-adapter": "^3.1.0"
+    "webrtc-adapter": "^3.1.0",
+    "wolfy87-eventemitter": "^5.1.0"
   },
   "devDependencies": {
     "grunt": "~1.0.1",
