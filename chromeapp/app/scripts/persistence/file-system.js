@@ -139,3 +139,36 @@ exports.promptForDir = function() {
     });
   });
 };
+
+/**
+ * Retrieve the binary contents of the file at the specified fileName.
+ *
+ * @param {String} fileName the name of the file
+ *
+ * @return {Promise.<Buffer, Error>} Promise that resolves with a Buffer
+ * containing the contents of the file or rejects with an Error
+ */
+exports.getFileContentsFromName = function(fileName) {
+  return new Promise(function(resolve, reject) {
+    exports.getDirectoryForCacheEntries()
+    .then(cacheDir => {
+      return fsUtil.getFile(
+        cacheDir,
+        {
+          create: false,
+          exclusive: false
+        },
+        fileName
+      );
+    })
+    .then(fileEntry => {
+      return fsUtil.getFileContents(fileEntry);
+    })
+    .then(buff => {
+      resolve(buff);
+    })
+    .catch(err => {
+      reject(err);
+    });
+  });
+};

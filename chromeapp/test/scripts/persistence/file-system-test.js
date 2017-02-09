@@ -4,6 +4,7 @@ var test = require('tape');
 var proxyquire = require('proxyquire');
 var sinon = require('sinon');
 require('sinon-as-promised');
+var fileSystem = require('../../../app/scripts/persistence/file-system');
 
 /**
  * Manipulating the object directly leads to polluting the require cache. Any
@@ -14,6 +15,7 @@ function resetFileSystem() {
   delete require.cache[
     require.resolve('../../../app/scripts/persistence/file-system')
   ];
+  fileSystem = require('../../../app/scripts/persistence/file-system');
 }
 
 test('promptForDir calls chrome API and returns Entry', function(t) {
@@ -246,4 +248,54 @@ test('constructFileSchemeUrl creates correct scheme', function(t) {
   var actual = fileSystem.constructFileSchemeUrl(absPath, entryPath);
   t.equal(actual, expected);
   t.end();
+});
+
+test('getFileContentsFromName resolves with contents', function(t) {
+  var fileName = 'such_a_fancy_name';
+  var cacheDir = sinon.stub();
+  var fileEntry = sinon.stub();
+
+  var expected = Buffer.from('hello');
+
+  var getDirectoryForCacheEntriesSpy = sinon.stub().resolves(cacheDir);
+
+  var getFileSpy = sinon.stub().resolves(fileEntry);
+  var getFileContentsSpy = sinon.stub().resolves(expected);
+
+  var fileSystem = proxyquire(
+    '../../../app/scripts/persistence/file-system',
+    {
+      './file-system-util': {
+        getFile: getFileSpy,
+        getFileContents: getFileContentsSpy
+      }
+    }
+  );
+  fileSystem.getDirectoryForCacheEntries = getDirectoryForCacheEntriesSpy;
+
+  fileSystem.getFileContentsFromName(fileName)
+  .then(actual => {
+    // We called getFile with the file name and cache dir
+    t.equal(getFileSpy.args[0][0], cacheDir);
+    t.equal(getFileSpy.args[0][2], fileName);
+
+    t.deepEqual(actual, expected);
+    t.end();
+    resetFileSystem();
+  });
+});
+
+test('getFileContentsFromName rejects with error', function(t) {
+  var fileName = 'such_a_fancy_name';
+  var expected = { error: 'get directory for cache entries failed' };
+
+  var getDirectoryForCacheEntriesSpy = sinon.stub().rejects(expected);
+  fileSystem.getDirectoryForCacheEntries = getDirectoryForCacheEntriesSpy;
+
+  fileSystem.getFileContentsFromName(fileName)
+  .catch(actual => {
+    t.deepEqual(actual, expected);
+    t.end();
+    resetFileSystem();
+  });
 });
