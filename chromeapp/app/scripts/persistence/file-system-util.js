@@ -1,6 +1,8 @@
 /* globals Promise */
 'use strict';
 
+var Buffer = require('buffer').Buffer;
+
 /**
  * General file system operations on top of the web APIs.
  */
@@ -109,4 +111,91 @@ exports.getDirectory = function(dirEntry, options, name) {
       reject(err);
     });
   });
+};
+
+/**
+ * @param {FileSystemEntry} entry
+ *
+ * @return {Promise.<Metadata, Error>} Promise that resolves with the size of
+ * the file or rejects with an Error
+ */
+exports.getMetadata = function(entry) {
+  return new Promise(function(resolve, reject) {
+    entry.getMetadata(
+      function success(metadata) {
+        resolve(metadata);
+      },
+      function error(err) {
+        reject(err); 
+      }
+    );
+  });
+};
+
+/**
+ * Promise-ified wrapper around the FileSystemFileEntry.file() method.
+ *
+ * @param {FileSystemFileEntry} fileEntry
+ *
+ * @return {Promise.<File, Error>} Promise that resolves with the File or
+ * rejects with an Error
+ */
+exports.getFileFromEntry = function(fileEntry) {
+  return new Promise(function(resolve, reject) {
+    fileEntry.file(
+      function success(file) {
+        resolve(file);
+      },
+      function error(err) {
+        reject(err); 
+      }
+    );
+  });
+};
+
+/**
+ * Retrieves the binary contents of a file.
+ *
+ * @param {FileEntry} fileEntry the fileEntry for which you want the contents
+ *
+ * @return {Promise.<Buffer, Error>} Promise that resolves with a Buffer object
+ * containing the binary content of the file or rejects with an Error.
+ */
+exports.getFileContents = function(fileEntry) {
+  return new Promise(function(resolve, reject) {
+    // This is the Buffer we will write the file contents into as we read it.
+    var chunks = [];
+    exports.getFileFromEntry(fileEntry)
+    .then(file => {
+      var fileReader = exports.createFileReader();
+
+      fileReader.onload = function(evt) {
+        chunks.push(evt.target.result);
+      };
+
+      fileReader.onloadend = function() {
+        var result = Buffer.concat(chunks);
+        resolve(result);
+      };
+
+      fileReader.onerror = function(evt) {
+        console.error('error reading', evt.target.error);
+        reject(evt.target.error);
+      };
+
+      fileReader.readAsArrayBuffer(file);
+    })
+    .catch(err => {
+      reject(err);
+    });
+  }); 
+};
+
+/**
+ * Exposed for testing.
+ *
+ * @return {FileReader} result of a straight call to new FileReader()
+ */
+exports.createFileReader = function() {
+  return new FileReader();
 };

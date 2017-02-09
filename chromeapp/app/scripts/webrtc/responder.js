@@ -4,6 +4,8 @@ var Buffer = require('buffer').Buffer;
 
 var binUtil = require('../dnssd/binary-utils').BinaryUtils;
 var chunkingChannel = require('./chunking-channel');
+var fileSystem = require('../persistence/file-system');
+var fsUtil = require('../persistence/file-system-util');
 var message = require('./message');
 var serverApi = require('../server/server-api');
 
@@ -66,6 +68,11 @@ exports.onList = function(channel) {
  * @param {JSON} msg the message requesting the information
  */
 exports.onFile = function(channel, msg) {
+  // Similar code is implemented in server/handlers.js. That code writes as the
+  // file as read--we are going to try not doing that here, given our decision
+  // to not chunk files at this point in time.
+  var fileName = api.getCachedFileNameFromPath(msg.request.accessPath);
+
   // TODO: implement
   console.log('onFile channel: ', channel);
   console.log('onFile msg: ', msg);

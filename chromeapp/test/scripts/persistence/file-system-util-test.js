@@ -1,9 +1,22 @@
 'use strict';
+var Buffer = require('buffer').Buffer;
 var test = require('tape');
 var sinon = require('sinon');
 require('sinon-as-promised');
 
 var util = require('../../../app/scripts/persistence/file-system-util');
+
+/**
+ * Manipulating the object directly leads to polluting the require cache. Any
+ * test that modifies the required object should call this method to get a
+ * fresh version
+ */
+function resetUtil() {
+  delete require.cache[
+    require.resolve('../../../app/scripts/persistence/file-system-util')
+  ];
+  util = require('../../../app/scripts/persistence/file-system-util');
+}
 
 test('listEntries returns all entries', function(t) {
   var readEntriesSpy = sinon.stub();
@@ -218,5 +231,128 @@ test('getDirectory rejects with error', function(t) {
     t.deepEqual(getDirectoryStub.args[0][1], options);
     t.equal(actualError, error);
     t.end();
+  });
+});
+
+test('getMetadata resolves with metadata if success', function(t) {
+  var expected = { size: 12345 };
+
+  var getMetadataCB = function(success) {
+    success(expected); 
+  };
+
+  var entryStub = sinon.stub();
+  entryStub.getMetadata = getMetadataCB;
+
+  util.getMetadata(entryStub)
+  .then(actual => {
+    t.equal(actual, expected);
+    t.end();
+  });
+});
+
+test('getMetadata rejects on error', function(t) {
+  var expected = { err: 'get metadata error' };
+
+  var getMetadataCB = function(successCallback, errorCallback) {
+    errorCallback(expected);
+  };
+
+  var entryStub = sinon.stub();
+  entryStub.getMetadata = getMetadataCB;
+
+  util.getMetadata(entryStub)
+  .catch(actual => {
+    t.equal(actual, expected);
+    t.end();
+  });
+});
+
+test('getFileFromEntry resolves with file if success', function(t) {
+  var expected = { file: 'object' };
+
+  var getFileStub = function(success) {
+    success(expected); 
+  };
+
+  var entryStub = sinon.stub();
+  entryStub.file = getFileStub;
+
+  util.getFileFromEntry(entryStub)
+  .then(actual => {
+    t.equal(actual, expected);
+    t.end();
+  });
+});
+
+test('getFileFromEntry rejects on error', function(t) {
+  var expected = { err: 'file error' };
+
+  var getFileStub = function(successCallback, errorCallback) {
+    errorCallback(expected); 
+  };
+
+  var entryStub = sinon.stub();
+  entryStub.file = getFileStub;
+
+  util.getFileFromEntry(entryStub)
+  .catch(actual => {
+    t.equal(actual, expected);
+    t.end();
+  });
+});
+
+test('getFileContents resolves with full contents', function(t) {
+  var fileReaderStub = sinon.stub();
+  util.createFileReader = sinon.stub().returns(fileReaderStub);
+
+  var buff1 = Buffer.from('Tyrion ');
+  var buff2 = Buffer.from('Lannister');
+  var expectedResult = Buffer.from('Tyrion Lannister');
+
+  var file = { stubType: 'file' };
+  var fileEntry = { stubType: 'fileEntry' };
+
+  util.getFileFromEntry = sinon.stub().withArgs(fileEntry).resolves(file);
+
+  fileReaderStub.readAsArrayBuffer = function(actualFile) {
+    t.equal(actualFile, file);
+    // And now issue our calls to the events.
+    fileReaderStub.onload({ target: { result: buff1 } });
+    fileReaderStub.onload({ target: { result: buff2 } });
+    fileReaderStub.onloadend();
+  };
+
+  util.getFileContents(fileEntry)
+  .then(actual => {
+    t.deepEqual(actual, expectedResult);
+    t.equal(actual.toString(), 'Tyrion Lannister');
+    t.end();
+    resetUtil();
+  });
+});
+
+test('getFileContents rejects when onerror called', function(t) {
+  var fileReaderStub = sinon.stub();
+  util.createFileReader = sinon.stub().returns(fileReaderStub);
+
+  var expectedError = { err: 'much wrong' };
+
+  var file = { stubType: 'file' };
+  var fileEntry = { stubType: 'fileEntry' };
+
+  util.getFileFromEntry = sinon.stub().withArgs(fileEntry).resolves(file);
+
+  fileReaderStub.readAsArrayBuffer = function(actualFile) {
+    t.equal(actualFile, file);
+    // And now issue our calls to the events.
+    fileReaderStub.onerror({ target: { error: expectedError } });
+  };
+
+  util.getFileContents(fileEntry)
+  .catch(actual => {
+    t.deepEqual(actual, expectedError);
+    t.end();
+    resetUtil();
   });
 });

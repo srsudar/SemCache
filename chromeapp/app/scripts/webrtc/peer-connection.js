@@ -37,11 +37,6 @@ exports.PeerConnection.prototype.getRawConnection = function() {
  * the directory contents
  */
 exports.PeerConnection.prototype.getList = function() {
-  // TODO: implement
-  // Generate a request object.
-  // Add this request to the queue you're monitoring.
-  // Issue the request.
-  // Resolve completing it. Hmm.
   // For now we are going to assume that all messages can be held in memory.
   // This means that a single message can be processed without worrying about
   // piecing it together from other messages. It is a simplification, but one
@@ -67,12 +62,13 @@ exports.PeerConnection.prototype.getList = function() {
  *
  * @param {String} remotePath the identifier on the remote machine
  *
- * @return {Promise.<ArrayBuffer, Error>} Promise that resolves when the get is
+ * @return {Promise.<Buffer, Error>} Promise that resolves when the get is
  * complete
  */
 exports.PeerConnection.prototype.getFile = function(remotePath) {
-  // TODO: implement
-  // TODO: should we stream this?
+  // For now we are assuming that all files can be held in memory and do not
+  // need to be written to disk as they are received. This is reasonable, I
+  // believe, given the way mhtml is displayed.
   var msg = message.createFileMessage(remotePath);
   var rawConnection = this.getRawConnection();
   return exports.sendAndGetResponse(rawConnection, msg);

@@ -2760,8 +2760,6 @@ exports.CHUNK_SIZE = 16000;
 /**
  * @constructor
  * @param {RTCPeerConnection} rawConnection a raw connection to a peer
- * @param {boolean} isClient true if this is a client that will be issuing a
- * request
  * @param {boolean} cacheChunks true if the Client it self should save
  * chunks. If true, the 'complete' event will include the final ArrayBuffer. If
  * false, chunks will be emitted only on 'chunk' events.
@@ -2770,7 +2768,7 @@ exports.CHUNK_SIZE = 16000;
  * message
  */
 exports.Client = function Client(
-    rawConnection, isClient, cacheChunks, msg
+    rawConnection, cacheChunks, msg
 ) {
   if (!(this instanceof Client)) {
     throw new Error('Client must be called with new');
@@ -2782,27 +2780,21 @@ exports.Client = function Client(
   this.streamInfo = null;
   this.awaitingFirstResponse = true;
   this.msg = msg;
-
-  if (this.cacheChunks) {
-    this.chunks = [];
-  } else {
-    this.chunks = null;
-  }
+  this.chunks = [];
 };
 
 _.extend(exports.Client.prototype, new EventEmitter());
 
-exports.Client.prototype.doPing = function() {
-  this.emit('ping', {foo: 'bar'});
-};
-
+/**
+ * Send the message to the server that initiates the transfer of the content.
+ */
 exports.Client.prototype.sendStartMessage = function() {
   var msgBin = Buffer.from(JSON.stringify(this.msg));
   this.channel.send(msgBin);
 };
 
 /**
- * @param {JSON} msg the message that starts requesting data from the peer
+ * Request the information from the server and start receiving data.
  */
 exports.Client.prototype.start = function() {
   var self = this;
@@ -2844,6 +2836,9 @@ exports.Client.prototype.start = function() {
   };
 };
 
+/**
+ * Inform the server that we are ready for the next chunk.
+ */
 exports.Client.prototype.requestNext = function() {
   var continueMsg = { message: 'next' };
   var continueMsgBin = Buffer.from(JSON.stringify(continueMsg));
@@ -2863,6 +2858,11 @@ exports.Client.prototype.emitChunk = function(buff) {
   this.emit(EV_CHUNK, buff);
 };
 
+/**
+ * Emit a 'complete' event signifying that everything has been received. If
+ * cacheChunks is true, the event will be emitted with a single buffer
+ * containing all concatenated chunks.
+ */
 exports.Client.prototype.emitComplete = function() {
   if (this.cacheChunks) {
     var reclaimed = Buffer.concat(this.chunks);
@@ -2873,7 +2873,11 @@ exports.Client.prototype.emitComplete = function() {
 };
 
 /**
+ * Create a Server to respond to Client requests.
+ *
  * @constructor
+ * @param {RTCDataChannel} channel a channel that has been initiated by a
+ * Client.
  */
 exports.Server = function Server(channel) {
   if (!(this instanceof Server)) {
@@ -2885,8 +2889,6 @@ exports.Server = function Server(channel) {
   this.streamInfo = null;
   this.chunksSent = null;
 };
-
-_.extend(exports.Server.prototype, new EventEmitter());
 
 /**
  * Send buff over the channel using chunks. The channel must have already been
@@ -3066,11 +3068,6 @@ exports.PeerConnection.prototype.getRawConnection = function() {
  * the directory contents
  */
 exports.PeerConnection.prototype.getList = function() {
-  // TODO: implement
-  // Generate a request object.
-  // Add this request to the queue you're monitoring.
-  // Issue the request.
-  // Resolve completing it. Hmm.
   // For now we are going to assume that all messages can be held in memory.
   // This means that a single message can be processed without worrying about
   // piecing it together from other messages. It is a simplification, but one
@@ -3096,12 +3093,13 @@ exports.PeerConnection.prototype.getList = function() {
  *
  * @param {String} remotePath the identifier on the remote machine
  *
- * @return {Promise.<ArrayBuffer, Error>} Promise that resolves when the get is
+ * @return {Promise.<Buffer, Error>} Promise that resolves when the get is
  * complete
  */
 exports.PeerConnection.prototype.getFile = function(remotePath) {
-  // TODO: implement
-  // TODO: should we stream this?
+  // For now we are assuming that all files can be held in memory and do not
+  // need to be written to disk as they are received. This is reasonable, I
+  // believe, given the way mhtml is displayed.
   var msg = message.createFileMessage(remotePath);
   var rawConnection = this.getRawConnection();
   return exports.sendAndGetResponse(rawConnection, msg);
@@ -3125,7 +3123,7 @@ exports.PeerConnection.prototype.getFile = function(remotePath) {
  */
 exports.sendAndGetResponse = function(pc, msg) {
   return new Promise(function(resolve, reject) {
-    var ccClient = new chunkingChannel.Client(pc, true, true, msg);
+    var ccClient = new chunkingChannel.Client(pc, true, msg);
 
     ccClient.on('complete', buff => {
       resolve(buff);
@@ -3146,6 +3144,8 @@ var Buffer = require('buffer').Buffer;
 
 var binUtil = require('../dnssd/binary-utils').BinaryUtils;
 var chunkingChannel = require('./chunking-channel');
+var fileSystem = require('../persistence/file-system');
+var fsUtil = require('../persistence/file-system-util');
 var message = require('./message');
 var serverApi = require('../server/server-api');
 
@@ -3208,13 +3208,18 @@ exports.onList = function(channel) {
  * @param {JSON} msg the message requesting the information
  */
 exports.onFile = function(channel, msg) {
+  // Similar code is implemented in server/handlers.js. That code writes as the
+  // file as read--we are going to try not doing that here, given our decision
+  // to not chunk files at this point in time.
+  var fileName = api.getCachedFileNameFromPath(msg.request.accessPath);
+
   // TODO: implement
   console.log('onFile channel: ', channel);
   console.log('onFile msg: ', msg);
   throw new Error('peer-connection.onFile not yet implemented');
 };
 
-},{"../dnssd/binary-utils":"binaryUtils","../server/server-api":14,"./chunking-channel":16,"./message":17,"buffer":22}],20:[function(require,module,exports){
+},{"../dnssd/binary-utils":"binaryUtils","../persistence/file-system":"fileSystem","../persistence/file-system-util":"fsUtil","../server/server-api":14,"./chunking-channel":16,"./message":17,"buffer":22}],20:[function(require,module,exports){
 (function (global){
 /*! http://mths.be/base64 v0.1.0 by @mathias | MIT license */
 ;(function(root) {
@@ -33710,6 +33715,8 @@ exports.promptForDir = function() {
 /* globals Promise */
 'use strict';
 
+var Buffer = require('buffer').Buffer;
+
 /**
  * General file system operations on top of the web APIs.
  */
@@ -33820,7 +33827,94 @@ exports.getDirectory = function(dirEntry, options, name) {
   });
 };
 
-},{}],"moment":[function(require,module,exports){
+/**
+ * @param {FileSystemEntry} entry
+ *
+ * @return {Promise.<Metadata, Error>} Promise that resolves with the size of
+ * the file or rejects with an Error
+ */
+exports.getMetadata = function(entry) {
+  return new Promise(function(resolve, reject) {
+    entry.getMetadata(
+      function success(metadata) {
+        resolve(metadata);
+      },
+      function error(err) {
+        reject(err); 
+      }
+    );
+  });
+};
+
+/**
+ * Promise-ified wrapper around the FileSystemFileEntry.file() method.
+ *
+ * @param {FileSystemFileEntry} fileEntry
+ *
+ * @return {Promise.<File, Error>} Promise that resolves with the File or
+ * rejects with an Error
+ */
+exports.getFileFromEntry = function(fileEntry) {
+  return new Promise(function(resolve, reject) {
+    fileEntry.file(
+      function success(file) {
+        resolve(file);
+      },
+      function error(err) {
+        reject(err); 
+      }
+    );
+  });
+};
+
+/**
+ * Retrieves the binary contents of a file.
+ *
+ * @param {FileEntry} fileEntry the fileEntry for which you want the contents
+ *
+ * @return {Promise.<Buffer, Error>} Promise that resolves with a Buffer object
+ * containing the binary content of the file or rejects with an Error.
+ */
+exports.getFileContents = function(fileEntry) {
+  return new Promise(function(resolve, reject) {
+    // This is the Buffer we will write the file contents into as we read it.
+    var chunks = [];
+    exports.getFileFromEntry(fileEntry)
+    .then(file => {
+      var fileReader = exports.createFileReader();
+
+      fileReader.onload = function(evt) {
+        chunks.push(evt.target.result);
+      };
+
+      fileReader.onloadend = function() {
+        var result = Buffer.concat(chunks);
+        resolve(result);
+      };
+
+      fileReader.onerror = function(evt) {
+        console.error('error reading', evt.target.error);
+        reject(evt.target.error);
+      };
+
+      fileReader.readAsArrayBuffer(file);
+    })
+    .catch(err => {
+      reject(err);
+    });
+  }); 
+};
+
+/**
+ * Exposed for testing.
+ *
+ * @return {FileReader} result of a straight call to new FileReader()
+ */
+exports.createFileReader = function() {
+  return new FileReader();
+};
+
+},{"buffer":22}],"moment":[function(require,module,exports){
 //! moment.js
 //! version : 2.17.1
 //! authors : Tim Wood, Iskren Chernev, Moment.js contributors
