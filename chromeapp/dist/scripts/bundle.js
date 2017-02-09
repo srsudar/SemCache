@@ -2746,6 +2746,13 @@ var EV_COMPLETE = 'complete';
 var EV_ERR = 'err';
 
 /**
+ * The size of chunks that will be sent over WebRTC at a given time. This is
+ * supposedly a reasonable value for Chrome, according to various documents
+ * online.
+ */
+exports.CHUNK_SIZE = 16000;
+
+/**
  * This object provides a way to communicate with a peer to chunk binary data
  * by default.
  */
@@ -2755,18 +2762,18 @@ var EV_ERR = 'err';
  * @param {RTCPeerConnection} rawConnection a raw connection to a peer
  * @param {boolean} isClient true if this is a client that will be issuing a
  * request
- * @param {boolean} cacheChunks true if the ChunkingChannel it self should save
+ * @param {boolean} cacheChunks true if the Client it self should save
  * chunks. If true, the 'complete' event will include the final ArrayBuffer. If
  * false, chunks will be emitted only on 'chunk' events.
  * @param {JSON} msg the message for the server. The peer being connected to
  * and represented by rawConnection is expected to know how to respond to the
  * message
  */
-exports.ChunkingChannel = function ChunkingChannel(
+exports.Client = function Client(
     rawConnection, isClient, cacheChunks, msg
 ) {
-  if (!(this instanceof ChunkingChannel)) {
-    throw new Error('ChunkingChannel must be called with new');
+  if (!(this instanceof Client)) {
+    throw new Error('Client must be called with new');
   }
 
   this.cacheChunks = cacheChunks;
@@ -2783,13 +2790,13 @@ exports.ChunkingChannel = function ChunkingChannel(
   }
 };
 
-_.extend(exports.ChunkingChannel.prototype, new EventEmitter());
+_.extend(exports.Client.prototype, new EventEmitter());
 
-exports.ChunkingChannel.prototype.doPing = function() {
+exports.Client.prototype.doPing = function() {
   this.emit('ping', {foo: 'bar'});
 };
 
-exports.ChunkingChannel.prototype.sendStartMessage = function() {
+exports.Client.prototype.sendStartMessage = function() {
   var msgBin = Buffer.from(JSON.stringify(this.msg));
   this.channel.send(msgBin);
 };
@@ -2797,7 +2804,7 @@ exports.ChunkingChannel.prototype.sendStartMessage = function() {
 /**
  * @param {JSON} msg the message that starts requesting data from the peer
  */
-exports.ChunkingChannel.prototype.start = function() {
+exports.Client.prototype.start = function() {
   var self = this;
   var channel = this.rawConnection.createDataChannel(this.msg.channelName);
   this.channel = channel;
@@ -2837,7 +2844,7 @@ exports.ChunkingChannel.prototype.start = function() {
   };
 };
 
-exports.ChunkingChannel.prototype.requestNext = function() {
+exports.Client.prototype.requestNext = function() {
   var continueMsg = { message: 'next' };
   var continueMsgBin = Buffer.from(JSON.stringify(continueMsg));
   try {
@@ -2852,17 +2859,91 @@ exports.ChunkingChannel.prototype.requestNext = function() {
  *
  * @param {Buffer} buff the Buffer object representing this chunk
  */
-exports.ChunkingChannel.prototype.emitChunk = function(buff) {
+exports.Client.prototype.emitChunk = function(buff) {
   this.emit(EV_CHUNK, buff);
 };
 
-exports.ChunkingChannel.prototype.emitComplete = function() {
+exports.Client.prototype.emitComplete = function() {
   if (this.cacheChunks) {
     var reclaimed = Buffer.concat(this.chunks);
     this.emit(EV_COMPLETE, reclaimed);
   } else {
     this.emit(EV_COMPLETE);
   }
+};
+
+/**
+ * @constructor
+ */
+exports.Server = function Server(channel) {
+  if (!(this instanceof Server)) {
+    throw new Error('Server must be called with new');
+  }
+
+  this.channel = channel;
+  this.numChunks = null;
+  this.streamInfo = null;
+  this.chunksSent = null;
+};
+
+_.extend(exports.Server.prototype, new EventEmitter());
+
+/**
+ * Send buff over the channel using chunks. The channel must have already been
+ * used to request a response--i.e. a ChannelClient must be listening.
+ *
+ * Note that currently this does not support streaming--buff must be able to be
+ * held in memory. It is not difficult to imagine this API being modified to
+ * change that, however.
+ *
+ * @param {Buffer} buff the buffer to send
+ */
+exports.Server.prototype.sendBuffer = function(buff) {
+  this.buffToSend = buff;
+  this.numChunks = Math.ceil(buff.length / exports.CHUNK_SIZE);
+  this.streamInfo = exports.createStreamInfo(this.numChunks);
+  this.chunksSent = 0;
+
+  var self = this;
+  this.channel.onmessage = function(event) {
+    var dataBuff = Buffer.from(event.data);
+    var msg = JSON.parse(dataBuff);
+
+    if (msg.message !== 'next') {
+      console.log('Unrecognized control signal: ', msg);
+      return;
+    }
+
+    var chunkStart = self.chunksSent * exports.CHUNK_SIZE;
+    var chunkEnd = chunkStart + exports.CHUNK_SIZE;
+    chunkEnd = Math.min(chunkEnd, buff.length);
+    var chunk = buff.slice(chunkStart, chunkEnd);
+
+    try {
+      self.channel.send(chunk);
+      self.chunksSent++;
+    } catch (err) {
+      console.log('Error sending chunk: ', err);
+    }
+  };
+  
+  // Start the process by sending the streamInfo to the client.
+  try {
+    this.channel.send(Buffer.from(JSON.stringify(this.streamInfo)));
+  } catch (err) {
+    console.log('Error sending streamInfo: ', this.streamInfo);
+  }
+};
+
+/**
+ * Create a stream info object. This is the first message sent by the Server.
+ *
+ * @param {integer} numChunks the total number of chunks that will be sent.
+ * This is not the total number of messages, but the number of chunks in the
+ * file.
+ */
+exports.createStreamInfo = function(numChunks) {
+  return { numChunks: numChunks };
 };
 
 },{"buffer":22,"underscore":36,"wolfy87-eventemitter":37}],17:[function(require,module,exports){
@@ -2948,10 +3029,7 @@ exports.isFile = function(msg) {
 },{}],18:[function(require,module,exports){
 'use strict';
 
-var Buffer = require('buffer').Buffer;
-
 var chunkingChannel = require('./chunking-channel');
-var binUtil = require('../dnssd/binary-utils').BinaryUtils;
 var message = require('./message');
 
 /**
@@ -3047,87 +3125,29 @@ exports.PeerConnection.prototype.getFile = function(remotePath) {
  */
 exports.sendAndGetResponse = function(pc, msg) {
   return new Promise(function(resolve, reject) {
-    var cc = new chunkingChannel.ChunkingChannel(pc, true, true, msg);
+    var ccClient = new chunkingChannel.Client(pc, true, true, msg);
 
-    cc.on('complete', buff => {
+    ccClient.on('complete', buff => {
       resolve(buff);
     });
 
-    cc.on('error', err => {
+    ccClient.on('error', err => {
       reject(err);
     });
 
-    cc.start();
-    // try {
-    //   var resolved = false;
-    //   var channel = pc.createDataChannel(msg.channelName);
-    //   channel.binaryType = 'arraybuffer';
-
-    //   var streamInfo = null;
-    //   var chunksReceived = 0;
-    //   var receivingChunks = false;
-    //   var receivedChunks = [];
-
-    //   channel.onopen = function() {
-    //     // After we've opened the channel, send our message.
-    //     var msgBin = binUtil.stringToArrayBuffer(JSON.stringify(msg));
-    //     channel.send(msgBin);
-    //   };
-
-    //   channel.onclose = function() {
-    //     if (exports.DEBUG) {
-    //       console.log('closed channel: ' + msg.channelName);
-    //     }
-    //     if (!resolved) {
-    //       resolved = true;
-    //       resolve();
-    //     }
-    //   };
-
-    //   channel.onmessage = function(event) {
-    //     var dataBin = event.data;
-
-    //     // We expect a JSON msg about our stream as the first message.
-    //     if (!receivingChunks) {
-    //       streamInfo = JSON.parse(Buffer.from(dataBin).toString());
-    //       // Now that we have the streamInfo we transition to expecting chunks
-    //       // of binary data.
-    //       receivingChunks = true;
-    //       channel.send(Buffer.from(JSON.stringify({ message: 'next' })));
-    //       return;
-    //     }
-
-    //     receivedChunks.push(Buffer.from(dataBin));
-    //     chunksReceived++;
-
-    //     if (chunksReceived === streamInfo.numChunks) {
-    //       channel.close();
-    //       resolve(Buffer.concat(receivedChunks));
-    //     } else {
-    //       channel.send(Buffer.from(JSON.stringify({ message: 'next' })));
-    //     }
-    //   };
-    // } catch (err) {
-    //   reject(err);
-    // }
+    ccClient.start();
   });
 };
 
-},{"../dnssd/binary-utils":"binaryUtils","./chunking-channel":16,"./message":17,"buffer":22}],19:[function(require,module,exports){
+},{"./chunking-channel":16,"./message":17}],19:[function(require,module,exports){
 'use strict';
 
 var Buffer = require('buffer').Buffer;
 
 var binUtil = require('../dnssd/binary-utils').BinaryUtils;
+var chunkingChannel = require('./chunking-channel');
 var message = require('./message');
 var serverApi = require('../server/server-api');
-
-/**
- * The size of chunks that will be sent over WebRTC at a given time. This is
- * supposedly a reasonable value for Chrome, according to various documents
- * online.
- */
-exports.CHUNK_SIZE = 16000;
 
 /**
  * This module is responsible for responding to incoming requests.
@@ -3172,29 +3192,9 @@ exports.onDataChannelMessageHandler = function(channel, event) {
 exports.onList = function(channel) {
   serverApi.getResponseForAllCachedPages()
   .then(json => {
-    var jsonStr = JSON.stringify(json);
-    var jsonBin = Buffer.from(jsonStr);
-
-    var numChunks = Math.ceil(jsonBin.length / exports.CHUNK_SIZE);
-    var streamInfo = { numChunks: numChunks };
-
-    var chunksSent = 0;
-    channel.onmessage = function(event) {
-      var msg = JSON.parse(Buffer.from(event.data).toString());
-      if (msg.message !== 'next') {
-        console.log('Unrecognized control signal: ', msg);
-        return;
-      }
-      var chunkStart = chunksSent * exports.CHUNK_SIZE;
-      var chunkEnd = chunkStart + exports.CHUNK_SIZE;
-      chunkEnd = Math.min(chunkEnd, jsonBin.length);
-      var chunk = jsonBin.slice(chunkStart, chunkEnd);
-      chunksSent++;
-      channel.send(chunk);
-    };
-
-    // Start the streaming process
-    channel.send(Buffer.from(JSON.stringify(streamInfo)));
+    var jsonBuff = Buffer.from(JSON.stringify(json));
+    var ccServer = new chunkingChannel.Server(channel);
+    ccServer.sendBuffer(jsonBuff);
   });
 };
 
@@ -3214,7 +3214,7 @@ exports.onFile = function(channel, msg) {
   throw new Error('peer-connection.onFile not yet implemented');
 };
 
-},{"../dnssd/binary-utils":"binaryUtils","../server/server-api":14,"./message":17,"buffer":22}],20:[function(require,module,exports){
+},{"../dnssd/binary-utils":"binaryUtils","../server/server-api":14,"./chunking-channel":16,"./message":17,"buffer":22}],20:[function(require,module,exports){
 (function (global){
 /*! http://mths.be/base64 v0.1.0 by @mathias | MIT license */
 ;(function(root) {

@@ -96,16 +96,16 @@ exports.PeerConnection.prototype.getFile = function(remotePath) {
  */
 exports.sendAndGetResponse = function(pc, msg) {
   return new Promise(function(resolve, reject) {
-    var cc = new chunkingChannel.ChunkingChannel(pc, true, true, msg);
+    var ccClient = new chunkingChannel.Client(pc, true, true, msg);
 
-    cc.on('complete', buff => {
+    ccClient.on('complete', buff => {
       resolve(buff);
     });
 
-    cc.on('error', err => {
+    ccClient.on('error', err => {
       reject(err);
     });
 
-    cc.start();
+    ccClient.start();
   });
 };
