@@ -45337,7 +45337,7 @@ _.extend(exports.WebRtcOfferHandler.prototype,
   WSC.BaseHandler.prototype
 );
 
-},{"../dnssd/binary-utils":"binaryUtils","../persistence/file-system":"fileSystem","../persistence/file-system-util":"fsUtil","../webrtc/connection-manager":"cmgr","../webrtc/responder":18,"../webrtc/util":"webrtc","./server-api":14,"underscore":35}],14:[function(require,module,exports){
+},{"../dnssd/binary-utils":"binaryUtils","../persistence/file-system":"fileSystem","../persistence/file-system-util":"fsUtil","../webrtc/connection-manager":"cmgr","../webrtc/responder":19,"../webrtc/util":"webrtc","./server-api":14,"underscore":36}],14:[function(require,module,exports){
 'use strict';
 
 /**
@@ -45565,6 +45565,137 @@ exports.trace = function trace(arg) {
 },{}],16:[function(require,module,exports){
 'use strict';
 
+var _ = require('underscore');
+var Buffer = require('buffer').Buffer;
+var EventEmitter = require('wolfy87-eventemitter');
+
+var EV_CHUNK = 'chunk';
+var EV_COMPLETE = 'complete';
+var EV_ERR = 'err';
+
+/**
+ * This object provides a way to communicate with a peer to chunk binary data
+ * by default.
+ */
+
+/**
+ * @constructor
+ * @param {RTCPeerConnection} rawConnection a raw connection to a peer
+ * @param {boolean} isClient true if this is a client that will be issuing a
+ * request
+ * @param {boolean} cacheChunks true if the ChunkingChannel it self should save
+ * chunks. If true, the 'complete' event will include the final ArrayBuffer. If
+ * false, chunks will be emitted only on 'chunk' events.
+ * @param {JSON} msg the message for the server. The peer being connected to
+ * and represented by rawConnection is expected to know how to respond to the
+ * message
+ */
+exports.ChunkingChannel = function ChunkingChannel(
+    rawConnection, isClient, cacheChunks, msg
+) {
+  if (!(this instanceof ChunkingChannel)) {
+    throw new Error('ChunkingChannel must be called with new');
+  }
+
+  this.cacheChunks = cacheChunks;
+  this.rawConnection = rawConnection;
+  this.numChunksReceived = 0;
+  this.streamInfo = null;
+  this.awaitingFirstResponse = true;
+  this.msg = msg;
+
+  if (this.cacheChunks) {
+    this.chunks = [];
+  } else {
+    this.chunks = null;
+  }
+};
+
+_.extend(exports.ChunkingChannel.prototype, new EventEmitter());
+
+exports.ChunkingChannel.prototype.doPing = function() {
+  this.emit('ping', {foo: 'bar'});
+};
+
+exports.ChunkingChannel.prototype.sendStartMessage = function() {
+  var msgBin = Buffer.from(JSON.stringify(this.msg));
+  this.channel.send(msgBin);
+};
+
+/**
+ * @param {JSON} msg the message that starts requesting data from the peer
+ */
+exports.ChunkingChannel.prototype.start = function() {
+  var self = this;
+  var channel = this.rawConnection.createDataChannel(this.msg.channelName);
+  this.channel = channel;
+  channel.binaryType = 'arraybuffer';
+
+  channel.onopen = function() {
+    self.sendStartMessage();
+  };
+
+  channel.onmessage = function(event) {
+    var dataBuff = Buffer.from(event.data);
+
+    // We expect a JSON message about our stream as the first message. All
+    // subsequent messages will be ArrayBuffers. We know we receive them in
+    // ordered fashion due to the guarantees of RTCDataChannel.
+    if (self.awaitingFirstResponse) {
+      self.streamInfo = JSON.parse(dataBuff.toString());
+      self.awaitingFirstResponse = false;
+      self.requestNext();
+      return;
+    }
+
+    // Otherwise, we've received a chunk of our data.
+    if (self.cacheChunks) {
+      self.chunks.push(dataBuff);
+    }
+    self.numChunksReceived++;
+    self.emitChunk(dataBuff);
+
+    if (self.numChunksReceived === self.streamInfo.numChunks) {
+      // We're done.
+      self.emitComplete();
+      self.channel.close();
+    } else {
+      self.requestNext();
+    }
+  };
+};
+
+exports.ChunkingChannel.prototype.requestNext = function() {
+  var continueMsg = { message: 'next' };
+  var continueMsgBin = Buffer.from(JSON.stringify(continueMsg));
+  try {
+    this.channel.send(continueMsgBin);
+  } catch (err) {
+    this.emit(EV_ERR, err);
+  }
+};
+
+/**
+ * Emit a 'chunk' event with the Buffer representing this chunk.
+ *
+ * @param {Buffer} buff the Buffer object representing this chunk
+ */
+exports.ChunkingChannel.prototype.emitChunk = function(buff) {
+  this.emit(EV_CHUNK, buff);
+};
+
+exports.ChunkingChannel.prototype.emitComplete = function() {
+  if (this.cacheChunks) {
+    var reclaimed = Buffer.concat(this.chunks);
+    this.emit(EV_COMPLETE, reclaimed);
+  } else {
+    this.emit(EV_COMPLETE);
+  }
+};
+
+},{"buffer":22,"underscore":36,"wolfy87-eventemitter":37}],17:[function(require,module,exports){
+'use strict';
+
 /**
  * Request messages for communicating with peers.
  *
@@ -45642,11 +45773,12 @@ exports.isFile = function(msg) {
   return msg.type && msg.type === exports.TYPE_FILE;
 };
 
-},{}],17:[function(require,module,exports){
+},{}],18:[function(require,module,exports){
 'use strict';
 
 var Buffer = require('buffer').Buffer;
 
+var chunkingChannel = require('./chunking-channel');
 var binUtil = require('../dnssd/binary-utils').BinaryUtils;
 var message = require('./message');
 
@@ -45743,62 +45875,73 @@ exports.PeerConnection.prototype.getFile = function(remotePath) {
  */
 exports.sendAndGetResponse = function(pc, msg) {
   return new Promise(function(resolve, reject) {
-    try {
-      var resolved = false;
-      var channel = pc.createDataChannel(msg.channelName);
-      channel.binaryType = 'arraybuffer';
+    var cc = new chunkingChannel.ChunkingChannel(pc, true, true, msg);
 
-      var streamInfo = null;
-      var chunksReceived = 0;
-      var receivingChunks = false;
-      var receivedChunks = [];
+    cc.on('complete', buff => {
+      resolve(buff);
+    });
 
-      channel.onopen = function() {
-        // After we've opened the channel, send our message.
-        var msgBin = binUtil.stringToArrayBuffer(JSON.stringify(msg));
-        channel.send(msgBin);
-      };
-
-      channel.onclose = function() {
-        if (exports.DEBUG) {
-          console.log('closed channel: ' + msg.channelName);
-        }
-        if (!resolved) {
-          resolved = true;
-          resolve();
-        }
-      };
-
-      channel.onmessage = function(event) {
-        var dataBin = event.data;
-
-        // We expect a JSON msg about our stream as the first message.
-        if (!receivingChunks) {
-          streamInfo = JSON.parse(Buffer.from(dataBin).toString());
-          // Now that we have the streamInfo we transition to expecting chunks
-          // of binary data.
-          receivingChunks = true;
-          channel.send(Buffer.from(JSON.stringify({ message: 'next' })));
-          return;
-        }
-
-        receivedChunks.push(Buffer.from(dataBin));
-        chunksReceived++;
-
-        if (chunksReceived === streamInfo.numChunks) {
-          channel.close();
-          resolve(Buffer.concat(receivedChunks));
-        } else {
-          channel.send(Buffer.from(JSON.stringify({ message: 'next' })));
-        }
-      };
-    } catch (err) {
+    cc.on('error', err => {
       reject(err);
-    }
+    });
+
+    cc.start();
+    // try {
+    //   var resolved = false;
+    //   var channel = pc.createDataChannel(msg.channelName);
+    //   channel.binaryType = 'arraybuffer';
+
+    //   var streamInfo = null;
+    //   var chunksReceived = 0;
+    //   var receivingChunks = false;
+    //   var receivedChunks = [];
+
+    //   channel.onopen = function() {
+    //     // After we've opened the channel, send our message.
+    //     var msgBin = binUtil.stringToArrayBuffer(JSON.stringify(msg));
+    //     channel.send(msgBin);
+    //   };
+
+    //   channel.onclose = function() {
+    //     if (exports.DEBUG) {
+    //       console.log('closed channel: ' + msg.channelName);
+    //     }
+    //     if (!resolved) {
+    //       resolved = true;
+    //       resolve();
+    //     }
+    //   };
+
+    //   channel.onmessage = function(event) {
+    //     var dataBin = event.data;
+
+    //     // We expect a JSON msg about our stream as the first message.
+    //     if (!receivingChunks) {
+    //       streamInfo = JSON.parse(Buffer.from(dataBin).toString());
+    //       // Now that we have the streamInfo we transition to expecting chunks
+    //       // of binary data.
+    //       receivingChunks = true;
+    //       channel.send(Buffer.from(JSON.stringify({ message: 'next' })));
+    //       return;
+    //     }
+
+    //     receivedChunks.push(Buffer.from(dataBin));
+    //     chunksReceived++;
+
+    //     if (chunksReceived === streamInfo.numChunks) {
+    //       channel.close();
+    //       resolve(Buffer.concat(receivedChunks));
+    //     } else {
+    //       channel.send(Buffer.from(JSON.stringify({ message: 'next' })));
+    //     }
+    //   };
+    // } catch (err) {
+    //   reject(err);
+    // }
   });
 };
 
-},{"../dnssd/binary-utils":"binaryUtils","./message":16,"buffer":21}],18:[function(require,module,exports){
+},{"../dnssd/binary-utils":"binaryUtils","./chunking-channel":16,"./message":17,"buffer":22}],19:[function(require,module,exports){
 'use strict';
 
 var Buffer = require('buffer').Buffer;
@@ -45899,7 +46042,7 @@ exports.onFile = function(channel, msg) {
   throw new Error('peer-connection.onFile not yet implemented');
 };
 
-},{"../dnssd/binary-utils":"binaryUtils","../server/server-api":14,"./message":16,"buffer":21}],19:[function(require,module,exports){
+},{"../dnssd/binary-utils":"binaryUtils","../server/server-api":14,"./message":17,"buffer":22}],20:[function(require,module,exports){
 (function (global){
 /*! http://mths.be/base64 v0.1.0 by @mathias | MIT license */
 ;(function(root) {
@@ -46068,7 +46211,7 @@ exports.onFile = function(channel, msg) {
 }(this));
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],20:[function(require,module,exports){
+},{}],21:[function(require,module,exports){
 'use strict'
 
 exports.byteLength = byteLength
@@ -46184,7 +46327,7 @@ function fromByteArray (uint8) {
   return parts.join('')
 }
 
-},{}],21:[function(require,module,exports){
+},{}],22:[function(require,module,exports){
 (function (global){
 /*!
  * The buffer module from node.js, for the browser.
@@ -47977,14 +48120,14 @@ function isnan (val) {
 }
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"base64-js":20,"ieee754":24,"isarray":22}],22:[function(require,module,exports){
+},{"base64-js":21,"ieee754":25,"isarray":23}],23:[function(require,module,exports){
 var toString = {}.toString;
 
 module.exports = Array.isArray || function (arr) {
   return toString.call(arr) == '[object Array]';
 };
 
-},{}],23:[function(require,module,exports){
+},{}],24:[function(require,module,exports){
 var isBuffer = require('is-buffer')
 
 var flat = module.exports = flatten
@@ -48091,7 +48234,7 @@ function unflatten(target, opts) {
   return result
 }
 
-},{"is-buffer":25}],24:[function(require,module,exports){
+},{"is-buffer":26}],25:[function(require,module,exports){
 exports.read = function (buffer, offset, isLE, mLen, nBytes) {
   var e, m
   var eLen = nBytes * 8 - mLen - 1
@@ -48177,7 +48320,7 @@ exports.write = function (buffer, value, offset, isLE, mLen, nBytes) {
   buffer[offset + i - d] |= s * 128
 }
 
-},{}],25:[function(require,module,exports){
+},{}],26:[function(require,module,exports){
 /*!
  * Determine if an object is a Buffer
  *
@@ -48200,7 +48343,7 @@ function isSlowBuffer (obj) {
   return typeof obj.readFloatLE === 'function' && typeof obj.slice === 'function' && isBuffer(obj.slice(0, 0))
 }
 
-},{}],26:[function(require,module,exports){
+},{}],27:[function(require,module,exports){
 (function (process){
 /**
  * Module dependencies.
@@ -48504,7 +48647,7 @@ function createDataRows(params) {
 }
 
 }).call(this,require('_process'))
-},{"_process":34,"flat":23,"lodash.clonedeep":27,"lodash.flatten":28,"lodash.get":29,"lodash.set":30,"lodash.uniq":31,"os":33}],27:[function(require,module,exports){
+},{"_process":35,"flat":24,"lodash.clonedeep":28,"lodash.flatten":29,"lodash.get":30,"lodash.set":31,"lodash.uniq":32,"os":34}],28:[function(require,module,exports){
 (function (global){
 /**
  * lodash (Custom Build) <https://lodash.com/>
@@ -50256,7 +50399,7 @@ function stubFalse() {
 module.exports = cloneDeep;
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],28:[function(require,module,exports){
+},{}],29:[function(require,module,exports){
 (function (global){
 /**
  * lodash (Custom Build) <https://lodash.com/>
@@ -50609,7 +50752,7 @@ function isObjectLike(value) {
 module.exports = flatten;
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],29:[function(require,module,exports){
+},{}],30:[function(require,module,exports){
 (function (global){
 /**
  * lodash (Custom Build) <https://lodash.com/>
@@ -51544,7 +51687,7 @@ function get(object, path, defaultValue) {
 module.exports = get;
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],30:[function(require,module,exports){
+},{}],31:[function(require,module,exports){
 (function (global){
 /**
  * lodash (Custom Build) <https://lodash.com/>
@@ -52538,7 +52681,7 @@ function set(object, path, value) {
 module.exports = set;
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],31:[function(require,module,exports){
+},{}],32:[function(require,module,exports){
 (function (global){
 /**
  * lodash (Custom Build) <https://lodash.com/>
@@ -53438,7 +53581,7 @@ function noop() {
 module.exports = uniq;
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],32:[function(require,module,exports){
+},{}],33:[function(require,module,exports){
 (function (global){
 /**
  * @license
@@ -70526,7 +70669,7 @@ module.exports = uniq;
 }.call(this));
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],33:[function(require,module,exports){
+},{}],34:[function(require,module,exports){
 exports.endianness = function () { return 'LE' };
 
 exports.hostname = function () {
@@ -70573,7 +70716,7 @@ exports.tmpdir = exports.tmpDir = function () {
 
 exports.EOL = '\n';
 
-},{}],34:[function(require,module,exports){
+},{}],35:[function(require,module,exports){
 // shim for using process in browser
 var process = module.exports = {};
 
@@ -70755,7 +70898,7 @@ process.chdir = function (dir) {
 };
 process.umask = function() { return 0; };
 
-},{}],35:[function(require,module,exports){
+},{}],36:[function(require,module,exports){
 //     Underscore.js 1.8.3
 //     http://underscorejs.org
 //     (c) 2009-2015 Jeremy Ashkenas, DocumentCloud and Investigative Reporters & Editors
@@ -72305,7 +72448,7 @@ process.umask = function() { return 0; };
   }
 }.call(this));
 
-},{}],36:[function(require,module,exports){
+},{}],37:[function(require,module,exports){
 /*!
  * EventEmitter v5.1.0 - git.io/ee
  * Unlicense - http://unlicense.org/
@@ -73297,42 +73440,7 @@ return BinaryUtils;
 
 })();
 
-},{}],"cc":[function(require,module,exports){
-'use strict';
-
-var _ = require('underscore');
-var EventEmitter = require('wolfy87-eventemitter');
-
-/**
- * This object provides a way to communicate with a peer to chunk binary data
- * by default.
- */
-
-// Events
-// start
-// ready-for-chunk
-// chunk
-// end
-
-/**
- * @constructor
- * @param {RTCPeerConnection} rawConnection a raw connection to a peer
- */
-exports.ChunkingChannel = function ChunkingChannel(rawConnection) {
-  if (!(this instanceof ChunkingChannel)) {
-    throw new Error('ChunkingChannel must be called with new');
-  }
-
-  this.rawConnection = rawConnection;
-};
-
-_.extend(exports.ChunkingChannel.prototype, new EventEmitter());
-
-exports.ChunkingChannel.prototype.doPing = function() {
-  this.emit('ping', {foo: 'bar'});
-};
-
-},{"underscore":35,"wolfy87-eventemitter":36}],"chromeUdp":[function(require,module,exports){
+},{}],"chromeUdp":[function(require,module,exports){
 /* globals Promise, chrome */
 'use strict';
 
@@ -73704,7 +73812,7 @@ exports.removeConnection = function(ipaddr, port) {
   delete CONNECTIONS[key];
 };
 
-},{"../../../app/scripts/webrtc/peer-connection":17,"../dnssd/binary-utils":"binaryUtils","../server/server-api":14,"../util":15}],"dnsSem":[function(require,module,exports){
+},{"../../../app/scripts/webrtc/peer-connection":18,"../dnssd/binary-utils":"binaryUtils","../server/server-api":14,"../util":15}],"dnsSem":[function(require,module,exports){
 /*jshint esnext:true*/
 'use strict';
 
@@ -75466,7 +75574,7 @@ exports.queryForResponses = function(
   });
 };
 
-},{"../util":15,"./dns-codes":6,"./dns-controller":"dnsc","./dns-packet":7,"./dns-util":8,"./resource-record":10,"lodash":32}],"eval":[function(require,module,exports){
+},{"../util":15,"./dns-codes":6,"./dns-controller":"dnsc","./dns-packet":7,"./dns-util":8,"./resource-record":10,"lodash":33}],"eval":[function(require,module,exports){
 'use strict';
 
 /**
@@ -76137,7 +76245,7 @@ exports.downloadKeyAsCsv = function(key) {
   });
 };
 
-},{"./app-controller":"appController","./chrome-apis/storage":4,"./persistence/datastore":11,"./server/server-api":14,"./util":15,"json2csv":26}],"extBridge":[function(require,module,exports){
+},{"./app-controller":"appController","./chrome-apis/storage":4,"./persistence/datastore":11,"./server/server-api":14,"./util":15,"json2csv":27}],"extBridge":[function(require,module,exports){
 'use strict';
 
 var chromeRuntime = require('../chrome-apis/runtime');
@@ -76283,7 +76391,7 @@ exports.sendMessageToOpenUrl = function(url) {
   exports.sendMessageToExtension(message);
 };
 
-},{"../chrome-apis/runtime":3,"../persistence/datastore":11,"base-64":19}],"fileSystem":[function(require,module,exports){
+},{"../chrome-apis/runtime":3,"../persistence/datastore":11,"base-64":20}],"fileSystem":[function(require,module,exports){
 /*jshint esnext:true*/
 /* globals Promise */
 'use strict';

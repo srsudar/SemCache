@@ -1,8 +1,6 @@
 'use strict';
 
-var Buffer = require('buffer').Buffer;
-
-var binUtil = require('../dnssd/binary-utils').BinaryUtils;
+var chunkingChannel = require('./chunking-channel');
 var message = require('./message');
 
 /**
@@ -98,57 +96,16 @@ exports.PeerConnection.prototype.getFile = function(remotePath) {
  */
 exports.sendAndGetResponse = function(pc, msg) {
   return new Promise(function(resolve, reject) {
-    try {
-      var resolved = false;
-      var channel = pc.createDataChannel(msg.channelName);
-      channel.binaryType = 'arraybuffer';
+    var cc = new chunkingChannel.ChunkingChannel(pc, true, true, msg);
 
-      var streamInfo = null;
-      var chunksReceived = 0;
-      var receivingChunks = false;
-      var receivedChunks = [];
+    cc.on('complete', buff => {
+      resolve(buff);
+    });
 
-      channel.onopen = function() {
-        // After we've opened the channel, send our message.
-        var msgBin = binUtil.stringToArrayBuffer(JSON.stringify(msg));
-        channel.send(msgBin);
-      };
-
-      channel.onclose = function() {
-        if (exports.DEBUG) {
-          console.log('closed channel: ' + msg.channelName);
-        }
-        if (!resolved) {
-          resolved = true;
-          resolve();
-        }
-      };
-
-      channel.onmessage = function(event) {
-        var dataBin = event.data;
-
-        // We expect a JSON msg about our stream as the first message.
-        if (!receivingChunks) {
-          streamInfo = JSON.parse(Buffer.from(dataBin).toString());
-          // Now that we have the streamInfo we transition to expecting chunks
-          // of binary data.
-          receivingChunks = true;
-          channel.send(Buffer.from(JSON.stringify({ message: 'next' })));
-          return;
-        }
-
-        receivedChunks.push(Buffer.from(dataBin));
-        chunksReceived++;
-
-        if (chunksReceived === streamInfo.numChunks) {
-          channel.close();
-          resolve(Buffer.concat(receivedChunks));
-        } else {
-          channel.send(Buffer.from(JSON.stringify({ message: 'next' })));
-        }
-      };
-    } catch (err) {
+    cc.on('error', err => {
       reject(err);
-    }
+    });
+
+    cc.start();
   });
 };
