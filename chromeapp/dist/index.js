@@ -45970,10 +45970,10 @@ exports.sendAndGetResponse = function(pc, msg) {
 
 var Buffer = require('buffer').Buffer;
 
+var api = require('../server/server-api');
 var binUtil = require('../dnssd/binary-utils').BinaryUtils;
 var chunkingChannel = require('./chunking-channel');
 var fileSystem = require('../persistence/file-system');
-var fsUtil = require('../persistence/file-system-util');
 var message = require('./message');
 var serverApi = require('../server/server-api');
 
@@ -46040,14 +46040,14 @@ exports.onFile = function(channel, msg) {
   // file as read--we are going to try not doing that here, given our decision
   // to not chunk files at this point in time.
   var fileName = api.getCachedFileNameFromPath(msg.request.accessPath);
-
-  // TODO: implement
-  console.log('onFile channel: ', channel);
-  console.log('onFile msg: ', msg);
-  throw new Error('peer-connection.onFile not yet implemented');
+  fileSystem.getFileContentsFromName(fileName)
+  .then(buff => {
+    var ccServer = new chunkingChannel.Server(channel);
+    ccServer.sendBuffer(buff);
+  });
 };
 
-},{"../dnssd/binary-utils":"binaryUtils","../persistence/file-system":"fileSystem","../persistence/file-system-util":"fsUtil","../server/server-api":14,"./chunking-channel":16,"./message":17,"buffer":22}],20:[function(require,module,exports){
+},{"../dnssd/binary-utils":"binaryUtils","../persistence/file-system":"fileSystem","../server/server-api":14,"./chunking-channel":16,"./message":17,"buffer":22}],20:[function(require,module,exports){
 (function (global){
 /*! http://mths.be/base64 v0.1.0 by @mathias | MIT license */
 ;(function(root) {
@@ -76535,6 +76535,39 @@ exports.promptForDir = function() {
     chromefs.chooseEntry({type: 'openDirectory'})
     .then(entry => {
       resolve(entry);
+    });
+  });
+};
+
+/**
+ * Retrieve the binary contents of the file at the specified fileName.
+ *
+ * @param {String} fileName the name of the file
+ *
+ * @return {Promise.<Buffer, Error>} Promise that resolves with a Buffer
+ * containing the contents of the file or rejects with an Error
+ */
+exports.getFileContentsFromName = function(fileName) {
+  return new Promise(function(resolve, reject) {
+    exports.getDirectoryForCacheEntries()
+    .then(cacheDir => {
+      return fsUtil.getFile(
+        cacheDir,
+        {
+          create: false,
+          exclusive: false
+        },
+        fileName
+      );
+    })
+    .then(fileEntry => {
+      return fsUtil.getFileContents(fileEntry);
+    })
+    .then(buff => {
+      resolve(buff);
+    })
+    .catch(err => {
+      reject(err);
     });
   });
 };

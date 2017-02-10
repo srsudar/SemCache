@@ -2,10 +2,10 @@
 
 var Buffer = require('buffer').Buffer;
 
+var api = require('../server/server-api');
 var binUtil = require('../dnssd/binary-utils').BinaryUtils;
 var chunkingChannel = require('./chunking-channel');
 var fileSystem = require('../persistence/file-system');
-var fsUtil = require('../persistence/file-system-util');
 var message = require('./message');
 var serverApi = require('../server/server-api');
 
@@ -48,13 +48,21 @@ exports.onDataChannelMessageHandler = function(channel, event) {
  * 
  * @param {RTCDataChannel} channel the data channel on which to send the
  * response
+ *
+ * @return {Promise} Promise that returns after sending has begun.
  */
 exports.onList = function(channel) {
-  serverApi.getResponseForAllCachedPages()
-  .then(json => {
-    var jsonBuff = Buffer.from(JSON.stringify(json));
-    var ccServer = new chunkingChannel.Server(channel);
-    ccServer.sendBuffer(jsonBuff);
+  return new Promise(function(resolve, reject) {
+    serverApi.getResponseForAllCachedPages()
+    .then(json => {
+      var jsonBuff = Buffer.from(JSON.stringify(json));
+      var ccServer = exports.createCcServer(channel);
+      ccServer.sendBuffer(jsonBuff);
+      resolve();
+    })
+    .catch(err => {
+      reject(err);
+    });
   });
 };
 
@@ -66,15 +74,46 @@ exports.onList = function(channel) {
  * @param {RTCDataChannel} channel the data channel on which to send the
  * response
  * @param {JSON} msg the message requesting the information
+ *
+ * @return {Promise} Promise that returns after sending has begun.
  */
 exports.onFile = function(channel, msg) {
-  // Similar code is implemented in server/handlers.js. That code writes as the
-  // file as read--we are going to try not doing that here, given our decision
-  // to not chunk files at this point in time.
-  var fileName = api.getCachedFileNameFromPath(msg.request.accessPath);
+  return new Promise(function(resolve, reject) {
+    var fileName = api.getCachedFileNameFromPath(msg.request.accessPath);
+    fileSystem.getFileContentsFromName(fileName)
+    .then(buff => {
+      var ccServer = exports.createCcServer(channel);
+      ccServer.sendBuffer(buff);
+      resolve();
+    })
+    .catch(err => {
+      reject(err);
+    });
+  });
+};
 
-  // TODO: implement
-  console.log('onFile channel: ', channel);
-  console.log('onFile msg: ', msg);
-  throw new Error('peer-connection.onFile not yet implemented');
+/**
+ * Factory method for creating a ChunkingChannel.Server object.
+ *
+ * Exposed for testing.
+ *
+ * @param {RTCDataChannel} channel
+ *
+ * @return {Server} a new ChunkingChannel.Server object wrapping the channel.
+ */
+exports.createCcServer = function(channel) {
+  return new chunkingChannel.Server(channel);
+};
+
+/**
+ * Factory method for creating a ChunkingChannel.Client object.
+ *
+ * Exposed for testing.
+ *
+ * @param {RTCDataChannel} channel
+ *
+ * @return {Server} a new ChunkingChannel.Client object wrapping the channel.
+ */
+exports.createCcClient = function(channel) {
+  return new chunkingChannel.Client(channel);
 };

@@ -51,7 +51,7 @@ exports.createListMessage = function() {
 exports.createFileMessage = function(filePath) {
   var result = exports.createMessage(exports.TYPE_FILE);
   var request = {};
-  request.path = filePath;
+  request.accessPath = filePath;
   result.request = request;
   return result;
 };
