@@ -1,7 +1,6 @@
 'use strict';
 var test = require('tape');
 var sinon = require('sinon');
-var proxyquire = require('proxyquire');
 require('sinon-as-promised');
 
 var message = require('../../../app/scripts/webrtc/message');
@@ -57,7 +56,7 @@ test('createFileMessage returns with request information', function(t) {
   var actual = message.createFileMessage(path);
 
   t.equal(actual.type, message.TYPE_FILE);
-  t.equal(actual.request.path, path);
+  t.equal(actual.request.accessPath, path);
   t.end();
 });
 

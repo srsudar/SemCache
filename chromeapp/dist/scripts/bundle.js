@@ -2760,6 +2760,11 @@ exports.CHUNK_SIZE = 16000;
 /**
  * @constructor
  * @param {RTCPeerConnection} rawConnection a raw connection to a peer
+<<<<<<< HEAD
+=======
+ * @param {boolean} isClient true if this is a client that will be issuing a
+ * request
+>>>>>>> e619208623da2799520ff1374173db269b4fab1f
  * @param {boolean} cacheChunks true if the Client it self should save
  * chunks. If true, the 'complete' event will include the final ArrayBuffer. If
  * false, chunks will be emitted only on 'chunk' events.
@@ -2768,7 +2773,11 @@ exports.CHUNK_SIZE = 16000;
  * message
  */
 exports.Client = function Client(
+<<<<<<< HEAD
     rawConnection, cacheChunks, msg
+=======
+    rawConnection, isClient, cacheChunks, msg
+>>>>>>> e619208623da2799520ff1374173db269b4fab1f
 ) {
   if (!(this instanceof Client)) {
     throw new Error('Client must be called with new');
@@ -2785,9 +2794,16 @@ exports.Client = function Client(
 
 _.extend(exports.Client.prototype, new EventEmitter());
 
+<<<<<<< HEAD
 /**
  * Send the message to the server that initiates the transfer of the content.
  */
+=======
+exports.Client.prototype.doPing = function() {
+  this.emit('ping', {foo: 'bar'});
+};
+
+>>>>>>> e619208623da2799520ff1374173db269b4fab1f
 exports.Client.prototype.sendStartMessage = function() {
   var msgBin = Buffer.from(JSON.stringify(this.msg));
   this.channel.send(msgBin);
@@ -2836,9 +2852,12 @@ exports.Client.prototype.start = function() {
   };
 };
 
+<<<<<<< HEAD
 /**
  * Inform the server that we are ready for the next chunk.
  */
+=======
+>>>>>>> e619208623da2799520ff1374173db269b4fab1f
 exports.Client.prototype.requestNext = function() {
   var continueMsg = { message: 'next' };
   var continueMsgBin = Buffer.from(JSON.stringify(continueMsg));
@@ -2858,11 +2877,14 @@ exports.Client.prototype.emitChunk = function(buff) {
   this.emit(EV_CHUNK, buff);
 };
 
+<<<<<<< HEAD
 /**
  * Emit a 'complete' event signifying that everything has been received. If
  * cacheChunks is true, the event will be emitted with a single buffer
  * containing all concatenated chunks.
  */
+=======
+>>>>>>> e619208623da2799520ff1374173db269b4fab1f
 exports.Client.prototype.emitComplete = function() {
   if (this.cacheChunks) {
     var reclaimed = Buffer.concat(this.chunks);
@@ -2873,11 +2895,15 @@ exports.Client.prototype.emitComplete = function() {
 };
 
 /**
+<<<<<<< HEAD
  * Create a Server to respond to Client requests.
  *
  * @constructor
  * @param {RTCDataChannel} channel a channel that has been initiated by a
  * Client.
+=======
+ * @constructor
+>>>>>>> e619208623da2799520ff1374173db269b4fab1f
  */
 exports.Server = function Server(channel) {
   if (!(this instanceof Server)) {
@@ -2890,6 +2916,11 @@ exports.Server = function Server(channel) {
   this.chunksSent = null;
 };
 
+<<<<<<< HEAD
+=======
+_.extend(exports.Server.prototype, new EventEmitter());
+
+>>>>>>> e619208623da2799520ff1374173db269b4fab1f
 /**
  * Send buff over the channel using chunks. The channel must have already been
  * used to request a response--i.e. a ChannelClient must be listening.
@@ -3123,7 +3154,11 @@ exports.PeerConnection.prototype.getFile = function(remotePath) {
  */
 exports.sendAndGetResponse = function(pc, msg) {
   return new Promise(function(resolve, reject) {
+<<<<<<< HEAD
     var ccClient = new chunkingChannel.Client(pc, true, msg);
+=======
+    var ccClient = new chunkingChannel.Client(pc, true, true, msg);
+>>>>>>> e619208623da2799520ff1374173db269b4fab1f
 
     ccClient.on('complete', buff => {
       resolve(buff);
@@ -3145,7 +3180,10 @@ var Buffer = require('buffer').Buffer;
 var api = require('../server/server-api');
 var binUtil = require('../dnssd/binary-utils').BinaryUtils;
 var chunkingChannel = require('./chunking-channel');
+<<<<<<< HEAD
 var fileSystem = require('../persistence/file-system');
+=======
+>>>>>>> e619208623da2799520ff1374173db269b4fab1f
 var message = require('./message');
 var serverApi = require('../server/server-api');
 
@@ -3219,7 +3257,11 @@ exports.onFile = function(channel, msg) {
   });
 };
 
+<<<<<<< HEAD
 },{"../dnssd/binary-utils":"binaryUtils","../persistence/file-system":"fileSystem","../server/server-api":14,"./chunking-channel":16,"./message":17,"buffer":22}],20:[function(require,module,exports){
+=======
+},{"../dnssd/binary-utils":"binaryUtils","../server/server-api":14,"./chunking-channel":16,"./message":17,"buffer":22}],20:[function(require,module,exports){
+>>>>>>> e619208623da2799520ff1374173db269b4fab1f
 (function (global){
 /*! http://mths.be/base64 v0.1.0 by @mathias | MIT license */
 ;(function(root) {
