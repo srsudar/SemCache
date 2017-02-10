@@ -29,7 +29,7 @@ test('creates correctly with legal args', function(t) {
   t.equal(msg.type, typeList);
   t.equal(msg.channelName, channelName);
 
-  var msg = new message.createMessage(typeFile);
+  msg = new message.createMessage(typeFile);
   t.equal(msg.type, typeFile);
 
   resetMessage();
