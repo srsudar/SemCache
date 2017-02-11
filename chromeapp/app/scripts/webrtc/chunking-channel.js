@@ -103,7 +103,7 @@ exports.Client.prototype.start = function() {
  * Inform the server that we are ready for the next chunk.
  */
 exports.Client.prototype.requestNext = function() {
-  var continueMsg = { message: 'next' };
+  var continueMsg = exports.createContinueMessage();
   var continueMsgBin = Buffer.from(JSON.stringify(continueMsg));
   try {
     this.channel.send(continueMsgBin);
@@ -185,8 +185,11 @@ exports.Server.prototype.sendBuffer = function(buff) {
     var chunk = buff.slice(chunkStart, chunkEnd);
 
     try {
-      self.channel.send(chunk);
+      // The number of chunks must be incremented before the send, otherwise if
+      // an ack comes back very quickly (impossibly quickly except in test
+      // conditions?) you can send the same chunk twice.
       self.chunksSent++;
+      self.channel.send(chunk);
     } catch (err) {
       console.log('Error sending chunk: ', err);
     }
@@ -209,4 +212,14 @@ exports.Server.prototype.sendBuffer = function(buff) {
  */
 exports.createStreamInfo = function(numChunks) {
   return { numChunks: numChunks };
+};
+
+/**
+ * Create an object to be sent to the server to signify that the next chunk is
+ * ready to be received.
+ *
+ * @return {JSON}
+ */
+exports.createContinueMessage = function() {
+  return { message: 'next' };
 };
