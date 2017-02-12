@@ -16,6 +16,18 @@ test('getRawConnection returns constructor arg', function(t) {
   t.end();
 });
 
+test('emits close event when rawConnection onclose invoked', function(t) {
+  var rawConnection = sinon.stub();
+  var pc = new peerConn.PeerConnection(rawConnection);
+
+  pc.on('close', actual => {
+    t.equal(actual, undefined);
+    t.end();
+  });
+
+  rawConnection.onclose();
+});
+
 test('getList issues call to peer', function(t) {
   t.fail();
 });

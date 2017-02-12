@@ -38,12 +38,18 @@ function createKey(ipaddr, port) {
 /**
  * Add a connection to the known pool of connection.
  *
+ * PeerConnections added via this method will be automatically removed when
+ * they emit a close event.
+ *
  * @param {String} ipaddr the IP address of the peer this connects to
  * @param {number} port the port of the instance advertised via mDNS where this
  * connection is connected
  * @param {PeerConnection} cxn the connection being added
  */
 exports.addConnection = function(ipaddr, port, cxn) {
+  cxn.on('close', () => {
+    exports.removeConnection(ipaddr, port);
+  });
   var key = createKey(ipaddr, port);
   CONNECTIONS[key] = cxn;
 };

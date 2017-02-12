@@ -1,7 +1,11 @@
 'use strict';
 
+var _ = require('underscore');
 var chunkingChannel = require('./chunking-channel');
+var EventEmitter = require('wolfy87-eventemitter');
 var message = require('./message');
+
+var EV_CLOSE = 'close';
 
 /**
  * Handles a connection to a SemCache peer. 
@@ -10,13 +14,33 @@ var message = require('./message');
 /**
  * PeerConnection is a wrapper around the raw WebRTC machinery to provide a
  * SemCache-specific API.
+ * 
+ * @param {RTCPeerConnection} rawConnection the raw RTCPeerConnection that will
+ * be backing this connection. This rawConnection has its onclose handler
+ * modified to allow the PeerConnection to emit its own 'close' event.
+ *
+ * @constructor
  */
 exports.PeerConnection = function PeerConnection(rawConnection) {
   if (!(this instanceof PeerConnection)) {
     throw new Error('PeerConnection must be called with new');
   }
+  var self = this;
 
   this.rawConnection = rawConnection;
+
+  this.rawConnection.onclose = function() {
+    self.emitClose();
+  };
+};
+
+_.extend(exports.PeerConnection.prototype, new EventEmitter());
+
+/**
+ * Emit a close event.
+ */
+exports.PeerConnection.prototype.emitClose = function() {
+  this.emit(EV_CLOSE);
 };
 
 /**

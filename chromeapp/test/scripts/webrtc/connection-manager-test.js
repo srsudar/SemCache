@@ -6,6 +6,7 @@ var sinon = require('sinon');
 require('sinon-as-promised');
 
 var cmgr = require('../../../app/scripts/webrtc/connection-manager');
+var peerConn = require('../../../app/scripts/webrtc/peer-connection');
 
 /**
  * Manipulating the object directly leads to polluting the require cache. Any
@@ -292,7 +293,8 @@ function sendOfferAssertionHelper(fetchError, createDescError, t) {
 }
 
 test('addConnection and getConnection correct in base case', function(t) {
-  var cxn = { testType: 'PeerConnection' };
+  var cxn = sinon.stub();
+  cxn.on = sinon.stub();
   var ipaddr = '1.2.3.4';
   var port = 1234;
 
@@ -304,6 +306,19 @@ test('addConnection and getConnection correct in base case', function(t) {
   resetCmgr();
 });
 
+test('connection is removed after close event', function(t) {
+  var cxn = new peerConn.PeerConnection(sinon.stub());
+  var ipaddr = '1.2.3.4';
+  var port = 7777;
+
+  cmgr.addConnection(ipaddr, port, cxn);
+
+  t.equal(cmgr.getConnection(ipaddr, port), cxn);
+  cxn.emitClose();
+  t.equal(cmgr.getConnection(ipaddr, port), null);
+  t.end();
+});
+
 test('getConnection returns null if not present', function(t) {
   var actual = cmgr.getConnection('foo', 11);
   t.equal(actual, null);
@@ -311,7 +326,8 @@ test('getConnection returns null if not present', function(t) {
 });
 
 test('removeConnection deletes connection if present', function(t) {
-  var cxn = 'a connection';
+  var cxn = sinon.stub();
+  cxn.on = sinon.stub();
   var ipaddr = '9.8.7.6';
   var port = 5555;
 
