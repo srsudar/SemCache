@@ -65,10 +65,11 @@ exports.PeerConnection.prototype.getList = function() {
   // This means that a single message can be processed without worrying about
   // piecing it together from other messages. It is a simplification, but one
   // that seems reasonable.
-  var msg = message.createListMessage();
-  var rawConnection = this.getRawConnection();
-
+  var self = this;
   return new Promise(function(resolve, reject) {
+    var msg = message.createListMessage();
+    var rawConnection = self.getRawConnection();
+
     exports.sendAndGetResponse(rawConnection, msg)
     .then(buff => {
       var str = buff.toString();
@@ -93,9 +94,18 @@ exports.PeerConnection.prototype.getFile = function(remotePath) {
   // For now we are assuming that all files can be held in memory and do not
   // need to be written to disk as they are received. This is reasonable, I
   // believe, given the way mhtml is displayed.
-  var msg = message.createFileMessage(remotePath);
-  var rawConnection = this.getRawConnection();
-  return exports.sendAndGetResponse(rawConnection, msg);
+  var self = this;
+  return new Promise(function(resolve, reject) {
+    var msg = message.createFileMessage(remotePath);
+    var rawConnection = self.getRawConnection();
+    exports.sendAndGetResponse(rawConnection, msg)
+    .then(buffer => {
+      resolve(buffer);
+    })
+    .catch(err => {
+      reject(err);
+    });
+  });
 };
 
 /**

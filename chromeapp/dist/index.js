@@ -45337,7 +45337,7 @@ _.extend(exports.WebRtcOfferHandler.prototype,
   WSC.BaseHandler.prototype
 );
 
-},{"../dnssd/binary-utils":"binaryUtils","../persistence/file-system":"fileSystem","../persistence/file-system-util":"fsUtil","../webrtc/connection-manager":"cmgr","../webrtc/responder":19,"../webrtc/util":"webrtc","./server-api":14,"underscore":36}],14:[function(require,module,exports){
+},{"../dnssd/binary-utils":"binaryUtils","../persistence/file-system":"fileSystem","../persistence/file-system-util":"fsUtil","../webrtc/connection-manager":"cmgr","../webrtc/responder":19,"../webrtc/util":20,"./server-api":14,"underscore":37}],14:[function(require,module,exports){
 'use strict';
 
 /**
@@ -45588,11 +45588,6 @@ exports.CHUNK_SIZE = 16000;
 /**
  * @constructor
  * @param {RTCPeerConnection} rawConnection a raw connection to a peer
-<<<<<<< HEAD
-=======
- * @param {boolean} isClient true if this is a client that will be issuing a
- * request
->>>>>>> e619208623da2799520ff1374173db269b4fab1f
  * @param {boolean} cacheChunks true if the Client it self should save
  * chunks. If true, the 'complete' event will include the final ArrayBuffer. If
  * false, chunks will be emitted only on 'chunk' events.
@@ -45601,11 +45596,7 @@ exports.CHUNK_SIZE = 16000;
  * message
  */
 exports.Client = function Client(
-<<<<<<< HEAD
     rawConnection, cacheChunks, msg
-=======
-    rawConnection, isClient, cacheChunks, msg
->>>>>>> e619208623da2799520ff1374173db269b4fab1f
 ) {
   if (!(this instanceof Client)) {
     throw new Error('Client must be called with new');
@@ -45622,16 +45613,9 @@ exports.Client = function Client(
 
 _.extend(exports.Client.prototype, new EventEmitter());
 
-<<<<<<< HEAD
 /**
  * Send the message to the server that initiates the transfer of the content.
  */
-=======
-exports.Client.prototype.doPing = function() {
-  this.emit('ping', {foo: 'bar'});
-};
-
->>>>>>> e619208623da2799520ff1374173db269b4fab1f
 exports.Client.prototype.sendStartMessage = function() {
   var msgBin = Buffer.from(JSON.stringify(this.msg));
   this.channel.send(msgBin);
@@ -45680,14 +45664,11 @@ exports.Client.prototype.start = function() {
   };
 };
 
-<<<<<<< HEAD
 /**
  * Inform the server that we are ready for the next chunk.
  */
-=======
->>>>>>> e619208623da2799520ff1374173db269b4fab1f
 exports.Client.prototype.requestNext = function() {
-  var continueMsg = { message: 'next' };
+  var continueMsg = exports.createContinueMessage();
   var continueMsgBin = Buffer.from(JSON.stringify(continueMsg));
   try {
     this.channel.send(continueMsgBin);
@@ -45705,14 +45686,11 @@ exports.Client.prototype.emitChunk = function(buff) {
   this.emit(EV_CHUNK, buff);
 };
 
-<<<<<<< HEAD
 /**
  * Emit a 'complete' event signifying that everything has been received. If
  * cacheChunks is true, the event will be emitted with a single buffer
  * containing all concatenated chunks.
  */
-=======
->>>>>>> e619208623da2799520ff1374173db269b4fab1f
 exports.Client.prototype.emitComplete = function() {
   if (this.cacheChunks) {
     var reclaimed = Buffer.concat(this.chunks);
@@ -45723,15 +45701,11 @@ exports.Client.prototype.emitComplete = function() {
 };
 
 /**
-<<<<<<< HEAD
  * Create a Server to respond to Client requests.
  *
  * @constructor
  * @param {RTCDataChannel} channel a channel that has been initiated by a
  * Client.
-=======
- * @constructor
->>>>>>> e619208623da2799520ff1374173db269b4fab1f
  */
 exports.Server = function Server(channel) {
   if (!(this instanceof Server)) {
@@ -45744,11 +45718,6 @@ exports.Server = function Server(channel) {
   this.chunksSent = null;
 };
 
-<<<<<<< HEAD
-=======
-_.extend(exports.Server.prototype, new EventEmitter());
-
->>>>>>> e619208623da2799520ff1374173db269b4fab1f
 /**
  * Send buff over the channel using chunks. The channel must have already been
  * used to request a response--i.e. a ChannelClient must be listening.
@@ -45781,8 +45750,11 @@ exports.Server.prototype.sendBuffer = function(buff) {
     var chunk = buff.slice(chunkStart, chunkEnd);
 
     try {
-      self.channel.send(chunk);
+      // The number of chunks must be incremented before the send, otherwise if
+      // an ack comes back very quickly (impossibly quickly except in test
+      // conditions?) you can send the same chunk twice.
       self.chunksSent++;
+      self.channel.send(chunk);
     } catch (err) {
       console.log('Error sending chunk: ', err);
     }
@@ -45807,7 +45779,17 @@ exports.createStreamInfo = function(numChunks) {
   return { numChunks: numChunks };
 };
 
-},{"buffer":22,"underscore":36,"wolfy87-eventemitter":37}],17:[function(require,module,exports){
+/**
+ * Create an object to be sent to the server to signify that the next chunk is
+ * ready to be received.
+ *
+ * @return {JSON}
+ */
+exports.createContinueMessage = function() {
+  return { message: 'next' };
+};
+
+},{"buffer":23,"underscore":37,"wolfy87-eventemitter":38}],17:[function(require,module,exports){
 'use strict';
 
 /**
@@ -45861,7 +45843,7 @@ exports.createListMessage = function() {
 exports.createFileMessage = function(filePath) {
   var result = exports.createMessage(exports.TYPE_FILE);
   var request = {};
-  request.path = filePath;
+  request.accessPath = filePath;
   result.request = request;
   return result;
 };
@@ -45890,8 +45872,12 @@ exports.isFile = function(msg) {
 },{}],18:[function(require,module,exports){
 'use strict';
 
+var _ = require('underscore');
 var chunkingChannel = require('./chunking-channel');
+var EventEmitter = require('wolfy87-eventemitter');
 var message = require('./message');
+
+var EV_CLOSE = 'close';
 
 /**
  * Handles a connection to a SemCache peer. 
@@ -45900,13 +45886,33 @@ var message = require('./message');
 /**
  * PeerConnection is a wrapper around the raw WebRTC machinery to provide a
  * SemCache-specific API.
+ * 
+ * @param {RTCPeerConnection} rawConnection the raw RTCPeerConnection that will
+ * be backing this connection. This rawConnection has its onclose handler
+ * modified to allow the PeerConnection to emit its own 'close' event.
+ *
+ * @constructor
  */
 exports.PeerConnection = function PeerConnection(rawConnection) {
   if (!(this instanceof PeerConnection)) {
     throw new Error('PeerConnection must be called with new');
   }
+  var self = this;
 
   this.rawConnection = rawConnection;
+
+  this.rawConnection.onclose = function() {
+    self.emitClose();
+  };
+};
+
+_.extend(exports.PeerConnection.prototype, new EventEmitter());
+
+/**
+ * Emit a close event.
+ */
+exports.PeerConnection.prototype.emitClose = function() {
+  this.emit(EV_CLOSE);
 };
 
 /**
@@ -45931,10 +45937,11 @@ exports.PeerConnection.prototype.getList = function() {
   // This means that a single message can be processed without worrying about
   // piecing it together from other messages. It is a simplification, but one
   // that seems reasonable.
-  var msg = message.createListMessage();
-  var rawConnection = this.getRawConnection();
-
+  var self = this;
   return new Promise(function(resolve, reject) {
+    var msg = message.createListMessage();
+    var rawConnection = self.getRawConnection();
+
     exports.sendAndGetResponse(rawConnection, msg)
     .then(buff => {
       var str = buff.toString();
@@ -45959,9 +45966,18 @@ exports.PeerConnection.prototype.getFile = function(remotePath) {
   // For now we are assuming that all files can be held in memory and do not
   // need to be written to disk as they are received. This is reasonable, I
   // believe, given the way mhtml is displayed.
-  var msg = message.createFileMessage(remotePath);
-  var rawConnection = this.getRawConnection();
-  return exports.sendAndGetResponse(rawConnection, msg);
+  var self = this;
+  return new Promise(function(resolve, reject) {
+    var msg = message.createFileMessage(remotePath);
+    var rawConnection = self.getRawConnection();
+    exports.sendAndGetResponse(rawConnection, msg)
+    .then(buffer => {
+      resolve(buffer);
+    })
+    .catch(err => {
+      reject(err);
+    });
+  });
 };
 
 /**
@@ -45982,11 +45998,7 @@ exports.PeerConnection.prototype.getFile = function(remotePath) {
  */
 exports.sendAndGetResponse = function(pc, msg) {
   return new Promise(function(resolve, reject) {
-<<<<<<< HEAD
     var ccClient = new chunkingChannel.Client(pc, true, msg);
-=======
-    var ccClient = new chunkingChannel.Client(pc, true, true, msg);
->>>>>>> e619208623da2799520ff1374173db269b4fab1f
 
     ccClient.on('complete', buff => {
       resolve(buff);
@@ -46000,7 +46012,7 @@ exports.sendAndGetResponse = function(pc, msg) {
   });
 };
 
-},{"./chunking-channel":16,"./message":17}],19:[function(require,module,exports){
+},{"./chunking-channel":16,"./message":17,"underscore":37,"wolfy87-eventemitter":38}],19:[function(require,module,exports){
 'use strict';
 
 var Buffer = require('buffer').Buffer;
@@ -46008,10 +46020,7 @@ var Buffer = require('buffer').Buffer;
 var api = require('../server/server-api');
 var binUtil = require('../dnssd/binary-utils').BinaryUtils;
 var chunkingChannel = require('./chunking-channel');
-<<<<<<< HEAD
 var fileSystem = require('../persistence/file-system');
-=======
->>>>>>> e619208623da2799520ff1374173db269b4fab1f
 var message = require('./message');
 var serverApi = require('../server/server-api');
 
@@ -46054,13 +46063,21 @@ exports.onDataChannelMessageHandler = function(channel, event) {
  * 
  * @param {RTCDataChannel} channel the data channel on which to send the
  * response
+ *
+ * @return {Promise} Promise that returns after sending has begun.
  */
 exports.onList = function(channel) {
-  serverApi.getResponseForAllCachedPages()
-  .then(json => {
-    var jsonBuff = Buffer.from(JSON.stringify(json));
-    var ccServer = new chunkingChannel.Server(channel);
-    ccServer.sendBuffer(jsonBuff);
+  return new Promise(function(resolve, reject) {
+    serverApi.getResponseForAllCachedPages()
+    .then(json => {
+      var jsonBuff = Buffer.from(JSON.stringify(json));
+      var ccServer = exports.createCcServer(channel);
+      ccServer.sendBuffer(jsonBuff);
+      resolve();
+    })
+    .catch(err => {
+      reject(err);
+    });
   });
 };
 
@@ -46072,24 +46089,183 @@ exports.onList = function(channel) {
  * @param {RTCDataChannel} channel the data channel on which to send the
  * response
  * @param {JSON} msg the message requesting the information
+ *
+ * @return {Promise} Promise that returns after sending has begun.
  */
 exports.onFile = function(channel, msg) {
-  // Similar code is implemented in server/handlers.js. That code writes as the
-  // file as read--we are going to try not doing that here, given our decision
-  // to not chunk files at this point in time.
-  var fileName = api.getCachedFileNameFromPath(msg.request.accessPath);
-  fileSystem.getFileContentsFromName(fileName)
-  .then(buff => {
-    var ccServer = new chunkingChannel.Server(channel);
-    ccServer.sendBuffer(buff);
+  return new Promise(function(resolve, reject) {
+    var fileName = api.getCachedFileNameFromPath(msg.request.accessPath);
+    fileSystem.getFileContentsFromName(fileName)
+    .then(buff => {
+      var ccServer = exports.createCcServer(channel);
+      ccServer.sendBuffer(buff);
+      resolve();
+    })
+    .catch(err => {
+      reject(err);
+    });
   });
 };
 
-<<<<<<< HEAD
-},{"../dnssd/binary-utils":"binaryUtils","../persistence/file-system":"fileSystem","../server/server-api":14,"./chunking-channel":16,"./message":17,"buffer":22}],20:[function(require,module,exports){
-=======
-},{"../dnssd/binary-utils":"binaryUtils","../server/server-api":14,"./chunking-channel":16,"./message":17,"buffer":22}],20:[function(require,module,exports){
->>>>>>> e619208623da2799520ff1374173db269b4fab1f
+/**
+ * Factory method for creating a ChunkingChannel.Server object.
+ *
+ * Exposed for testing.
+ *
+ * @param {RTCDataChannel} channel
+ *
+ * @return {Server} a new ChunkingChannel.Server object wrapping the channel.
+ */
+exports.createCcServer = function(channel) {
+  return new chunkingChannel.Server(channel);
+};
+
+/**
+ * Factory method for creating a ChunkingChannel.Client object.
+ *
+ * Exposed for testing.
+ *
+ * @param {RTCDataChannel} channel
+ *
+ * @return {Server} a new ChunkingChannel.Client object wrapping the channel.
+ */
+exports.createCcClient = function(channel) {
+  return new chunkingChannel.Client(channel);
+};
+
+},{"../dnssd/binary-utils":"binaryUtils","../persistence/file-system":"fileSystem","../server/server-api":14,"./chunking-channel":16,"./message":17,"buffer":23}],20:[function(require,module,exports){
+/* globals RTCPeerConnection, RTCSessionDescription, RTCIceCandidate */
+'use strict';
+
+var util = require('../util');
+var settings = require('../settings');
+var binUtil = require('../dnssd/binary-utils').BinaryUtils;
+var serverApi = require('../server/server-api');
+var cxnMgr = require('./connection-manager');
+
+var pc;
+var localDesc;
+var requestChannel;
+var iceCandidates;
+
+exports.optionalCreateArgs = { };
+
+exports.getConnection = function() {
+  return pc;
+};
+
+exports.getRequestChannel = function() {
+  return requestChannel;
+};
+
+/**
+ * This is taken largely from:
+ * https://github.com/webrtc/samples/blob/gh-pages/src/content/datachannel/filetransfer/js/main.js
+ */
+
+exports.createConnection = function() {
+  iceCandidates = [];
+  pc = new RTCPeerConnection(null, exports.optionalCreateArgs); 
+
+  requestChannel = pc.createDataChannel('requestChannel');
+  requestChannel.binaryType = 'arraybuffer';
+
+  requestChannel.onopen = exports.onChannelStateChange;
+  requestChannel.onclose = exports.onChannelStateChange;
+
+  pc.onicecandidate = function(e) {
+    exports.onIceCandidate(pc, e);
+  };
+
+  pc.createOffer().then(
+    exports.gotDescription,
+    exports.onCreateDescriptionError
+  );
+};
+
+exports.onCreateDescriptionError = function(err) {
+  util.trace('Failed to create session description: ' + err.toString());
+};
+
+exports.onChannelStateChange = function(e) {
+  util.trace(e);
+};
+
+exports.onIceCandidate = function(pc, e) {
+  if (e.candidate === null) {
+    // supposedly all candidates complete
+    util.trace('done with candidates');
+    util.trace('desc after ICE candidate: ' + pc);
+    exports.sendOffer();
+  } else {
+    console.log('got ice candidate: ', e);
+    iceCandidates.push(e.candidate);
+  }
+};
+
+exports.sendOffer = function() {
+  // Now we set up a request.
+  var port = settings.getServerPort();
+  var addr = '127.0.0.1';
+  var fullAddr = 'http://' +
+    addr +
+    ':' +
+    port +
+    '/' +
+    serverApi.getApiEndpoints().receiveWrtcOffer;
+
+  var bodyJson = {
+    description: localDesc,
+    iceCandidates: iceCandidates
+  };
+
+  util.fetch(
+    fullAddr,
+    {
+      method: 'PUT',
+      body: binUtil.stringToArrayBuffer(JSON.stringify(bodyJson))
+    }
+  )
+  .then(resp => {
+    console.log('got response from fetch, window.putResp: ' + resp);
+    window.putResp = resp;
+    return resp.json();
+  })
+  .then(json => {
+    console.log('retrieved json: ' + json);
+    var calleeDesc = new RTCSessionDescription(json.description);
+    pc.setRemoteDescription(calleeDesc);
+
+    json.iceCandidates.forEach(candidateStr => {
+      var candidate = new RTCIceCandidate(candidateStr);
+      pc.addIceCandidate(candidate);
+    });
+
+    pc.ondatachannel = exports.channelCallback;
+    cxnMgr.local = pc;
+  });
+};
+
+exports.gotDescription = function(desc) {
+  util.trace('Got description: ' + desc.toString());
+  localDesc = desc;
+  pc.setLocalDescription(desc);  
+};
+
+exports.channelCallback = function(event) {
+  util.trace('Channel Callback');
+  var channel = event.channel;
+  channel.binaryType = 'arraybuffer';
+  channel.onmessage = exports.onReceiveMessageCallback;
+};
+
+exports.onReceiveMessageCallback = function(event) {
+  var dataBin = event.data;
+  var dataJson = binUtil.arrayBufferToString(dataBin);
+  console.log('received message: ', dataJson);
+};
+
+},{"../dnssd/binary-utils":"binaryUtils","../server/server-api":14,"../settings":"settings","../util":15,"./connection-manager":"cmgr"}],21:[function(require,module,exports){
 (function (global){
 /*! http://mths.be/base64 v0.1.0 by @mathias | MIT license */
 ;(function(root) {
@@ -46258,7 +46434,7 @@ exports.onFile = function(channel, msg) {
 }(this));
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],21:[function(require,module,exports){
+},{}],22:[function(require,module,exports){
 'use strict'
 
 exports.byteLength = byteLength
@@ -46374,7 +46550,7 @@ function fromByteArray (uint8) {
   return parts.join('')
 }
 
-},{}],22:[function(require,module,exports){
+},{}],23:[function(require,module,exports){
 (function (global){
 /*!
  * The buffer module from node.js, for the browser.
@@ -48167,14 +48343,14 @@ function isnan (val) {
 }
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"base64-js":21,"ieee754":25,"isarray":23}],23:[function(require,module,exports){
+},{"base64-js":22,"ieee754":26,"isarray":24}],24:[function(require,module,exports){
 var toString = {}.toString;
 
 module.exports = Array.isArray || function (arr) {
   return toString.call(arr) == '[object Array]';
 };
 
-},{}],24:[function(require,module,exports){
+},{}],25:[function(require,module,exports){
 var isBuffer = require('is-buffer')
 
 var flat = module.exports = flatten
@@ -48281,7 +48457,7 @@ function unflatten(target, opts) {
   return result
 }
 
-},{"is-buffer":26}],25:[function(require,module,exports){
+},{"is-buffer":27}],26:[function(require,module,exports){
 exports.read = function (buffer, offset, isLE, mLen, nBytes) {
   var e, m
   var eLen = nBytes * 8 - mLen - 1
@@ -48367,7 +48543,7 @@ exports.write = function (buffer, value, offset, isLE, mLen, nBytes) {
   buffer[offset + i - d] |= s * 128
 }
 
-},{}],26:[function(require,module,exports){
+},{}],27:[function(require,module,exports){
 /*!
  * Determine if an object is a Buffer
  *
@@ -48390,7 +48566,7 @@ function isSlowBuffer (obj) {
   return typeof obj.readFloatLE === 'function' && typeof obj.slice === 'function' && isBuffer(obj.slice(0, 0))
 }
 
-},{}],27:[function(require,module,exports){
+},{}],28:[function(require,module,exports){
 (function (process){
 /**
  * Module dependencies.
@@ -48694,7 +48870,7 @@ function createDataRows(params) {
 }
 
 }).call(this,require('_process'))
-},{"_process":35,"flat":24,"lodash.clonedeep":28,"lodash.flatten":29,"lodash.get":30,"lodash.set":31,"lodash.uniq":32,"os":34}],28:[function(require,module,exports){
+},{"_process":36,"flat":25,"lodash.clonedeep":29,"lodash.flatten":30,"lodash.get":31,"lodash.set":32,"lodash.uniq":33,"os":35}],29:[function(require,module,exports){
 (function (global){
 /**
  * lodash (Custom Build) <https://lodash.com/>
@@ -50446,7 +50622,7 @@ function stubFalse() {
 module.exports = cloneDeep;
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],29:[function(require,module,exports){
+},{}],30:[function(require,module,exports){
 (function (global){
 /**
  * lodash (Custom Build) <https://lodash.com/>
@@ -50799,7 +50975,7 @@ function isObjectLike(value) {
 module.exports = flatten;
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],30:[function(require,module,exports){
+},{}],31:[function(require,module,exports){
 (function (global){
 /**
  * lodash (Custom Build) <https://lodash.com/>
@@ -51734,7 +51910,7 @@ function get(object, path, defaultValue) {
 module.exports = get;
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],31:[function(require,module,exports){
+},{}],32:[function(require,module,exports){
 (function (global){
 /**
  * lodash (Custom Build) <https://lodash.com/>
@@ -52728,7 +52904,7 @@ function set(object, path, value) {
 module.exports = set;
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],32:[function(require,module,exports){
+},{}],33:[function(require,module,exports){
 (function (global){
 /**
  * lodash (Custom Build) <https://lodash.com/>
@@ -53628,7 +53804,7 @@ function noop() {
 module.exports = uniq;
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],33:[function(require,module,exports){
+},{}],34:[function(require,module,exports){
 (function (global){
 /**
  * @license
@@ -70716,7 +70892,7 @@ module.exports = uniq;
 }.call(this));
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],34:[function(require,module,exports){
+},{}],35:[function(require,module,exports){
 exports.endianness = function () { return 'LE' };
 
 exports.hostname = function () {
@@ -70763,7 +70939,7 @@ exports.tmpdir = exports.tmpDir = function () {
 
 exports.EOL = '\n';
 
-},{}],35:[function(require,module,exports){
+},{}],36:[function(require,module,exports){
 // shim for using process in browser
 var process = module.exports = {};
 
@@ -70945,7 +71121,7 @@ process.chdir = function (dir) {
 };
 process.umask = function() { return 0; };
 
-},{}],36:[function(require,module,exports){
+},{}],37:[function(require,module,exports){
 //     Underscore.js 1.8.3
 //     http://underscorejs.org
 //     (c) 2009-2015 Jeremy Ashkenas, DocumentCloud and Investigative Reporters & Editors
@@ -72495,7 +72671,7 @@ process.umask = function() { return 0; };
   }
 }.call(this));
 
-},{}],37:[function(require,module,exports){
+},{}],38:[function(require,module,exports){
 /*!
  * EventEmitter v5.1.0 - git.io/ee
  * Unlicense - http://unlicense.org/
@@ -73652,8 +73828,9 @@ exports.getNetworkInterfaces = function() {
 /* globals RTCPeerConnection, RTCSessionDescription, RTCIceCandidate */
 'use strict';
 
+var Buffer = require('buffer').Buffer;
+
 var util = require('../util');
-var binUtil = require('../dnssd/binary-utils').BinaryUtils;
 var peerConn = require('../../../app/scripts/webrtc/peer-connection');
 var serverApi = require('../server/server-api');
 
@@ -73688,12 +73865,18 @@ function createKey(ipaddr, port) {
 /**
  * Add a connection to the known pool of connection.
  *
+ * PeerConnections added via this method will be automatically removed when
+ * they emit a close event.
+ *
  * @param {String} ipaddr the IP address of the peer this connects to
  * @param {number} port the port of the instance advertised via mDNS where this
  * connection is connected
  * @param {PeerConnection} cxn the connection being added
  */
 exports.addConnection = function(ipaddr, port, cxn) {
+  cxn.on('close', () => {
+    exports.removeConnection(ipaddr, port);
+  });
   var key = createKey(ipaddr, port);
   CONNECTIONS[key] = cxn;
 };
@@ -73713,6 +73896,18 @@ exports.getConnection = function(ipaddr, port) {
 };
 
 /**
+ * Remove the connection from the known pool.
+ *
+ * @param {String} ipaddr the IP address of the peer this connects to
+ * @param {number} port the port of the instance advertised via mDNS where this
+ * connection is connected
+ */
+exports.removeConnection = function(ipaddr, port) {
+  var key = createKey(ipaddr, port);
+  delete CONNECTIONS[key];
+};
+
+/**
  * Create a connection to the given peer, adding it to make it known to the
  * manager.
  *
@@ -73726,13 +73921,12 @@ exports.getConnection = function(ipaddr, port) {
 exports.createConnection = function(ipaddr, port) {
   var wrtcEndpoint = exports.getPathForWebrtcNegotiation(ipaddr, port);
   return new Promise(function(resolve, reject) {
-    var pc = new RTCPeerConnection(null, null);
+    var pc = exports.createRTCPeerConnection(null, null);
     globalPc = pc;
 
     // Start a channel to kick off ICE candidates. Without this or otherwise
     // requesting media stream the ICE gathering process does not begin.
-    var channel = pc.createDataChannel('requestChannel');
-    channel.onopen = function(e) { console.log('opened first channel: ', e); };
+    pc.createDataChannel('requestChannel');
 
     var iceCandidates = [];
     var description = null;
@@ -73743,11 +73937,14 @@ exports.createConnection = function(ipaddr, port) {
         // All candidates are complete.
         iceComplete = true;
         if (exports.DEBUG) { console.log('done with ICE candidates'); }
-        if (description) {
-          return exports.sendOffer(
-            wrtcEndpoint, pc, description, iceCandidates, ipaddr, port
-          );
-        }
+        exports.sendOffer(
+          wrtcEndpoint, pc, description, iceCandidates, ipaddr, port
+        ).then(establishedConnection => {
+          resolve(establishedConnection);
+        })
+        .catch(err => {
+          reject(err);
+        });
       } else {
         iceCandidates.push(e.candidate);
       }
@@ -73756,7 +73953,7 @@ exports.createConnection = function(ipaddr, port) {
     pc.createOffer()
     .then(desc => {
       description = desc;
-      pc.setLocalDescription(desc);
+      return pc.setLocalDescription(desc);
     })
     .catch(err => {
       reject(err);
@@ -73770,41 +73967,46 @@ exports.onIceCandidate = function(e) {
 
 /**
  * @param {String} wrtcEndpoint
- * @param {RTCPeerDescription} pc
+ * @param {RTCPeerDescription} rawConnection
  * @param {RTCSessionDescription} desc
  * @param {Array.<RTCIceCandidate>} iceCandidates
  *
  * @return {Promise.<PeerConnection>}
  */
 exports.sendOffer = function(
-    wrtcEndpoint, pc, desc, iceCandidates, ipaddr, port
+    wrtcEndpoint, rawConnection, desc, iceCandidates, ipaddr, port
 ) {
-  var bodyJson = {};
-  bodyJson.description = desc;
-  bodyJson.iceCandidates = iceCandidates;
+  return new Promise(function(resolve, reject) {
+    var bodyJson = {};
+    bodyJson.description = desc;
+    bodyJson.iceCandidates = iceCandidates;
 
-  util.fetch(
-    wrtcEndpoint,
-    {
-      method: 'PUT',
-      body: binUtil.stringToArrayBuffer(JSON.stringify(bodyJson))
-    }
-  )
-  .then(resp => {
-    return resp.json();
-  })
-  .then(json => {
-    var peerDesc = new RTCSessionDescription(json.description);
-    pc.setRemoteDescription(peerDesc);
+    util.fetch(
+      wrtcEndpoint,
+      {
+        method: 'PUT',
+        body: Buffer.from(JSON.stringify(bodyJson))
+      }
+    )
+    .then(resp => {
+      return resp.json();
+    })
+    .then(json => {
+      var peerDesc = exports.createRTCSessionDescription(json.description);
+      rawConnection.setRemoteDescription(peerDesc);
 
-    json.iceCandidates.forEach(candidateStr => {
-      var candidate = new RTCIceCandidate(candidateStr);
-      pc.addIceCandidate(candidate);
+      json.iceCandidates.forEach(candidateJson => {
+        var candidate = exports.createRTCIceCandidate(candidateJson);
+        rawConnection.addIceCandidate(candidate);
+      });
+
+      var cxn = exports.createPeerConnection(rawConnection);
+      exports.addConnection(ipaddr, port, cxn);
+      resolve(cxn);
+    })
+    .catch(err => {
+      reject(err);
     });
-
-    var cxn = new peerConn.PeerConnection(pc);
-    exports.addConnection(ipaddr, port, cxn);
-    return Promise.resolve(cxn);
   });
 };
 
@@ -73815,6 +74017,18 @@ exports.getPathForWebrtcNegotiation = function(addr, port) {
     port +
     '/' +
     serverApi.getApiEndpoints().receiveWrtcOffer;
+};
+
+/**
+ * Create a PeerConnection object. Thin wrapper around the constructor to
+ * facilitate testing.
+ *
+ * @param {RTCPeerConnection} rawConnection
+ *
+ * @return {PeerConnection}
+ */
+exports.createPeerConnection = function(rawConnection) {
+  return new peerConn.PeerConnection(rawConnection);
 };
 
 /**
@@ -73848,18 +74062,48 @@ exports.getOrCreateConnection = function(ipaddr, port) {
 };
 
 /**
- * Remove the connection from the known pool.
+ * Create an RTCPeerConnection. Thin wrapper around the RTCPeerConnection
+ * constructor.
  *
- * @param {String} ipaddr the IP address of the peer this connects to
- * @param {number} port the port of the instance advertised via mDNS where this
- * connection is connected
+ * Exposed for testing.
+ *
+ * @param {JSON} servers
+ * @param {JSON} constraings
+ *
+ * @return {RTCPeerConnection}
  */
-exports.removeConnection = function(ipaddr, port) {
-  var key = createKey(ipaddr, port);
-  delete CONNECTIONS[key];
+exports.createRTCPeerConnection = function(servers, constraints) {
+  return new RTCPeerConnection(servers, constraints);
 };
 
-},{"../../../app/scripts/webrtc/peer-connection":18,"../dnssd/binary-utils":"binaryUtils","../server/server-api":14,"../util":15}],"dnsSem":[function(require,module,exports){
+/**
+ * Create an RTCIceCandidate. Thin wrapper around the RTCIceCandidate
+ * constructor to facilitate testing.
+ *
+ * @param {JSON} candidateJson the JSON object representing an ICE candidate
+ * that has come across the wire
+ *
+ * @return {RTCIceCandidate}
+ */
+exports.createRTCIceCandidate = function(candidateJson) {
+  return new RTCIceCandidate(candidateJson);
+};
+
+/**
+ * Create an RTCSessionDescription from a stringified JSON description. Thing
+ * wrapper around the RTCSessionDescription constructor.
+ *
+ * Exposed for testing.
+ *
+ * @param {JSON} descJson JSON representation of an RTCSessionDescription
+ *
+ * @return {RTCSessionDescription}
+ */
+exports.createRTCSessionDescription = function(descJson) {
+  return new RTCSessionDescription(descJson);
+};
+
+},{"../../../app/scripts/webrtc/peer-connection":18,"../server/server-api":14,"../util":15,"buffer":23}],"dnsSem":[function(require,module,exports){
 /*jshint esnext:true*/
 'use strict';
 
@@ -75621,7 +75865,7 @@ exports.queryForResponses = function(
   });
 };
 
-},{"../util":15,"./dns-codes":6,"./dns-controller":"dnsc","./dns-packet":7,"./dns-util":8,"./resource-record":10,"lodash":33}],"eval":[function(require,module,exports){
+},{"../util":15,"./dns-codes":6,"./dns-controller":"dnsc","./dns-packet":7,"./dns-util":8,"./resource-record":10,"lodash":34}],"eval":[function(require,module,exports){
 'use strict';
 
 /**
@@ -76292,7 +76536,7 @@ exports.downloadKeyAsCsv = function(key) {
   });
 };
 
-},{"./app-controller":"appController","./chrome-apis/storage":4,"./persistence/datastore":11,"./server/server-api":14,"./util":15,"json2csv":27}],"extBridge":[function(require,module,exports){
+},{"./app-controller":"appController","./chrome-apis/storage":4,"./persistence/datastore":11,"./server/server-api":14,"./util":15,"json2csv":28}],"extBridge":[function(require,module,exports){
 'use strict';
 
 var chromeRuntime = require('../chrome-apis/runtime');
@@ -76438,7 +76682,7 @@ exports.sendMessageToOpenUrl = function(url) {
   exports.sendMessageToExtension(message);
 };
 
-},{"../chrome-apis/runtime":3,"../persistence/datastore":11,"base-64":20}],"fileSystem":[function(require,module,exports){
+},{"../chrome-apis/runtime":3,"../persistence/datastore":11,"base-64":21}],"fileSystem":[function(require,module,exports){
 /*jshint esnext:true*/
 /* globals Promise */
 'use strict';
@@ -76817,7 +77061,7 @@ exports.createFileReader = function() {
   return new FileReader();
 };
 
-},{"buffer":22}],"moment":[function(require,module,exports){
+},{"buffer":23}],"moment":[function(require,module,exports){
 //! moment.js
 //! version : 2.17.1
 //! authors : Tim Wood, Iskren Chernev, Moment.js contributors
@@ -81480,136 +81724,4 @@ exports.promptAndSetNewBaseDir = function() {
   });
 };
 
-},{"./chrome-apis/file-system":2,"./chrome-apis/storage":4,"./persistence/file-system":"fileSystem"}],"webrtc":[function(require,module,exports){
-/* globals RTCPeerConnection, RTCSessionDescription, RTCIceCandidate */
-'use strict';
-
-var util = require('../util');
-var settings = require('../settings');
-var binUtil = require('../dnssd/binary-utils').BinaryUtils;
-var serverApi = require('../server/server-api');
-var cxnMgr = require('./connection-manager');
-
-var pc;
-var localDesc;
-var requestChannel;
-var iceCandidates;
-
-exports.optionalCreateArgs = { };
-
-exports.getConnection = function() {
-  return pc;
-};
-
-exports.getRequestChannel = function() {
-  return requestChannel;
-};
-
-/**
- * This is taken largely from:
- * https://github.com/webrtc/samples/blob/gh-pages/src/content/datachannel/filetransfer/js/main.js
- */
-
-exports.createConnection = function() {
-  iceCandidates = [];
-  pc = new RTCPeerConnection(null, exports.optionalCreateArgs); 
-
-  requestChannel = pc.createDataChannel('requestChannel');
-  requestChannel.binaryType = 'arraybuffer';
-
-  requestChannel.onopen = exports.onChannelStateChange;
-  requestChannel.onclose = exports.onChannelStateChange;
-
-  pc.onicecandidate = function(e) {
-    exports.onIceCandidate(pc, e);
-  };
-
-  pc.createOffer().then(
-    exports.gotDescription,
-    exports.onCreateDescriptionError
-  );
-};
-
-exports.onCreateDescriptionError = function(err) {
-  util.trace('Failed to create session description: ' + err.toString());
-};
-
-exports.onChannelStateChange = function(e) {
-  util.trace(e);
-};
-
-exports.onIceCandidate = function(pc, e) {
-  if (e.candidate === null) {
-    // supposedly all candidates complete
-    util.trace('done with candidates');
-    util.trace('desc after ICE candidate: ' + pc);
-    exports.sendOffer();
-  } else {
-    console.log('got ice candidate: ', e);
-    iceCandidates.push(e.candidate);
-  }
-};
-
-exports.sendOffer = function() {
-  // Now we set up a request.
-  var port = settings.getServerPort();
-  var addr = '127.0.0.1';
-  var fullAddr = 'http://' +
-    addr +
-    ':' +
-    port +
-    '/' +
-    serverApi.getApiEndpoints().receiveWrtcOffer;
-
-  var bodyJson = {
-    description: localDesc,
-    iceCandidates: iceCandidates
-  };
-
-  util.fetch(
-    fullAddr,
-    {
-      method: 'PUT',
-      body: binUtil.stringToArrayBuffer(JSON.stringify(bodyJson))
-    }
-  )
-  .then(resp => {
-    console.log('got response from fetch, window.putResp: ' + resp);
-    window.putResp = resp;
-    return resp.json();
-  })
-  .then(json => {
-    console.log('retrieved json: ' + json);
-    var calleeDesc = new RTCSessionDescription(json.description);
-    pc.setRemoteDescription(calleeDesc);
-
-    json.iceCandidates.forEach(candidateStr => {
-      var candidate = new RTCIceCandidate(candidateStr);
-      pc.addIceCandidate(candidate);
-    });
-
-    pc.ondatachannel = exports.channelCallback;
-    cxnMgr.local = pc;
-  });
-};
-
-exports.gotDescription = function(desc) {
-  util.trace('Got description: ' + desc.toString());
-  localDesc = desc;
-  pc.setLocalDescription(desc);  
-};
-
-exports.channelCallback = function(event) {
-  util.trace('Channel Callback');
-  var channel = event.channel;
-  channel.binaryType = 'arraybuffer';
-  channel.onmessage = exports.onReceiveMessageCallback;
-};
-
-exports.onReceiveMessageCallback = function(event) {
-  var dataBin = event.data;
-  var dataJson = binUtil.arrayBufferToString(dataBin);
-  console.log('received message: ', dataJson);
-};
-
-},{"../dnssd/binary-utils":"binaryUtils","../server/server-api":14,"../settings":"settings","../util":15,"./connection-manager":"cmgr"}]},{},[1]);
+},{"./chrome-apis/file-system":2,"./chrome-apis/storage":4,"./persistence/file-system":"fileSystem"}]},{},[1]);
