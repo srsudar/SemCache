@@ -45125,7 +45125,6 @@ var fileSystem = require('../persistence/file-system');
 var fsUtil = require('../persistence/file-system-util');
 var binUtil = require('../dnssd/binary-utils').BinaryUtils;
 var rtcConnMgr = require('../webrtc/connection-manager');
-var webrtcUtil = require('../webrtc/util');
 var wrtcResponder = require('../webrtc/responder');
 
 /**
@@ -45237,7 +45236,7 @@ _.extend(exports.WebRtcOfferHandler.prototype,
 
       var bodyJson = JSON.parse(bodyStr);
 
-      var pc = new RTCPeerConnection(null, webrtcUtil.optionalCreateArgs);
+      var pc = new RTCPeerConnection(null, null);
       pc.onicecandidate = onIceCandidate;
       var remoteDescription = new RTCSessionDescription(bodyJson.description);
       pc.setRemoteDescription(remoteDescription);
@@ -45283,13 +45282,8 @@ _.extend(exports.WebRtcOfferHandler.prototype,
 
 
         pc.ondatachannel = wrtcResponder.onDataChannelHandler;
-        // pc.ondatachannel = webrtcUtil.channelCallback;
 
         maybeRespond();
-
-        // var descJson = JSON.stringify(desc);
-        // var descBin = binUtil.stringToArrayBuffer(descJson);
-        // that.write(descBin);
       }, err => {
         console.log('err creating desc: ', err);
       });
@@ -45337,7 +45331,7 @@ _.extend(exports.WebRtcOfferHandler.prototype,
   WSC.BaseHandler.prototype
 );
 
-},{"../dnssd/binary-utils":"binaryUtils","../persistence/file-system":"fileSystem","../persistence/file-system-util":"fsUtil","../webrtc/connection-manager":"cmgr","../webrtc/responder":19,"../webrtc/util":20,"./server-api":14,"underscore":37}],14:[function(require,module,exports){
+},{"../dnssd/binary-utils":"binaryUtils","../persistence/file-system":"fileSystem","../persistence/file-system-util":"fsUtil","../webrtc/connection-manager":"cmgr","../webrtc/responder":19,"./server-api":14,"underscore":36}],14:[function(require,module,exports){
 'use strict';
 
 /**
@@ -45789,7 +45783,7 @@ exports.createContinueMessage = function() {
   return { message: 'next' };
 };
 
-},{"buffer":23,"underscore":37,"wolfy87-eventemitter":38}],17:[function(require,module,exports){
+},{"buffer":22,"underscore":36,"wolfy87-eventemitter":37}],17:[function(require,module,exports){
 'use strict';
 
 /**
@@ -46012,7 +46006,7 @@ exports.sendAndGetResponse = function(pc, msg) {
   });
 };
 
-},{"./chunking-channel":16,"./message":17,"underscore":37,"wolfy87-eventemitter":38}],19:[function(require,module,exports){
+},{"./chunking-channel":16,"./message":17,"underscore":36,"wolfy87-eventemitter":37}],19:[function(require,module,exports){
 'use strict';
 
 var Buffer = require('buffer').Buffer;
@@ -46133,139 +46127,7 @@ exports.createCcClient = function(channel) {
   return new chunkingChannel.Client(channel);
 };
 
-},{"../dnssd/binary-utils":"binaryUtils","../persistence/file-system":"fileSystem","../server/server-api":14,"./chunking-channel":16,"./message":17,"buffer":23}],20:[function(require,module,exports){
-/* globals RTCPeerConnection, RTCSessionDescription, RTCIceCandidate */
-'use strict';
-
-var util = require('../util');
-var settings = require('../settings');
-var binUtil = require('../dnssd/binary-utils').BinaryUtils;
-var serverApi = require('../server/server-api');
-var cxnMgr = require('./connection-manager');
-
-var pc;
-var localDesc;
-var requestChannel;
-var iceCandidates;
-
-exports.optionalCreateArgs = { };
-
-exports.getConnection = function() {
-  return pc;
-};
-
-exports.getRequestChannel = function() {
-  return requestChannel;
-};
-
-/**
- * This is taken largely from:
- * https://github.com/webrtc/samples/blob/gh-pages/src/content/datachannel/filetransfer/js/main.js
- */
-
-exports.createConnection = function() {
-  iceCandidates = [];
-  pc = new RTCPeerConnection(null, exports.optionalCreateArgs); 
-
-  requestChannel = pc.createDataChannel('requestChannel');
-  requestChannel.binaryType = 'arraybuffer';
-
-  requestChannel.onopen = exports.onChannelStateChange;
-  requestChannel.onclose = exports.onChannelStateChange;
-
-  pc.onicecandidate = function(e) {
-    exports.onIceCandidate(pc, e);
-  };
-
-  pc.createOffer().then(
-    exports.gotDescription,
-    exports.onCreateDescriptionError
-  );
-};
-
-exports.onCreateDescriptionError = function(err) {
-  util.trace('Failed to create session description: ' + err.toString());
-};
-
-exports.onChannelStateChange = function(e) {
-  util.trace(e);
-};
-
-exports.onIceCandidate = function(pc, e) {
-  if (e.candidate === null) {
-    // supposedly all candidates complete
-    util.trace('done with candidates');
-    util.trace('desc after ICE candidate: ' + pc);
-    exports.sendOffer();
-  } else {
-    console.log('got ice candidate: ', e);
-    iceCandidates.push(e.candidate);
-  }
-};
-
-exports.sendOffer = function() {
-  // Now we set up a request.
-  var port = settings.getServerPort();
-  var addr = '127.0.0.1';
-  var fullAddr = 'http://' +
-    addr +
-    ':' +
-    port +
-    '/' +
-    serverApi.getApiEndpoints().receiveWrtcOffer;
-
-  var bodyJson = {
-    description: localDesc,
-    iceCandidates: iceCandidates
-  };
-
-  util.fetch(
-    fullAddr,
-    {
-      method: 'PUT',
-      body: binUtil.stringToArrayBuffer(JSON.stringify(bodyJson))
-    }
-  )
-  .then(resp => {
-    console.log('got response from fetch, window.putResp: ' + resp);
-    window.putResp = resp;
-    return resp.json();
-  })
-  .then(json => {
-    console.log('retrieved json: ' + json);
-    var calleeDesc = new RTCSessionDescription(json.description);
-    pc.setRemoteDescription(calleeDesc);
-
-    json.iceCandidates.forEach(candidateStr => {
-      var candidate = new RTCIceCandidate(candidateStr);
-      pc.addIceCandidate(candidate);
-    });
-
-    pc.ondatachannel = exports.channelCallback;
-    cxnMgr.local = pc;
-  });
-};
-
-exports.gotDescription = function(desc) {
-  util.trace('Got description: ' + desc.toString());
-  localDesc = desc;
-  pc.setLocalDescription(desc);  
-};
-
-exports.channelCallback = function(event) {
-  util.trace('Channel Callback');
-  var channel = event.channel;
-  channel.binaryType = 'arraybuffer';
-  channel.onmessage = exports.onReceiveMessageCallback;
-};
-
-exports.onReceiveMessageCallback = function(event) {
-  var dataBin = event.data;
-  var dataJson = binUtil.arrayBufferToString(dataBin);
-  console.log('received message: ', dataJson);
-};
-
-},{"../dnssd/binary-utils":"binaryUtils","../server/server-api":14,"../settings":"settings","../util":15,"./connection-manager":"cmgr"}],21:[function(require,module,exports){
+},{"../dnssd/binary-utils":"binaryUtils","../persistence/file-system":"fileSystem","../server/server-api":14,"./chunking-channel":16,"./message":17,"buffer":22}],20:[function(require,module,exports){
 (function (global){
 /*! http://mths.be/base64 v0.1.0 by @mathias | MIT license */
 ;(function(root) {
@@ -46434,7 +46296,7 @@ exports.onReceiveMessageCallback = function(event) {
 }(this));
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],22:[function(require,module,exports){
+},{}],21:[function(require,module,exports){
 'use strict'
 
 exports.byteLength = byteLength
@@ -46550,7 +46412,7 @@ function fromByteArray (uint8) {
   return parts.join('')
 }
 
-},{}],23:[function(require,module,exports){
+},{}],22:[function(require,module,exports){
 (function (global){
 /*!
  * The buffer module from node.js, for the browser.
@@ -48343,14 +48205,14 @@ function isnan (val) {
 }
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"base64-js":22,"ieee754":26,"isarray":24}],24:[function(require,module,exports){
+},{"base64-js":21,"ieee754":25,"isarray":23}],23:[function(require,module,exports){
 var toString = {}.toString;
 
 module.exports = Array.isArray || function (arr) {
   return toString.call(arr) == '[object Array]';
 };
 
-},{}],25:[function(require,module,exports){
+},{}],24:[function(require,module,exports){
 var isBuffer = require('is-buffer')
 
 var flat = module.exports = flatten
@@ -48457,7 +48319,7 @@ function unflatten(target, opts) {
   return result
 }
 
-},{"is-buffer":27}],26:[function(require,module,exports){
+},{"is-buffer":26}],25:[function(require,module,exports){
 exports.read = function (buffer, offset, isLE, mLen, nBytes) {
   var e, m
   var eLen = nBytes * 8 - mLen - 1
@@ -48543,7 +48405,7 @@ exports.write = function (buffer, value, offset, isLE, mLen, nBytes) {
   buffer[offset + i - d] |= s * 128
 }
 
-},{}],27:[function(require,module,exports){
+},{}],26:[function(require,module,exports){
 /*!
  * Determine if an object is a Buffer
  *
@@ -48566,7 +48428,7 @@ function isSlowBuffer (obj) {
   return typeof obj.readFloatLE === 'function' && typeof obj.slice === 'function' && isBuffer(obj.slice(0, 0))
 }
 
-},{}],28:[function(require,module,exports){
+},{}],27:[function(require,module,exports){
 (function (process){
 /**
  * Module dependencies.
@@ -48870,7 +48732,7 @@ function createDataRows(params) {
 }
 
 }).call(this,require('_process'))
-},{"_process":36,"flat":25,"lodash.clonedeep":29,"lodash.flatten":30,"lodash.get":31,"lodash.set":32,"lodash.uniq":33,"os":35}],29:[function(require,module,exports){
+},{"_process":35,"flat":24,"lodash.clonedeep":28,"lodash.flatten":29,"lodash.get":30,"lodash.set":31,"lodash.uniq":32,"os":34}],28:[function(require,module,exports){
 (function (global){
 /**
  * lodash (Custom Build) <https://lodash.com/>
@@ -50622,7 +50484,7 @@ function stubFalse() {
 module.exports = cloneDeep;
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],30:[function(require,module,exports){
+},{}],29:[function(require,module,exports){
 (function (global){
 /**
  * lodash (Custom Build) <https://lodash.com/>
@@ -50975,7 +50837,7 @@ function isObjectLike(value) {
 module.exports = flatten;
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],31:[function(require,module,exports){
+},{}],30:[function(require,module,exports){
 (function (global){
 /**
  * lodash (Custom Build) <https://lodash.com/>
@@ -51910,7 +51772,7 @@ function get(object, path, defaultValue) {
 module.exports = get;
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],32:[function(require,module,exports){
+},{}],31:[function(require,module,exports){
 (function (global){
 /**
  * lodash (Custom Build) <https://lodash.com/>
@@ -52904,7 +52766,7 @@ function set(object, path, value) {
 module.exports = set;
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],33:[function(require,module,exports){
+},{}],32:[function(require,module,exports){
 (function (global){
 /**
  * lodash (Custom Build) <https://lodash.com/>
@@ -53804,7 +53666,7 @@ function noop() {
 module.exports = uniq;
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],34:[function(require,module,exports){
+},{}],33:[function(require,module,exports){
 (function (global){
 /**
  * @license
@@ -70892,7 +70754,7 @@ module.exports = uniq;
 }.call(this));
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],35:[function(require,module,exports){
+},{}],34:[function(require,module,exports){
 exports.endianness = function () { return 'LE' };
 
 exports.hostname = function () {
@@ -70939,7 +70801,7 @@ exports.tmpdir = exports.tmpDir = function () {
 
 exports.EOL = '\n';
 
-},{}],36:[function(require,module,exports){
+},{}],35:[function(require,module,exports){
 // shim for using process in browser
 var process = module.exports = {};
 
@@ -71121,7 +70983,7 @@ process.chdir = function (dir) {
 };
 process.umask = function() { return 0; };
 
-},{}],37:[function(require,module,exports){
+},{}],36:[function(require,module,exports){
 //     Underscore.js 1.8.3
 //     http://underscorejs.org
 //     (c) 2009-2015 Jeremy Ashkenas, DocumentCloud and Investigative Reporters & Editors
@@ -72671,7 +72533,7 @@ process.umask = function() { return 0; };
   }
 }.call(this));
 
-},{}],38:[function(require,module,exports){
+},{}],37:[function(require,module,exports){
 /*!
  * EventEmitter v5.1.0 - git.io/ee
  * Unlicense - http://unlicense.org/
@@ -74103,7 +73965,7 @@ exports.createRTCSessionDescription = function(descJson) {
   return new RTCSessionDescription(descJson);
 };
 
-},{"../../../app/scripts/webrtc/peer-connection":18,"../server/server-api":14,"../util":15,"buffer":23}],"dnsSem":[function(require,module,exports){
+},{"../../../app/scripts/webrtc/peer-connection":18,"../server/server-api":14,"../util":15,"buffer":22}],"dnsSem":[function(require,module,exports){
 /*jshint esnext:true*/
 'use strict';
 
@@ -75865,7 +75727,7 @@ exports.queryForResponses = function(
   });
 };
 
-},{"../util":15,"./dns-codes":6,"./dns-controller":"dnsc","./dns-packet":7,"./dns-util":8,"./resource-record":10,"lodash":34}],"eval":[function(require,module,exports){
+},{"../util":15,"./dns-codes":6,"./dns-controller":"dnsc","./dns-packet":7,"./dns-util":8,"./resource-record":10,"lodash":33}],"eval":[function(require,module,exports){
 'use strict';
 
 /**
@@ -76536,7 +76398,7 @@ exports.downloadKeyAsCsv = function(key) {
   });
 };
 
-},{"./app-controller":"appController","./chrome-apis/storage":4,"./persistence/datastore":11,"./server/server-api":14,"./util":15,"json2csv":28}],"extBridge":[function(require,module,exports){
+},{"./app-controller":"appController","./chrome-apis/storage":4,"./persistence/datastore":11,"./server/server-api":14,"./util":15,"json2csv":27}],"extBridge":[function(require,module,exports){
 'use strict';
 
 var chromeRuntime = require('../chrome-apis/runtime');
@@ -76682,7 +76544,7 @@ exports.sendMessageToOpenUrl = function(url) {
   exports.sendMessageToExtension(message);
 };
 
-},{"../chrome-apis/runtime":3,"../persistence/datastore":11,"base-64":21}],"fileSystem":[function(require,module,exports){
+},{"../chrome-apis/runtime":3,"../persistence/datastore":11,"base-64":20}],"fileSystem":[function(require,module,exports){
 /*jshint esnext:true*/
 /* globals Promise */
 'use strict';
@@ -77061,7 +76923,7 @@ exports.createFileReader = function() {
   return new FileReader();
 };
 
-},{"buffer":23}],"moment":[function(require,module,exports){
+},{"buffer":22}],"moment":[function(require,module,exports){
 //! moment.js
 //! version : 2.17.1
 //! authors : Tim Wood, Iskren Chernev, Moment.js contributors

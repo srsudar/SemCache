@@ -7,7 +7,6 @@ var fileSystem = require('../persistence/file-system');
 var fsUtil = require('../persistence/file-system-util');
 var binUtil = require('../dnssd/binary-utils').BinaryUtils;
 var rtcConnMgr = require('../webrtc/connection-manager');
-var webrtcUtil = require('../webrtc/util');
 var wrtcResponder = require('../webrtc/responder');
 
 /**
@@ -119,7 +118,7 @@ _.extend(exports.WebRtcOfferHandler.prototype,
 
       var bodyJson = JSON.parse(bodyStr);
 
-      var pc = new RTCPeerConnection(null, webrtcUtil.optionalCreateArgs);
+      var pc = new RTCPeerConnection(null, null);
       pc.onicecandidate = onIceCandidate;
       var remoteDescription = new RTCSessionDescription(bodyJson.description);
       pc.setRemoteDescription(remoteDescription);
@@ -165,13 +164,8 @@ _.extend(exports.WebRtcOfferHandler.prototype,
 
 
         pc.ondatachannel = wrtcResponder.onDataChannelHandler;
-        // pc.ondatachannel = webrtcUtil.channelCallback;
 
         maybeRespond();
-
-        // var descJson = JSON.stringify(desc);
-        // var descBin = binUtil.stringToArrayBuffer(descJson);
-        // that.write(descBin);
       }, err => {
         console.log('err creating desc: ', err);
       });
