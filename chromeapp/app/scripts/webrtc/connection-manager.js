@@ -1,8 +1,9 @@
 /* globals RTCPeerConnection, RTCSessionDescription, RTCIceCandidate */
 'use strict';
 
+var Buffer = require('buffer').Buffer;
+
 var util = require('../util');
-var binUtil = require('../dnssd/binary-utils').BinaryUtils;
 var peerConn = require('../../../app/scripts/webrtc/peer-connection');
 var serverApi = require('../server/server-api');
 
@@ -62,6 +63,18 @@ exports.getConnection = function(ipaddr, port) {
 };
 
 /**
+ * Remove the connection from the known pool.
+ *
+ * @param {String} ipaddr the IP address of the peer this connects to
+ * @param {number} port the port of the instance advertised via mDNS where this
+ * connection is connected
+ */
+exports.removeConnection = function(ipaddr, port) {
+  var key = createKey(ipaddr, port);
+  delete CONNECTIONS[key];
+};
+
+/**
  * Create a connection to the given peer, adding it to make it known to the
  * manager.
  *
@@ -75,13 +88,12 @@ exports.getConnection = function(ipaddr, port) {
 exports.createConnection = function(ipaddr, port) {
   var wrtcEndpoint = exports.getPathForWebrtcNegotiation(ipaddr, port);
   return new Promise(function(resolve, reject) {
-    var pc = new RTCPeerConnection(null, null);
+    var pc = exports.createRTCPeerConnection(null, null);
     globalPc = pc;
 
     // Start a channel to kick off ICE candidates. Without this or otherwise
     // requesting media stream the ICE gathering process does not begin.
-    var channel = pc.createDataChannel('requestChannel');
-    channel.onopen = function(e) { console.log('opened first channel: ', e); };
+    pc.createDataChannel('requestChannel');
 
     var iceCandidates = [];
     var description = null;
@@ -92,11 +104,14 @@ exports.createConnection = function(ipaddr, port) {
         // All candidates are complete.
         iceComplete = true;
         if (exports.DEBUG) { console.log('done with ICE candidates'); }
-        if (description) {
-          return exports.sendOffer(
-            wrtcEndpoint, pc, description, iceCandidates, ipaddr, port
-          );
-        }
+        exports.sendOffer(
+          wrtcEndpoint, pc, description, iceCandidates, ipaddr, port
+        ).then(establishedConnection => {
+          resolve(establishedConnection);
+        })
+        .catch(err => {
+          reject(err);
+        });
       } else {
         iceCandidates.push(e.candidate);
       }
@@ -105,7 +120,7 @@ exports.createConnection = function(ipaddr, port) {
     pc.createOffer()
     .then(desc => {
       description = desc;
-      pc.setLocalDescription(desc);
+      return pc.setLocalDescription(desc);
     })
     .catch(err => {
       reject(err);
@@ -119,41 +134,46 @@ exports.onIceCandidate = function(e) {
 
 /**
  * @param {String} wrtcEndpoint
- * @param {RTCPeerDescription} pc
+ * @param {RTCPeerDescription} rawConnection
  * @param {RTCSessionDescription} desc
  * @param {Array.<RTCIceCandidate>} iceCandidates
  *
  * @return {Promise.<PeerConnection>}
  */
 exports.sendOffer = function(
-    wrtcEndpoint, pc, desc, iceCandidates, ipaddr, port
+    wrtcEndpoint, rawConnection, desc, iceCandidates, ipaddr, port
 ) {
-  var bodyJson = {};
-  bodyJson.description = desc;
-  bodyJson.iceCandidates = iceCandidates;
+  return new Promise(function(resolve, reject) {
+    var bodyJson = {};
+    bodyJson.description = desc;
+    bodyJson.iceCandidates = iceCandidates;
 
-  util.fetch(
-    wrtcEndpoint,
-    {
-      method: 'PUT',
-      body: binUtil.stringToArrayBuffer(JSON.stringify(bodyJson))
-    }
-  )
-  .then(resp => {
-    return resp.json();
-  })
-  .then(json => {
-    var peerDesc = new RTCSessionDescription(json.description);
-    pc.setRemoteDescription(peerDesc);
+    util.fetch(
+      wrtcEndpoint,
+      {
+        method: 'PUT',
+        body: Buffer.from(JSON.stringify(bodyJson))
+      }
+    )
+    .then(resp => {
+      return resp.json();
+    })
+    .then(json => {
+      var peerDesc = exports.createRTCSessionDescription(json.description);
+      rawConnection.setRemoteDescription(peerDesc);
 
-    json.iceCandidates.forEach(candidateStr => {
-      var candidate = new RTCIceCandidate(candidateStr);
-      pc.addIceCandidate(candidate);
+      json.iceCandidates.forEach(candidateJson => {
+        var candidate = exports.createRTCIceCandidate(candidateJson);
+        rawConnection.addIceCandidate(candidate);
+      });
+
+      var cxn = exports.createPeerConnection(rawConnection);
+      exports.addConnection(ipaddr, port, cxn);
+      resolve(cxn);
+    })
+    .catch(err => {
+      reject(err);
     });
-
-    var cxn = new peerConn.PeerConnection(pc);
-    exports.addConnection(ipaddr, port, cxn);
-    return Promise.resolve(cxn);
   });
 };
 
@@ -164,6 +184,18 @@ exports.getPathForWebrtcNegotiation = function(addr, port) {
     port +
     '/' +
     serverApi.getApiEndpoints().receiveWrtcOffer;
+};
+
+/**
+ * Create a PeerConnection object. Thin wrapper around the constructor to
+ * facilitate testing.
+ *
+ * @param {RTCPeerConnection} rawConnection
+ *
+ * @return {PeerConnection}
+ */
+exports.createPeerConnection = function(rawConnection) {
+  return new peerConn.PeerConnection(rawConnection);
 };
 
 /**
@@ -197,13 +229,43 @@ exports.getOrCreateConnection = function(ipaddr, port) {
 };
 
 /**
- * Remove the connection from the known pool.
+ * Create an RTCPeerConnection. Thin wrapper around the RTCPeerConnection
+ * constructor.
  *
- * @param {String} ipaddr the IP address of the peer this connects to
- * @param {number} port the port of the instance advertised via mDNS where this
- * connection is connected
+ * Exposed for testing.
+ *
+ * @param {JSON} servers
+ * @param {JSON} constraings
+ *
+ * @return {RTCPeerConnection}
  */
-exports.removeConnection = function(ipaddr, port) {
-  var key = createKey(ipaddr, port);
-  delete CONNECTIONS[key];
+exports.createRTCPeerConnection = function(servers, constraints) {
+  return new RTCPeerConnection(servers, constraints);
+};
+
+/**
+ * Create an RTCIceCandidate. Thin wrapper around the RTCIceCandidate
+ * constructor to facilitate testing.
+ *
+ * @param {JSON} candidateJson the JSON object representing an ICE candidate
+ * that has come across the wire
+ *
+ * @return {RTCIceCandidate}
+ */
+exports.createRTCIceCandidate = function(candidateJson) {
+  return new RTCIceCandidate(candidateJson);
+};
+
+/**
+ * Create an RTCSessionDescription from a stringified JSON description. Thing
+ * wrapper around the RTCSessionDescription constructor.
+ *
+ * Exposed for testing.
+ *
+ * @param {JSON} descJson JSON representation of an RTCSessionDescription
+ *
+ * @return {RTCSessionDescription}
+ */
+exports.createRTCSessionDescription = function(descJson) {
+  return new RTCSessionDescription(descJson);
 };
