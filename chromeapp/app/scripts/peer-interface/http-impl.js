@@ -5,8 +5,8 @@ var util = require('../util');
 /**
  * @constructor
  */
-exports.PeerAccessor = function PeerAccessor() {
-  if (!(this instanceof PeerAccessor)) {
+exports.HttpPeerAccessor = function HttpPeerAccessor() {
+  if (!(this instanceof HttpPeerAccessor)) {
     throw new Error('PeerAccessor must be called with new');
   }
   
@@ -19,7 +19,7 @@ exports.PeerAccessor = function PeerAccessor() {
  *
  * @returns {Promise.<Blob, Error>}
  */
-exports.PeerAccessor.prototype.getFileBlob = function(params) {
+exports.HttpPeerAccessor.prototype.getFileBlob = function(params) {
   return new Promise(function(resolve, reject) {
     return util.fetch(params.fileUrl)
     .then(response => {
@@ -41,7 +41,7 @@ exports.PeerAccessor.prototype.getFileBlob = function(params) {
  *
  * @returns {Promise.<JSON, Error>}
  */
-exports.PeerAccessor.prototype.getList = function(params) {
+exports.HttpPeerAccessor.prototype.getList = function(params) {
   return new Promise(function(resolve, reject) {
     util.fetch(params.listUrl)
     .then(response => {

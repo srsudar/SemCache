@@ -5,8 +5,8 @@ var cmgr = require('../webrtc/connection-manager');
 /**
  * @constructor
  */
-exports.PeerAccessor = function PeerAccessor() {
-  if (!(this instanceof PeerAccessor)) {
+exports.WebrtcPeerAccessor = function WebrtcPeerAccessor() {
+  if (!(this instanceof WebrtcPeerAccessor)) {
     throw new Error('PeerAccessor must be called with new');
   }
   
@@ -20,7 +20,7 @@ exports.PeerAccessor = function PeerAccessor() {
  *
  * @returns {Promise.<Blob, Error>}
  */
-exports.PeerAccessor.prototype.getFileBlob = function(params) {
+exports.WebrtcPeerAccessor.prototype.getFileBlob = function(params) {
   return new Promise(function(resolve, reject) {
     cmgr.getOrCreateConnection(params.ipAddress, params.port)
     .then(peerConnection => {
@@ -43,7 +43,7 @@ exports.PeerAccessor.prototype.getFileBlob = function(params) {
  *
  * @returns {Promise.<JSON, Error>}
  */
-exports.PeerAccessor.prototype.getList = function(params) {
+exports.WebrtcPeerAccessor.prototype.getList = function(params) {
   return new Promise(function(resolve, reject) {
     cmgr.getOrCreateConnection(params.ipAddress, params.port)
     .then(peerConnection => {
@@ -57,4 +57,3 @@ exports.PeerAccessor.prototype.getList = function(params) {
     });
   });
 };
-

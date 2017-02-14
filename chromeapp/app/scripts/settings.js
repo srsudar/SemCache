@@ -17,6 +17,14 @@ var chromefs = require('./chrome-apis/file-system');
 /** The prefix that we use to namespace setting keys. */
 var SETTING_NAMESPACE_PREFIX = 'setting_';
 
+/**
+ * The strings we use to represent transport mechanisms in the database.
+ */
+var TRANSPORT_METHOD_STRINGS = {
+  http: 'http',
+  webrtc: 'webrtc'
+};
+
 exports.SETTINGS_OBJ = null;
 
 var userFriendlyKeys = {
@@ -25,7 +33,8 @@ var userFriendlyKeys = {
   baseDirId: 'baseDirId',
   baseDirPath: 'baseDirPath',
   serverPort: 'serverPort',
-  hostName: 'hostName'
+  hostName: 'hostName',
+  transportMethod: 'transportMethod'
 };
 
 /**
@@ -40,7 +49,8 @@ exports.getAllSettingKeys = function() {
     exports.createNameSpacedKey(userFriendlyKeys.baseDirId),
     exports.createNameSpacedKey(userFriendlyKeys.baseDirPath),
     exports.createNameSpacedKey(userFriendlyKeys.serverPort),
-    exports.createNameSpacedKey(userFriendlyKeys.hostName)
+    exports.createNameSpacedKey(userFriendlyKeys.hostName),
+    exports.createNameSpacedKey(userFriendlyKeys.transportMethod)
   ];
 };
 
@@ -202,6 +212,19 @@ exports.getHostName = function() {
 };
 
 /**
+ * @return {String} String representing the transport method to be used by the
+ * instance to interface with peers. Options are 'http' and 'webrtc'. Defaults
+ * to 'http'.
+ */
+exports.getTransportMethod = function() {
+  var result = exports.get(userFriendlyKeys.transportMethod);
+  if (result === null) {
+    result = TRANSPORT_METHOD_STRINGS.http;
+  }
+  return result;
+};
+
+/**
  * @param {string} path the absolute path to the base directory of SemCache,
  * which unfortunately cannot be determined via an API
  */
@@ -247,6 +270,32 @@ exports.setServerPort = function(port) {
  */
 exports.setHostName = function(hostName) {
   return exports.set(userFriendlyKeys.hostName, hostName);
+};
+
+/**
+ * Indicate that HTTP should be used as the transport mechanism to interface
+ * with peers.
+ *
+ * @return {Promise.<JSON, Error>} Promise that resolves with the current
+ * settings object
+ */
+exports.setTransportHttp = function() {
+  return exports.set(
+    userFriendlyKeys.transportMethod, TRANSPORT_METHOD_STRINGS.http
+  );
+};
+
+/**
+ * Indicate that WebRTC should be used as the transport mechanism to interface
+ * with peers.
+ *
+ * @return {Promise.<JSON, Error>} Promise that resolves with the current
+ * settings object
+ */
+exports.setTransportWebrtc = function() {
+  return exports.set(
+    userFriendlyKeys.transportMethod, TRANSPORT_METHOD_STRINGS.webrtc
+  );
 };
 
 /**

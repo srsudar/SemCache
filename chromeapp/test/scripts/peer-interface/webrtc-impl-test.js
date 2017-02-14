@@ -30,7 +30,7 @@ function resetWebrtcImpl() {
 }
 
 test('can create PeerAccessor', function(t) {
-  var pa = new webrtcImpl.PeerAccessor();
+  var pa = new webrtcImpl.WebrtcPeerAccessor();
   t.notEqual(null, pa);
   t.end();
 });
@@ -54,7 +54,7 @@ test('getFileBlob resolves with peerConnection.getFile', function(t) {
   });
 
   var params = common.createFileParams(ipaddr, port, fileUrl);
-  var peerAccessor = new webrtcImpl.PeerAccessor();
+  var peerAccessor = new webrtcImpl.WebrtcPeerAccessor();
   peerAccessor.getFileBlob(params)
   .then(actual => {
     t.equal(actual, expected);
@@ -74,7 +74,7 @@ test('getFileBlob rejects with error', function(t) {
     }
   });
 
-  var peerAccessor = new webrtcImpl.PeerAccessor();
+  var peerAccessor = new webrtcImpl.WebrtcPeerAccessor();
   peerAccessor.getFileBlob({})
   .catch(actual => {
     t.equal(actual, expected);
@@ -100,7 +100,7 @@ test('getList resolves with json', function(t) {
   });
   var params = common.createListParams(ipaddr, port, 'listurl');
 
-  var peerAccessor = new webrtcImpl.PeerAccessor();
+  var peerAccessor = new webrtcImpl.WebrtcPeerAccessor();
   peerAccessor.getList(params)
   .then(actual => {
     t.equal(actual, expected);
@@ -120,7 +120,7 @@ test('getList rejects with error', function(t) {
     }
   });
 
-  var peerAccessor = new webrtcImpl.PeerAccessor();
+  var peerAccessor = new webrtcImpl.WebrtcPeerAccessor();
   peerAccessor.getList({})
   .catch(actual => {
     t.equal(actual, expected);

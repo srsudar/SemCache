@@ -30,7 +30,7 @@ function resetHttpImpl() {
 }
 
 test('can create PeerAccessor', function(t) {
-  var peer = new httpImpl.PeerAccessor();
+  var peer = new httpImpl.HttpPeerAccessor();
   t.notEqual(null, peer);
   t.end();
 });
@@ -48,7 +48,7 @@ test('getFileBlob resolves with blob', function(t) {
     }
   });
 
-  var pa = new httpImpl.PeerAccessor();
+  var pa = new httpImpl.HttpPeerAccessor();
   pa.getFileBlob(mhtmlUrl)
   .then(actual => {
     t.equal(actual, expected);
@@ -68,7 +68,7 @@ test('getFileBlob rejects with error', function(t) {
     }
   });
 
-  var pa = new httpImpl.PeerAccessor();
+  var pa = new httpImpl.HttpPeerAccessor();
   pa.getFileBlob(url)
   .catch(actual => {
     t.equal(actual, expected);
@@ -92,7 +92,7 @@ test('getList resolves with json', function(t) {
   });
 
   var params = common.createListParams(null, null, listUrl);
-  var peerAccessor = new httpImpl.PeerAccessor();
+  var peerAccessor = new httpImpl.HttpPeerAccessor();
   peerAccessor.getList(params)
   .then(actual => {
     t.equal(actual, expected);
@@ -111,7 +111,7 @@ test('getList rejects with error', function(t) {
     }
   });
 
-  var peerAccessor = new httpImpl.PeerAccessor();
+  var peerAccessor = new httpImpl.HttpPeerAccessor();
   peerAccessor.getList({})
   .catch(actual => {
     t.equal(actual, expected);

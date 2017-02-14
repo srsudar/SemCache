@@ -6,13 +6,16 @@
  */
 
 var datastore = require('./persistence/datastore');
+var dnsController = require('./dnssd/dns-controller');
+var dnssdSem = require('./dnssd/dns-sd-semcache');
+var evaluation = require('./evaluation');
 var extBridge = require('./extension-bridge/messaging');
 var fileSystem = require('./persistence/file-system');
+var ifCommon = require('./peer-interface/common');
+var ifHttp = require('./peer-interface/http-impl');
+var ifWebrtc = require('./peer-interface/webrtc-impl');
 var settings = require('./settings');
-var dnssdSem = require('./dnssd/dns-sd-semcache');
 var serverApi = require('./server/server-api');
-var dnsController = require('./dnssd/dns-controller');
-var evaluation = require('./evaluation');
 
 var ABS_PATH_TO_BASE_DIR = null;
 
@@ -380,12 +383,28 @@ exports.getAbsPathToBaseDir = function() {
 };
 
 /**
+ * Create a PeerAccessor based on the configured settings.
+ */
+exports.getPeerAccessor = function() {
+  var transportMethod = settings.getTransportMethod();
+  if (transportMethod === 'http') {
+    return new ifHttp.HttpPeerAccessor(); 
+  } else if (transportMethod === 'webrtc') {
+    return new ifWebrtc.WebrtcPeerAccessor(); 
+  } else {
+    throw new Error('Unrecognized transport method: ' + transportMethod);
+  }
+};
+
+/**
  * Save the MHTML file at mhtmlUrl into the local cache and open the URL.
  *
  * @param {captureUrl} captureUrl
  * @param {captureDate} captureDate
  * @param {string} mhtmlUrl the url of the mhtml file to save and open
  * @param {object} metadata the metadata that is stored along with the file
+ * @param {String} ipaddr IP address of the peer
+ * @param {integer} port port of the peer
  *
  * @return {Promise} a Promise that resolves after open has been called.
  */
@@ -393,34 +412,34 @@ exports.saveMhtmlAndOpen = function(
   captureUrl,
   captureDate,
   mhtmlUrl,
-  metadata
+  metadata,
+  ipaddr,
+  port
 ) {
   return new Promise(function(resolve) {
     var start = evaluation.getNow();
     var streamName = 'open_' + captureUrl;
-    exports.fetch(mhtmlUrl)
-      .then(response => {
-        return response.blob();
-      })
-      .then(mhtmlBlob => {
-        return datastore.addPageToCache(
-          captureUrl,
-          captureDate,
-          mhtmlBlob,
-          metadata
-        );
-      })
-      .then((entry) => {
-        var fileUrl = fileSystem.constructFileSchemeUrl(
-          exports.getAbsPathToBaseDir(),
-          entry.fullPath
-        );
-        extBridge.sendMessageToOpenUrl(fileUrl);
-        var end = evaluation.getNow();
-        var totalTime = end - start;
-        evaluation.logTime(streamName, totalTime);
-        console.warn('totalTime to fetch: ', totalTime);
-        resolve(totalTime);
-      });
+    var params = ifCommon.createFileParams(ipaddr, port, mhtmlUrl);
+    exports.getPeerAccessor().getFileBlob(params)
+    .then(blob => {
+      return datastore.addPageToCache(
+        captureUrl,
+        captureDate,
+        blob,
+        metadata
+      );
+    })
+    .then((entry) => {
+      var fileUrl = fileSystem.constructFileSchemeUrl(
+        exports.getAbsPathToBaseDir(),
+        entry.fullPath
+      );
+      extBridge.sendMessageToOpenUrl(fileUrl);
+      var end = evaluation.getNow();
+      var totalTime = end - start;
+      evaluation.logTime(streamName, totalTime);
+      console.warn('totalTime to fetch: ', totalTime);
+      resolve(totalTime);
+    });
   });
 };

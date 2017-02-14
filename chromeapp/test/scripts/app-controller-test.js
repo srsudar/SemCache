@@ -6,6 +6,11 @@ var sinon = require('sinon');
 require('sinon-as-promised');
 var testUtil = require('./test-util');
 
+var appc = require('../../app/scripts/app-controller');
+var ifCommon = require('../../app/scripts/peer-interface/common');
+var ifHttp = require('../../app/scripts/peer-interface/http-impl');
+var ifWebrtc = require('../../app/scripts/peer-interface/webrtc-impl');
+
 /**
  * Manipulating the object directly leads to polluting the require cache. Any
  * test that modifies the required object should call this method to get a
@@ -15,10 +20,15 @@ function resetAppController() {
   delete require.cache[
     require.resolve('../../app/scripts/app-controller')
   ];
+  appc = require('../../app/scripts/app-controller');
+}
+
+function proxyquireAppc(proxies) {
+  appc = proxyquire('../../app/scripts/app-controller', proxies);
 }
 
 function rejectIfMissingSettingHelper(instanceName, port, dirId, host, t) {
-  var appc = proxyquire('../../app/scripts/app-controller', {
+  proxyquireAppc({
     './settings': {
       getInstanceName: sinon.stub().returns(instanceName),
       getServerPort: sinon.stub().returns(port),
@@ -45,15 +55,21 @@ test('saveMhtmlAndOpen persists and opens', function(t) {
   var absPathToBaseDir = '/some/absolute/path/semcachedir';
 
   var fileUrl = 'file:///some path to the dir';
+  var ipaddr = '7.6.5.4';
+  var port = 7777;
   var constructFileSchemeUrlSpy = sinon.stub().returns(fileUrl);
 
   var getNowStub = sinon.stub().returns(1);
   var logTimeStub = sinon.stub();
+  
+  var blob = 'the fake blob';
+
+  var peerAccessorStub = sinon.stub();
+  var getFileBobStub = sinon.stub().resolves(blob);
+  peerAccessorStub.getFileBlob = getFileBobStub;
 
   // ADD THE ABSOLUTE PATH TO THE BASE DIRECTORY
-  var appc = proxyquire(
-    '../../app/scripts/app-controller',
-    {
+  proxyquireAppc({
       './persistence/datastore': {
         addPageToCache: addPageStub
       },
@@ -70,21 +86,22 @@ test('saveMhtmlAndOpen persists and opens', function(t) {
     }
   );
   
-  var blob = 'the fake blob';
-  var responseStub = sinon.stub();
-  responseStub.blob = sinon.stub().resolves(blob);
-  
-  var fetchStub = sinon.stub().resolves(responseStub);
-  appc.fetch = fetchStub;
   appc.getAbsPathToBaseDir = sinon.stub().returns(absPathToBaseDir);
+  appc.getPeerAccessor = sinon.stub().returns(peerAccessorStub);
 
   var captureUrl = 'the capture url';
   var captureDate = 'the date it was captured';
   var accessPath = 'the url to download the mhtml';
   var mdata = { muchMeta: 'so data' };
-  appc.saveMhtmlAndOpen(captureUrl, captureDate, accessPath, mdata)
+  appc.saveMhtmlAndOpen(
+    captureUrl, captureDate, accessPath, mdata, ipaddr, port
+  )
     .then(() => {
       t.equal(sendMessageToOpenSpy.args[0][0], fileUrl);
+      t.deepEqual(
+        getFileBobStub.args[0][0],
+        ifCommon.createFileParams(ipaddr, port, accessPath)
+      );
       t.deepEqual(
         addPageStub.args[0],
         [captureUrl, captureDate, blob, mdata]
@@ -123,7 +140,7 @@ test('startServersAndRegister rejects if register rejects', function(t) {
   var baseDirId = 'zyx';
   var hostName = 'laptop.local';
 
-  var appc = proxyquire('../../app/scripts/app-controller', {
+  proxyquireAppc({
     './settings': {
       getInstanceName: sinon.stub().returns(instanceName),
       getServerPort: sinon.stub().returns(port),
@@ -161,7 +178,7 @@ test('startServersAndRegister rejects if no ifaces', function(t) {
   var baseDirId = 'zyx';
   var hostName = 'laptop.local';
 
-  var appc = proxyquire('../../app/scripts/app-controller', {
+  proxyquireAppc({
     './settings': {
       getInstanceName: sinon.stub().returns(instanceName),
       getServerPort: sinon.stub().returns(port),
@@ -203,7 +220,7 @@ test('startServersAndRegister resolves if register resolves', function(t) {
   var getIPv4InterfacesSpy = sinon.stub().returns([iface]);
   var updateCachesForSettingsSpy = sinon.stub();
 
-  var appc = proxyquire('../../app/scripts/app-controller', {
+  proxyquireAppc({
     './settings': {
       getInstanceName: sinon.stub().returns(instanceName),
       getServerPort: sinon.stub().returns(port),
@@ -253,7 +270,6 @@ test('getListUrlForSelf is sensible', function(t) {
     port: 7161
   };
   
-  var appc = require('../../app/scripts/app-controller');
   appc.getListeningHttpInterface = sinon.stub().returns(iface);
 
   var expected = 'http://123.4.5.67:7161/list_pages';
@@ -277,7 +293,7 @@ test('getOwnCache returns correct info', function(t) {
   var getHttpIfaceSpy = sinon.stub().returns({ address: ipAddress });
   var getListUrlSpy = sinon.stub().returns(listUrl);
 
-  var appc = proxyquire('../../app/scripts/app-controller', {
+  proxyquireAppc({
     './settings': {
       getInstanceName: getInstanceNameSpy,
       getServerPort: getServerPortSpy,
@@ -311,7 +327,7 @@ test('getOwnCacheName correct', function(t) {
   };
 
   var getInstanceNameSpy = sinon.stub().returns(friendlyName);
-  var appc = proxyquire('../../app/scripts/app-controller', {
+  proxyquireAppc({
     './settings': {
       getInstanceName: getInstanceNameSpy,
     }
@@ -323,7 +339,6 @@ test('getOwnCacheName correct', function(t) {
 });
 
 test('getPeerCacheNames does not query network if not started', function(t) {
-  var appc = require('../../app/scripts/app-controller');
   appc.SERVERS_STARTED = false;
   var expected = [];
 
@@ -339,7 +354,6 @@ test('getPeerCacheNames does not query network if no network', function(t) {
   var cacheName = { friendlyName: 'my name' };
   var getOwnCacheNameSpy = sinon.stub().returns(cacheName);
 
-  var appc = require('../../app/scripts/app-controller');
   appc.SERVERS_STARTED = true;
   appc.getOwnCacheName = getOwnCacheNameSpy;
   appc.networkIsActive = sinon.stub().returns(false);
@@ -368,7 +382,7 @@ test('getPeerCacheNames resolves if running', function(t) {
   var getOwnCacheNameSpy = sinon.stub().returns(self);
   var networkIsActiveSpy = sinon.stub().returns(true);
 
-  var appc = proxyquire('../../app/scripts/app-controller', {
+  proxyquireAppc({
     './dnssd/dns-sd-semcache': {
       browseForSemCacheInstanceNames: browseForSemCacheInstanceNamesSpy
     }
@@ -397,7 +411,7 @@ test('getBrowseableCaches does not query network if not started', function(t) {
   );
   var browseSpy = sinon.spy();
 
-  var appc = proxyquire('../../app/scripts/app-controller', {
+  proxyquireAppc({
     './dnssd/dns-sd-semcache': {
       browseForSemCacheInstances: browseSpy
     }
@@ -443,7 +457,7 @@ test('getBrowseableCaches dedupes and returns correct list', function(t) {
 
   var getOwnCacheSpy = sinon.stub().returns(ownCache);
 
-  var appc = proxyquire('../../app/scripts/app-controller', {
+  proxyquireAppc({
     './server/server-api': {
       getListPageUrlForCache: getListUrlSpy
     },
@@ -470,7 +484,6 @@ test('getBrowseableCaches dedupes and returns correct list', function(t) {
 });
 
 test('networkIsActive true if started', function(t) {
-  var appc = require('../../app/scripts/app-controller');
   appc.SERVERS_STARTED = true;
   t.true(appc.networkIsActive());
   t.end();
@@ -478,7 +491,6 @@ test('networkIsActive true if started', function(t) {
 });
 
 test('networkIsActive false if not started', function(t) {
-  var appc = require('../../app/scripts/app-controller');
   appc.SERVERS_STARTED = false;
   t.false(appc.networkIsActive());
   t.end();
@@ -489,7 +501,7 @@ test('stopServers restores state', function(t) {
   var stopSpy = sinon.spy();
   var stopDnsControllerSpy = sinon.spy();
 
-  var appc = proxyquire('../../app/scripts/app-controller', {
+  proxyquireAppc({
     './dnssd/dns-controller': {
       stop: stopDnsControllerSpy
     }
@@ -523,7 +535,7 @@ test('resolveCache does not use network for self', function(t) {
   var resolveCacheSpy = sinon.stub().resolves();
   var getOwnCacheSpy = sinon.stub().returns(ownCache);
 
-  var appc = proxyquire('../../app/scripts/app-controller', {
+  proxyquireAppc({
     './dnssd/dns-sd-semcache': {
       resolveCache: resolveCacheSpy
     },
@@ -553,7 +565,7 @@ test('resolveCache queries network if needed and resolves', function(t) {
   var resolveCacheSpy = sinon.stub().withArgs(fullName).resolves(expected);
   var getOwnCacheSpy = sinon.stub().returns(ownCache);
 
-  var appc = proxyquire('../../app/scripts/app-controller', {
+  proxyquireAppc({
     './dnssd/dns-sd-semcache': {
       resolveCache: resolveCacheSpy
     },
@@ -578,7 +590,7 @@ test('resolveCache rejects if query fails', function(t) {
   var resolveCacheSpy = sinon.stub().withArgs(fullName).rejects(expected);
   var getOwnCacheSpy = sinon.stub().returns(ownCache);
 
-  var appc = proxyquire('../../app/scripts/app-controller', {
+  proxyquireAppc({
     './dnssd/dns-sd-semcache': {
       resolveCache: resolveCacheSpy
     },
@@ -591,4 +603,42 @@ test('resolveCache rejects if query fails', function(t) {
       t.end();
       resetAppController();
     });
+});
+
+test('getPeerInterface correct for http', function(t) {
+  proxyquireAppc({
+    './settings': {
+      getTransportMethod: sinon.stub().returns('http')
+    }
+  });
+
+  var actual = appc.getPeerAccessor();
+  t.true(actual instanceof ifHttp.HttpPeerAccessor);
+  t.end();
+  resetAppController();
+});
+
+test('getPeerInterface correct for webrtc', function(t) {
+  proxyquireAppc({
+    './settings': {
+      getTransportMethod: sinon.stub().returns('webrtc')
+    }
+  });
+
+  var actual = appc.getPeerAccessor();
+  t.true(actual instanceof ifWebrtc.WebrtcPeerAccessor);
+  t.end();
+  resetAppController();
+});
+
+test('getPeerInterface throws if unrecognized', function(t) {
+  proxyquireAppc({
+    './settings': {
+      getTransportMethod: sinon.stub().returns('I do not exist')
+    }
+  });
+
+  t.throws(appc.getPeerAccessor);
+  t.end();
+  resetAppController();
 });

@@ -5,6 +5,8 @@ var proxyquire = require('proxyquire');
 var sinon = require('sinon');
 require('sinon-as-promised');
 
+var settings = require('../../app/scripts/settings');
+
 /**
  * Manipulating the object directly leads to polluting the require cache. Any
  * test that modifies the required object should call this method to get a
@@ -14,6 +16,7 @@ function resetSettings() {
   delete require.cache[
     require.resolve('../../app/scripts/settings')
   ];
+  settings = require('../../app/scripts/settings');
 }
 
 /**
@@ -39,7 +42,7 @@ function helperGetCallsInternalsForKey(settings, getFn, key, t) {
  *
  * @param {settings} settings the settings module
  * @param {function} getFn the setter function
- * @param {key} key the key expected to be passed to the get machinery
+ * @param {key} key the key expected to be passed to the set machinery
  * @param {any} value the value to set
  * @param {t} t the test param
  */
@@ -57,7 +60,6 @@ function helperSetCallsInternalsForKey(settings, setFn, key, value, t) {
 }
 
 test('createNameSpacedKey returns correct value', function(t) {
-  var settings = require('../../app/scripts/settings');
   var key = 'someKey';
   var expected = 'setting_someKey';
   var actual = settings.createNameSpacedKey(key);
@@ -67,7 +69,6 @@ test('createNameSpacedKey returns correct value', function(t) {
 });
 
 test('removeNameSpaceFromKey returns user-friendly key', function(t) {
-  var settings = require('../../app/scripts/settings');
   var nameSpaced = 'setting_mySpecialKey';
   var expected = 'mySpecialKey';
   var actual = settings.removeNameSpaceFromKey(nameSpaced);
@@ -94,7 +95,7 @@ test('set calls storage.set and resolves with updated cache', function(t) {
 
   var setSpy = sinon.stub().resolves();
 
-  var settings = proxyquire(
+  settings = proxyquire(
     '../../app/scripts/settings',
     {
       './chrome-apis/storage':
@@ -122,7 +123,6 @@ test('get returns cached value if present', function(t) {
     myKey: 'omg its real!'
   };
 
-  var settings = require('../../app/scripts/settings');
   settings.getSettingsObj = sinon.stub().returns(settingsObj);
 
   var actual = settings.get('myKey');
@@ -136,7 +136,6 @@ test('get returns null if not present', function(t) {
     bar: 'much bar!'
   };
 
-  var settings = require('../../app/scripts/settings');
   settings.getSettingsObj = sinon.stub().returns(settingsObj);
 
   var actual = settings.get('fakeKey');
@@ -146,7 +145,6 @@ test('get returns null if not present', function(t) {
 });
 
 test('getAllSettingsKeys has all keys', function(t) {
-  var settings = require('../../app/scripts/settings');
   var actual = settings.getAllSettingKeys();
 
   var contains = function(arr, val) {
@@ -176,7 +174,7 @@ test('init initializes cache', function(t) {
   var getStub = sinon.stub().resolves(rawSettings);
   var getAllKeysStub = sinon.stub().returns(settingKeys);
 
-  var settings = proxyquire(
+  settings = proxyquire(
     '../../app/scripts/settings',
     {
       './chrome-apis/storage':
@@ -200,7 +198,6 @@ test('init initializes cache', function(t) {
 });
 
 test('custom getters call internals', function(t) {
-  var settings = require('../../app/scripts/settings');
   // Using the hard-coded strings avoid initialization errors. Not ideal but
   // not terrible.
   helperGetCallsInternalsForKey(
@@ -239,12 +236,29 @@ test('custom getters call internals', function(t) {
     'hostName',
     t
   );
+  helperGetCallsInternalsForKey(
+    settings,
+    settings.getTransportMethod,
+    'transportMethod',
+    t
+  );
+  t.end();
+  resetSettings();
+});
+
+test('getTransportMethod defaults to http', function(t) {
+  var key = 'transportMethod';
+  var getSpy = sinon.stub().withArgs(key).returns(null);
+  settings.get = getSpy;
+
+  var actual = settings.getTransportMethod();
+  t.equal(actual, 'http');
+  t.deepEqual(getSpy.args[0], [key]);
   t.end();
   resetSettings();
 });
 
 test('custom setters call internals', function(t) {
-  var settings = require('../../app/scripts/settings');
   // Using the hard-coded strings avoid initialization errors. Not ideal but
   // not terrible.
   helperSetCallsInternalsForKey(
@@ -289,6 +303,20 @@ test('custom setters call internals', function(t) {
     'laptop.local',
     t
   );
+  helperSetCallsInternalsForKey(
+    settings,
+    settings.setTransportHttp,
+    'transportMethod',
+    'http',
+    t
+  );
+  helperSetCallsInternalsForKey(
+    settings,
+    settings.setTransportWebrtc,
+    'transportMethod',
+    'webrtc',
+    t
+  );
   t.end();
   resetSettings();
 });
@@ -305,7 +333,7 @@ test('promptAndSetNewBaseDir calls storage APIs', function(t) {
   var setBaseDirIdSpy = sinon.spy();
   var setBaseDirPathSpy = sinon.spy();
 
-  var settings = proxyquire(
+  settings = proxyquire(
     '../../app/scripts/settings', {
       './chrome-apis/file-system':
         {
