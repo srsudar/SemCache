@@ -57,23 +57,14 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
       <paper-fab icon="refresh" class="fab" on-tap="refresh"></paper-fab>
     </div>
 
-    <iron-ajax
-      id="ajax"
-      auto
-      url="{{url}}"
-      handle-as="json"
-      on-response="hideLoading"
-      on-error="hideLoading"
-      last-response="{{response}}"></iron-ajax>
-
-      <template is="dom-repeat" items="{{response.cachedPages}}">
-        <cached-page-summary
-          capture-url="{{item.captureUrl}}"
-          capture-date="{{item.captureDate}}"
-          access-path="{{item.accessPath}}"
-          metadata="{{item.metadata}}" >
-        </cached-page-summary>
-      </template>
+    <template is="dom-repeat" items="{{pageList}}">
+      <cached-page-summary
+        capture-url="{{item.captureUrl}}"
+        capture-date="{{item.captureDate}}"
+        access-path="{{item.accessPath}}"
+        metadata="{{item.metadata}}" >
+      </cached-page-summary>
+    </template>
 
   </template>
   <script>
@@ -89,6 +80,11 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
         type: String,
         reflectToAttribute: true,
         notify: true,
+      },
+      pageList: {
+        type: Object,
+        notify: true,
+        value: function() { return []; }
       }
     },
 
@@ -100,7 +96,6 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
     refresh: function() {
       var thisEl = this;
       return new Promise(function(resolve) {
-        console.log('CLICKED FAB');
         if (!thisEl.serviceName) {
           console.log('Service name is not defined!');
           return;
@@ -110,23 +105,13 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
           .then(() => {
             return thisEl.getAppControllerModule();
           })
-          .then(appc => {
-            console.log('appc: ');
-            console.log(appc);
-            console.log('thisEl.serviceName');
-            console.log(thisEl.serviceName);
-            return appc.resolveCache(thisEl.serviceName)
+          .then(appController => {
+            appc = appController;
+            return appc.getListFromService(thisEl.serviceName);
           })
-          .then(cacheInfo => {
-            console.log('cacheInfo');
-            console.log(cacheInfo);
-            if (!cacheInfo || !cacheInfo.listUrl) {
-              console.log('no listUrl for cache. cache: ', cacheInfo);
-              thisEl.hideLoading();
-            } else {
-              thisEl.url = cacheInfo.listUrl;
-              thisEl.$.ajax.generateRequest();
-            }
+          .then(pageList => {
+            thisEl.pageList = pageList.cachedPages;
+            thisEl.hideLoading();
             resolve();
           })
           .catch(err => {

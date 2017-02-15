@@ -40,22 +40,6 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
           serviceName: serviceName
         };
 
-        // A mock result from a call to resolveCache
-        var cacheInfo = {
-          domainName: 'laptop.local',
-          friendlyName: 'My Cache',
-          instanceName: 'My Cache._semcache._tcp.local',
-          ipAddress: '1.2.3.4',
-          port: 1111,
-          listUrl: 'http://1.2.3.4:1111/list_pages'
-        };
-
-        // Testing of iron-ajax is based on this excellent video from the
-        // Polymer team: https://www.youtube.com/watch?v=_9qARcdCAn4
-        var responseHeaders = {
-          json: { 'Content-Type': 'application/json' }
-        };
-
         // An example result we might expect from listUrl
         var cacheJson = {
           metadata: { version: 0 },
@@ -75,12 +59,11 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
           ]
         };
 
-        var resolveCacheSpy = sinon.stub();
-        resolveCacheSpy.withArgs(serviceName).returns(
-          Promise.resolve(cacheInfo)
-        );
+        var getListFromServiceSpy = sinon.stub().withArgs(serviceName)
+          .returns(Promise.resolve(cacheJson));
+
         var getAppControllerModuleSpy = sinon.stub().returns({
-          resolveCache: resolveCacheSpy
+          getListFromService: getListFromServiceSpy
         });
 
         setup(function() {
@@ -99,20 +82,6 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
           myEl.showLoading = showLoadingSpy;
           myEl.hideLoading = hideLoadingSpy;
 
-          var server = sinon.fakeServer.create();
-          server.respondWith(
-            'GET',
-            cacheInfo.listUrl,
-            [
-              200,
-              responseHeaders.json,
-              JSON.stringify(cacheJson)
-            ]
-          );
-          // Given that our functionality is included within a promise, we
-          // can't rely on the server.respond() function
-          server.respondImmediately = true;
-
           myEl.refresh()
             .then(() => {
               var ajaxAssertionsComplete = false;
@@ -120,64 +89,46 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
               
               assert.equal(showLoadingSpy.callCount, 1);
               assert.equal(hideLoadingSpy.callCount, 1);
+              
+              flush(function() {
+                // We are using flush to ensure that dom-repeat has had time
+                // to add the cached-page-summary elements. Note that this is
+                // NOT intending to test that dom-repeat works, which could
+                // be a criticism of these assertions. Rather we are using
+                // these assertions to ensure we are configuring the repeat
+                // elements correctly.
+                var repeatedEls = Polymer.dom(myEl.root).querySelectorAll(
+                  'cached-page-summary'
+                );
+                var expectedPages = cacheJson.cachedPages;
+                for (var i = 0; i < expectedPages.length; i++) {
+                  var expected = expectedPages[i];
+                  var actual = repeatedEls[i];
+                  assert.equal(actual.captureUrl, expected.captureUrl);
+                  assert.equal(actual.captureDate, expected.captureDate);
+                  assert.equal(actual.accessPath, expected.accessPath);
+                  assert.deepEqual(actual.metadata, expected.metadata);
+                }
 
-              // Refresh set set up the url property
-              assert.equal(myEl.url, cacheInfo.listUrl);
-              promiseAssertionsComplete = true;
-
-              // We should have generated a request, but this executes
-              // asynchronously. Listen to the 'response' event, which will
-              // fire upon completion and do our assertions there.
-              myEl.$.ajax.addEventListener('response', function() {
-                assert.deepEqual(myEl.$.ajax.lastResponse, cacheJson);
-
-                flush(function() {
-                  // We are using flush to ensure that dom-repeat has had time
-                  // to add the cached-page-summary elements. Note that this is
-                  // NOT intending to test that dom-repeat works, which could
-                  // be a criticism of these assertions. Rather we are using
-                  // these assertions to ensure we are configuring the repeat
-                  // elements correctly.
-                  var repeatedEls = Polymer.dom(myEl.root).querySelectorAll(
-                    'cached-page-summary'
-                  );
-                  var expectedPages = cacheJson.cachedPages;
-                  for (var i = 0; i < expectedPages.length; i++) {
-                    var expected = expectedPages[i];
-                    var actual = repeatedEls[i];
-                    assert.equal(actual.captureUrl, expected.captureUrl);
-                    assert.equal(actual.captureDate, expected.captureDate);
-                    assert.equal(actual.accessPath, expected.accessPath);
-                    assert.deepEqual(actual.metadata, expected.metadata);
-                  }
-
-                  ajaxAssertionsComplete = true;
-                  if (ajaxAssertionsComplete && promiseAssertionsComplete) {
-                    done();
-                  }
-                });
-
-              });
-
-              // We should have populated the response pages
-              if (ajaxAssertionsComplete && promiseAssertionsComplete) {
                 done();
-              }
+              });
             });
         });
 
-        test('hides loading if resolve cache errors', function(done) {
+        test('hides loading if getListFromService rejects', function(done) {
           // We should show and hide the loading animation
           var showLoadingSpy = sinon.stub();
           var hideLoadingSpy = sinon.stub();
           myEl.showLoading = showLoadingSpy;
           myEl.hideLoading = hideLoadingSpy;
 
-          var resolveCacheSpy = sinon.stub();
-          resolveCacheSpy.returns(Promise.reject('expected err for test'));
+          var getListFromServiceSpy = sinon.stub();
+          getListFromServiceSpy.returns(
+            Promise.reject('expected err for test')
+          );
 
           getAppControllerModuleSpy = sinon.stub().returns({
-            resolveCache: resolveCacheSpy
+            getListFromService: getListFromServiceSpy
           });
           myEl.getAppControllerModule = getAppControllerModuleSpy;
 
@@ -190,29 +141,6 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
             });
         });
 
-        test('hides loading if no list url', function(done) {
-          // We should show and hide the loading animation
-          var showLoadingSpy = sinon.stub();
-          var hideLoadingSpy = sinon.stub();
-          myEl.showLoading = showLoadingSpy;
-          myEl.hideLoading = hideLoadingSpy;
-
-          var resolveCacheSpy = sinon.stub();
-          resolveCacheSpy.returns(Promise.resolve({ weird: 'object' }));
-
-          getAppControllerModuleSpy = sinon.stub().returns({
-            resolveCache: resolveCacheSpy
-          });
-          myEl.getAppControllerModule = getAppControllerModuleSpy;
-
-          myEl.refresh()
-            .then(() => {
-              assert.equal(showLoadingSpy.callCount, 1);
-              assert.equal(hideLoadingSpy.callCount, 1);
-
-              done();
-            });
-        });
       });
     </script>
 

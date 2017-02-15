@@ -18116,6 +18116,11 @@ Polymer({
         type: String,
         reflectToAttribute: true,
         notify: true,
+      },
+      pageList: {
+        type: Object,
+        notify: true,
+        value: function() { return []; }
       }
     },
 
@@ -18127,7 +18132,6 @@ Polymer({
     refresh: function() {
       var thisEl = this;
       return new Promise(function(resolve) {
-        console.log('CLICKED FAB');
         if (!thisEl.serviceName) {
           console.log('Service name is not defined!');
           return;
@@ -18137,23 +18141,13 @@ Polymer({
           .then(() => {
             return thisEl.getAppControllerModule();
           })
-          .then(appc => {
-            console.log('appc: ');
-            console.log(appc);
-            console.log('thisEl.serviceName');
-            console.log(thisEl.serviceName);
-            return appc.resolveCache(thisEl.serviceName)
+          .then(appController => {
+            appc = appController;
+            return appc.getListFromService(thisEl.serviceName);
           })
-          .then(cacheInfo => {
-            console.log('cacheInfo');
-            console.log(cacheInfo);
-            if (!cacheInfo || !cacheInfo.listUrl) {
-              console.log('no listUrl for cache. cache: ', cacheInfo);
-              thisEl.hideLoading();
-            } else {
-              thisEl.url = cacheInfo.listUrl;
-              thisEl.$.ajax.generateRequest();
-            }
+          .then(pageList => {
+            thisEl.pageList = pageList.cachedPages;
+            thisEl.hideLoading();
             resolve();
           })
           .catch(err => {
@@ -44789,6 +44783,149 @@ exports.peekTypeInReader = function(reader) {
 };
 
 },{"./byte-array":5,"./dns-codes":6,"./dns-util":8}],11:[function(require,module,exports){
+'use strict';
+
+/**
+ * Code shared across the peer-interface implementations.
+ */
+
+exports.createListParams = function(ipaddr, port, listUrl) {
+  return {
+    ipAddress: ipaddr,
+    port: port,
+    listUrl: listUrl
+  };
+};
+
+exports.createFileParams = function(ipaddr, port, fileUrl) {
+  return {
+    ipAddress: ipaddr,
+    port: port,
+    fileUrl: fileUrl
+  };
+};
+
+},{}],12:[function(require,module,exports){
+'use strict';
+
+var util = require('../util');
+
+/**
+ * @constructor
+ */
+exports.HttpPeerAccessor = function HttpPeerAccessor() {
+  if (!(this instanceof HttpPeerAccessor)) {
+    throw new Error('PeerAccessor must be called with new');
+  }
+  
+};
+
+/**
+ * Retrieve a blob from the peer.
+ *
+ * @param {JSON} params parameter object as created by peer-interface/common
+ *
+ * @returns {Promise.<Blob, Error>}
+ */
+exports.HttpPeerAccessor.prototype.getFileBlob = function(params) {
+  return new Promise(function(resolve, reject) {
+    return util.fetch(params.fileUrl)
+    .then(response => {
+      return response.blob();
+    })
+    .then(blob => {
+      resolve(blob);
+    })
+    .catch(err => {
+      reject(err);
+    });
+  });
+};
+
+/**
+ * Retrieve the list of pages in the peer's cache.
+ *
+ * @param {JSON} params parameter object as created by peer-interface/common
+ *
+ * @returns {Promise.<JSON, Error>}
+ */
+exports.HttpPeerAccessor.prototype.getList = function(params) {
+  return new Promise(function(resolve, reject) {
+    util.fetch(params.listUrl)
+    .then(response => {
+      return response.json();
+    })
+    .then(json => {
+      resolve(json);
+    })
+    .catch(err => {
+      reject(err);
+    });
+  });
+};
+
+},{"../util":18}],13:[function(require,module,exports){
+'use strict';
+
+var cmgr = require('../webrtc/connection-manager');
+
+/**
+ * @constructor
+ */
+exports.WebrtcPeerAccessor = function WebrtcPeerAccessor() {
+  if (!(this instanceof WebrtcPeerAccessor)) {
+    throw new Error('PeerAccessor must be called with new');
+  }
+  
+};
+
+/**
+ * Retrieve a blob from the peer.
+ *
+ * @param {JSON} params parameters for the get, as created by
+ * peer-interface/common.
+ *
+ * @returns {Promise.<Blob, Error>}
+ */
+exports.WebrtcPeerAccessor.prototype.getFileBlob = function(params) {
+  return new Promise(function(resolve, reject) {
+    cmgr.getOrCreateConnection(params.ipAddress, params.port)
+    .then(peerConnection => {
+      return peerConnection.getFile(params.fileUrl);
+    })
+    .then(binary => {
+      resolve(binary);
+    })
+    .catch(err => {
+      reject(err);
+    });
+  });
+};
+
+/**
+ * Retrieve the list of pages in the peer's cache.
+ *
+ * @param {JSON} params parameters for list request, as created by
+ * peer-interface/common.
+ *
+ * @returns {Promise.<JSON, Error>}
+ */
+exports.WebrtcPeerAccessor.prototype.getList = function(params) {
+  return new Promise(function(resolve, reject) {
+    cmgr.getOrCreateConnection(params.ipAddress, params.port)
+    .then(peerConnection => {
+      return peerConnection.getList();
+    })
+    .then(json => {
+      resolve(json);
+    })
+    .catch(err => {
+      reject(err);
+    });
+  });
+};
+
+},{"../webrtc/connection-manager":"cmgr"}],14:[function(require,module,exports){
 /* globals Promise */
 'use strict';
 
@@ -45085,7 +45222,7 @@ exports.getCaptureDateFromName = function(name) {
   return result;
 };
 
-},{"../chrome-apis/storage":4,"../server/server-api":14,"./file-system":"fileSystem","./file-system-util":"fsUtil"}],12:[function(require,module,exports){
+},{"../chrome-apis/storage":4,"../server/server-api":17,"./file-system":"fileSystem","./file-system-util":"fsUtil"}],15:[function(require,module,exports){
 /* globals WSC, _, TextEncoder */
 'use strict';
 
@@ -45115,7 +45252,7 @@ _.extend(exports.EvaluationHandler.prototype, {
   }
 }, WSC.BaseHandler.prototype);
 
-},{"../evaluation":"eval"}],13:[function(require,module,exports){
+},{"../evaluation":"eval"}],16:[function(require,module,exports){
 /* globals WSC, RTCPeerConnection, RTCSessionDescription, RTCIceCandidate */
 'use strict';
 
@@ -45331,7 +45468,7 @@ _.extend(exports.WebRtcOfferHandler.prototype,
   WSC.BaseHandler.prototype
 );
 
-},{"../dnssd/binary-utils":"binaryUtils","../persistence/file-system":"fileSystem","../persistence/file-system-util":"fsUtil","../webrtc/connection-manager":"cmgr","../webrtc/responder":19,"./server-api":14,"underscore":36}],14:[function(require,module,exports){
+},{"../dnssd/binary-utils":"binaryUtils","../persistence/file-system":"fileSystem","../persistence/file-system-util":"fsUtil","../webrtc/connection-manager":"cmgr","../webrtc/responder":22,"./server-api":17,"underscore":39}],17:[function(require,module,exports){
 'use strict';
 
 /**
@@ -45453,7 +45590,7 @@ exports.getCachedFileNameFromPath = function(path) {
   return result;
 };
 
-},{"../app-controller":"appController","../persistence/datastore":11}],15:[function(require,module,exports){
+},{"../app-controller":"appController","../persistence/datastore":14}],18:[function(require,module,exports){
 'use strict';
 
 /**
@@ -45556,7 +45693,7 @@ exports.trace = function trace(arg) {
   console.log(now + ': ', arg);
 };
 
-},{}],16:[function(require,module,exports){
+},{}],19:[function(require,module,exports){
 'use strict';
 
 var _ = require('underscore');
@@ -45783,7 +45920,7 @@ exports.createContinueMessage = function() {
   return { message: 'next' };
 };
 
-},{"buffer":22,"underscore":36,"wolfy87-eventemitter":37}],17:[function(require,module,exports){
+},{"buffer":25,"underscore":39,"wolfy87-eventemitter":40}],20:[function(require,module,exports){
 'use strict';
 
 /**
@@ -45863,7 +46000,7 @@ exports.isFile = function(msg) {
   return msg.type && msg.type === exports.TYPE_FILE;
 };
 
-},{}],18:[function(require,module,exports){
+},{}],21:[function(require,module,exports){
 'use strict';
 
 var _ = require('underscore');
@@ -46006,7 +46143,7 @@ exports.sendAndGetResponse = function(pc, msg) {
   });
 };
 
-},{"./chunking-channel":16,"./message":17,"underscore":36,"wolfy87-eventemitter":37}],19:[function(require,module,exports){
+},{"./chunking-channel":19,"./message":20,"underscore":39,"wolfy87-eventemitter":40}],22:[function(require,module,exports){
 'use strict';
 
 var Buffer = require('buffer').Buffer;
@@ -46127,7 +46264,7 @@ exports.createCcClient = function(channel) {
   return new chunkingChannel.Client(channel);
 };
 
-},{"../dnssd/binary-utils":"binaryUtils","../persistence/file-system":"fileSystem","../server/server-api":14,"./chunking-channel":16,"./message":17,"buffer":22}],20:[function(require,module,exports){
+},{"../dnssd/binary-utils":"binaryUtils","../persistence/file-system":"fileSystem","../server/server-api":17,"./chunking-channel":19,"./message":20,"buffer":25}],23:[function(require,module,exports){
 (function (global){
 /*! http://mths.be/base64 v0.1.0 by @mathias | MIT license */
 ;(function(root) {
@@ -46296,7 +46433,7 @@ exports.createCcClient = function(channel) {
 }(this));
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],21:[function(require,module,exports){
+},{}],24:[function(require,module,exports){
 'use strict'
 
 exports.byteLength = byteLength
@@ -46412,7 +46549,7 @@ function fromByteArray (uint8) {
   return parts.join('')
 }
 
-},{}],22:[function(require,module,exports){
+},{}],25:[function(require,module,exports){
 (function (global){
 /*!
  * The buffer module from node.js, for the browser.
@@ -48205,14 +48342,14 @@ function isnan (val) {
 }
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"base64-js":21,"ieee754":25,"isarray":23}],23:[function(require,module,exports){
+},{"base64-js":24,"ieee754":28,"isarray":26}],26:[function(require,module,exports){
 var toString = {}.toString;
 
 module.exports = Array.isArray || function (arr) {
   return toString.call(arr) == '[object Array]';
 };
 
-},{}],24:[function(require,module,exports){
+},{}],27:[function(require,module,exports){
 var isBuffer = require('is-buffer')
 
 var flat = module.exports = flatten
@@ -48319,7 +48456,7 @@ function unflatten(target, opts) {
   return result
 }
 
-},{"is-buffer":26}],25:[function(require,module,exports){
+},{"is-buffer":29}],28:[function(require,module,exports){
 exports.read = function (buffer, offset, isLE, mLen, nBytes) {
   var e, m
   var eLen = nBytes * 8 - mLen - 1
@@ -48405,7 +48542,7 @@ exports.write = function (buffer, value, offset, isLE, mLen, nBytes) {
   buffer[offset + i - d] |= s * 128
 }
 
-},{}],26:[function(require,module,exports){
+},{}],29:[function(require,module,exports){
 /*!
  * Determine if an object is a Buffer
  *
@@ -48428,7 +48565,7 @@ function isSlowBuffer (obj) {
   return typeof obj.readFloatLE === 'function' && typeof obj.slice === 'function' && isBuffer(obj.slice(0, 0))
 }
 
-},{}],27:[function(require,module,exports){
+},{}],30:[function(require,module,exports){
 (function (process){
 /**
  * Module dependencies.
@@ -48732,7 +48869,7 @@ function createDataRows(params) {
 }
 
 }).call(this,require('_process'))
-},{"_process":35,"flat":24,"lodash.clonedeep":28,"lodash.flatten":29,"lodash.get":30,"lodash.set":31,"lodash.uniq":32,"os":34}],28:[function(require,module,exports){
+},{"_process":38,"flat":27,"lodash.clonedeep":31,"lodash.flatten":32,"lodash.get":33,"lodash.set":34,"lodash.uniq":35,"os":37}],31:[function(require,module,exports){
 (function (global){
 /**
  * lodash (Custom Build) <https://lodash.com/>
@@ -50484,7 +50621,7 @@ function stubFalse() {
 module.exports = cloneDeep;
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],29:[function(require,module,exports){
+},{}],32:[function(require,module,exports){
 (function (global){
 /**
  * lodash (Custom Build) <https://lodash.com/>
@@ -50837,7 +50974,7 @@ function isObjectLike(value) {
 module.exports = flatten;
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],30:[function(require,module,exports){
+},{}],33:[function(require,module,exports){
 (function (global){
 /**
  * lodash (Custom Build) <https://lodash.com/>
@@ -51772,7 +51909,7 @@ function get(object, path, defaultValue) {
 module.exports = get;
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],31:[function(require,module,exports){
+},{}],34:[function(require,module,exports){
 (function (global){
 /**
  * lodash (Custom Build) <https://lodash.com/>
@@ -52766,7 +52903,7 @@ function set(object, path, value) {
 module.exports = set;
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],32:[function(require,module,exports){
+},{}],35:[function(require,module,exports){
 (function (global){
 /**
  * lodash (Custom Build) <https://lodash.com/>
@@ -53666,7 +53803,7 @@ function noop() {
 module.exports = uniq;
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],33:[function(require,module,exports){
+},{}],36:[function(require,module,exports){
 (function (global){
 /**
  * @license
@@ -70754,7 +70891,7 @@ module.exports = uniq;
 }.call(this));
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],34:[function(require,module,exports){
+},{}],37:[function(require,module,exports){
 exports.endianness = function () { return 'LE' };
 
 exports.hostname = function () {
@@ -70801,7 +70938,7 @@ exports.tmpdir = exports.tmpDir = function () {
 
 exports.EOL = '\n';
 
-},{}],35:[function(require,module,exports){
+},{}],38:[function(require,module,exports){
 // shim for using process in browser
 var process = module.exports = {};
 
@@ -70983,7 +71120,7 @@ process.chdir = function (dir) {
 };
 process.umask = function() { return 0; };
 
-},{}],36:[function(require,module,exports){
+},{}],39:[function(require,module,exports){
 //     Underscore.js 1.8.3
 //     http://underscorejs.org
 //     (c) 2009-2015 Jeremy Ashkenas, DocumentCloud and Investigative Reporters & Editors
@@ -72533,7 +72670,7 @@ process.umask = function() { return 0; };
   }
 }.call(this));
 
-},{}],37:[function(require,module,exports){
+},{}],40:[function(require,module,exports){
 /*!
  * EventEmitter v5.1.0 - git.io/ee
  * Unlicense - http://unlicense.org/
@@ -73030,13 +73167,16 @@ process.umask = function() { return 0; };
  */
 
 var datastore = require('./persistence/datastore');
+var dnsController = require('./dnssd/dns-controller');
+var dnssdSem = require('./dnssd/dns-sd-semcache');
+var evaluation = require('./evaluation');
 var extBridge = require('./extension-bridge/messaging');
 var fileSystem = require('./persistence/file-system');
+var ifCommon = require('./peer-interface/common');
+var ifHttp = require('./peer-interface/http-impl');
+var ifWebrtc = require('./peer-interface/webrtc-impl');
 var settings = require('./settings');
-var dnssdSem = require('./dnssd/dns-sd-semcache');
 var serverApi = require('./server/server-api');
-var dnsController = require('./dnssd/dns-controller');
-var evaluation = require('./evaluation');
 
 var ABS_PATH_TO_BASE_DIR = null;
 
@@ -73404,12 +73544,56 @@ exports.getAbsPathToBaseDir = function() {
 };
 
 /**
+ * Create a PeerAccessor based on the configured settings.
+ */
+exports.getPeerAccessor = function() {
+  var transportMethod = settings.getTransportMethod();
+  if (transportMethod === 'http') {
+    return new ifHttp.HttpPeerAccessor(); 
+  } else if (transportMethod === 'webrtc') {
+    return new ifWebrtc.WebrtcPeerAccessor(); 
+  } else {
+    throw new Error('Unrecognized transport method: ' + transportMethod);
+  }
+};
+
+/**
+ * Obtain the list of cached pages from a service, given its full name.
+ *
+ * @param {string} serviceName the full <instance>.<type>.<domain> name of the
+ * service
+ *
+ * @returns {Promise.<JSON, Error>} Promise that resolves with the JSON
+ * response representing the list, or rejects with an Error
+ */
+exports.getListFromService = function(serviceName) {
+  return new Promise(function(resolve, reject) {
+    var peerAccessor = exports.getPeerAccessor();
+    exports.resolveCache(serviceName)
+    .then(cacheInfo => {
+      var listParams = ifCommon.createListParams(
+        cacheInfo.ipAddress, cacheInfo.port, cacheInfo.listUrl
+      );
+      return peerAccessor.getList(listParams);
+    })
+    .then(pageList => {
+      resolve(pageList);
+    })
+    .catch(err => {
+      reject(err);
+    });
+  });
+};
+
+/**
  * Save the MHTML file at mhtmlUrl into the local cache and open the URL.
  *
  * @param {captureUrl} captureUrl
  * @param {captureDate} captureDate
  * @param {string} mhtmlUrl the url of the mhtml file to save and open
  * @param {object} metadata the metadata that is stored along with the file
+ * @param {String} ipaddr IP address of the peer
+ * @param {integer} port port of the peer
  *
  * @return {Promise} a Promise that resolves after open has been called.
  */
@@ -73417,39 +73601,39 @@ exports.saveMhtmlAndOpen = function(
   captureUrl,
   captureDate,
   mhtmlUrl,
-  metadata
+  metadata,
+  ipaddr,
+  port
 ) {
   return new Promise(function(resolve) {
     var start = evaluation.getNow();
     var streamName = 'open_' + captureUrl;
-    exports.fetch(mhtmlUrl)
-      .then(response => {
-        return response.blob();
-      })
-      .then(mhtmlBlob => {
-        return datastore.addPageToCache(
-          captureUrl,
-          captureDate,
-          mhtmlBlob,
-          metadata
-        );
-      })
-      .then((entry) => {
-        var fileUrl = fileSystem.constructFileSchemeUrl(
-          exports.getAbsPathToBaseDir(),
-          entry.fullPath
-        );
-        extBridge.sendMessageToOpenUrl(fileUrl);
-        var end = evaluation.getNow();
-        var totalTime = end - start;
-        evaluation.logTime(streamName, totalTime);
-        console.warn('totalTime to fetch: ', totalTime);
-        resolve(totalTime);
-      });
+    var params = ifCommon.createFileParams(ipaddr, port, mhtmlUrl);
+    exports.getPeerAccessor().getFileBlob(params)
+    .then(blob => {
+      return datastore.addPageToCache(
+        captureUrl,
+        captureDate,
+        blob,
+        metadata
+      );
+    })
+    .then((entry) => {
+      var fileUrl = fileSystem.constructFileSchemeUrl(
+        exports.getAbsPathToBaseDir(),
+        entry.fullPath
+      );
+      extBridge.sendMessageToOpenUrl(fileUrl);
+      var end = evaluation.getNow();
+      var totalTime = end - start;
+      evaluation.logTime(streamName, totalTime);
+      console.warn('totalTime to fetch: ', totalTime);
+      resolve(totalTime);
+    });
   });
 };
 
-},{"./dnssd/dns-controller":"dnsc","./dnssd/dns-sd-semcache":"dnsSem","./evaluation":"eval","./extension-bridge/messaging":"extBridge","./persistence/datastore":11,"./persistence/file-system":"fileSystem","./server/server-api":14,"./server/server-controller":"serverController","./settings":"settings"}],"binaryUtils":[function(require,module,exports){
+},{"./dnssd/dns-controller":"dnsc","./dnssd/dns-sd-semcache":"dnsSem","./evaluation":"eval","./extension-bridge/messaging":"extBridge","./peer-interface/common":11,"./peer-interface/http-impl":12,"./peer-interface/webrtc-impl":13,"./persistence/datastore":14,"./persistence/file-system":"fileSystem","./server/server-api":17,"./server/server-controller":"serverController","./settings":"settings"}],"binaryUtils":[function(require,module,exports){
 /*jshint esnext:true*/
 /*
  * https://github.com/justindarc/dns-sd.js
@@ -73965,7 +74149,7 @@ exports.createRTCSessionDescription = function(descJson) {
   return new RTCSessionDescription(descJson);
 };
 
-},{"../../../app/scripts/webrtc/peer-connection":18,"../server/server-api":14,"../util":15,"buffer":22}],"dnsSem":[function(require,module,exports){
+},{"../../../app/scripts/webrtc/peer-connection":21,"../server/server-api":17,"../util":18,"buffer":25}],"dnsSem":[function(require,module,exports){
 /*jshint esnext:true*/
 'use strict';
 
@@ -74099,7 +74283,7 @@ exports.browseForSemCacheInstances = function() {
   return result;
 };
 
-},{"../server/server-api":14,"./dns-sd":"dnssd"}],"dnsc":[function(require,module,exports){
+},{"../server/server-api":17,"./dns-sd":"dnssd"}],"dnsc":[function(require,module,exports){
 /*jshint esnext:true*/
 /* globals Promise */
 'use strict';
@@ -74767,7 +74951,7 @@ exports.addRecord = function(name, record) {
   existingRecords.push(record);
 };
 
-},{"../chrome-apis/udp":"chromeUdp","../util":15,"./byte-array":5,"./dns-codes":6,"./dns-packet":7,"./dns-util":8,"./question-section":9}],"dnssd":[function(require,module,exports){
+},{"../chrome-apis/udp":"chromeUdp","../util":18,"./byte-array":5,"./dns-codes":6,"./dns-packet":7,"./dns-util":8,"./question-section":9}],"dnssd":[function(require,module,exports){
 /*jshint esnext:true*/
 /* globals Promise */
 'use strict';
@@ -75727,7 +75911,7 @@ exports.queryForResponses = function(
   });
 };
 
-},{"../util":15,"./dns-codes":6,"./dns-controller":"dnsc","./dns-packet":7,"./dns-util":8,"./resource-record":10,"lodash":33}],"eval":[function(require,module,exports){
+},{"../util":18,"./dns-codes":6,"./dns-controller":"dnsc","./dns-packet":7,"./dns-util":8,"./resource-record":10,"lodash":36}],"eval":[function(require,module,exports){
 'use strict';
 
 /**
@@ -76398,7 +76582,7 @@ exports.downloadKeyAsCsv = function(key) {
   });
 };
 
-},{"./app-controller":"appController","./chrome-apis/storage":4,"./persistence/datastore":11,"./server/server-api":14,"./util":15,"json2csv":27}],"extBridge":[function(require,module,exports){
+},{"./app-controller":"appController","./chrome-apis/storage":4,"./persistence/datastore":14,"./server/server-api":17,"./util":18,"json2csv":30}],"extBridge":[function(require,module,exports){
 'use strict';
 
 var chromeRuntime = require('../chrome-apis/runtime');
@@ -76544,7 +76728,7 @@ exports.sendMessageToOpenUrl = function(url) {
   exports.sendMessageToExtension(message);
 };
 
-},{"../chrome-apis/runtime":3,"../persistence/datastore":11,"base-64":20}],"fileSystem":[function(require,module,exports){
+},{"../chrome-apis/runtime":3,"../persistence/datastore":14,"base-64":23}],"fileSystem":[function(require,module,exports){
 /*jshint esnext:true*/
 /* globals Promise */
 'use strict';
@@ -76923,7 +77107,7 @@ exports.createFileReader = function() {
   return new FileReader();
 };
 
-},{"buffer":22}],"moment":[function(require,module,exports){
+},{"buffer":25}],"moment":[function(require,module,exports){
 //! moment.js
 //! version : 2.17.1
 //! authors : Tim Wood, Iskren Chernev, Moment.js contributors
@@ -81294,7 +81478,7 @@ exports.start = function(host, port) {
   startServer(host, port, endpointHandlers);
 };
 
-},{"./evaluation-handler":12,"./handlers":13,"./server-api":14}],"settings":[function(require,module,exports){
+},{"./evaluation-handler":15,"./handlers":16,"./server-api":17}],"settings":[function(require,module,exports){
 /* global Promise */
 'use strict';
 
@@ -81314,6 +81498,14 @@ var chromefs = require('./chrome-apis/file-system');
 /** The prefix that we use to namespace setting keys. */
 var SETTING_NAMESPACE_PREFIX = 'setting_';
 
+/**
+ * The strings we use to represent transport mechanisms in the database.
+ */
+var TRANSPORT_METHOD_STRINGS = {
+  http: 'http',
+  webrtc: 'webrtc'
+};
+
 exports.SETTINGS_OBJ = null;
 
 var userFriendlyKeys = {
@@ -81322,7 +81514,8 @@ var userFriendlyKeys = {
   baseDirId: 'baseDirId',
   baseDirPath: 'baseDirPath',
   serverPort: 'serverPort',
-  hostName: 'hostName'
+  hostName: 'hostName',
+  transportMethod: 'transportMethod'
 };
 
 /**
@@ -81337,7 +81530,8 @@ exports.getAllSettingKeys = function() {
     exports.createNameSpacedKey(userFriendlyKeys.baseDirId),
     exports.createNameSpacedKey(userFriendlyKeys.baseDirPath),
     exports.createNameSpacedKey(userFriendlyKeys.serverPort),
-    exports.createNameSpacedKey(userFriendlyKeys.hostName)
+    exports.createNameSpacedKey(userFriendlyKeys.hostName),
+    exports.createNameSpacedKey(userFriendlyKeys.transportMethod)
   ];
 };
 
@@ -81499,6 +81693,19 @@ exports.getHostName = function() {
 };
 
 /**
+ * @return {String} String representing the transport method to be used by the
+ * instance to interface with peers. Options are 'http' and 'webrtc'. Defaults
+ * to 'http'.
+ */
+exports.getTransportMethod = function() {
+  var result = exports.get(userFriendlyKeys.transportMethod);
+  if (result === null) {
+    result = TRANSPORT_METHOD_STRINGS.http;
+  }
+  return result;
+};
+
+/**
  * @param {string} path the absolute path to the base directory of SemCache,
  * which unfortunately cannot be determined via an API
  */
@@ -81544,6 +81751,32 @@ exports.setServerPort = function(port) {
  */
 exports.setHostName = function(hostName) {
   return exports.set(userFriendlyKeys.hostName, hostName);
+};
+
+/**
+ * Indicate that HTTP should be used as the transport mechanism to interface
+ * with peers.
+ *
+ * @return {Promise.<JSON, Error>} Promise that resolves with the current
+ * settings object
+ */
+exports.setTransportHttp = function() {
+  return exports.set(
+    userFriendlyKeys.transportMethod, TRANSPORT_METHOD_STRINGS.http
+  );
+};
+
+/**
+ * Indicate that WebRTC should be used as the transport mechanism to interface
+ * with peers.
+ *
+ * @return {Promise.<JSON, Error>} Promise that resolves with the current
+ * settings object
+ */
+exports.setTransportWebrtc = function() {
+  return exports.set(
+    userFriendlyKeys.transportMethod, TRANSPORT_METHOD_STRINGS.webrtc
+  );
 };
 
 /**
