@@ -44,6 +44,8 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
         var setPortSpy = sinon.spy();
         var setNameSpy = sinon.spy();
         var setHostNameSpy = sinon.spy();
+        var setTransportHttpSpy = sinon.spy();
+        var setTransportWebrtcSpy = sinon.spy();
 
         var settingsModuleSpy = {
           setAbsPath: setPathSpy,
@@ -51,11 +53,14 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
           setBaseDirId: setDirSpy,
           setServerPort: setPortSpy,
           setHostName: setHostNameSpy,
+          setTransportHttp: setTransportHttpSpy,
+          setTransportWebrtc: setTransportWebrtcSpy,
           getAbsPath: sinon.stub(),
           getInstanceName: sinon.stub(),
           getBaseDirId: sinon.stub(),
           getServerPort: sinon.stub(),
-          getHostName: sinon.stub()
+          getHostName: sinon.stub(),
+          getTransportMethod: sinon.stub()
         };
 
         var myEl;
@@ -76,6 +81,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
           myEl.$$('#instance-name-input').value = instanceName;
           myEl.$$('#server-port-input').value = port;
           myEl.$$('#domain-name-input').value = domainName;
+          myEl.$$('#transport-method').selected = 'http';
 
           saveEl.click();
 
@@ -87,8 +93,18 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
           assert.equal(setPortSpy.args[0][0], port);
           assert.equal(setNameSpy.args[0][0], instanceName);
           assert.equal(setHostNameSpy.args[0][0], domainName);
-        });
+          // We expect a call only to set http, but not to set webrtc
+          assert.equal(setTransportHttpSpy.callCount, 1);
+          assert.equal(setTransportWebrtcSpy.callCount, 0);
 
+          // Save again changing the selected value
+          myEl.$$('#transport-method').selected = 'webrtc';
+          saveEl.click();
+        
+          // At this point we should have seen a single call to each
+          assert.equal(setTransportHttpSpy.callCount, 1);
+          assert.equal(setTransportWebrtcSpy.callCount, 1);
+        });
       });
 
       suite('<settings-view> 2', function() {
@@ -98,13 +114,15 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
         var port = 1234;
         var instanceName = 'Matt\'s cache';
         var domainName = 'hello.local';
+        var transportMethod = 'webrtc';
 
         var settingsModuleSpy = {
           getAbsPath: sinon.stub().returns(path),
           getInstanceName: sinon.stub().returns(instanceName),
           getBaseDirPath: sinon.stub().returns(entryPath),
           getServerPort: sinon.stub().returns(port),
-          getHostName: sinon.stub().returns(domainName)
+          getHostName: sinon.stub().returns(domainName),
+          getTransportMethod: sinon.stub().returns(transportMethod)
         };
 
         window.require = function() {
@@ -135,6 +153,10 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
           assert.equal(
             myEl.$$('#domain-name-input').value,
             domainName
+          );
+          assert.equal(
+            myEl.$$('#transport-method').selected,
+            transportMethod
           );
         });
 

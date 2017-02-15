@@ -21626,179 +21626,428 @@ Polymer({
       Polymer.PaperInputBehavior
     ]
   });
-Polymer({
-      is: 'settings-view',
+/**
+   * `Polymer.IronMenuBehavior` implements accessible menu behavior.
+   *
+   * @demo demo/index.html
+   * @polymerBehavior Polymer.IronMenuBehavior
+   */
+  Polymer.IronMenuBehaviorImpl = {
 
-      properties: {
-        absPath: {
-          type: String,
-          value: function() {
-            return this._getAbsPath();
-          }
-        },
-        instanceName: {
-          type: String,
-          value: function() {
-            return this._getInstanceName();
-          }
-        },
-        baseDirPath: {
-          type: String,
-          value: function() {
-            return this._getBaseDirPath();
-          }
-        },
-        serverPort: {
-          type: Number,
-          value: function() {
-            return this._getServerPort();
-          }
-        },
-        domainName: {
-          type: String,
-          value: function() {
-            return this._getDomainName();
-          }
-        },
-
-        /**
-         * Describes the author of the element, but is really just an excuse to
-         * show off JSDoc annotations.
-         *
-         * @type {{name: string, image: string}}
-         */
-        author: {
-          type: Object,
-          // Use `value` to provide a default value for a property, by setting it
-          // on your element's prototype.
-          //
-          // If you provide a function, as we do here, Polymer will call that
-          // _per element instance_.
-          //
-          // We do that to ensure that each element gets its own copy of the
-          // value, rather than having it shared across all instances (via the
-          // prototype).
-          value: function() {
-            return {
-              name:  'Dimitri Glazkov',
-              image: 'http://addyosmani.com/blog/wp-content/uploads/2013/04/unicorn.jpg',
-            };
-          }
-        },
-      },
-      _getAbsPath: function() {
-        var settingsModule = this.getSettingsModule();
-        var result = settingsModule.getAbsPath();
-        return result;
-      },
-
-      _getInstanceName: function() {
-        var settingsModule = this.getSettingsModule();
-        var result = settingsModule.getInstanceName();
-        return result;
-      },
-
-      _getBaseDirPath: function() {
-        var settingsModule = this.getSettingsModule();
-        var result = settingsModule.getBaseDirPath();
-        return result;
-      },
-
-      _getServerPort: function() {
-        var settingsModule = this.getSettingsModule();
-        var result = settingsModule.getServerPort();
-        return result;
-      },
-
-      _getDomainName: function() {
-        var settingsModule = this.getSettingsModule();
-        var result = settingsModule.getHostName();
-        return result;
-      },
-
-      getSettingsModule: function() {
-        var result = require('settings');
-        return result;
-      },
-
-      saveSettings: function() {
-        var enteredPath = this.$$('#abs-path-input').value;
-        var enteredName = this.$$('#instance-name-input').value;
-        var enteredPort = this.$$('#server-port-input').value;
-        var enteredDomain = this.$$('#domain-name-input').value;
-
-        var settings = this.getSettingsModule();
-        settings.setAbsPath(enteredPath);
-        settings.setInstanceName(enteredName);
-        settings.setServerPort(enteredPort);
-        settings.setHostName(enteredDomain);
-      },
-
-      chooseBaseDir: function() {
-        var settings = this.getSettingsModule();
-        settings.promptAndSetNewBaseDir()
-        .then(idAndPath => {
-          this.$$('#base-dir-label').textContent = idAndPath.baseDirPath;
-        });
-      },
-
-      // Element Lifecycle
-
-      ready: function() {
-        // `ready` is called after all elements have been configured, but
-        // propagates bottom-up. This element's children are ready, but parents
-        // are not.
-        //
-        // This is the point where you should make modifications to the DOM (when
-        // necessary), or kick off any processes the element wants to perform.
-      },
-
-      attached: function() {
-        // `attached` fires once the element and its parents have been inserted
-        // into a document.
-        //
-        // This is a good place to perform any work related to your element's
-        // visual state or active behavior (measuring sizes, beginning animations,
-        // loading resources, etc).
-      },
-
-      detached: function() {
-        // The analog to `attached`, `detached` fires when the element has been
-        // removed from a document.
-        //
-        // Use this to clean up anything you did in `attached`.
-      },
-
-      // Element Behavior
+    properties: {
 
       /**
-       * Sometimes it's just nice to say hi.
-       *
-       * @param {string} greeting A positive greeting.
-       * @return {string} The full greeting.
+       * Returns the currently focused item.
+       * @type {?Object}
        */
-      sayHello: function(greeting) {
-        var response = greeting || 'Hello World!';
-        return 'seed-element says, ' + response;
+      focusedItem: {
+        observer: '_focusedItemChanged',
+        readOnly: true,
+        type: Object
       },
 
       /**
-       * The `seed-element-lasers` event is fired whenever `fireLasers` is called.
-       *
-       * @event seed-element-lasers
-       * @detail {{sound: String}}
+       * The attribute to use on menu items to look up the item title. Typing the first
+       * letter of an item when the menu is open focuses that item. If unset, `textContent`
+       * will be used.
        */
-
-      /**
-       * Attempt to destroy this element's enemies with a beam of light!
-       *
-       * Or, at least, dispatch an event in the vain hope that someone else will
-       * do the zapping.
-       */
-      fireLasers: function() {
-        this.fire('seed-element-lasers', {sound: 'Pew pew!'});
+      attrForItemTitle: {
+        type: String
       }
-    });
+    },
+
+    _SEARCH_RESET_TIMEOUT_MS: 1000,
+
+    hostAttributes: {
+      'role': 'menu',
+      'tabindex': '0'
+    },
+
+    observers: [
+      '_updateMultiselectable(multi)'
+    ],
+
+    listeners: {
+      'focus': '_onFocus',
+      'keydown': '_onKeydown',
+      'iron-items-changed': '_onIronItemsChanged'
+    },
+
+    keyBindings: {
+      'up': '_onUpKey',
+      'down': '_onDownKey',
+      'esc': '_onEscKey',
+      'shift+tab:keydown': '_onShiftTabDown'
+    },
+
+    attached: function() {
+      this._resetTabindices();
+    },
+
+    /**
+     * Selects the given value. If the `multi` property is true, then the selected state of the
+     * `value` will be toggled; otherwise the `value` will be selected.
+     *
+     * @param {string|number} value the value to select.
+     */
+    select: function(value) {
+      // Cancel automatically focusing a default item if the menu received focus
+      // through a user action selecting a particular item.
+      if (this._defaultFocusAsync) {
+        this.cancelAsync(this._defaultFocusAsync);
+        this._defaultFocusAsync = null;
+      }
+      var item = this._valueToItem(value);
+      if (item && item.hasAttribute('disabled')) return;
+      this._setFocusedItem(item);
+      Polymer.IronMultiSelectableBehaviorImpl.select.apply(this, arguments);
+    },
+
+    /**
+     * Resets all tabindex attributes to the appropriate value based on the
+     * current selection state. The appropriate value is `0` (focusable) for
+     * the default selected item, and `-1` (not keyboard focusable) for all
+     * other items.
+     */
+    _resetTabindices: function() {
+      var selectedItem = this.multi ? (this.selectedItems && this.selectedItems[0]) : this.selectedItem;
+
+      this.items.forEach(function(item) {
+        item.setAttribute('tabindex', item === selectedItem ? '0' : '-1');
+      }, this);
+    },
+
+    /**
+     * Sets appropriate ARIA based on whether or not the menu is meant to be
+     * multi-selectable.
+     *
+     * @param {boolean} multi True if the menu should be multi-selectable.
+     */
+    _updateMultiselectable: function(multi) {
+      if (multi) {
+        this.setAttribute('aria-multiselectable', 'true');
+      } else {
+        this.removeAttribute('aria-multiselectable');
+      }
+    },
+
+    /**
+     * Given a KeyboardEvent, this method will focus the appropriate item in the
+     * menu (if there is a relevant item, and it is possible to focus it).
+     *
+     * @param {KeyboardEvent} event A KeyboardEvent.
+     */
+    _focusWithKeyboardEvent: function(event) {
+      this.cancelDebouncer('_clearSearchText');
+
+      var searchText = this._searchText || '';
+      var key = event.key && event.key.length == 1 ? event.key :
+          String.fromCharCode(event.keyCode);
+      searchText += key.toLocaleLowerCase();
+
+      var searchLength = searchText.length;
+
+      for (var i = 0, item; item = this.items[i]; i++) {
+        if (item.hasAttribute('disabled')) {
+          continue;
+        }
+
+        var attr = this.attrForItemTitle || 'textContent';
+        var title = (item[attr] || item.getAttribute(attr) || '').trim();
+
+        if (title.length < searchLength) {
+          continue;
+        }
+
+        if (title.slice(0, searchLength).toLocaleLowerCase() == searchText) {
+          this._setFocusedItem(item);
+          break;
+        }
+      }
+
+      this._searchText = searchText;
+      this.debounce('_clearSearchText', this._clearSearchText,
+                    this._SEARCH_RESET_TIMEOUT_MS);
+    },
+
+    _clearSearchText: function() {
+      this._searchText = '';
+    },
+
+    /**
+     * Focuses the previous item (relative to the currently focused item) in the
+     * menu, disabled items will be skipped.
+     * Loop until length + 1 to handle case of single item in menu.
+     */
+    _focusPrevious: function() {
+      var length = this.items.length;
+      var curFocusIndex = Number(this.indexOf(this.focusedItem));
+
+      for (var i = 1; i < length + 1; i++) {
+        var item = this.items[(curFocusIndex - i + length) % length];
+        if (!item.hasAttribute('disabled')) {
+          var owner = Polymer.dom(item).getOwnerRoot() || document;
+          this._setFocusedItem(item);
+
+          // Focus might not have worked, if the element was hidden or not
+          // focusable. In that case, try again.
+          if (Polymer.dom(owner).activeElement == item) {
+            return;
+          }
+        }
+      }
+    },
+
+    /**
+     * Focuses the next item (relative to the currently focused item) in the
+     * menu, disabled items will be skipped.
+     * Loop until length + 1 to handle case of single item in menu.
+     */
+    _focusNext: function() {
+      var length = this.items.length;
+      var curFocusIndex = Number(this.indexOf(this.focusedItem));
+
+      for (var i = 1; i < length + 1; i++) {
+        var item = this.items[(curFocusIndex + i) % length];
+        if (!item.hasAttribute('disabled')) {
+          var owner = Polymer.dom(item).getOwnerRoot() || document;
+          this._setFocusedItem(item);
+
+          // Focus might not have worked, if the element was hidden or not
+          // focusable. In that case, try again.
+          if (Polymer.dom(owner).activeElement == item) {
+            return;
+          }
+        }
+      }
+    },
+
+    /**
+     * Mutates items in the menu based on provided selection details, so that
+     * all items correctly reflect selection state.
+     *
+     * @param {Element} item An item in the menu.
+     * @param {boolean} isSelected True if the item should be shown in a
+     * selected state, otherwise false.
+     */
+    _applySelection: function(item, isSelected) {
+      if (isSelected) {
+        item.setAttribute('aria-selected', 'true');
+      } else {
+        item.removeAttribute('aria-selected');
+      }
+      Polymer.IronSelectableBehavior._applySelection.apply(this, arguments);
+    },
+
+    /**
+     * Discretely updates tabindex values among menu items as the focused item
+     * changes.
+     *
+     * @param {Element} focusedItem The element that is currently focused.
+     * @param {?Element} old The last element that was considered focused, if
+     * applicable.
+     */
+    _focusedItemChanged: function(focusedItem, old) {
+      old && old.setAttribute('tabindex', '-1');
+      if (focusedItem) {
+        focusedItem.setAttribute('tabindex', '0');
+        focusedItem.focus();
+      }
+    },
+
+    /**
+     * A handler that responds to mutation changes related to the list of items
+     * in the menu.
+     *
+     * @param {CustomEvent} event An event containing mutation records as its
+     * detail.
+     */
+    _onIronItemsChanged: function(event) {
+      if (event.detail.addedNodes.length) {
+        this._resetTabindices();
+      }
+    },
+
+    /**
+     * Handler that is called when a shift+tab keypress is detected by the menu.
+     *
+     * @param {CustomEvent} event A key combination event.
+     */
+    _onShiftTabDown: function(event) {
+      var oldTabIndex = this.getAttribute('tabindex');
+
+      Polymer.IronMenuBehaviorImpl._shiftTabPressed = true;
+
+      this._setFocusedItem(null);
+
+      this.setAttribute('tabindex', '-1');
+
+      this.async(function() {
+        this.setAttribute('tabindex', oldTabIndex);
+        Polymer.IronMenuBehaviorImpl._shiftTabPressed = false;
+        // NOTE(cdata): polymer/polymer#1305
+      }, 1);
+    },
+
+    /**
+     * Handler that is called when the menu receives focus.
+     *
+     * @param {FocusEvent} event A focus event.
+     */
+    _onFocus: function(event) {
+      if (Polymer.IronMenuBehaviorImpl._shiftTabPressed) {
+        // do not focus the menu itself
+        return;
+      }
+
+      // Do not focus the selected tab if the deepest target is part of the
+      // menu element's local DOM and is focusable.
+      var rootTarget = /** @type {?HTMLElement} */(
+          Polymer.dom(event).rootTarget);
+      if (rootTarget !== this && typeof rootTarget.tabIndex !== "undefined" && !this.isLightDescendant(rootTarget)) {
+        return;
+      }
+
+      // clear the cached focus item
+      this._defaultFocusAsync = this.async(function() {
+        // focus the selected item when the menu receives focus, or the first item
+        // if no item is selected
+        var selectedItem = this.multi ? (this.selectedItems && this.selectedItems[0]) : this.selectedItem;
+
+        this._setFocusedItem(null);
+
+        if (selectedItem) {
+          this._setFocusedItem(selectedItem);
+        } else if (this.items[0]) {
+          // We find the first none-disabled item (if one exists)
+          this._focusNext();
+        }
+      });
+    },
+
+    /**
+     * Handler that is called when the up key is pressed.
+     *
+     * @param {CustomEvent} event A key combination event.
+     */
+    _onUpKey: function(event) {
+      // up and down arrows moves the focus
+      this._focusPrevious();
+      event.detail.keyboardEvent.preventDefault();
+    },
+
+    /**
+     * Handler that is called when the down key is pressed.
+     *
+     * @param {CustomEvent} event A key combination event.
+     */
+    _onDownKey: function(event) {
+      this._focusNext();
+      event.detail.keyboardEvent.preventDefault();
+    },
+
+    /**
+     * Handler that is called when the esc key is pressed.
+     *
+     * @param {CustomEvent} event A key combination event.
+     */
+    _onEscKey: function(event) {
+      // esc blurs the control
+      this.focusedItem.blur();
+    },
+
+    /**
+     * Handler that is called when a keydown event is detected.
+     *
+     * @param {KeyboardEvent} event A keyboard event.
+     */
+    _onKeydown: function(event) {
+      if (!this.keyboardEventMatchesKeys(event, 'up down esc')) {
+        // all other keys focus the menu item starting with that character
+        this._focusWithKeyboardEvent(event);
+      }
+      event.stopPropagation();
+    },
+
+    // override _activateHandler
+    _activateHandler: function(event) {
+      Polymer.IronSelectableBehavior._activateHandler.call(this, event);
+      event.stopPropagation();
+    }
+  };
+
+  Polymer.IronMenuBehaviorImpl._shiftTabPressed = false;
+
+  /** @polymerBehavior Polymer.IronMenuBehavior */
+  Polymer.IronMenuBehavior = [
+    Polymer.IronMultiSelectableBehavior,
+    Polymer.IronA11yKeysBehavior,
+    Polymer.IronMenuBehaviorImpl
+  ];
+/**
+   * `Polymer.IronMenubarBehavior` implements accessible menubar behavior.
+   *
+   * @polymerBehavior Polymer.IronMenubarBehavior
+   */
+  Polymer.IronMenubarBehaviorImpl = {
+
+    hostAttributes: {
+      'role': 'menubar'
+    },
+
+    keyBindings: {
+      'left': '_onLeftKey',
+      'right': '_onRightKey'
+    },
+
+    _onUpKey: function(event) {
+      this.focusedItem.click();
+      event.detail.keyboardEvent.preventDefault();
+    },
+
+    _onDownKey: function(event) {
+      this.focusedItem.click();
+      event.detail.keyboardEvent.preventDefault();
+    },
+
+    get _isRTL() {
+      return window.getComputedStyle(this)['direction'] === 'rtl';
+    },
+
+    _onLeftKey: function(event) {
+      if (this._isRTL) {
+        this._focusNext();
+      } else {
+        this._focusPrevious();
+      }
+      event.detail.keyboardEvent.preventDefault();
+    },
+
+    _onRightKey: function(event) {
+      if (this._isRTL) {
+        this._focusPrevious();
+      } else {
+        this._focusNext();
+      }
+      event.detail.keyboardEvent.preventDefault();
+    },
+
+    _onKeydown: function(event) {
+      if (this.keyboardEventMatchesKeys(event, 'up down left right esc')) {
+        return;
+      }
+
+      // all other keys focus the menu item starting with that character
+      this._focusWithKeyboardEvent(event);
+    }
+
+  };
+
+  /** @polymerBehavior Polymer.IronMenubarBehavior */
+  Polymer.IronMenubarBehavior = [
+    Polymer.IronMenuBehavior,
+    Polymer.IronMenubarBehaviorImpl
+  ];
 /**
    * Use `Polymer.IronCheckedElementBehavior` to implement a custom element
    * that has a `checked` property, which can be used for validation if the
@@ -21942,6 +22191,363 @@ Polymer({
     Polymer.IronCheckedElementBehavior,
     Polymer.PaperCheckedElementBehaviorImpl
   ];
+Polymer({
+      is: 'paper-radio-button',
+
+      behaviors: [
+        Polymer.PaperCheckedElementBehavior
+      ],
+
+      hostAttributes: {
+        role: 'radio',
+        'aria-checked': false,
+        tabindex: 0
+      },
+
+      properties: {
+        /**
+         * Fired when the checked state changes due to user interaction.
+         *
+         * @event change
+         */
+
+        /**
+         * Fired when the checked state changes.
+         *
+         * @event iron-change
+         */
+
+        ariaActiveAttribute: {
+          type: String,
+          value: 'aria-checked'
+        }
+      },
+
+      ready: function() {
+        this._rippleContainer = this.$.radioContainer;
+      },
+
+      attached: function() {
+        var inkSize = this.getComputedStyleValue('--calculated-paper-radio-button-ink-size').trim();
+        // If unset, compute and set the default `--paper-radio-button-ink-size`.
+        if (inkSize === '-1px') {
+          var size = parseFloat(this.getComputedStyleValue('--calculated-paper-radio-button-size').trim());
+          var defaultInkSize = Math.floor(3 * size);
+
+          // The button and ripple need to have the same parity so that their
+          // centers align.
+          if (defaultInkSize % 2 !== size % 2) {
+            defaultInkSize++;
+          }
+
+          this.customStyle['--paper-radio-button-ink-size'] = defaultInkSize + 'px';
+          this.updateStyles();
+        }
+      },
+    });
+Polymer({
+    is: 'paper-radio-group',
+
+    behaviors: [
+      Polymer.IronMenubarBehavior
+    ],
+
+    hostAttributes: {
+      role: 'radiogroup',
+      tabindex: 0
+    },
+
+    properties: {
+      /**
+       * Fired when the radio group selection changes.
+       *
+       * @event paper-radio-group-changed
+       */
+
+      /**
+       * Overriden from Polymer.IronSelectableBehavior
+       */
+      attrForSelected: {
+        type: String,
+        value: 'name'
+      },
+
+      /**
+       * Overriden from Polymer.IronSelectableBehavior
+       */
+      selectedAttribute: {
+        type: String,
+        value: 'checked'
+      },
+
+      /**
+       * Overriden from Polymer.IronSelectableBehavior
+       */
+      selectable: {
+        type: String,
+        value: 'paper-radio-button'
+      },
+
+      /**
+       * If true, radio-buttons can be deselected
+       */
+      allowEmptySelection: {
+        type: Boolean,
+        value: false
+      }
+    },
+
+    /**
+     * Selects the given value.
+     */
+    select: function(value) {
+      var newItem = this._valueToItem(value);
+      if (newItem && newItem.hasAttribute('disabled')) {
+        return;
+      }
+
+      if (this.selected) {
+        var oldItem = this._valueToItem(this.selected);
+
+        if (this.selected == value) {
+          // If deselecting is allowed we'll have to apply an empty selection.
+          // Otherwise, we should force the selection to stay and make this
+          // action a no-op.
+          if (this.allowEmptySelection) {
+            value = '';
+          } else {
+            if (oldItem)
+              oldItem.checked = true;
+            return;
+          }
+        }
+
+        if (oldItem)
+          oldItem.checked = false;
+      }
+
+      Polymer.IronSelectableBehavior.select.apply(this, [value]);
+      this.fire('paper-radio-group-changed');
+    },
+
+    _activateFocusedItem: function() {
+      this._itemActivate(this._valueForItem(this.focusedItem), this.focusedItem);
+    },
+
+    _onUpKey: function(event) {
+      this._focusPrevious();
+      event.preventDefault();
+      this._activateFocusedItem();
+    },
+
+    _onDownKey: function(event) {
+      this._focusNext();
+      event.preventDefault();
+      this._activateFocusedItem();
+    },
+
+    _onLeftKey: function(event) {
+      Polymer.IronMenubarBehaviorImpl._onLeftKey.apply(this, arguments);
+      this._activateFocusedItem();
+    },
+
+    _onRightKey: function(event) {
+      Polymer.IronMenubarBehaviorImpl._onRightKey.apply(this, arguments);
+      this._activateFocusedItem();
+    }
+  });
+Polymer({
+      is: 'settings-view',
+
+      properties: {
+        absPath: {
+          type: String,
+          value: function() {
+            return this._getAbsPath();
+          }
+        },
+        instanceName: {
+          type: String,
+          value: function() {
+            return this._getInstanceName();
+          }
+        },
+        baseDirPath: {
+          type: String,
+          value: function() {
+            return this._getBaseDirPath();
+          }
+        },
+        serverPort: {
+          type: Number,
+          value: function() {
+            return this._getServerPort();
+          }
+        },
+        domainName: {
+          type: String,
+          value: function() {
+            return this._getDomainName();
+          }
+        },
+        transportMethod: {
+          type: String,
+          value: function() {
+            return this._getTransportMethod();
+          }
+        },
+
+        /**
+         * Describes the author of the element, but is really just an excuse to
+         * show off JSDoc annotations.
+         *
+         * @type {{name: string, image: string}}
+         */
+        author: {
+          type: Object,
+          // Use `value` to provide a default value for a property, by setting it
+          // on your element's prototype.
+          //
+          // If you provide a function, as we do here, Polymer will call that
+          // _per element instance_.
+          //
+          // We do that to ensure that each element gets its own copy of the
+          // value, rather than having it shared across all instances (via the
+          // prototype).
+          value: function() {
+            return {
+              name:  'Dimitri Glazkov',
+              image: 'http://addyosmani.com/blog/wp-content/uploads/2013/04/unicorn.jpg',
+            };
+          }
+        },
+      },
+      _getAbsPath: function() {
+        var settingsModule = this.getSettingsModule();
+        var result = settingsModule.getAbsPath();
+        return result;
+      },
+
+      _getInstanceName: function() {
+        var settingsModule = this.getSettingsModule();
+        var result = settingsModule.getInstanceName();
+        return result;
+      },
+
+      _getBaseDirPath: function() {
+        var settingsModule = this.getSettingsModule();
+        var result = settingsModule.getBaseDirPath();
+        return result;
+      },
+
+      _getServerPort: function() {
+        var settingsModule = this.getSettingsModule();
+        var result = settingsModule.getServerPort();
+        return result;
+      },
+
+      _getDomainName: function() {
+        var settingsModule = this.getSettingsModule();
+        var result = settingsModule.getHostName();
+        return result;
+      },
+
+      _getTransportMethod: function() {
+        var settingsModule = this.getSettingsModule();
+        var result = settingsModule.getTransportMethod();
+        return result;
+      },
+
+      getSettingsModule: function() {
+        var result = require('settings');
+        return result;
+      },
+
+      saveSettings: function() {
+        var enteredPath = this.$$('#abs-path-input').value;
+        var enteredName = this.$$('#instance-name-input').value;
+        var enteredPort = this.$$('#server-port-input').value;
+        var enteredDomain = this.$$('#domain-name-input').value;
+        var transportMethod = this.$$('#transport-method').selected;
+
+        var settings = this.getSettingsModule();
+        settings.setAbsPath(enteredPath);
+        settings.setInstanceName(enteredName);
+        settings.setServerPort(enteredPort);
+        settings.setHostName(enteredDomain);
+
+        if (transportMethod === 'webrtc') {
+          settings.setTransportWebrtc();
+        } else {
+          settings.setTransportHttp();
+        }
+      },
+
+      chooseBaseDir: function() {
+        var settings = this.getSettingsModule();
+        settings.promptAndSetNewBaseDir()
+        .then(idAndPath => {
+          this.$$('#base-dir-label').textContent = idAndPath.baseDirPath;
+        });
+      },
+
+      // Element Lifecycle
+
+      ready: function() {
+        // `ready` is called after all elements have been configured, but
+        // propagates bottom-up. This element's children are ready, but parents
+        // are not.
+        //
+        // This is the point where you should make modifications to the DOM (when
+        // necessary), or kick off any processes the element wants to perform.
+      },
+
+      attached: function() {
+        // `attached` fires once the element and its parents have been inserted
+        // into a document.
+        //
+        // This is a good place to perform any work related to your element's
+        // visual state or active behavior (measuring sizes, beginning animations,
+        // loading resources, etc).
+      },
+
+      detached: function() {
+        // The analog to `attached`, `detached` fires when the element has been
+        // removed from a document.
+        //
+        // Use this to clean up anything you did in `attached`.
+      },
+
+      // Element Behavior
+
+      /**
+       * Sometimes it's just nice to say hi.
+       *
+       * @param {string} greeting A positive greeting.
+       * @return {string} The full greeting.
+       */
+      sayHello: function(greeting) {
+        var response = greeting || 'Hello World!';
+        return 'seed-element says, ' + response;
+      },
+
+      /**
+       * The `seed-element-lasers` event is fired whenever `fireLasers` is called.
+       *
+       * @event seed-element-lasers
+       * @detail {{sound: String}}
+       */
+
+      /**
+       * Attempt to destroy this element's enemies with a beam of light!
+       *
+       * Or, at least, dispatch an event in the vain hope that someone else will
+       * do the zapping.
+       */
+      fireLasers: function() {
+        this.fire('seed-element-lasers', {sound: 'Pew pew!'});
+      }
+    });
 Polymer({
       is: 'paper-toggle-button',
 

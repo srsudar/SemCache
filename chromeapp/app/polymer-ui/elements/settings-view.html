@@ -11,6 +11,8 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 <link rel="import" href="../../../bower_components/polymer/polymer.html">
 <link rel="import" href="../../../bower_components/paper-card/paper-card.html">
 <link rel="import" href="../../../bower_components/paper-input/paper-input.html">
+<link rel="import" href="../../../bower_components/paper-radio-group/paper-radio-group.html">
+<link rel="import" href="../../../bower_components/paper-radio-button/paper-radio-button.html">
 
 <dom-module id="settings-view">
   <template>
@@ -142,6 +144,15 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
     <iron-label id="server-port-hint">We temporarily need to manually select a
       port for the HTTP server to listen on.</iron-label>
 
+    <h2>Transport Method</h2>
+    <iron-label id="transport-method-hint">Indicate whether we should interact
+      with peers via HTTP or WebRTC.</iron-label>
+    <br>
+    <paper-radio-group id="transport-method" selected="{{transportMethod}}">
+      <paper-radio-button name="http">HTTP</paper-radio-button>
+      <paper-radio-button name="webrtc">WebRTC</paper-radio-button>
+    </paper-radio-group>
+
     </div>
     <content></content>
   </template>
@@ -179,6 +190,12 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
           type: String,
           value: function() {
             return this._getDomainName();
+          }
+        },
+        transportMethod: {
+          type: String,
+          value: function() {
+            return this._getTransportMethod();
           }
         },
 
@@ -237,6 +254,12 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
         return result;
       },
 
+      _getTransportMethod: function() {
+        var settingsModule = this.getSettingsModule();
+        var result = settingsModule.getTransportMethod();
+        return result;
+      },
+
       getSettingsModule: function() {
         var result = require('settings');
         return result;
@@ -247,12 +270,19 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
         var enteredName = this.$$('#instance-name-input').value;
         var enteredPort = this.$$('#server-port-input').value;
         var enteredDomain = this.$$('#domain-name-input').value;
+        var transportMethod = this.$$('#transport-method').selected;
 
         var settings = this.getSettingsModule();
         settings.setAbsPath(enteredPath);
         settings.setInstanceName(enteredName);
         settings.setServerPort(enteredPort);
         settings.setHostName(enteredDomain);
+
+        if (transportMethod === 'webrtc') {
+          settings.setTransportWebrtc();
+        } else {
+          settings.setTransportHttp();
+        }
       },
 
       chooseBaseDir: function() {
