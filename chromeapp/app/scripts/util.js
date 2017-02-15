@@ -99,3 +99,81 @@ exports.trace = function trace(arg) {
   var now = (window.performance.now() / 1000).toFixed(3);
   console.log(now + ': ', arg);
 };
+
+/**
+ * Extract the hostname (or IP address) from a URL.
+ *
+ * @param {String} url
+ *
+ * @returns {String}
+ */
+exports.getHostFromUrl = function(url) {
+  // Find '//'. This will be the end of the scheme.
+  // Then find the minimum of '/', ':', '#', '?'. That will contain the URL.
+  var slashes = url.indexOf('//');
+  if (slashes < 0) { throw new Error('not a url: ' + url); }
+  // Truncate to ignore the slashes.
+  url = url.substring(slashes + 2);
+
+  var candidateIndices = [
+    url.indexOf(':'),
+    url.indexOf('#'),
+    url.indexOf('?'),
+    url.indexOf('/')
+  ];
+  var min = url.length;
+  candidateIndices.forEach(idx => {
+    if (idx !== -1) {
+      // It is present in the string.
+      if (idx < min) {
+        min = idx;
+      }
+    }
+  });
+  
+  return url.substr(0, min);
+};
+
+/**
+ * Extract the port from a URL. The port must be explicitly indicated in the
+ * URL, or an error is thrown.
+ *
+ * @param {String} url
+ *
+ * @returns {Integer}
+ */
+exports.getPortFromUrl = function(url) {
+  var originalUrl = url;
+  var host = exports.getHostFromUrl(url);
+  var idxOfHost = url.indexOf(host);
+  // Truncate the host
+  url = url.substring(idxOfHost + host.length);
+  if (!url.startsWith(':')) {
+    throw new Error('No port in url: ' + originalUrl);
+  }
+  // Truncate the colon
+  url = url.substring(1);
+  var candidateIndices = [
+    url.indexOf('#'),
+    url.indexOf('?'),
+    url.indexOf('/')
+  ];
+  var min = url.length;
+  candidateIndices.forEach(idx => {
+    if (idx !== -1) {
+      if (idx < min) {
+        min = idx;
+      }
+    }
+  });
+  var portStr = url.substring(0, min);
+  // There is no easy way that I'm aware of to check is something can be safely
+  // parsed to an int in JavaScript. Wtf. But this is will work well enough for
+  // our cases. It will permit things like '12a', '0xaf', etc, but this seems
+  // fine.
+  var result = parseInt(portStr, 10);
+  if (isNaN(result)) {
+    throw new Error('Invalid port in url: ' + originalUrl);
+  }
+  return parseInt(portStr);
+};

@@ -78,7 +78,7 @@ test('getFileBlob rejects with error', function(t) {
 });
 
 test('getList resolves with json', function(t) {
-  var listUrl = 'list url';
+  var listUrl = 'http://1.2.3.4:22';
   var expected = { list: 'so many pages' };
   var response = sinon.stub();
   response.json = sinon.stub().resolves(expected);

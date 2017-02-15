@@ -91,7 +91,7 @@ test('saveMhtmlAndOpen persists and opens', function(t) {
 
   var captureUrl = 'the capture url';
   var captureDate = 'the date it was captured';
-  var accessPath = 'the url to download the mhtml';
+  var accessPath = 'http://' + ipaddr + ':' + port;
   var mdata = { muchMeta: 'so data' };
   appc.saveMhtmlAndOpen(
     captureUrl, captureDate, accessPath, mdata, ipaddr, port
@@ -108,7 +108,34 @@ test('saveMhtmlAndOpen persists and opens', function(t) {
       );
       t.end();
       resetAppController();
+    })
+    .catch(err => {
+      t.fail(err);
+      t.end();
     });
+});
+
+test('saveMhtmlAndOpen rejects if error', function(t) {
+  var expected = { error: 'went south' };
+  proxyquireAppc({
+    './persistence/datastore': {
+      addPageToCache: sinon.stub().rejects(expected)
+    },
+    './evaluation': {
+      getNow: sinon.stub().returns(0),
+      logTime: sinon.stub().returns(0)
+    }
+  });
+  var peerAccessorStub = sinon.stub();
+  peerAccessorStub.getFileBlob = sinon.stub().resolves();
+  appc.getPeerAccessor = sinon.stub().returns(peerAccessorStub);
+
+  appc.saveMhtmlAndOpen('url', 'capture', 'http://1.2.3.4:88')
+  .catch(actual => {
+    t.equal(actual, expected);
+    t.end();
+    resetAppController();
+  });
 });
 
 test('getListFromService resolves with json', function(t) {

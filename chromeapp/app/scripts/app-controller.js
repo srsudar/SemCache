@@ -444,7 +444,7 @@ exports.saveMhtmlAndOpen = function(
   ipaddr,
   port
 ) {
-  return new Promise(function(resolve) {
+  return new Promise(function(resolve, reject) {
     var start = evaluation.getNow();
     var streamName = 'open_' + captureUrl;
     var params = ifCommon.createFileParams(ipaddr, port, mhtmlUrl);
@@ -468,6 +468,9 @@ exports.saveMhtmlAndOpen = function(
       evaluation.logTime(streamName, totalTime);
       console.warn('totalTime to fetch: ', totalTime);
       resolve(totalTime);
+    })
+    .catch(err => {
+      reject(err);
     });
   });
 };
