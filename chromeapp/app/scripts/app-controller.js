@@ -397,6 +397,34 @@ exports.getPeerAccessor = function() {
 };
 
 /**
+ * Obtain the list of cached pages from a service, given its full name.
+ *
+ * @param {string} serviceName the full <instance>.<type>.<domain> name of the
+ * service
+ *
+ * @returns {Promise.<JSON, Error>} Promise that resolves with the JSON
+ * response representing the list, or rejects with an Error
+ */
+exports.getListFromService = function(serviceName) {
+  return new Promise(function(resolve, reject) {
+    var peerAccessor = exports.getPeerAccessor();
+    exports.resolveCache(serviceName)
+    .then(cacheInfo => {
+      var listParams = ifCommon.createListParams(
+        cacheInfo.ipAddress, cacheInfo.port, cacheInfo.listUrl
+      );
+      return peerAccessor.getList(listParams);
+    })
+    .then(pageList => {
+      resolve(pageList);
+    })
+    .catch(err => {
+      reject(err);
+    });
+  });
+};
+
+/**
  * Save the MHTML file at mhtmlUrl into the local cache and open the URL.
  *
  * @param {captureUrl} captureUrl

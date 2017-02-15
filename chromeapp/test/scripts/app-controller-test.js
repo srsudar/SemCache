@@ -111,6 +111,54 @@ test('saveMhtmlAndOpen persists and opens', function(t) {
     });
 });
 
+test('getListFromService resolves with json', function(t) {
+  var serviceName = 'hello.semcache.local';
+  var cacheInfo = {
+    ipAddress: '1.2.3.4',
+    port: 8866,
+    listUrl: 'http://peer/list.json'
+  };
+  var expected = { cachedPages: ['page1', 'page2'] };
+  var listParams = ifCommon.createListParams(
+    cacheInfo.ipAddress, cacheInfo.port, cacheInfo.listUrl
+  );
+
+  var peerAccessorStub = sinon.stub();
+  peerAccessorStub.getList = sinon.stub().withArgs(listParams)
+    .resolves(expected);
+  var resolveCacheStub = sinon.stub().withArgs(serviceName)
+    .resolves(cacheInfo);
+
+  appc.resolveCache = resolveCacheStub;
+  appc.getPeerAccessor = sinon.stub().returns(peerAccessorStub);
+
+  appc.getListFromService(serviceName)
+  .then(actual => {
+    t.equal(actual, expected);
+    t.end();
+    resetAppController();
+  })
+  .catch(err => {
+    t.fail(err);
+    t.end();
+  });
+});
+
+test('getListFromService rejects with error', function(t) {
+  var serviceName = 'hello.semcache.local';
+  var expected = { error: 'getPeerAccessor failed' };
+  var peerAccessorStub = sinon.stub().throws(expected);
+
+  appc.getPeerAccessor = peerAccessorStub;
+
+  appc.getListFromService(serviceName)
+  .catch(actual => {
+    t.equal(actual, expected);
+    t.end();
+    resetAppController();
+  });
+});
+
 test('startServersAndRegisters rejects if missing instance name', function(t) {
   rejectIfMissingSettingHelper(undefined, 1234, 'abc', 'host', t);
 });
