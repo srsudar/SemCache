@@ -1,9 +1,11 @@
 /*jshint esnext:true*/
 'use strict';
+var Buffer = require('buffer').Buffer;
 var test = require('tape');
 var sinon = require('sinon');
 require('sinon-as-promised');
 
+var binUtil = require('../../app/scripts/dnssd/binary-utils').BinaryUtils;
 var util = require('../../app/scripts/util');
 
 /**
@@ -145,3 +147,14 @@ test('getPortFromUrl not deceived by later colons', function(t) {
   t.throws(() => { util.getPortFromUrl(url); });
   t.end();
 });
+
+// test.only('getBufferAsBlob returns Blob', function(t) {
+//   var targetStr = 'hello';
+//   var buff = Buffer.from(targetStr);
+//   var arrayBuffer = binUtil.arrayBufferToString(targetStr);
+//   var expected = new Blob([arrayBuffer], { type: 'application/octet-binary' });
+
+//   var actual = util.getBufferAsBlob(buff);
+//   t.deepEqual(actual, expected);
+//   t.end();
+// });

@@ -45536,6 +45536,7 @@ exports.HttpPeerAccessor.prototype.getList = function(params) {
 'use strict';
 
 var cmgr = require('../webrtc/connection-manager');
+var util = require('../util');
 
 /**
  * @constructor
@@ -45562,7 +45563,8 @@ exports.WebrtcPeerAccessor.prototype.getFileBlob = function(params) {
       return peerConnection.getFile(params.fileUrl);
     })
     .then(binary => {
-      resolve(binary);
+      var blob = util.getBufferAsBlob(binary);
+      resolve(blob);
     })
     .catch(err => {
       reject(err);
@@ -45593,7 +45595,7 @@ exports.WebrtcPeerAccessor.prototype.getList = function(params) {
   });
 };
 
-},{"../webrtc/connection-manager":"cmgr"}],14:[function(require,module,exports){
+},{"../util":18,"../webrtc/connection-manager":"cmgr"}],14:[function(require,module,exports){
 /* globals Promise */
 'use strict';
 
@@ -46437,6 +46439,22 @@ exports.getPortFromUrl = function(url) {
     throw new Error('Invalid port in url: ' + originalUrl);
   }
   return parseInt(portStr);
+};
+
+/**
+ * Return the Buffer as a Blob with type application/octet-binary.
+ *
+ * @param {Buffer} buff
+ *
+ * @returns {Blob}
+ */
+exports.getBufferAsBlob = function(buff) {
+  return new Blob(
+    [buff], 
+    {
+      type: 'application/octet-binary' 
+    }
+  );
 };
 
 },{}],19:[function(require,module,exports){

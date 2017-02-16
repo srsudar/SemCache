@@ -1,6 +1,7 @@
 'use strict';
 
 var cmgr = require('../webrtc/connection-manager');
+var util = require('../util');
 
 /**
  * @constructor
@@ -27,7 +28,8 @@ exports.WebrtcPeerAccessor.prototype.getFileBlob = function(params) {
       return peerConnection.getFile(params.fileUrl);
     })
     .then(binary => {
-      resolve(binary);
+      var blob = util.getBufferAsBlob(binary);
+      resolve(blob);
     })
     .catch(err => {
       reject(err);

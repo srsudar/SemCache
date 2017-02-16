@@ -177,3 +177,19 @@ exports.getPortFromUrl = function(url) {
   }
   return parseInt(portStr);
 };
+
+/**
+ * Return the Buffer as a Blob with type application/octet-binary.
+ *
+ * @param {Buffer} buff
+ *
+ * @returns {Blob}
+ */
+exports.getBufferAsBlob = function(buff) {
+  return new Blob(
+    [buff], 
+    {
+      type: 'application/octet-binary' 
+    }
+  );
+};

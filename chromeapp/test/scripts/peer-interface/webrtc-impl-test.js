@@ -40,16 +40,21 @@ test('getFileBlob resolves with peerConnection.getFile', function(t) {
   var port = 1234;
   var fileUrl = 'path to file';
   
-  var expected = { tesType: 'I am the result of PeerConnection.getFile' };
-
+  var buffer = { tesType: 'I am the result of PeerConnection.getFile' };
+  var expected = 'I am a blob';
+  
+  var getBufferAsBlobSpy = sinon.stub().withArgs(buffer).returns(expected);
   var peerConn = sinon.stub();
-  peerConn.getFile = sinon.stub().withArgs(fileUrl).resolves(expected);
+  peerConn.getFile = sinon.stub().withArgs(fileUrl).resolves(buffer);
   var getOrCreateConnectionSpy = sinon.stub().withArgs(ipaddr, port)
     .resolves(peerConn);
   
   proxyquireWebrtcImpl({
     '../webrtc/connection-manager': {
       getOrCreateConnection: getOrCreateConnectionSpy
+    },
+    '../util': {
+      getBufferAsBlob: getBufferAsBlobSpy
     }
   });
 
@@ -61,6 +66,10 @@ test('getFileBlob resolves with peerConnection.getFile', function(t) {
     t.deepEqual(getOrCreateConnectionSpy.args[0], [ipaddr, port]);
     t.end();
     resetWebrtcImpl();
+  })
+  .catch(err => {
+    t.fail(err);
+    t.end();
   });
 });
 
