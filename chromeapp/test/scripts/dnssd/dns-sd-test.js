@@ -841,7 +841,7 @@ test('advertiseService advertises', function(t) {
   var expectedArgs = [
     expectedPacket,
     dnsController.DNSSD_MULTICAST_GROUP,
-    dnsController.DNSSD_PORT
+    dnsController.MDNS_PORT
   ];
 
   t.deepEqual(sendPacketSpy.args[0], expectedArgs);

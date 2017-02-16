@@ -75861,7 +75861,7 @@ exports.advertiseService = function(resourceRecords) {
   dnsController.sendPacket(
     advertisePacket,
     dnsController.DNSSD_MULTICAST_GROUP,
-    dnsController.DNSSD_PORT
+    dnsController.MDNS_PORT
   );
 };
 
