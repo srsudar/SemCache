@@ -74,6 +74,11 @@ test('getList issues call to peer', function(t) {
     t.deepEqual(actual, expected);
     t.end();
     resetPeerConn();
+  })
+  .catch(err => {
+    t.fail(err);
+    t.end();
+    resetPeerConn();
   });
 });
 
@@ -91,6 +96,11 @@ test('getList rejects if sendAndGetResponse rejects', function(t) {
   var pc = new peerConn.PeerConnection(rawConnection);
 
   pc.getList()
+  .then(res => {
+    t.fail(res);
+    t.end();
+    resetPeerConn();
+  })
   .catch(actual => {
     t.equal(actual, expected);
     t.end();
@@ -120,6 +130,11 @@ test('getFile resolves with response from server', function(t) {
     t.deepEqual(actual, expected);
     t.end();
     resetPeerConn();
+  })
+  .catch(err => {
+    t.fail(err);
+    t.end();
+    resetPeerConn();
   });
 });
 
@@ -138,6 +153,11 @@ test('getFile rejects if error', function(t) {
   var pc = new peerConn.PeerConnection(rawConnection);
 
   pc.getFile()
+  .then(res => {
+    t.fail(res);
+    t.end();
+    resetPeerConn();
+  })
   .catch(actual => {
     t.deepEqual(actual, expected);
     t.end();

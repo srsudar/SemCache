@@ -123,11 +123,13 @@ test('getSocket resolves immediately if socket is present', function(t) {
     // It should return null by default, as we don't have the socket set yet.
     t.equal(socket, dummySocket);
     t.end();
-  }, function failure() {
-    t.fail();
+    resetDnsController();
+  })
+  .catch(err => {
+    t.fail(err);
+    t.end();
+    resetDnsController();
   });
-
-  resetDnsController();
 });
 
 test('getSocket follows success chain and resolves with socket', function(t) {
@@ -149,10 +151,15 @@ test('getSocket follows success chain and resolves with socket', function(t) {
     }
   );
 
-  var result = mockedController.getSocket();
-  result.then(function success(actual) {
+  mockedController.getSocket()
+  .then(function success(actual) {
     t.deepEqual(actual, expected);
     t.true(mockedController.isStarted());
+    t.end();
+    resetDnsController();
+  })
+  .catch(err => {
+    t.fail(err);
     t.end();
     resetDnsController();
   });
@@ -181,7 +188,12 @@ test('getSocket fails if bind fails', function(t) {
   );
 
   var result = mockedController.getSocket();
-  result.catch(errorObj => {
+  result.then(res => {
+    t.fail(res);
+    t.end();
+    resetDnsController();
+  })
+  .catch(errorObj => {
     var startsWithMessage = errorObj.message.startsWith(
       'Error when binding DNSSD port'
     );
@@ -212,8 +224,13 @@ test('getSocket fails if join group fails', function(t) {
     }
   );
 
-  var result = mockedController.getSocket();
-  result.catch(errorObj => {
+  mockedController.getSocket()
+  .then(res => {
+    t.fail(res);
+    t.end();
+    resetDnsController();
+  })
+  .catch(errorObj => {
     var startsWithMessage = errorObj.message.startsWith(
       'Error when joining DNSSD group'
     );
@@ -454,12 +471,17 @@ test('start initializes correctly', function(t) {
   dnsController.initializeNetworkInterfaceCache = initializeCacheStub;
   
   dnsController.start()
-    .then(() => {
-      t.true(getSocketStub.calledOnce);
-      t.true(initializeCacheStub.calledOnce);
-      t.end();
-      resetDnsController();
-    });
+  .then(() => {
+    t.true(getSocketStub.calledOnce);
+    t.true(initializeCacheStub.calledOnce);
+    t.end();
+    resetDnsController();
+  })
+  .catch(err => {
+    t.fail(err);
+    t.end();
+    resetDnsController();
+  });
 });
 
 test('getIPv4Interfaces throws if not started', function(t) {
@@ -498,6 +520,11 @@ test('initializeNetworkInterfaceCache initializes cache', function(t) {
   .then(function addedInterfaces() {
     var expectedInterfaces = [iface];
     t.deepEqual(mockedController.getIPv4Interfaces(), expectedInterfaces);
+    t.end();
+    resetDnsController();
+  })
+  .catch(err => {
+    t.fail(err);
     t.end();
     resetDnsController();
   });

@@ -88,6 +88,11 @@ test('getAllCachedPages resolves all pages', function(t) {
     t.deepEqual(pages, expectedCachedPages);
     t.end();
     resetDatastore();
+  })
+  .catch(err => {
+    t.fail(err);
+    t.end();
+    resetDatastore();
   });
 });
 
@@ -98,6 +103,11 @@ test('getAllCachedPages rejects if base dir not set', function(t) {
   datastore.getAllFileEntriesForPages = getAllFileEntriesSpy;
 
   datastore.getAllCachedPages()
+  .then(res => {
+    t.fail(res);
+    t.end();
+    resetDatastore();
+  })
   .catch(actualErr => {
     t.equal(actualErr, expectedErr);
     t.end();
@@ -129,6 +139,11 @@ test('getAllFileEntriesForPages resolves all pages', function(t) {
     t.deepEqual(entries, expectedEntries);
     t.end();
     resetDatastore();
+  })
+  .catch(err => {
+    t.fail(err);
+    t.end();
+    resetDatastore();
   });
 });
 
@@ -143,6 +158,11 @@ test('getAllFileEntriesForPages rejects if base dir not set', function(t) {
   );
 
   datastore.getAllFileEntriesForPages()
+  .then(res => {
+    t.fail(res);
+    t.end();
+    resetDatastore();
+  })
   .catch(err => {
     t.equal(err, 'dir not set');
     t.end();
@@ -185,10 +205,15 @@ test('getEntryAsCachedPage returns CachedPage', function(t) {
 
   var expected = new datastore.CachedPage(url, date, accessUrl, mdata);
   datastore.getEntryAsCachedPage(entry)
-    .then(actual => {
-      t.deepEqual(actual, expected);
-      t.end();
-    });
+  .then(actual => {
+    t.deepEqual(actual, expected);
+    t.end();
+  })
+  .catch(err => {
+    t.fail(err);
+    t.end();
+    resetDatastore();
+  });
 });
 
 test(
@@ -209,11 +234,16 @@ test(
     datastore.writeMetadataForEntry = writeMetadataForEntrySpy;
 
     datastore.addPageToCache('url', 'date', 'blob')
-      .catch(err => {
-        t.equal(err, errObj);
-        t.end();
-        resetDatastore();
-      });
+    .then(res => {
+      t.fail(res);
+      t.end();
+      resetDatastore();
+    })
+    .catch(err => {
+      t.equal(err, errObj);
+      t.end();
+      resetDatastore();
+    });
   }
 );
 
@@ -250,6 +280,11 @@ test('addPageToCache rejects if write metadata rejects', function(t) {
   datastore.writeMetadataForEntry = writeMetadataForEntrySpy;
 
   datastore.addPageToCache(captureUrl, captureDate, blob)
+  .then(res => {
+    t.fail(res);
+    t.end();
+    resetDatastore();
+  })
   .catch(actual => {
     t.deepEqual(actual, expected);
     t.end();
@@ -277,6 +312,11 @@ test('addPageToCache rejects if getFile rejects', function(t) {
   datastore.writeMetadataForEntry = writeMetadataForEntrySpy;
 
   datastore.addPageToCache('url', 'date', 'blob')
+  .then(res => {
+    t.fail(res);
+    t.end();
+    resetDatastore();
+  })
   .catch(err => {
     t.equal(err, errObj);
     t.end();
@@ -306,6 +346,11 @@ test('addPageToCache rejects if writeToFile rejects', function(t) {
   datastore.writeMetadataForEntry = writeMetadataForEntrySpy;
 
   datastore.addPageToCache('url', 'date', 'blob')
+  .then(res => {
+    t.fail(res);
+    t.end();
+    resetDatastore();
+  })
   .catch(err => {
     t.equal(err, errObj);
     t.end();
@@ -354,6 +399,11 @@ test('addPageToCache resolves if all others succeed', function(t) {
     t.deepEqual(writeToFileSpy.args[0], [fileEntryStub, blob]);
     t.end();
     resetDatastore();
+  })
+  .catch(err => {
+    t.fail(err);
+    t.end();
+    resetDatastore();
   });
 });
 
@@ -387,11 +437,16 @@ test('getMetadataForEntry resolves with result to storage', function(t) {
   datastore.createMetadataKey = createMetadataKeySpy;
 
   datastore.getMetadataForEntry(entry)
-    .then(actual => {
-      t.deepEqual(actual, expected);
-      t.end();
-      resetDatastore();
-    });
+  .then(actual => {
+    t.deepEqual(actual, expected);
+    t.end();
+    resetDatastore();
+  })
+  .catch(err => {
+    t.fail(err);
+    t.end();
+    resetDatastore();
+  });
 });
 
 test('writeMetadataForEntry resolves if set resolves', function(t) {
@@ -414,10 +469,15 @@ test('writeMetadataForEntry resolves if set resolves', function(t) {
   datastore.createMetadataKey = createMetadataKeySpy;
 
   datastore.writeMetadataForEntry(entry)
-    .then(result => {
-      // We don't expect to resolve with anything.
-      t.equal(result, undefined);
-      t.end();
-      resetDatastore();
-    });
+  .then(result => {
+    // We don't expect to resolve with anything.
+    t.equal(result, undefined);
+    t.end();
+    resetDatastore();
+  })
+  .catch(err => {
+    t.fail(err);
+    t.end();
+    resetDatastore();
+  });
 });

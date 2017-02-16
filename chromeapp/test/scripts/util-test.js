@@ -1,11 +1,9 @@
 /*jshint esnext:true*/
 'use strict';
-var Buffer = require('buffer').Buffer;
 var test = require('tape');
 var sinon = require('sinon');
 require('sinon-as-promised');
 
-var binUtil = require('../../app/scripts/dnssd/binary-utils').BinaryUtils;
 var util = require('../../app/scripts/util');
 
 /**
@@ -37,6 +35,11 @@ test('fetchJson invokes promises and resolves', function(t) {
 
     t.end();
     resetUtil();
+  })
+  .catch(err => {
+    t.fail(err);
+    t.end();
+    resetUtil();
   });
 });
 
@@ -52,13 +55,18 @@ test('waitInRange calls random int and wait with result', function(t) {
   var max = 333;
 
   util.waitInRange(min, max)
-    .then(() => {
-      // + 1 because the call to randomInt is +1 to be inclusive
-      t.deepEqual(randomIntSpy.args[0], [min, max + 1]);
-      t.deepEqual(waitSpy.args[0], [waitTime]);
-      t.end();
-      resetUtil();
-    });
+  .then(() => {
+    // + 1 because the call to randomInt is +1 to be inclusive
+    t.deepEqual(randomIntSpy.args[0], [min, max + 1]);
+    t.deepEqual(waitSpy.args[0], [waitTime]);
+    t.end();
+    resetUtil();
+  })
+  .catch(err => {
+    t.fail(err);
+    t.end();
+    resetUtil();
+  });
 });
 
 test('getHostFromUrl returns hostname bare hostname', function(t) {

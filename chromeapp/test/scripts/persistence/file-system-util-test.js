@@ -44,6 +44,11 @@ test('listEntries returns all entries', function(t) {
   .then(entries => {
     t.deepEqual(entries, expectedEntries);
     t.end();
+  })
+  .catch(err => {
+    t.fail(err);
+    t.end();
+    resetUtil();
   });
 });
 
@@ -62,6 +67,11 @@ test('listEntries returns empty Array if no entries', function(t) {
   .then(entries => {
     t.deepEqual(entries, []);
     t.end();
+  })
+  .catch(err => {
+    t.fail(err);
+    t.end();
+    resetUtil();
   });
 });
 
@@ -82,6 +92,11 @@ test('listEntries catches if error callback invoked', function(t) {
   dirEntry.createReader = sinon.stub().returns(dirReaderSpy);
 
   util.listEntries(dirEntry)
+  .then(res => {
+    t.fail(res);
+    t.end();
+    resetUtil();
+  })
   .catch(err => {
     t.deepEqual(err, errorMsg);
     t.end();
@@ -110,6 +125,11 @@ test('writeToFile resolves on completion', function(t) {
   .then(function() {
     t.equal(fileBlobArg, fileBlob);
     t.end();
+  })
+  .catch(err => {
+    t.fail(err);
+    t.end();
+    resetUtil();
   });
 });
 
@@ -133,6 +153,11 @@ test('writeToFile rejects on error', function(t) {
   fileEntry.createWriter = createWriterSpy;
 
   util.writeToFile(fileEntry, fileBlob)
+  .then(res => {
+    t.fail(res);
+    t.end();
+    resetUtil();
+  })
   .catch(function(actualError) {
     t.equal(actualError, error);
     t.equal(fileBlobArg, fileBlob);
@@ -162,6 +187,11 @@ test('getFile resolves with entry', function(t) {
     t.deepEqual(getFileStub.args[0][1], options);
     t.equal(actualEntry, fileEntry);
     t.end();
+  })
+  .catch(err => {
+    t.fail(err);
+    t.end();
+    resetUtil();
   });
 });
 
@@ -180,6 +210,11 @@ test('getFile rejects with error', function(t) {
   var name = 'fileName.txt';
 
   util.getFile(dirEntry, options, name)
+  .then(res => {
+    t.fail(res);
+    t.end();
+    resetUtil();
+  })
   .catch(actualError => {
     t.deepEqual(getFileStub.args[0][0], name);
     t.deepEqual(getFileStub.args[0][1], options);
@@ -207,6 +242,11 @@ test('getDirectory resolves with entry', function(t) {
     t.deepEqual(getDirectoryStub.args[0][1], options);
     t.equal(actualEntry, directoryEntry);
     t.end();
+  })
+  .catch(err => {
+    t.fail(err);
+    t.end();
+    resetUtil();
   });
 });
 
@@ -228,6 +268,11 @@ test('getDirectory rejects with error', function(t) {
   var name = 'erroneousDirName';
 
   util.getDirectory(dirEntry, options, name)
+  .then(res => {
+    t.fail(res);
+    t.end();
+    resetUtil();
+  })
   .catch(actualError => {
     t.deepEqual(getDirectoryStub.args[0][0], name);
     t.deepEqual(getDirectoryStub.args[0][1], options);
@@ -250,6 +295,11 @@ test('getMetadata resolves with metadata if success', function(t) {
   .then(actual => {
     t.equal(actual, expected);
     t.end();
+  })
+  .catch(err => {
+    t.fail(err);
+    t.end();
+    resetUtil();
   });
 });
 
@@ -264,6 +314,11 @@ test('getMetadata rejects on error', function(t) {
   entryStub.getMetadata = getMetadataCB;
 
   util.getMetadata(entryStub)
+  .then(res => {
+    t.fail(res);
+    t.end();
+    resetUtil();
+  })
   .catch(actual => {
     t.equal(actual, expected);
     t.end();
@@ -284,6 +339,11 @@ test('getFileFromEntry resolves with file if success', function(t) {
   .then(actual => {
     t.equal(actual, expected);
     t.end();
+  })
+  .catch(err => {
+    t.fail(err);
+    t.end();
+    resetUtil();
   });
 });
 
@@ -298,6 +358,11 @@ test('getFileFromEntry rejects on error', function(t) {
   entryStub.file = getFileStub;
 
   util.getFileFromEntry(entryStub)
+  .then(res => {
+    t.fail(res);
+    t.end();
+    resetUtil();
+  })
   .catch(actual => {
     t.equal(actual, expected);
     t.end();
@@ -336,6 +401,7 @@ test('getFileContents resolves with full contents', function(t) {
   .catch(err => {
     t.fail(err);
     t.end();
+    resetUtil();
   });
 });
 
@@ -363,6 +429,11 @@ test('getFileContents rejects if Buffer.concat fails', function(t) {
   };
 
   util.getFileContents(fileEntry)
+  .then(res => {
+    t.fail(res);
+    t.end();
+    resetUtil();
+  })
   .catch(actual => {
     t.equal(actual, expected);
     t.end();
@@ -388,6 +459,11 @@ test('getFileContents rejects when onerror called', function(t) {
   };
 
   util.getFileContents(fileEntry)
+  .then(res => {
+    t.fail(res);
+    t.end();
+    resetUtil();
+  })
   .catch(actual => {
     t.deepEqual(actual, expectedError);
     t.end();

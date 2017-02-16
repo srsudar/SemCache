@@ -58,12 +58,16 @@ test('getResponseForAllCachedPages rejects if read fails', function(t) {
   );
 
   mockedApi.getResponseForAllCachedPages()
-    .catch(actualErr => {
-      t.deepEqual(actualErr, errObj);
-      t.end();
-      resetApi();
-    });
-
+  .then(res => {
+    t.fail(res);
+    t.end();
+    resetApi();
+  })
+  .catch(actualErr => {
+    t.deepEqual(actualErr, errObj);
+    t.end();
+    resetApi();
+  });
 });
 
 test('getResponseForAllCachedPages resolves with pages', function(t) {
@@ -87,12 +91,16 @@ test('getResponseForAllCachedPages resolves with pages', function(t) {
   };
 
   mockedApi.getResponseForAllCachedPages()
-    .then(actual => {
-      t.deepEqual(actual, expected);
-      t.end();
-      resetApi();
-    });
-
+  .then(actual => {
+    t.deepEqual(actual, expected);
+    t.end();
+    resetApi();
+  })
+  .catch(err => {
+    t.fail(err);
+    t.end();
+    resetApi();
+  });
 });
 
 test('getCachedFileNameFromPath parses path correct', function(t) {

@@ -152,6 +152,11 @@ function createConnectionAssertionHelper(
     );
     t.end();
     resetCmgr();
+  })
+  .catch(err => {
+    t.fail(err);
+    t.end();
+    resetCmgr();
   });
 }
 
@@ -289,6 +294,11 @@ function sendOfferAssertionHelper(fetchError, createDescError, t) {
 
     resetCmgr();
     t.end();
+  })
+  .catch(err => {
+    t.fail(err);
+    t.end();
+    resetCmgr();
   });
 }
 
@@ -355,6 +365,11 @@ test('createConnection rejects if createOffer rejects', function(t) {
   createConnectionAssertionHelper(null, expected, null, null, t);
   
   cmgr.createConnection()
+  .then(res => {
+    t.fail(res);
+    t.end();
+    resetCmgr();
+  })
   .catch(actual => {
     t.equal(actual, expected);
     t.end();
@@ -367,6 +382,11 @@ test('createConnection rejects if setLocalDescription rejects', function(t) {
   createConnectionAssertionHelper(null, null, expected, null, t);
   
   cmgr.createConnection()
+  .then(res => {
+    t.fail(res);
+    t.end();
+    resetCmgr();
+  })
   .catch(actual => {
     t.equal(actual, expected);
     t.end();
@@ -379,6 +399,11 @@ test('createConnection rejects if sendOffer rejects', function(t) {
   createConnectionAssertionHelper(expected, null, null, null, t);
   
   cmgr.createConnection()
+  .then(res => {
+    t.fail(res);
+    t.end();
+    resetCmgr();
+  })
   .catch(actual => {
     t.equal(actual, expected);
     t.end();
@@ -391,6 +416,11 @@ test('createConnection rejects if createDataChannel throws', function(t) {
   createConnectionAssertionHelper(null, null, null, expected, t);
   
   cmgr.createConnection()
+  .then(res => {
+    t.fail(res);
+    t.end();
+    resetCmgr();
+  })
   .catch(actual => {
     t.equal(actual, expected);
     t.end();
@@ -407,6 +437,11 @@ test('sendOffer rejects if fetch rejects', function(t) {
   var wrappedCall = sendOfferAssertionHelper(expected, null, t);
 
   wrappedCall()
+  .then(res => {
+    t.fail(res);
+    t.end();
+    resetCmgr();
+  })
   .catch(actual => {
     t.equal(actual, expected);
     t.end();
@@ -419,6 +454,11 @@ test('sendOffer rejects if setRemoteDescription rejects', function(t) {
   var wrappedCall = sendOfferAssertionHelper(null, expected, t);
 
   wrappedCall()
+  .then(res => {
+    t.fail(res);
+    t.end();
+    resetCmgr();
+  })
   .catch(actual => {
     t.equal(actual, expected);
     t.end();

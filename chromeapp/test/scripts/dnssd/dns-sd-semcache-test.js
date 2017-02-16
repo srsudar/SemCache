@@ -90,10 +90,14 @@ test('resolveCache rejects if resolveService rejects', function(t) {
   });
 
   dnssdSem.resolveCache(fullName)
-    .catch(actual => {
-      t.deepEqual(actual, expected);
-      t.end();
-    });
+  .then(res => {
+    t.fail(res);
+    t.end();
+  })
+  .catch(actual => {
+    t.deepEqual(actual, expected);
+    t.end();
+  });
 });
 
 test('resolveCache adds listUrl and resolves', function(t) {
@@ -128,11 +132,15 @@ test('resolveCache adds listUrl and resolves', function(t) {
   });
 
   dnssdSem.resolveCache(fullName)
-    .then(actual => {
-      t.deepEqual(actual, expected);
-      t.deepEqual(getListPageUrlForCacheSpy.args[0], [ipAddress, port]);
-      t.end();
-    });
+  .then(actual => {
+    t.deepEqual(actual, expected);
+    t.deepEqual(getListPageUrlForCacheSpy.args[0], [ipAddress, port]);
+    t.end();
+  })
+  .catch(err => {
+    t.fail(err);
+    t.end();
+  });
 });
 
 test('browseForSemCacheInstances calls browse with correct args', function(t) {

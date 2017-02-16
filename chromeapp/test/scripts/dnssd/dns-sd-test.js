@@ -98,26 +98,31 @@ function callsQueryForResponsesHelper(
   }
 
   dnssd[methodName](qName, timeout, numRetries)
-    .then(function resolved(services) {
-      var qNameArg = queryForResponsesSpy.args[0][0];
-      var qTypeArg = queryForResponsesSpy.args[0][1];
-      var qClassArg = queryForResponsesSpy.args[0][2];
-      var multipleArg = queryForResponsesSpy.args[0][3];
-      var timeoutArg = queryForResponsesSpy.args[0][4];
-      var numRetriesArg = queryForResponsesSpy.args[0][5];
+  .then(function resolved(services) {
+    var qNameArg = queryForResponsesSpy.args[0][0];
+    var qTypeArg = queryForResponsesSpy.args[0][1];
+    var qClassArg = queryForResponsesSpy.args[0][2];
+    var multipleArg = queryForResponsesSpy.args[0][3];
+    var timeoutArg = queryForResponsesSpy.args[0][4];
+    var numRetriesArg = queryForResponsesSpy.args[0][5];
 
-      t.true(queryForResponsesSpy.calledOnce);
-      t.equal(qNameArg, qName);
-      t.equal(qTypeArg, qType);
-      t.equal(qClassArg, qClass);
-      t.equal(multipleArg, multipleResponses);
-      t.equal(timeoutArg, timeout);
-      t.equal(numRetriesArg, numRetries);
-      t.deepEqual(services, result);
-      t.end();
+    t.true(queryForResponsesSpy.calledOnce);
+    t.equal(qNameArg, qName);
+    t.equal(qTypeArg, qType);
+    t.equal(qClassArg, qClass);
+    t.equal(multipleArg, multipleResponses);
+    t.equal(timeoutArg, timeout);
+    t.equal(numRetriesArg, numRetries);
+    t.deepEqual(services, result);
+    t.end();
 
-      resetDnsSd();
-    });
+    resetDnsSd();
+  })
+  .catch(err => {
+    t.fail(err);
+    t.end();
+    resetDnsSd();
+  });
 }
 
 /**
@@ -172,6 +177,11 @@ function queryForResponsesNoPacketsHelper(numRetries, t) {
 
     t.equal(packetIsForQuerySpy.callCount, 0);
     t.deepEqual(records, expectedPackets);
+  })
+  .catch(err => {
+    t.fail(err);
+    t.end();
+    resetDnsSd();
   });
 }
 
@@ -248,6 +258,11 @@ function queryForResponsesSinglePacketHelper(numRetries, resolveOnNum, t) {
 
     t.equal(packetIsForQuerySpy.callCount, 1);
     t.deepEqual(records, expectedPackets);
+  })
+  .catch(err => {
+    t.fail(err);
+    t.end();
+    resetDnsSd();
   });
 }
 
@@ -284,8 +299,13 @@ function probeRejectsHelper(returnTrueAfterCall, t) {
   });
   dnssd.receivedResponsePacket = receivedResponsePacketSpy;
 
-  var issuePromise = dnssd.issueProbe('queryname', 4, 5);
-  issuePromise.catch(function failure() {
+  dnssd.issueProbe('queryname', 4, 5)
+  .then(res => {
+    t.fail(res);
+    t.end();
+    resetDnsSd();
+  })
+  .catch(function failure() {
     // our promise didn't resolve, meaning we failed.
     // We should have been called one more than we were permitting (i.e. a call
     // on the 0th call leads to a single call
@@ -389,6 +409,11 @@ test('issueProbe succeeds correctly', function(t) {
     t.true(removeOnReceiveCallbackSpy.calledOnce);
     resetDnsSd();
     t.end();
+  })
+  .catch(err => {
+    t.fail(err);
+    t.end();
+    resetDnsSd();
   });
 });
 
@@ -614,8 +639,13 @@ test('register rejects if host taken', function(t) {
   dnssd.createHostRecords = createHostRecordsSpy;
   dnssd.createServiceRecords = createServiceRecordsSpy;
 
-  var resultPromise = dnssd.register(host, instanceName, type, port);
-  resultPromise.catch(failObj => {
+  dnssd.register(host, instanceName, type, port)
+  .then(res => {
+    t.fail(res);
+    t.end();
+    resetDnsSd();
+  })
+  .catch(failObj => {
     // We rejected, as expected because the host was taken.
     // Make sure we called issueProbe with the host
     t.equal(issueProbeSpy.args[0][0], host);
@@ -642,9 +672,13 @@ test('register rejects if instance taken', function(t) {
   issueProbeSpy.onCall(1).rejects('auto reject of probe');
   dnssd.issueProbe = issueProbeSpy;
 
-  var resultPromise = dnssd.register(host, instanceName, type, port);
-
-  resultPromise.catch(failObj => {
+  dnssd.register(host, instanceName, type, port)
+  .then(res => {
+    t.fail(res);
+    t.end();
+    resetDnsSd();
+  })
+  .catch(failObj => {
     // We rejected, as expected because the instance was taken.
     // Make sure we called issueProbe with the instance
     t.equal(issueProbeSpy.args[0][0], host);
@@ -800,6 +834,11 @@ test('register resolves if name and host probe succeed', function(t) {
 
     resetDnsSd();
     t.end();
+  })
+  .catch(err => {
+    t.fail(err);
+    t.end();
+    resetDnsSd();
   });
 });
 
@@ -929,6 +968,11 @@ test('queryForResponses correct for multiple', function(t) {
     t.equal(waitSpy.args[0][0], qTime);
     t.equal(packetIsForQuerySpy.callCount, 2);
     t.deepEqual(records, expectedPackets);
+    t.end();
+    resetDnsSd();
+  })
+  .catch(err => {
+    t.fail(err);
     t.end();
     resetDnsSd();
   });
@@ -1181,6 +1225,11 @@ test('browseServiceInstances handles dropped SRV', function(t) {
     t.deepEqual(instances, [records[0].expected, records[2].expected]);
     resetDnsSd();
     t.end();
+  })
+  .catch(err => {
+    t.fail(err);
+    t.end();
+    resetDnsSd();
   });
 });
 
@@ -1283,6 +1332,11 @@ test('browseServiceInstances handles dropped A', function(t) {
     t.deepEqual(instances, [records[0].expected, records[1].expected]);
     resetDnsSd();
     t.end();
+  })
+  .catch(err => {
+    t.fail(err);
+    t.end();
+    resetDnsSd();
   });
 });
 
@@ -1367,6 +1421,11 @@ test('browseServiceInstances queries all types and returns', function(t) {
     t.deepEqual(instances, [records[0].expected, records[1].expected]);
     resetDnsSd();
     t.end();
+  })
+  .catch(err => {
+    t.fail(err);
+    t.end();
+    resetDnsSd();
   });
 });
 
@@ -1467,6 +1526,11 @@ test('resolveService resolves if all correct', function(t) {
     t.deepEqual(operationalInfo, expected);
     resetDnsSd();
     t.end();
+  })
+  .catch(err => {
+    t.fail(err);
+    t.end();
+    resetDnsSd();
   });
 });
 
@@ -1485,6 +1549,11 @@ test('resolveService rejects if missing SRV', function(t) {
   var expected = 'did not find SRV record for service: ' + serviceName;
 
   dnssd.resolveService(serviceName)
+  .then(res => {
+    t.fail(res);
+    t.end();
+    resetDnsSd();
+  })
   .catch(actual => {
     t.equal(queryForInstanceInfoSpy.callCount, 1);
 
@@ -1527,6 +1596,11 @@ test('resolveService rejects if missing A', function(t) {
     JSON.stringify(records[0].srv);
 
   dnssd.resolveService(serviceName)
+  .then(res => {
+    t.fail(res);
+    t.end();
+    resetDnsSd();
+  })
   .catch(actual => {
     // Each spy called the appropriate number of times with the appropriate
     // arguments

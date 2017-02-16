@@ -70,6 +70,7 @@ test('getFileBlob resolves with peerConnection.getFile', function(t) {
   .catch(err => {
     t.fail(err);
     t.end();
+    resetWebrtcImpl();
   });
 });
 
@@ -85,6 +86,11 @@ test('getFileBlob rejects with error', function(t) {
 
   var peerAccessor = new webrtcImpl.WebrtcPeerAccessor();
   peerAccessor.getFileBlob({})
+  .then(res => {
+    t.fail(res);
+    t.end();
+    resetWebrtcImpl();
+  })
   .catch(actual => {
     t.equal(actual, expected);
     t.end();
@@ -116,6 +122,11 @@ test('getList resolves with json', function(t) {
     t.deepEqual(getOrCreateConnectionSpy.args[0], [ipaddr, port]);
     t.end();
     resetWebrtcImpl();
+  })
+  .catch(err => {
+    t.fail(err);
+    t.end();
+    resetWebrtcImpl();
   });
 });
 
@@ -131,6 +142,11 @@ test('getList rejects with error', function(t) {
 
   var peerAccessor = new webrtcImpl.WebrtcPeerAccessor();
   peerAccessor.getList({})
+  .then(res => {
+    t.fail(res);
+    t.end();
+    resetWebrtcImpl();
+  })
   .catch(actual => {
     t.equal(actual, expected);
     t.end();

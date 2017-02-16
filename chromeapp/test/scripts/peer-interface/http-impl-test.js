@@ -54,6 +54,11 @@ test('getFileBlob resolves with blob', function(t) {
     t.equal(actual, expected);
     t.end();
     resetHttpImpl();
+  })
+  .catch(err => {
+    t.fail(err);
+    t.end();
+    resetHttpImpl();
   });
 });
 
@@ -70,6 +75,11 @@ test('getFileBlob rejects with error', function(t) {
 
   var pa = new httpImpl.HttpPeerAccessor();
   pa.getFileBlob(url)
+  .then(res => {
+    t.fail(res);
+    t.end();
+    resetHttpImpl();
+  })
   .catch(actual => {
     t.equal(actual, expected);
     t.end();
@@ -98,6 +108,11 @@ test('getList resolves with json', function(t) {
     t.equal(actual, expected);
     t.end();
     resetHttpImpl();
+  })
+  .catch(err => {
+    t.fail(err);
+    t.end();
+    resetHttpImpl();
   });
 });
 
@@ -113,6 +128,11 @@ test('getList rejects with error', function(t) {
 
   var peerAccessor = new httpImpl.HttpPeerAccessor();
   peerAccessor.getList({})
+  .then(res => {
+    t.fail(res);
+    t.end();
+    resetHttpImpl();
+  })
   .catch(actual => {
     t.equal(actual, expected);
     t.end();

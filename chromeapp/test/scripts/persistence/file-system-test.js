@@ -39,6 +39,11 @@ test('promptForDir calls chrome API and returns Entry', function(t) {
     t.equal(actualEntry, expectedEntry);
     t.end();
     resetFileSystem();
+  })
+  .catch(err => {
+    t.fail(err);
+    t.end();
+    resetFileSystem();
   });
 });
 
@@ -97,6 +102,11 @@ test('baseDirIsSet true correctly', function(t) {
     t.true(getSpy.calledWith(fileSystem.KEY_BASE_DIR));
     t.end();
     resetFileSystem();
+  })
+  .catch(err => {
+    t.fail(err);
+    t.end();
+    resetFileSystem();
   });
 
 });
@@ -121,8 +131,12 @@ test('baseDirIsSet true correctly', function(t) {
     t.true(getSpy.calledWith(fileSystem.KEY_BASE_DIR));
     t.end();
     resetFileSystem();
+  })
+  .catch(err => {
+    t.fail(err);
+    t.end();
+    resetFileSystem();
   });
-
 });
 
 test('getPersistedBaseDir returns null if not set', function(t) {
@@ -133,6 +147,11 @@ test('getPersistedBaseDir returns null if not set', function(t) {
   fileSystem.getPersistedBaseDir()
   .then(dirEntry => {
     t.equal(dirEntry, expected);
+    t.end();
+    resetFileSystem();
+  })
+  .catch(err => {
+    t.fail(err);
     t.end();
     resetFileSystem();
   });
@@ -163,6 +182,11 @@ test('getPersistedBaseDir retrieves from storage', function(t) {
     t.true(getSpy.calledWith(fileSystem.KEY_BASE_DIR));
     t.end();
     resetFileSystem();
+  })
+  .catch(err => {
+    t.fail(err);
+    t.end();
+    resetFileSystem();
   });
 });
 
@@ -174,6 +198,11 @@ test('getDirectoryForCacheEntries rejects if no base dir', function(t) {
   fileSystem.getPersistedBaseDir = getPersistedBaseDirSpy;
 
   fileSystem.getDirectoryForCacheEntries()
+  .then(res => {
+    t.fail(res);
+    t.end();
+    resetFileSystem();
+  })
   .catch(actualErr => {
     t.deepEqual(actualErr, errObj);
     t.end();
@@ -199,11 +228,16 @@ test(
     fileSystem.getPersistedBaseDir = getPersistedBaseDirSpy;
 
     fileSystem.getDirectoryForCacheEntries()
-      .catch(actualErr => {
-        t.deepEqual(actualErr, errObj);
-        t.end();
-        resetFileSystem();
-      });
+    .then(res => {
+      t.fail(res);
+      t.end();
+      resetFileSystem();
+    })
+    .catch(actualErr => {
+      t.deepEqual(actualErr, errObj);
+      t.end();
+      resetFileSystem();
+    });
   }
 );
 
@@ -225,17 +259,22 @@ test('getDirectoryForCacheEntries resolves with entry', function(t) {
   fileSystem.getPersistedBaseDir = getPersistedBaseDirSpy;
 
   fileSystem.getDirectoryForCacheEntries()
-    .then(actualDirEntry => {
-      t.deepEqual(actualDirEntry, cacheDir);
-      t.true(getPersistedBaseDirSpy.calledOnce);
-      t.deepEqual(getDirectoryStub.args[0],
-        [
-          baseDir, {create: true, exclusive: false}, fileSystem.PATH_CACHE_DIR
-        ]
-      );
-      t.end();
-      resetFileSystem();
-    });
+  .then(actualDirEntry => {
+    t.deepEqual(actualDirEntry, cacheDir);
+    t.true(getPersistedBaseDirSpy.calledOnce);
+    t.deepEqual(getDirectoryStub.args[0],
+      [
+        baseDir, {create: true, exclusive: false}, fileSystem.PATH_CACHE_DIR
+      ]
+    );
+    t.end();
+    resetFileSystem();
+  })
+  .catch(err => {
+    t.fail(err);
+    t.end();
+    resetFileSystem();
+  });
 });
 
 test('constructFileSchemeUrl creates correct scheme', function(t) {
@@ -282,6 +321,11 @@ test('getFileContentsFromName resolves with contents', function(t) {
     t.deepEqual(actual, expected);
     t.end();
     resetFileSystem();
+  })
+  .catch(err => {
+    t.fail(err);
+    t.end();
+    resetFileSystem();
   });
 });
 
@@ -293,6 +337,11 @@ test('getFileContentsFromName rejects with error', function(t) {
   fileSystem.getDirectoryForCacheEntries = getDirectoryForCacheEntriesSpy;
 
   fileSystem.getFileContentsFromName(fileName)
+  .then(res => {
+    t.fail(res);
+    t.end();
+    resetFileSystem();
+  })
   .catch(actual => {
     t.deepEqual(actual, expected);
     t.end();

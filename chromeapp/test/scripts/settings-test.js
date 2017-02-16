@@ -56,6 +56,11 @@ function helperSetCallsInternalsForKey(settings, setFn, key, value, t) {
     t.deepEqual(returnedObj, expected);
     t.true(setStub.calledOnce);
     t.deepEqual(setStub.args[0], [key, value]);
+  })
+  .catch(err => {
+    t.fail(err);
+    t.end();
+    resetSettings();
   });
 }
 
@@ -107,15 +112,19 @@ test('set calls storage.set and resolves with updated cache', function(t) {
   settings.SETTINGS_OBJ = oldSettings;
 
   settings.set(key, newValue)
-    .then(actualObj => {
-      t.deepEqual(actualObj, expectedSettingsObj);
-      t.deepEqual(setSpy.args[0], [expectedKvPair, false]);
-      // And finally that we've updated the cache for future callers as well.
-      t.deepEqual(settings.getSettingsObj(), expectedSettingsObj);
-      t.end();
-      resetSettings();
-    });
-
+  .then(actualObj => {
+    t.deepEqual(actualObj, expectedSettingsObj);
+    t.deepEqual(setSpy.args[0], [expectedKvPair, false]);
+    // And finally that we've updated the cache for future callers as well.
+    t.deepEqual(settings.getSettingsObj(), expectedSettingsObj);
+    t.end();
+    resetSettings();
+  })
+  .catch(err => {
+    t.fail(err);
+    t.end();
+    resetSettings();
+  });
 });
 
 test('get returns cached value if present', function(t) {
@@ -186,15 +195,20 @@ test('init initializes cache', function(t) {
   settings.getAllSettingKeys = getAllKeysStub;
 
   settings.init()
-    .then(returnedObj => {
-      t.true(getStub.calledOnce);
-      t.deepEqual(getStub.args[0][0], settingKeys);
-      t.deepEqual(returnedObj, processedSettings);
-      // We should also be returning the cache to callers now
-      t.deepEqual(settings.getSettingsObj(), processedSettings);
-      t.end();
-      resetSettings();
-    });
+  .then(returnedObj => {
+    t.true(getStub.calledOnce);
+    t.deepEqual(getStub.args[0][0], settingKeys);
+    t.deepEqual(returnedObj, processedSettings);
+    // We should also be returning the cache to callers now
+    t.deepEqual(settings.getSettingsObj(), processedSettings);
+    t.end();
+    resetSettings();
+  })
+  .catch(err => {
+    t.fail(err);
+    t.end();
+    resetSettings();
+  });
 });
 
 test('custom getters call internals', function(t) {
@@ -363,6 +377,11 @@ test('promptAndSetNewBaseDir calls storage APIs', function(t) {
     t.deepEqual(returnedObj, expected);
     t.equal(setBaseDirIdSpy.args[0][0], dirId);
     t.equal(setBaseDirPathSpy.args[0][0], displayPath);
+    t.end();
+    resetSettings();
+  })
+  .catch(err => {
+    t.fail(err);
     t.end();
     resetSettings();
   });

@@ -38,6 +38,11 @@ function rejectIfMissingSettingHelper(instanceName, port, dirId, host, t) {
   });
 
   appc.startServersAndRegister()
+  .then(res => {
+    t.fail(res);
+    t.end();
+    resetAppController();
+  })
   .catch(err => {
     t.equal(err, 'Complete and save settings before starting');
     t.end();
@@ -96,23 +101,24 @@ test('saveMhtmlAndOpen persists and opens', function(t) {
   appc.saveMhtmlAndOpen(
     captureUrl, captureDate, accessPath, mdata, ipaddr, port
   )
-    .then(() => {
-      t.equal(sendMessageToOpenSpy.args[0][0], fileUrl);
-      t.deepEqual(
-        getFileBobStub.args[0][0],
-        ifCommon.createFileParams(ipaddr, port, accessPath)
-      );
-      t.deepEqual(
-        addPageStub.args[0],
-        [captureUrl, captureDate, blob, mdata]
-      );
-      t.end();
-      resetAppController();
-    })
-    .catch(err => {
-      t.fail(err);
-      t.end();
-    });
+  .then(() => {
+    t.equal(sendMessageToOpenSpy.args[0][0], fileUrl);
+    t.deepEqual(
+      getFileBobStub.args[0][0],
+      ifCommon.createFileParams(ipaddr, port, accessPath)
+    );
+    t.deepEqual(
+      addPageStub.args[0],
+      [captureUrl, captureDate, blob, mdata]
+    );
+    t.end();
+    resetAppController();
+  })
+  .catch(err => {
+    t.fail(err);
+    t.end();
+    resetAppController();
+  });
 });
 
 test('saveMhtmlAndOpen rejects if error', function(t) {
@@ -131,6 +137,11 @@ test('saveMhtmlAndOpen rejects if error', function(t) {
   appc.getPeerAccessor = sinon.stub().returns(peerAccessorStub);
 
   appc.saveMhtmlAndOpen('url', 'capture', 'http://1.2.3.4:88')
+  .then(res => {
+    t.fail(res);
+    t.end();
+    resetAppController();
+  })
   .catch(actual => {
     t.equal(actual, expected);
     t.end();
@@ -168,6 +179,7 @@ test('getListFromService resolves with json', function(t) {
   .catch(err => {
     t.fail(err);
     t.end();
+    resetAppController();
   });
 });
 
@@ -179,6 +191,11 @@ test('getListFromService rejects with error', function(t) {
   appc.getPeerAccessor = peerAccessorStub;
 
   appc.getListFromService(serviceName)
+  .then(res => {
+    t.fail(res);
+    t.end();
+    resetAppController();
+  })
   .catch(actual => {
     t.equal(actual, expected);
     t.end();
@@ -236,6 +253,11 @@ test('startServersAndRegister rejects if register rejects', function(t) {
   appc.updateCachesForSettings = sinon.stub();
 
   appc.startServersAndRegister()
+  .then(res => {
+    t.fail(res);
+    t.end();
+    resetAppController();
+  })
   .catch(actualErr => {
     t.deepEqual(registerSemCacheSpy.args[0], [hostName, instanceName, port]);
     t.equal(actualErr, expectedErr);
@@ -268,6 +290,11 @@ test('startServersAndRegister rejects if no ifaces', function(t) {
   appc.updateCachesForSettings = sinon.stub();
 
   appc.startServersAndRegister()
+  .then(res => {
+    t.fail(res);
+    t.end();
+    resetAppController();
+  })
   .catch(actualErr => {
     t.equal(actualErr.message, expectedErr);
     t.false(appc.networkIsActive());
@@ -335,8 +362,12 @@ test('startServersAndRegister resolves if register resolves', function(t) {
     
     t.end();
     resetAppController();
+  })
+  .catch(err => {
+    t.fail(err);
+    t.end();
+    resetAppController();
   });
-
 });
 
 test('getListUrlForSelf is sensible', function(t) {
@@ -418,11 +449,16 @@ test('getPeerCacheNames does not query network if not started', function(t) {
   var expected = [];
 
   appc.getPeerCacheNames()
-    .then(actual => {
-      t.deepEqual(actual, expected); 
-      t.end();
-      resetAppController();
-    });
+  .then(actual => {
+    t.deepEqual(actual, expected); 
+    t.end();
+    resetAppController();
+  })
+  .catch(err => {
+    t.fail(err);
+    t.end();
+    resetAppController();
+  });
 });
 
 test('getPeerCacheNames does not query network if no network', function(t) {
@@ -436,11 +472,16 @@ test('getPeerCacheNames does not query network if no network', function(t) {
   var expected = [cacheName];
 
   appc.getPeerCacheNames()
-    .then(actual => {
-      t.deepEqual(actual, expected); 
-      t.end();
-      resetAppController();
-    });
+  .then(actual => {
+    t.deepEqual(actual, expected); 
+    t.end();
+    resetAppController();
+  })
+  .catch(err => {
+    t.fail(err);
+    t.end();
+    resetAppController();
+  });
 });
 
 test('getPeerCacheNames resolves if running', function(t) {
@@ -467,11 +508,16 @@ test('getPeerCacheNames resolves if running', function(t) {
   appc.SERVERS_STARTED = true;
 
   appc.getPeerCacheNames()
-    .then(actual => {
-      t.deepEqual(actual, cacheNames);
-      t.end();
-      resetAppController();
-    });
+  .then(actual => {
+    t.deepEqual(actual, cacheNames);
+    t.end();
+    resetAppController();
+  })
+  .catch(err => {
+    t.fail(err);
+    t.end();
+    resetAppController();
+  });
 });
 
 test('getBrowseableCaches does not query network if not started', function(t) {
@@ -497,12 +543,17 @@ test('getBrowseableCaches does not query network if not started', function(t) {
   var expected = [];
 
   appc.getBrowseableCaches()
-    .then(caches => {
-      t.deepEqual(caches, expected);
-      t.equal(browseSpy.callCount, 0);
-      t.end();
-      resetAppController();
-    });
+  .then(caches => {
+    t.deepEqual(caches, expected);
+    t.equal(browseSpy.callCount, 0);
+    t.end();
+    resetAppController();
+  })
+  .catch(err => {
+    t.fail(err);
+    t.end();
+    resetAppController();
+  });
 });
 
 test('getBrowseableCaches dedupes and returns correct list', function(t) {
@@ -549,13 +600,18 @@ test('getBrowseableCaches dedupes and returns correct list', function(t) {
   // name.
   var expected = [ownCache, firstCache, lastCache];
   appc.getBrowseableCaches()
-    .then(actual => {
-      t.deepEqual(actual, expected);
-      t.true(getListUrlSpy.calledWith(firstCache.ipAddress, firstCache.port));
-      t.true(getListUrlSpy.calledWith(lastCache.ipAddress, lastCache.port));
-      t.end();
-      resetAppController();
-    });
+  .then(actual => {
+    t.deepEqual(actual, expected);
+    t.true(getListUrlSpy.calledWith(firstCache.ipAddress, firstCache.port));
+    t.true(getListUrlSpy.calledWith(lastCache.ipAddress, lastCache.port));
+    t.end();
+    resetAppController();
+  })
+  .catch(err => {
+    t.fail(err);
+    t.end();
+    resetAppController();
+  });
 });
 
 test('networkIsActive true if started', function(t) {
@@ -618,12 +674,17 @@ test('resolveCache does not use network for self', function(t) {
   appc.getOwnCache = getOwnCacheSpy;
 
   appc.resolveCache(fullName)
-    .then(actual => {
-      t.deepEqual(actual, ownCache);
-      t.equal(resolveCacheSpy.callCount, 0);
-      t.end();
-      resetAppController();
-    });
+  .then(actual => {
+    t.deepEqual(actual, ownCache);
+    t.equal(resolveCacheSpy.callCount, 0);
+    t.end();
+    resetAppController();
+  })
+  .catch(err => {
+    t.fail(err);
+    t.end();
+    resetAppController();
+  });
 });
 
 test('resolveCache queries network if needed and resolves', function(t) {
@@ -648,11 +709,16 @@ test('resolveCache queries network if needed and resolves', function(t) {
   appc.getOwnCache = getOwnCacheSpy;
 
   appc.resolveCache(fullName)
-    .then(actual => {
-      t.deepEqual(actual, expected);
-      t.end();
-      resetAppController();
-    });
+  .then(actual => {
+    t.deepEqual(actual, expected);
+    t.end();
+    resetAppController();
+  })
+  .catch(err => {
+    t.fail(err);
+    t.end();
+    resetAppController();
+  });
 });
 
 test('resolveCache rejects if query fails', function(t) {
@@ -673,11 +739,16 @@ test('resolveCache rejects if query fails', function(t) {
   appc.getOwnCache = getOwnCacheSpy;
 
   appc.resolveCache(fullName)
-    .catch(actual => {
-      t.deepEqual(actual, expected);
-      t.end();
-      resetAppController();
-    });
+  .then(res => {
+    t.fail(res);
+    t.end();
+    resetAppController();
+  })
+  .catch(actual => {
+    t.deepEqual(actual, expected);
+    t.end();
+    resetAppController();
+  });
 });
 
 test('getPeerInterface correct for http', function(t) {

@@ -45,6 +45,11 @@ test('onList calls sendBuffer with binary contents', function(t) {
     t.deepEqual(ccServerSpy.sendBuffer.args[0], [buffer]);
     t.end();
     resetResponder();
+  })
+  .catch(err => {
+    t.fail(err);
+    t.end();
+    resetResponder();
   });
 });
 
@@ -63,6 +68,11 @@ test('onList rejects with error', function(t) {
   );
 
   responder.onList(channel)
+  .then(res => {
+    t.fail(res);
+    t.end();
+    resetResponder();
+  })
   .catch(actual => {
     t.deepEqual(actual, expected);
     t.end();
@@ -108,6 +118,11 @@ test('onFile calls sendBuffer with file contents', function(t) {
     t.deepEqual(sendBufferSpy.args[0], [buff]);
     t.end();
     resetResponder();
+  })
+  .catch(err => {
+    t.fail(err);
+    t.end();
+    resetResponder();
   });
 });
 
@@ -136,6 +151,11 @@ test('onFile rejects with error', function(t) {
   );
 
   responder.onFile(channel, msg)
+  .then(res => {
+    t.fail(res);
+    t.end();
+    resetResponder();
+  })
   .catch(actual => {
     t.equal(actual, expected);
     t.end();

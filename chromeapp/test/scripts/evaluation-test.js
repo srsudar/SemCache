@@ -88,6 +88,11 @@ function discoverPeerPagesHelper(doLazy, t) {
 
     t.end();
     resetEvaluation(); 
+  })
+  .catch(err => {
+    t.fail(err);
+    t.end();
+    resetEvaluation(); 
   });
 }
 
@@ -107,12 +112,17 @@ test('getTimeValues returns result of get', function(t) {
   });
 
   evaluation.getTimeValues(key)
-    .then(actual => {
-      t.deepEqual(actual, expected);
-      t.deepEqual(getSpy.args[0], [scopedKey]);
-      t.end();
-      resetEvaluation();
-    });
+  .then(actual => {
+    t.deepEqual(actual, expected);
+    t.deepEqual(getSpy.args[0], [scopedKey]);
+    t.end();
+    resetEvaluation();
+  })
+  .catch(err => {
+    t.fail(err);
+    t.end();
+    resetEvaluation(); 
+  });
 });
 
 test('getTimeValues returns null if not present', function(t) {
@@ -129,12 +139,17 @@ test('getTimeValues returns null if not present', function(t) {
   });
 
   evaluation.getTimeValues(key)
-    .then(actual => {
-      t.equal(actual, expected);
-      t.deepEqual(getSpy.args[0], [scopedKey]);
-      t.end();
-      resetEvaluation();
-    });
+  .then(actual => {
+    t.equal(actual, expected);
+    t.deepEqual(getSpy.args[0], [scopedKey]);
+    t.end();
+    resetEvaluation();
+  })
+  .catch(err => {
+    t.fail(err);
+    t.end();
+    resetEvaluation(); 
+  });
 });
 
 test('fulfillPromises all resolve', function(t) {
@@ -176,6 +191,11 @@ test('fulfillPromises all resolve', function(t) {
     t.deepEqual(actual, expected);
     t.end();
     resetEvaluation(); 
+  })
+  .catch(err => {
+    t.fail(err);
+    t.end();
+    resetEvaluation(); 
   });
 });
 
@@ -200,8 +220,12 @@ test('fulfillPromises all reject', function(t) {
     t.deepEqual(actual, expected);
     t.end();
     resetEvaluation(); 
+  })
+  .catch(err => {
+    t.fail(err);
+    t.end();
+    resetEvaluation(); 
   });
-
 });
 
 test('runDiscoverPeerPagesIteration resolves if all is well', function(t) {
@@ -301,6 +325,11 @@ test('runDiscoverPeerPagesIteration resolves if all is well', function(t) {
     t.deepEqual(fetchJsonSpy.args[1], [ evalUrl2 ]);
     t.end();
     resetEvaluation();
+  })
+  .catch(err => {
+    t.fail(err);
+    t.end();
+    resetEvaluation(); 
   });
 });
 
@@ -354,6 +383,11 @@ test('runDiscoverPeerPagesIteration rejects if not enough pages', function(t) {
   evaluation.getEvalPagesUrl = getEvalPagesUrlSpy;
   
   evaluation.runDiscoverPeerPagesIteration(numPeers, numPages)
+  .then(res => {
+    t.fail(res);
+    t.end();
+    resetEvaluation();
+  })
   .catch(actual => { 
     t.deepEqual(actual, expected);
     t.end();
@@ -379,6 +413,11 @@ test('runDiscoverPeerPagesIteration rejects if missing peers', function(t) {
   evaluation.getNow = sinon.stub();
   
   evaluation.runDiscoverPeerPagesIteration(numPeers, numPages)
+  .then(res => {
+    t.fail(res);
+    t.end();
+    resetEvaluation(); 
+  })
   .catch(actual => { 
     t.deepEqual(actual, expected);
     t.end();
@@ -412,11 +451,16 @@ test('logTime calls storage correctly if new stream', function(t) {
   expectedSet[scopedKey] = [ time ];
 
   evaluation.logTime(key, time)
-    .then(() => {
-      t.deepEqual(setSpy.args[0], [ expectedSet ]);
-      t.end();
-      resetEvaluation();
-    });
+  .then(() => {
+    t.deepEqual(setSpy.args[0], [ expectedSet ]);
+    t.end();
+    resetEvaluation();
+  })
+  .catch(err => {
+    t.fail(err);
+    t.end();
+    resetEvaluation(); 
+  });
 });
 
 test('logTime calls storage correctly if appending to stream', function(t) {
@@ -443,11 +487,16 @@ test('logTime calls storage correctly if appending to stream', function(t) {
   expectedSet[scopedKey] = newTimes;
 
   evaluation.logTime(key, time)
-    .then(() => {
-      t.deepEqual(setSpy.args[0], [ expectedSet ]);
-      t.end();
-      resetEvaluation();
-    });
+  .then(() => {
+    t.deepEqual(setSpy.args[0], [ expectedSet ]);
+    t.end();
+    resetEvaluation();
+  })
+  .catch(err => {
+    t.fail(err);
+    t.end();
+    resetEvaluation(); 
+  });
 });
 
 test('generateDummyPage incorporates nonce and number', function(t) {
@@ -591,6 +640,11 @@ test('runLoadPageTrial correct', function(t) {
 
     t.end();
     resetEvaluation(); 
+  })
+  .catch(err => {
+    t.fail(err);
+    t.end();
+    resetEvaluation(); 
   });
 });
 
@@ -672,7 +726,13 @@ test('runLoadPageTrialForCache correct', function(t) {
 
     t.end();
     resetEvaluation(); 
+  })
+  .catch(err => {
+    t.fail(err);
+    t.end();
+    resetEvaluation(); 
   });
+
 });
 
 test('resolvePeers correct', function(t) {
@@ -720,13 +780,18 @@ test('resolvePeers correct', function(t) {
   evaluation.getNow = getNowSpy;
 
   evaluation.resolvePeers(cacheNames, resolveDelay, toLog)
-    .then(actual => {
-      t.deepEqual(actual, expected);
-      t.deepEqual(toLog.serviceNames, expectedServiceNames);
-      t.deepEqual(toLog.resolves, expectedResolves);
-      t.equal(waitSpy.callCount, caches.length);
+  .then(actual => {
+    t.deepEqual(actual, expected);
+    t.deepEqual(toLog.serviceNames, expectedServiceNames);
+    t.deepEqual(toLog.resolves, expectedResolves);
+    t.equal(waitSpy.callCount, caches.length);
 
-      t.end();
-      resetEvaluation();
-    });
+    t.end();
+    resetEvaluation();
+  })
+  .catch(err => {
+    t.fail(err);
+    t.end();
+    resetEvaluation(); 
+  });
 });
