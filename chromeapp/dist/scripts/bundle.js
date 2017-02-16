@@ -1963,11 +1963,48 @@ window.dnsSem = require('dnsSem');
 },{"dnsSem":"dnsSem","dnsc":"dnsc","dnssd":"dnssd"}],11:[function(require,module,exports){
 'use strict';
 
+var util = require('../util');
+
 /**
  * Code shared across the peer-interface implementations.
  */
 
+/**
+ * Returns the IP address, interpolating if necessary.
+ */
+function getIpAddress(ipaddr, url) {
+  var result = ipaddr;
+  if (!result) {
+    result = util.getHostFromUrl(url);
+  }
+  return result;
+}
+
+/**
+ * Returns the port, interpolating if necessary.
+ */
+function getPort(port, url) {
+  var result = port;
+  if (!result) {
+    result = util.getPortFromUrl(url);
+  }
+  return result;
+}
+
+/**
+ * Create parameters for a PeerAccessor getList call. If ipaddr or port is
+ * missing, tries to interpolate them from listUrl.
+ *
+ * @param {String} ipaddr IP address of the peer
+ * @param {Integer} port port of the peer
+ * @param {String} listUrl the list URL for the peer's list access point. Only
+ * needed if the transport method will be HTTP.
+ *
+ * @returns {JSON}
+ */
 exports.createListParams = function(ipaddr, port, listUrl) {
+  ipaddr = getIpAddress(ipaddr, listUrl);
+  port = getPort(port, listUrl);
   return {
     ipAddress: ipaddr,
     port: port,
@@ -1975,7 +2012,20 @@ exports.createListParams = function(ipaddr, port, listUrl) {
   };
 };
 
+/**
+ * Create parameters for a PeerAccessor getFile call. If ipaddr or port is
+ * missing, tries to interpolate them from listUrl.
+ *
+ * @param {String} ipaddr IP address of the peer
+ * @param {Integer} port port of the peer
+ * @param {String} fileUrl the list URL for the file's access URL. Only
+ * needed if the transport method will be HTTP.
+ *
+ * @returns {JSON}
+ */
 exports.createFileParams = function(ipaddr, port, fileUrl) {
+  ipaddr = getIpAddress(ipaddr, fileUrl);
+  port = getPort(port, fileUrl);
   return {
     ipAddress: ipaddr,
     port: port,
@@ -1983,7 +2033,7 @@ exports.createFileParams = function(ipaddr, port, fileUrl) {
   };
 };
 
-},{}],12:[function(require,module,exports){
+},{"../util":18}],12:[function(require,module,exports){
 'use strict';
 
 var util = require('../util');
@@ -2869,6 +2919,84 @@ exports.downloadText = function(text, fileName) {
 exports.trace = function trace(arg) {
   var now = (window.performance.now() / 1000).toFixed(3);
   console.log(now + ': ', arg);
+};
+
+/**
+ * Extract the hostname (or IP address) from a URL.
+ *
+ * @param {String} url
+ *
+ * @returns {String}
+ */
+exports.getHostFromUrl = function(url) {
+  // Find '//'. This will be the end of the scheme.
+  // Then find the minimum of '/', ':', '#', '?'. That will contain the URL.
+  var slashes = url.indexOf('//');
+  if (slashes < 0) { throw new Error('not a url: ' + url); }
+  // Truncate to ignore the slashes.
+  url = url.substring(slashes + 2);
+
+  var candidateIndices = [
+    url.indexOf(':'),
+    url.indexOf('#'),
+    url.indexOf('?'),
+    url.indexOf('/')
+  ];
+  var min = url.length;
+  candidateIndices.forEach(idx => {
+    if (idx !== -1) {
+      // It is present in the string.
+      if (idx < min) {
+        min = idx;
+      }
+    }
+  });
+  
+  return url.substr(0, min);
+};
+
+/**
+ * Extract the port from a URL. The port must be explicitly indicated in the
+ * URL, or an error is thrown.
+ *
+ * @param {String} url
+ *
+ * @returns {Integer}
+ */
+exports.getPortFromUrl = function(url) {
+  var originalUrl = url;
+  var host = exports.getHostFromUrl(url);
+  var idxOfHost = url.indexOf(host);
+  // Truncate the host
+  url = url.substring(idxOfHost + host.length);
+  if (!url.startsWith(':')) {
+    throw new Error('No port in url: ' + originalUrl);
+  }
+  // Truncate the colon
+  url = url.substring(1);
+  var candidateIndices = [
+    url.indexOf('#'),
+    url.indexOf('?'),
+    url.indexOf('/')
+  ];
+  var min = url.length;
+  candidateIndices.forEach(idx => {
+    if (idx !== -1) {
+      if (idx < min) {
+        min = idx;
+      }
+    }
+  });
+  var portStr = url.substring(0, min);
+  // There is no easy way that I'm aware of to check is something can be safely
+  // parsed to an int in JavaScript. Wtf. But this is will work well enough for
+  // our cases. It will permit things like '12a', '0xaf', etc, but this seems
+  // fine.
+  var result = parseInt(portStr, 10);
+  if (isNaN(result)) {
+    throw new Error('Invalid port in url: ' + originalUrl);
+  }
+  return parseInt(portStr);
 };
 
 },{}],19:[function(require,module,exports){
@@ -30783,7 +30911,7 @@ exports.saveMhtmlAndOpen = function(
   ipaddr,
   port
 ) {
-  return new Promise(function(resolve) {
+  return new Promise(function(resolve, reject) {
     var start = evaluation.getNow();
     var streamName = 'open_' + captureUrl;
     var params = ifCommon.createFileParams(ipaddr, port, mhtmlUrl);
@@ -30807,6 +30935,9 @@ exports.saveMhtmlAndOpen = function(
       evaluation.logTime(streamName, totalTime);
       console.warn('totalTime to fetch: ', totalTime);
       resolve(totalTime);
+    })
+    .catch(err => {
+      reject(err);
     });
   });
 };
@@ -34248,23 +34379,29 @@ exports.getFileFromEntry = function(fileEntry) {
  */
 exports.getFileContents = function(fileEntry) {
   return new Promise(function(resolve, reject) {
-    // This is the Buffer we will write the file contents into as we read it.
+    // Array of Buffers that we write chunks to as we receive them.
     var chunks = [];
     exports.getFileFromEntry(fileEntry)
     .then(file => {
       var fileReader = exports.createFileReader();
 
       fileReader.onload = function(evt) {
-        chunks.push(evt.target.result);
+        // We want to push Buffers, not ArrayBuffers.
+        var arrayBuffer = evt.target.result;
+        chunks.push(Buffer.from(arrayBuffer));
       };
 
       fileReader.onloadend = function() {
-        var result = Buffer.concat(chunks);
-        resolve(result);
+        try {
+          var result = Buffer.concat(chunks);
+          resolve(result);
+        } catch (err) {
+          reject(err);
+        }
       };
 
       fileReader.onerror = function(evt) {
-        console.error('error reading', evt.target.error);
+        console.error('error reading ', evt.target.error);
         reject(evt.target.error);
       };
 

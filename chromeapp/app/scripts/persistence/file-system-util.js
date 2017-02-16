@@ -163,14 +163,16 @@ exports.getFileFromEntry = function(fileEntry) {
  */
 exports.getFileContents = function(fileEntry) {
   return new Promise(function(resolve, reject) {
-    // This is the Buffer we will write the file contents into as we read it.
+    // Array of Buffers that we write chunks to as we receive them.
     var chunks = [];
     exports.getFileFromEntry(fileEntry)
     .then(file => {
       var fileReader = exports.createFileReader();
 
       fileReader.onload = function(evt) {
-        chunks.push(evt.target.result);
+        // We want to push Buffers, not ArrayBuffers.
+        var arrayBuffer = evt.target.result;
+        chunks.push(Buffer.from(arrayBuffer));
       };
 
       fileReader.onloadend = function() {
@@ -183,7 +185,7 @@ exports.getFileContents = function(fileEntry) {
       };
 
       fileReader.onerror = function(evt) {
-        console.error('error reading', evt.target.error);
+        console.error('error reading ', evt.target.error);
         reject(evt.target.error);
       };
 

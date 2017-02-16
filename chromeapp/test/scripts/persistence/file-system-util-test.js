@@ -1,9 +1,11 @@
 'use strict';
 var Buffer = require('buffer').Buffer;
 var test = require('tape');
+var proxyquire = require('proxyquire');
 var sinon = require('sinon');
 require('sinon-as-promised');
 
+var binUtil = require('../../../app/scripts/dnssd/binary-utils').BinaryUtils;
 var util = require('../../../app/scripts/persistence/file-system-util');
 
 /**
@@ -306,8 +308,9 @@ test('getFileContents resolves with full contents', function(t) {
   var fileReaderStub = sinon.stub();
   util.createFileReader = sinon.stub().returns(fileReaderStub);
 
-  var buff1 = Buffer.from('Tyrion ');
-  var buff2 = Buffer.from('Lannister');
+  // We write ArrayBuffer objects.
+  var buff1 = binUtil.stringToArrayBuffer('Tyrion ');
+  var buff2 = binUtil.stringToArrayBuffer('Lannister');
   var expectedResult = Buffer.from('Tyrion Lannister');
 
   var file = { stubType: 'file' };
@@ -329,29 +332,39 @@ test('getFileContents resolves with full contents', function(t) {
     t.equal(actual.toString(), 'Tyrion Lannister');
     t.end();
     resetUtil();
+  })
+  .catch(err => {
+    t.fail(err);
+    t.end();
   });
 });
 
 test('getFileContents rejects if Buffer.concat fails', function(t) {
   var fileReaderStub = sinon.stub();
-  util.createFileReader = sinon.stub().returns(fileReaderStub);
+  var expected = { error: 'nope' };
 
   var file = { stubType: 'file' };
   var fileEntry = { stubType: 'fileEntry' };
 
+  util = proxyquire('../../../app/scripts/persistence/file-system-util', {
+    'buffer': {
+      Buffer: {
+        concat: sinon.stub().throws(expected)
+      }
+    }
+  });
+  util.createFileReader = sinon.stub().returns(fileReaderStub);
   util.getFileFromEntry = sinon.stub().withArgs(fileEntry).resolves(file);
 
   fileReaderStub.readAsArrayBuffer = function(actualFile) {
     t.equal(actualFile, file);
     // And now issue our calls to the events.
-    fileReaderStub.onload({ target: { result: 'bad' } });
-    fileReaderStub.onload({ target: { result: 'uhoh' } });
     fileReaderStub.onloadend();
   };
 
   util.getFileContents(fileEntry)
   .catch(actual => {
-    t.notEqual(actual, undefined);
+    t.equal(actual, expected);
     t.end();
     resetUtil();
   });

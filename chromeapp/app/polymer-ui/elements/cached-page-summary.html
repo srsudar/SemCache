@@ -100,6 +100,13 @@ Example:
           text="Opening">
         </paper-toast>
 
+        <paper-toast
+          id="toasterror"
+          duration="5"
+          class="fit-bottom"
+          text="Could not open">
+        </paper-toast>
+
       </div>
     </div>
   </template>
@@ -186,19 +193,31 @@ Example:
         return appController;
       },
 
-      openUrl: function(url) {
-        var appController = this.getAppController();
-        var toast = this.$.toastopening;
-        toast.fitInto = this.$.actioncontainer;
-        toast.open();
-        appController.saveMhtmlAndOpen(
-            this.captureUrl,
-            this.captureDate,
-            this.accessPath,
-            this.metadata
-        )
-        .then(() => {
-          this.$.toastopening.toggle();
+      openUrl: function() {
+        var thisEl = this;
+        return new Promise(function(resolve) {
+          Promise.resolve()
+          .then(() => {
+            var appController = thisEl.getAppController();
+            var toast = thisEl.$.toastopening;
+            toast.fitInto = thisEl.$.actioncontainer;
+            toast.open();
+            return appController.saveMhtmlAndOpen(
+                thisEl.captureUrl,
+                thisEl.captureDate,
+                thisEl.accessPath,
+                thisEl.metadata
+            );
+          })
+          .then(() => {
+            thisEl.$.toastopening.close();
+            resolve();
+          })
+          .catch(err => {
+            thisEl.$.toastopening.close();
+            thisEl.$.toasterror.open();
+            resolve();
+          });
         });
       },
 

@@ -36,7 +36,6 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 
     <script>
       suite('<cached-page-summary>', function() {
-
         var myEl;
         var moment;
 
@@ -73,13 +72,43 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
             saveMhtmlAndOpen: sinon.stub().returns(Promise.resolve())
           };
           myEl.getAppController = sinon.stub().returns(appControllerSpy);
+          // myEl.$.open.click();
+          myEl.openUrl(boundData.accessPath)
+          .then(() => {
+            var args = appControllerSpy.saveMhtmlAndOpen.args[0];
+            assert.equal(appControllerSpy.saveMhtmlAndOpen.calledOnce, true);
+            assert.equal(args[0], boundData.captureUrl);
+            assert.equal(args[1], boundData.captureDate);
+            assert.equal(args[2], boundData.accessPath);
+            assert.equal(args[3], boundData.metadata);
+            // We should have closed the toasts
+            assert.equal(myEl.$.toastopening.opened, false);
+            assert.equal(myEl.$.toasterror.opened, false);
+          });
+        });
+
+        test('clicking open calls openUrl', function() {
+          var openUrlSpy = sinon.stub();
+          myEl.openUrl = openUrlSpy;
           myEl.$.open.click();
-          var args = appControllerSpy.saveMhtmlAndOpen.args[0];
-          assert.equal(appControllerSpy.saveMhtmlAndOpen.calledOnce, true);
-          assert.equal(args[0], boundData.captureUrl);
-          assert.equal(args[1], boundData.captureDate);
-          assert.equal(args[2], boundData.accessPath);
-          assert.equal(args[3], boundData.metadata);
+          assert.equal(openUrlSpy.callCount, 1);
+        });
+
+        test('shows error if saveMhtmlAndOpen rejects', function() {
+          var msg = 'could not load file';
+          var err = new Error(msg);
+          var appControllerSpy = {
+            saveMhtmlAndOpen: sinon.stub().returns(Promise.reject(err))
+          };
+
+          myEl.getAppController = sinon.stub().returns(appControllerSpy);
+
+          myEl.openUrl(boundData.accessPath)
+          .then(() => {
+            assert.equal(appControllerSpy.saveMhtmlAndOpen.calledOnce, true);
+            assert.equal(myEl.$.toastopening.opened, false);
+            assert.equal(myEl.$.toasterror.opened, true);
+          });
         });
 
       });
