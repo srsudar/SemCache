@@ -174,8 +174,12 @@ exports.getFileContents = function(fileEntry) {
       };
 
       fileReader.onloadend = function() {
-        var result = Buffer.concat(chunks);
-        resolve(result);
+        try {
+          var result = Buffer.concat(chunks);
+          resolve(result);
+        } catch (err) {
+          reject(err);
+        }
       };
 
       fileReader.onerror = function(evt) {

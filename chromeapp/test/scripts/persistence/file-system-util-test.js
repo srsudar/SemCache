@@ -332,6 +332,31 @@ test('getFileContents resolves with full contents', function(t) {
   });
 });
 
+test('getFileContents rejects if Buffer.concat fails', function(t) {
+  var fileReaderStub = sinon.stub();
+  util.createFileReader = sinon.stub().returns(fileReaderStub);
+
+  var file = { stubType: 'file' };
+  var fileEntry = { stubType: 'fileEntry' };
+
+  util.getFileFromEntry = sinon.stub().withArgs(fileEntry).resolves(file);
+
+  fileReaderStub.readAsArrayBuffer = function(actualFile) {
+    t.equal(actualFile, file);
+    // And now issue our calls to the events.
+    fileReaderStub.onload({ target: { result: 'bad' } });
+    fileReaderStub.onload({ target: { result: 'uhoh' } });
+    fileReaderStub.onloadend();
+  };
+
+  util.getFileContents(fileEntry)
+  .catch(actual => {
+    t.notEqual(actual, undefined);
+    t.end();
+    resetUtil();
+  });
+});
+
 test('getFileContents rejects when onerror called', function(t) {
   var fileReaderStub = sinon.stub();
   util.createFileReader = sinon.stub().returns(fileReaderStub);
