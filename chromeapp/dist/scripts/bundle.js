@@ -2183,6 +2183,8 @@ var URL_DATE_DELIMITER = '_';
 
 exports.MHTML_EXTENSION = '.mhtml';
 
+exports.DEBUG = false;
+
 /**
  * This object represents a page that is stored in the cache and can be browsed
  * to.
@@ -2323,19 +2325,22 @@ exports.getAllFileEntriesForPages = function() {
  * @return {Promise -> CachedPage} Promise that resolves with the CachedPage
  */
 exports.getEntryAsCachedPage = function(entry) {
-  var captureUrl = exports.getCaptureUrlFromName(entry.name);
-  var captureDate = exports.getCaptureDateFromName(entry.name);
-  var accessUrl = serverApi.getAccessUrlForCachedPage(entry.fullPath);
-
   // Retrieve the metadata from Chrome storage.
-  return new Promise(function(resolve) {
+  return new Promise(function(resolve, reject) {
+    var captureUrl = exports.getCaptureUrlFromName(entry.name);
+    var captureDate = exports.getCaptureDateFromName(entry.name);
+    var accessUrl = serverApi.getAccessUrlForCachedPage(entry.fullPath);
+
     exports.getMetadataForEntry(entry)
-      .then(mdata => {
-        var result = new exports.CachedPage(
-          captureUrl, captureDate, accessUrl, mdata
-        );
-        resolve(result);
-      });
+    .then(mdata => {
+      var result = new exports.CachedPage(
+        captureUrl, captureDate, accessUrl, mdata
+      );
+      resolve(result);
+    })
+    .catch(err => {
+      reject(err);
+    });
   });
 };
 
@@ -2349,21 +2354,26 @@ exports.getEntryAsCachedPage = function(entry) {
  * @return {Promise -> object} Promise that resolves with the metadata object
  */
 exports.getMetadataForEntry = function(entry) {
-  var key = exports.createMetadataKey(entry);
-  return new Promise(function(resolve) {
+  return new Promise(function(resolve, reject) {
+    var key = exports.createMetadataKey(entry);
     storage.get(key)
-      .then(obj => {
-        // The get API resolves with the key value pair in a single object,
-        // e.g. get('foo') -> { foo: bar }.
-        var result = {};
-        if (obj && obj[key]) {
-          result = obj[key];
-        }
+    .then(obj => {
+      // The get API resolves with the key value pair in a single object,
+      // e.g. get('foo') -> { foo: bar }.
+      var result = {};
+      if (obj && obj[key]) {
+        result = obj[key];
+      }
+      if (exports.DEBUG) {
         console.log('querying for key: ', key);
         console.log('  get result: ', obj);
         console.log('  metadata: ', result);
-        resolve(result);
-      });
+      }
+      resolve(result);
+    })
+    .catch(err => {
+      reject(err);
+    });
   });
 };
 
@@ -2832,10 +2842,13 @@ exports.getCachedFileNameFromPath = function(path) {
  * parsed from url.
  */
 exports.fetchJson = function(url) {
-  return new Promise(function(resolve) {
+  return new Promise(function(resolve, reject) {
     exports.fetch(url)
     .then(response => {
       resolve(response.json());
+    })
+    .catch(err => {
+      reject(err);
     });
   });
 };
@@ -30686,22 +30699,25 @@ exports.getPeerCacheNames = function() {
     return Promise.resolve(result);
   }
 
-  return new Promise(function(resolve) {
+  return new Promise(function(resolve, reject) {
     dnssdSem.browseForSemCacheInstanceNames()
-      .then(instanceNames => {
-        // sort by instance name.
-        instanceNames.sort(function(a, b) {
-          return a.serviceName.localeCompare(b.serviceName);
-        });
-        instanceNames.forEach(instance => {
-          if (instance.serviceName === thisCacheName.serviceName) {
-            // We've found ourselves. Don't add it.
-            return;
-          }
-          result.push(instance);
-        });
-        resolve(result);
+    .then(instanceNames => {
+      // sort by instance name.
+      instanceNames.sort(function(a, b) {
+        return a.serviceName.localeCompare(b.serviceName);
       });
+      instanceNames.forEach(instance => {
+        if (instance.serviceName === thisCacheName.serviceName) {
+          // We've found ourselves. Don't add it.
+          return;
+        }
+        result.push(instance);
+      });
+      resolve(result);
+    })
+    .catch(err => {
+      reject(err);
+    });
   });
 };
 
@@ -30741,26 +30757,29 @@ exports.getBrowseableCaches = function() {
 
   var ipAddress = exports.getListeningHttpInterface().address;
 
-  return new Promise(function(resolve) {
+  return new Promise(function(resolve, reject) {
     dnssdSem.browseForSemCacheInstances()
-      .then(instances => {
-        // sort by instance name.
-        instances.sort(function(a, b) {
-          return a.instanceName.localeCompare(b.instanceName);
-        });
-        instances.forEach(instance => {
-          if (instance.ipAddress === ipAddress) {
-            // We've found ourselves. Don't add it.
-            return;
-          }
-          instance.listUrl = serverApi.getListPageUrlForCache(
-            instance.ipAddress,
-            instance.port
-          );
-          result.push(instance);
-        });
-        resolve(result);
+    .then(instances => {
+      // sort by instance name.
+      instances.sort(function(a, b) {
+        return a.instanceName.localeCompare(b.instanceName);
       });
+      instances.forEach(instance => {
+        if (instance.ipAddress === ipAddress) {
+          // We've found ourselves. Don't add it.
+          return;
+        }
+        instance.listUrl = serverApi.getListPageUrlForCache(
+          instance.ipAddress,
+          instance.port
+        );
+        result.push(instance);
+      });
+      resolve(result);
+    })
+    .catch(err => {
+      reject(err);
+    });
   });
 };
 
@@ -30826,13 +30845,16 @@ exports.stopServers = function() {
 exports.start = function() {
   extBridge.attachListeners();
 
-  return new Promise(function(resolve) {
+  return new Promise(function(resolve, reject) {
       settings.init()
       .then(settingsObj => {
         console.log('initialized settings: ', settingsObj);
         exports.updateCachesForSettings();
         resolve();
-      });
+      })
+    .catch(err => {
+      reject(err);
+    });
   });
 };
 
@@ -32038,13 +32060,13 @@ exports.filterResourcesForQuery = function(resources, qName, qType, qClass) {
 exports.getSocket = function() {
   if (exports.socket) {
     // Already started, resolve immediately.
-    return new Promise(resolve => { resolve(exports.socket); });
+    return Promise.resolve(exports.socket);
   }
 
   // Attach our listeners.
   chromeUdp.addOnReceiveListener(exports.onReceiveListener);
 
-  return new Promise((resolve, reject) => {
+  return new Promise(function(resolve, reject) {
     // We have two steps to do here: create a socket and bind that socket to
     // the mDNS port.
     var createPromise = chromeUdp.create({});
@@ -32107,8 +32129,9 @@ exports.start = function() {
  * @return {Promise} resolves when the cache is initialized
  */
 exports.initializeNetworkInterfaceCache = function() {
-  return new Promise(function(resolve) {
-    chromeUdp.getNetworkInterfaces().then(function success(interfaces) {
+  return new Promise(function(resolve, reject) {
+    chromeUdp.getNetworkInterfaces()
+    .then(function success(interfaces) {
       interfaces.forEach(iface => {
         if (iface.address.indexOf(':') !== -1) {
           console.log('Not yet supporting IPv6: ', iface);
@@ -32117,6 +32140,9 @@ exports.initializeNetworkInterfaceCache = function() {
         }
       });
       resolve();
+    })
+    .catch(err => {
+      reject(err);
     });
   });
 };
@@ -32994,7 +33020,7 @@ exports.queryForServiceInstances = function(
   waitTime = waitTime || exports.DEFAULT_QUERY_WAIT_TIME;
   var rType = dnsCodes.RECORD_TYPES.PTR;
   var rClass = dnsCodes.CLASS_CODES.IN;
-  return new Promise(function(resolve) {
+  return new Promise(function(resolve, reject) {
     exports.queryForResponses(
       serviceType,
       rType,
@@ -33026,6 +33052,9 @@ exports.queryForServiceInstances = function(
       result = _.uniqWith(result, _.isEqual);
 
       resolve(result);
+    })
+    .catch(err => {
+      reject(err);
     });
   });
 };
@@ -33052,7 +33081,7 @@ exports.queryForIpAddress = function(domainName, timeout, numRetries) {
   timeout = timeout || exports.DEFAULT_QUERY_WAIT_TIME;
   var rType = dnsCodes.RECORD_TYPES.A;
   var rClass = dnsCodes.CLASS_CODES.IN;
-  return new Promise(function(resolve) {
+  return new Promise(function(resolve, reject) {
     exports.queryForResponses(
       domainName,
       rType,
@@ -33076,6 +33105,9 @@ exports.queryForIpAddress = function(domainName, timeout, numRetries) {
         });
       });
       resolve(result);
+    })
+    .catch(err => {
+      reject(err);
     });
   });
 };
@@ -33101,7 +33133,7 @@ exports.queryForInstanceInfo = function(instanceName, timeout, numRetries) {
   timeout = timeout || exports.DEFAULT_QUERY_WAIT_TIME;
   var rType = dnsCodes.RECORD_TYPES.SRV;
   var rClass = dnsCodes.CLASS_CODES.IN;
-  return new Promise(function(resolve) {
+  return new Promise(function(resolve, reject) {
     exports.queryForResponses(
       instanceName,
       rType,
@@ -33126,6 +33158,9 @@ exports.queryForInstanceInfo = function(instanceName, timeout, numRetries) {
         });
       });
       resolve(result);
+    })
+    .catch(err => {
+      reject(err);
     });
   });
 };
@@ -33181,6 +33216,8 @@ exports.queryForResponses = function(
   // include a general standing query (if multipleResponses is true), or a
   // query for the first response (if multipleResponses is false).
 
+  // Not immediately obvious where something should reject in this case, so not
+  // including a reject parameter yet.
   return new Promise(function(resolve) {
     // Code executes even after a promise resolves, so we will use this flag to
     // make sure we never try to resolve more than once.
@@ -33348,23 +33385,26 @@ exports.getNow = function() {
  * @return {Promise} Promise that resolves when the write completes
  */
 exports.logTime = function(key, time) {
-  var scopedKey = exports.createTimingKey(key);
-  return new Promise(function(resolve) {
+  return new Promise(function(resolve, reject) {
+    var scopedKey = exports.createTimingKey(key);
     exports.getTimeValues(key)
-      .then(existingValues => {
-        var setObj = {};
-        if (existingValues) {
-          existingValues.push(time);
-          setObj[scopedKey] = existingValues;
-        } else {
-          // New value.
-          setObj[scopedKey] = [ time ];
-        }
-        return storage.set(setObj);
-      })
-      .then(() => {
-        resolve();
-      });
+    .then(existingValues => {
+      var setObj = {};
+      if (existingValues) {
+        existingValues.push(time);
+        setObj[scopedKey] = existingValues;
+      } else {
+        // New value.
+        setObj[scopedKey] = [ time ];
+      }
+      return storage.set(setObj);
+    })
+    .then(() => {
+      resolve();
+    })
+    .catch(err => {
+      reject(err);
+    });
   });
 };
 
@@ -33381,7 +33421,7 @@ exports.logTime = function(key, time) {
  * key in storage. Returns null if the value is not present.
  */
 exports.getTimeValues = function(key) {
-  return new Promise(function(resolve) {
+  return new Promise(function(resolve, reject) {
     var scopedKey = exports.createTimingKey(key);
     storage.get(scopedKey)
     .then(existingValues => {
@@ -33391,6 +33431,9 @@ exports.getTimeValues = function(key) {
         // Not present.
         resolve(null);
       }
+    })
+    .catch(err => {
+      reject(err);
     });
   });
 };
@@ -34135,7 +34178,7 @@ exports.getDirectoryForCacheEntries = function() {
  * directory has not been set.
  */
 exports.getPersistedBaseDir = function() {
-  return new Promise(function(resolve) {
+  return new Promise(function(resolve, reject) {
     exports.baseDirIsSet()
     .then(isSet => {
       if (isSet) {
@@ -34151,6 +34194,9 @@ exports.getPersistedBaseDir = function() {
         // Null if not set.
         resolve(null);
       }
+    })
+    .catch(err => {
+      reject(err);
     });
   });
 };
@@ -34159,7 +34205,7 @@ exports.getPersistedBaseDir = function() {
  * @return {Promise} Promise that resolves with a boolean
  */
 exports.baseDirIsSet = function() {
-  return new Promise(function(resolve) {
+  return new Promise(function(resolve, reject) {
     chromeStorage.get(exports.KEY_BASE_DIR)
     .then(keyValue => {
       var isSet = false;
@@ -34167,6 +34213,9 @@ exports.baseDirIsSet = function() {
         isSet = true;
       }
       resolve(isSet);
+    })
+    .catch(err => {
+      reject(err);
     });
   });
 };
@@ -34190,10 +34239,13 @@ exports.setBaseCacheDir = function(dirEntry) {
  * been chosen by the user.
  */
 exports.promptForDir = function() {
-  return new Promise(function(resolve) {
+  return new Promise(function(resolve, reject) {
     chromefs.chooseEntry({type: 'openDirectory'})
     .then(entry => {
       resolve(entry);
+    })
+    .catch(err => {
+      reject(err);
     });
   });
 };
@@ -38893,19 +38945,22 @@ exports.getSettingsObj = function() {
  */
 exports.init = function() {
   // Get all the known settings
-  return new Promise(function(resolve) {
+  return new Promise(function(resolve, reject) {
     storage.get(exports.getAllSettingKeys())
-      .then(allKvPairs => {
-        var processedSettings = {};
-        Object.keys(allKvPairs).forEach(rawKey => {
-          // we're dealing with the raw keys here, e.g. setting_absPath
-          var processedKey = exports.removeNameSpaceFromKey(rawKey);
-          var value = allKvPairs[rawKey];
-          processedSettings[processedKey] = value;
-        });
-        exports.SETTINGS_OBJ = processedSettings;
-        resolve(processedSettings);
+    .then(allKvPairs => {
+      var processedSettings = {};
+      Object.keys(allKvPairs).forEach(rawKey => {
+        // we're dealing with the raw keys here, e.g. setting_absPath
+        var processedKey = exports.removeNameSpaceFromKey(rawKey);
+        var value = allKvPairs[rawKey];
+        processedSettings[processedKey] = value;
       });
+      exports.SETTINGS_OBJ = processedSettings;
+      resolve(processedSettings);
+    })
+    .catch(err => {
+      reject(err);
+    });
   });
 
 };
@@ -38918,18 +38973,21 @@ exports.init = function() {
  * after the set completes
  */
 exports.set = function(key, value) {
-  var namespacedKey = exports.createNameSpacedKey(key);
-  var kvPair = {};
-  kvPair[namespacedKey] = value;
-  var useSync = false;
+  return new Promise(function(resolve, reject) {
+    var namespacedKey = exports.createNameSpacedKey(key);
+    var kvPair = {};
+    kvPair[namespacedKey] = value;
+    var useSync = false;
 
-  return new Promise(function(resolve) {
     storage.set(kvPair, useSync)
-      .then(() => {
-        exports.SETTINGS_OBJ[key] = value;
-        // Now that the set has succeeded, update the cache of settings.
-        resolve(exports.getSettingsObj());
-      });
+    .then(() => {
+      exports.SETTINGS_OBJ[key] = value;
+      // Now that the set has succeeded, update the cache of settings.
+      resolve(exports.getSettingsObj());
+    })
+    .catch(err => {
+      reject(err);
+    });
   });
 };
 
@@ -39123,7 +39181,7 @@ exports.setTransportWebrtc = function() {
  * }
  */
 exports.promptAndSetNewBaseDir = function() {
-  return new Promise(function(resolve) {
+  return new Promise(function(resolve, reject) {
     var dirId;
     fileSystem.promptForDir()
     .then(dirEntry => {
@@ -39148,6 +39206,9 @@ exports.promptAndSetNewBaseDir = function() {
           baseDirPath: displayPath
         }
       );
+    })
+    .catch(err => {
+      reject(err);
     });
   });
 };
