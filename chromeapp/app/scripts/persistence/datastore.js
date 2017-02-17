@@ -25,6 +25,8 @@ var URL_DATE_DELIMITER = '_';
 
 exports.MHTML_EXTENSION = '.mhtml';
 
+exports.DEBUG = false;
+
 /**
  * This object represents a page that is stored in the cache and can be browsed
  * to.
@@ -165,19 +167,22 @@ exports.getAllFileEntriesForPages = function() {
  * @return {Promise -> CachedPage} Promise that resolves with the CachedPage
  */
 exports.getEntryAsCachedPage = function(entry) {
-  var captureUrl = exports.getCaptureUrlFromName(entry.name);
-  var captureDate = exports.getCaptureDateFromName(entry.name);
-  var accessUrl = serverApi.getAccessUrlForCachedPage(entry.fullPath);
-
   // Retrieve the metadata from Chrome storage.
-  return new Promise(function(resolve) {
+  return new Promise(function(resolve, reject) {
+    var captureUrl = exports.getCaptureUrlFromName(entry.name);
+    var captureDate = exports.getCaptureDateFromName(entry.name);
+    var accessUrl = serverApi.getAccessUrlForCachedPage(entry.fullPath);
+
     exports.getMetadataForEntry(entry)
-      .then(mdata => {
-        var result = new exports.CachedPage(
-          captureUrl, captureDate, accessUrl, mdata
-        );
-        resolve(result);
-      });
+    .then(mdata => {
+      var result = new exports.CachedPage(
+        captureUrl, captureDate, accessUrl, mdata
+      );
+      resolve(result);
+    })
+    .catch(err => {
+      reject(err);
+    });
   });
 };
 
@@ -191,21 +196,26 @@ exports.getEntryAsCachedPage = function(entry) {
  * @return {Promise -> object} Promise that resolves with the metadata object
  */
 exports.getMetadataForEntry = function(entry) {
-  var key = exports.createMetadataKey(entry);
-  return new Promise(function(resolve) {
+  return new Promise(function(resolve, reject) {
+    var key = exports.createMetadataKey(entry);
     storage.get(key)
-      .then(obj => {
-        // The get API resolves with the key value pair in a single object,
-        // e.g. get('foo') -> { foo: bar }.
-        var result = {};
-        if (obj && obj[key]) {
-          result = obj[key];
-        }
+    .then(obj => {
+      // The get API resolves with the key value pair in a single object,
+      // e.g. get('foo') -> { foo: bar }.
+      var result = {};
+      if (obj && obj[key]) {
+        result = obj[key];
+      }
+      if (exports.DEBUG) {
         console.log('querying for key: ', key);
         console.log('  get result: ', obj);
         console.log('  metadata: ', result);
-        resolve(result);
-      });
+      }
+      resolve(result);
+    })
+    .catch(err => {
+      reject(err);
+    });
   });
 };
 

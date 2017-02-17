@@ -107,23 +107,26 @@ exports.getNow = function() {
  * @return {Promise} Promise that resolves when the write completes
  */
 exports.logTime = function(key, time) {
-  var scopedKey = exports.createTimingKey(key);
-  return new Promise(function(resolve) {
+  return new Promise(function(resolve, reject) {
+    var scopedKey = exports.createTimingKey(key);
     exports.getTimeValues(key)
-      .then(existingValues => {
-        var setObj = {};
-        if (existingValues) {
-          existingValues.push(time);
-          setObj[scopedKey] = existingValues;
-        } else {
-          // New value.
-          setObj[scopedKey] = [ time ];
-        }
-        return storage.set(setObj);
-      })
-      .then(() => {
-        resolve();
-      });
+    .then(existingValues => {
+      var setObj = {};
+      if (existingValues) {
+        existingValues.push(time);
+        setObj[scopedKey] = existingValues;
+      } else {
+        // New value.
+        setObj[scopedKey] = [ time ];
+      }
+      return storage.set(setObj);
+    })
+    .then(() => {
+      resolve();
+    })
+    .catch(err => {
+      reject(err);
+    });
   });
 };
 
@@ -140,7 +143,7 @@ exports.logTime = function(key, time) {
  * key in storage. Returns null if the value is not present.
  */
 exports.getTimeValues = function(key) {
-  return new Promise(function(resolve) {
+  return new Promise(function(resolve, reject) {
     var scopedKey = exports.createTimingKey(key);
     storage.get(scopedKey)
     .then(existingValues => {
@@ -150,6 +153,9 @@ exports.getTimeValues = function(key) {
         // Not present.
         resolve(null);
       }
+    })
+    .catch(err => {
+      reject(err);
     });
   });
 };

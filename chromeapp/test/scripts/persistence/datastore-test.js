@@ -18,6 +18,13 @@ function resetDatastore() {
   datastore = require('../../../app/scripts/persistence/datastore');
 }
 
+function proxyquireDatastore(proxies) {
+  datastore = proxyquire(
+    '../../../app/scripts/persistence/datastore', proxies
+  );
+
+}
+
 test('CachedPage constructs', function(t) {
   var url = 'http://www.example.com';
   var path = 'pages/www.example.com';
@@ -122,17 +129,14 @@ test('getAllFileEntriesForPages resolves all pages', function(t) {
   var expectedEntries = ['a', 'b', 54321, 'foobar', {}];
   var listEntriesSpy = sinon.stub().resolves(expectedEntries);
 
-  datastore = proxyquire(
-    '../../../app/scripts/persistence/datastore',
-    {
-      './file-system': {
-        getDirectoryForCacheEntries: getDirectoryForCacheEntriesSpy
-      },
-      './file-system-util': {
-        listEntries: listEntriesSpy
-      }
+  proxyquireDatastore({
+    './file-system': {
+      getDirectoryForCacheEntries: getDirectoryForCacheEntriesSpy
+    },
+    './file-system-util': {
+      listEntries: listEntriesSpy
     }
-  );
+  });
 
   datastore.getAllFileEntriesForPages()
   .then(entries => {
@@ -148,14 +152,11 @@ test('getAllFileEntriesForPages resolves all pages', function(t) {
 });
 
 test('getAllFileEntriesForPages rejects if base dir not set', function(t) {
-  datastore = proxyquire(
-    '../../../app/scripts/persistence/datastore',
-    {
-      './file-system': {
-        getDirectoryForCacheEntries: sinon.stub().resolves(null)
-      }
+  proxyquireDatastore({
+    './file-system': {
+      getDirectoryForCacheEntries: sinon.stub().resolves(null)
     }
-  );
+  });
 
   datastore.getAllFileEntriesForPages()
   .then(res => {
@@ -187,14 +188,11 @@ test('getEntryAsCachedPage returns CachedPage', function(t) {
   var accessUrl = 'the url with the file';
   var getAccessUrlStub = sinon.stub().withArgs(entry).returns(accessUrl);
 
-  datastore = proxyquire(
-    '../../../app/scripts/persistence/datastore',
-    {
-      '../server/server-api': {
-        getAccessUrlForCachedPage: getAccessUrlStub
-      }
+  proxyquireDatastore({
+    '../server/server-api': {
+      getAccessUrlForCachedPage: getAccessUrlStub
     }
-  );
+  });
   datastore.getMetadataForEntry = getMetadataForEntrySpy;
 
   var getUrlStub = sinon.stub().returns(url);
@@ -208,9 +206,33 @@ test('getEntryAsCachedPage returns CachedPage', function(t) {
   .then(actual => {
     t.deepEqual(actual, expected);
     t.end();
+    resetDatastore();
   })
   .catch(err => {
     t.fail(err);
+    t.end();
+    resetDatastore();
+  });
+});
+
+test('getEntryAsCachedPage rejects if error', function(t) {
+  var expected = { error: 'trouble' };
+  proxyquireDatastore({
+    '../server/server-api': {
+      getAccessUrlForCachedPage: sinon.stub()
+    }
+  });
+  datastore.getMetadataForEntry = sinon.stub().rejects(expected);
+  datastore.getCaptureUrlFromName = sinon.stub();
+  datastore.getCaptureDateFromName = sinon.stub();
+  datastore.getEntryAsCachedPage({ fullPath: 'http://1234:30/foo' })
+  .then(res => {
+    t.fail(res);
+    t.end();
+    resetDatastore();
+  })
+  .catch(actual => {
+    t.equal(actual, expected);
     t.end();
     resetDatastore();
   });
@@ -223,14 +245,11 @@ test(
     var getDirectoryForCacheEntriesSpy = sinon.stub().rejects(errObj);
     var writeMetadataForEntrySpy = sinon.stub().resolves();
 
-    datastore = proxyquire(
-      '../../../app/scripts/persistence/datastore',
-      {
-        './file-system': {
-          getDirectoryForCacheEntries: getDirectoryForCacheEntriesSpy
-        }
+    proxyquireDatastore({
+      './file-system': {
+        getDirectoryForCacheEntries: getDirectoryForCacheEntriesSpy
       }
-    );
+    });
     datastore.writeMetadataForEntry = writeMetadataForEntrySpy;
 
     datastore.addPageToCache('url', 'date', 'blob')
@@ -264,18 +283,15 @@ test('addPageToCache rejects if write metadata rejects', function(t) {
   var writeMetadataForEntrySpy = sinon.stub().rejects(expected);
   var createFileNameSpy = sinon.stub().returns(fileName);
 
-  datastore = proxyquire(
-    '../../../app/scripts/persistence/datastore',
-    {
-      './file-system': {
-        getDirectoryForCacheEntries: getDirectoryForCacheEntriesSpy
-      },
-      './file-system-util': {
-        getFile: getFileSpy,
-        writeToFile: writeToFileSpy
-      }
+  proxyquireDatastore({
+    './file-system': {
+      getDirectoryForCacheEntries: getDirectoryForCacheEntriesSpy
+    },
+    './file-system-util': {
+      getFile: getFileSpy,
+      writeToFile: writeToFileSpy
     }
-  );
+  });
   datastore.createFileNameForPage = createFileNameSpy;
   datastore.writeMetadataForEntry = writeMetadataForEntrySpy;
 
@@ -298,17 +314,14 @@ test('addPageToCache rejects if getFile rejects', function(t) {
   var getFileSpy = sinon.stub().rejects(errObj);
   var writeMetadataForEntrySpy = sinon.stub().resolves();
 
-  datastore = proxyquire(
-    '../../../app/scripts/persistence/datastore',
-    {
-      './file-system': {
-        getDirectoryForCacheEntries: getDirectoryForCacheEntriesSpy
-      },
-      './file-system-util': {
-        getFile: getFileSpy
-      }
+  proxyquireDatastore({
+    './file-system': {
+      getDirectoryForCacheEntries: getDirectoryForCacheEntriesSpy
+    },
+    './file-system-util': {
+      getFile: getFileSpy
     }
-  );
+  });
   datastore.writeMetadataForEntry = writeMetadataForEntrySpy;
 
   datastore.addPageToCache('url', 'date', 'blob')
@@ -331,18 +344,15 @@ test('addPageToCache rejects if writeToFile rejects', function(t) {
   var writeToFileSpy = sinon.stub().rejects(errObj);
   var writeMetadataForEntrySpy = sinon.stub().resolves();
 
-  datastore = proxyquire(
-    '../../../app/scripts/persistence/datastore',
-    {
-      './file-system': {
-        getDirectoryForCacheEntries: getDirectoryForCacheEntriesSpy
-      },
-      './file-system-util': {
-        getFile: getFileSpy,
-        writeToFile: writeToFileSpy
-      }
+  proxyquireDatastore({
+    './file-system': {
+      getDirectoryForCacheEntries: getDirectoryForCacheEntriesSpy
+    },
+    './file-system-util': {
+      getFile: getFileSpy,
+      writeToFile: writeToFileSpy
     }
-  );
+  });
   datastore.writeMetadataForEntry = writeMetadataForEntrySpy;
 
   datastore.addPageToCache('url', 'date', 'blob')
@@ -371,18 +381,15 @@ test('addPageToCache resolves if all others succeed', function(t) {
   var writeMetadataForEntrySpy = sinon.stub().resolves();
   var createFileNameSpy = sinon.stub().returns(fileName);
 
-  datastore = proxyquire(
-    '../../../app/scripts/persistence/datastore',
-    {
-      './file-system': {
-        getDirectoryForCacheEntries: getDirectoryForCacheEntriesSpy
-      },
-      './file-system-util': {
-        getFile: getFileSpy,
-        writeToFile: writeToFileSpy
-      }
+  proxyquireDatastore({
+    './file-system': {
+      getDirectoryForCacheEntries: getDirectoryForCacheEntriesSpy
+    },
+    './file-system-util': {
+      getFile: getFileSpy,
+      writeToFile: writeToFileSpy
     }
-  );
+  });
   datastore.createFileNameForPage = createFileNameSpy;
   datastore.writeMetadataForEntry = writeMetadataForEntrySpy;
 
@@ -426,14 +433,11 @@ test('getMetadataForEntry resolves with result to storage', function(t) {
   var createMetadataKeySpy = sinon.stub().withArgs(entry).returns(mdataKey);
   var getSpy = sinon.stub().withArgs(mdataKey).resolves(getResult);
 
-  datastore = proxyquire(
-    '../../../app/scripts/persistence/datastore',
-    {
-      '../chrome-apis/storage': {
-        get: getSpy
-      }
+  proxyquireDatastore({
+    '../chrome-apis/storage': {
+      get: getSpy
     }
-  );
+  });
   datastore.createMetadataKey = createMetadataKeySpy;
 
   datastore.getMetadataForEntry(entry)
@@ -449,6 +453,28 @@ test('getMetadataForEntry resolves with result to storage', function(t) {
   });
 });
 
+test('getMetadataForEntry rejects if error', function(t) {
+  var expected = { error: 'mo storage mo problems' };
+  proxyquireDatastore({
+    '../chrome-apis/storage': {
+      get: sinon.stub().rejects(expected)
+    }
+  });
+  datastore.createMetadataKey = sinon.stub();
+
+  datastore.getMetadataForEntry()
+  .then(res => {
+    t.fail(res);
+    t.end();
+    resetDatastore();
+  })
+  .catch(actual => {
+    t.equal(actual, expected);
+    t.end();
+    resetDatastore();
+  });
+});
+
 test('writeMetadataForEntry resolves if set resolves', function(t) {
   var key = 'mdatakey';
   var setArgs = {};
@@ -458,14 +484,11 @@ test('writeMetadataForEntry resolves if set resolves', function(t) {
   var setSpy = sinon.stub().withArgs(setArgs).resolves();
   var createMetadataKeySpy = sinon.stub().withArgs(entry).returns(key);
 
-  datastore = proxyquire(
-    '../../../app/scripts/persistence/datastore',
-    {
-      '../chrome-apis/storage': {
-        set: setSpy
-      }
+  proxyquireDatastore({
+    '../chrome-apis/storage': {
+      set: setSpy
     }
-  );
+  });
   datastore.createMetadataKey = createMetadataKeySpy;
 
   datastore.writeMetadataForEntry(entry)

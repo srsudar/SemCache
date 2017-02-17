@@ -520,6 +520,30 @@ test('getPeerCacheNames resolves if running', function(t) {
   });
 });
 
+test('getPeerCacheNames rejects if error', function(t) {
+  var expected = { error: 'uhoh' };
+  var browseForSemCacheInstanceNamesSpy = sinon.stub().rejects(expected);
+  proxyquireAppc({
+    './dnssd/dns-sd-semcache': {
+      browseForSemCacheInstanceNames: browseForSemCacheInstanceNamesSpy
+    }
+  });
+  appc.networkIsActive = sinon.stub().returns(true);
+  appc.SERVERS_STARTED = true;
+
+  appc.getPeerCacheNames()
+  .then(res => {
+    t.fail(res);
+    t.end();
+    resetAppController();
+  })
+  .catch(actual => {
+    t.equal(actual, expected);
+    t.end();
+    resetAppController();
+  });
+});
+
 test('getBrowseableCaches does not query network if not started', function(t) {
   var hostName = 'myself.local';
   var serverPort = 4444;
@@ -609,6 +633,32 @@ test('getBrowseableCaches dedupes and returns correct list', function(t) {
   })
   .catch(err => {
     t.fail(err);
+    t.end();
+    resetAppController();
+  });
+});
+
+test('getBrowseableCaches rejects if error', function(t) {
+  var expected = { error: 'uh oh' };
+  var browseForSemCacheInstancesSpy = sinon.stub().rejects(expected);
+  proxyquireAppc({
+    './dnssd/dns-sd-semcache': {
+      browseForSemCacheInstances: browseForSemCacheInstancesSpy
+    }
+  });
+  appc.networkIsActive = sinon.stub().returns(true);
+  appc.SERVERS_STARTED = true;
+  appc.getOwnCache = sinon.stub();
+  appc.getListeningHttpInterface = sinon.stub().returns({ address: '' });
+
+  appc.getBrowseableCaches()
+  .then(res => {
+    t.fail(res);
+    t.end();
+    resetAppController();
+  })
+  .catch(actual => {
+    t.equal(actual, expected);
     t.end();
     resetAppController();
   });
@@ -787,4 +837,28 @@ test('getPeerInterface throws if unrecognized', function(t) {
   t.throws(appc.getPeerAccessor);
   t.end();
   resetAppController();
+});
+
+test('start rejects if error', function(t) {
+  var expected = { error: 'setting trouble' };
+  proxyquireAppc({
+    './settings': {
+      init: sinon.stub().rejects(expected)
+    },
+    './extension-bridge/messaging': {
+      attachListeners: sinon.stub()
+    }
+  });
+
+  appc.start()
+  .then(res => {
+    t.fail(res);
+    t.end();
+    resetAppController();
+  })
+  .catch(actual => {
+    t.equal(actual, expected);
+    t.end();
+    resetAppController();
+  });
 });

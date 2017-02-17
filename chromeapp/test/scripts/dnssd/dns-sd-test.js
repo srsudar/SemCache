@@ -1045,6 +1045,21 @@ test('queryForServiceInstances correct', function(t) {
   );
 });
 
+test('queryForServiceInstances rejects if error', function(t) {
+  var expected = { error: 'woe2me' };
+  dnssd.queryForResponses = sinon.stub().rejects(expected);
+  dnssd.queryForServiceInstances()
+  .then(res => {
+    t.fail(res);
+    t.end();
+    resetDnsSd();
+  })
+  .catch(actual => {
+    t.equal(actual, expected);
+    t.end();
+    resetDnsSd();
+  });
+});
 
 test('queryForIpAddress correct', function(t) {
   var domainName = 'www.example.com';
@@ -1086,6 +1101,22 @@ test('queryForIpAddress correct', function(t) {
   );
 });
 
+test('queryForIpAddress rejects if error', function(t) {
+  var expected = { error: 'trouble' };
+  dnssd.queryForResponses = sinon.stub().rejects(expected);
+  dnssd.queryForIpAddress()
+  .then(res => {
+    t.fail(res);
+    t.end();
+    resetDnsSd();
+  })
+  .catch(actual => {
+    t.equal(actual, expected);
+    t.end();
+    resetDnsSd();
+  });
+});
+
 test('queryForInstanceInfo correct', function(t) {
   var instanceName = 'Sams Cache._semcache._tcp.local';
 
@@ -1125,6 +1156,22 @@ test('queryForInstanceInfo correct', function(t) {
     null,
     t
   );
+});
+
+test('queryForInstanceInfo rejects if error', function(t) {
+  var expected = { error: 'whoopsy daisy' };
+  dnssd.queryForResponses = sinon.stub().rejects(expected);
+  dnssd.queryForInstanceInfo()
+  .then(res => {
+    t.fail(res);
+    t.end();
+    resetDnsSd();
+  })
+  .catch(actual => {
+    t.equal(actual, expected);
+    t.end();
+    resetDnsSd();
+  });
 });
 
 test('browseServiceInstances handles dropped SRV', function(t) {

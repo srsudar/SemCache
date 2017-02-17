@@ -25,6 +25,12 @@ function resetDnsController() {
   dnsController = require('../../../app/scripts/dnssd/dns-controller');
 }
 
+function proxyquireDnsController(proxies) {
+  dnsController = proxyquire(
+    '../../../app/scripts/dnssd/dns-controller', proxies
+  );
+}
+
 /**
  * Helper function to test for multicast/unicast sending.
  */
@@ -61,14 +67,11 @@ function helperTestForSendAddress(t, isUnicast, address, port) {
   );
 
   var waitInRangeSpy = sinon.stub().resolves();
-  dnsController = proxyquire(
-    '../../../app/scripts/dnssd/dns-controller',
-    {
-      '../util': {
-        waitInRange: waitInRangeSpy
-      }
+  proxyquireDnsController({
+    '../util': {
+      waitInRange: waitInRangeSpy
     }
-  );
+  });
 
   // We will return a response packet regardless of the other parameters.
   question1.unicastResponseRequested = sinon.stub().returns(isUnicast);
@@ -82,7 +85,7 @@ function helperTestForSendAddress(t, isUnicast, address, port) {
     // We are going to ignore the first parameter, as we trust other methods to
     // test the content of the packet. We're interested only in the address and
     // port.
-    t.notNull(packetArg);
+    t.notEqual(packetArg, null);
     t.deepEqual(addrArg, address);
     t.deepEqual(portArg, port);
   };
@@ -139,22 +142,19 @@ test('getSocket follows success chain and resolves with socket', function(t) {
   };
   var expected = new chromeUdp.ChromeUdpSocket(fakeInfo);
 
-  var mockedController = proxyquire(
-    '../../../app/scripts/dnssd/dns-controller.js',
-    {
-      '../chrome-apis/udp': {
-        addOnReceiveListener: sinon.stub(),
-        create: sinon.stub().resolves(fakeInfo),
-        bind: sinon.stub().resolves(),
-        joinGroup: sinon.stub().resolves()
-      }
+  proxyquireDnsController({
+    '../chrome-apis/udp': {
+      addOnReceiveListener: sinon.stub(),
+      create: sinon.stub().resolves(fakeInfo),
+      bind: sinon.stub().resolves(),
+      joinGroup: sinon.stub().resolves()
     }
-  );
+  });
 
-  mockedController.getSocket()
+  dnsController.getSocket()
   .then(function success(actual) {
     t.deepEqual(actual, expected);
-    t.true(mockedController.isStarted());
+    t.true(dnsController.isStarted());
     t.end();
     resetDnsController();
   })
@@ -180,14 +180,11 @@ test('getSocket fails if bind fails', function(t) {
   chromeUdpStub.create = sinon.stub().resolves(fakeInfo);
   chromeUdpStub.bind = sinon.stub().rejects('auto reject');
 
-  var mockedController = proxyquire(
-    '../../../app/scripts/dnssd/dns-controller.js',
-    {
-      '../chrome-apis/udp': chromeUdpStub
-    }
-  );
+  proxyquireDnsController({
+    '../chrome-apis/udp': chromeUdpStub
+  });
 
-  var result = mockedController.getSocket();
+  var result = dnsController.getSocket();
   result.then(res => {
     t.fail(res);
     t.end();
@@ -211,20 +208,17 @@ test('getSocket fails if join group fails', function(t) {
   };
   var closeAllSocketsSpy = sinon.spy();
 
-  var mockedController = proxyquire(
-    '../../../app/scripts/dnssd/dns-controller.js',
-    {
-      '../chrome-apis/udp': {
-        addOnReceiveListener: sinon.stub(),
-        closeAllSockets: closeAllSocketsSpy,
-        create: sinon.stub().resolves(fakeInfo),
-        bind: sinon.stub().resolves(),
-        joinGroup: sinon.stub().rejects('auto reject')
-      }
+  proxyquireDnsController({
+    '../chrome-apis/udp': {
+      addOnReceiveListener: sinon.stub(),
+      closeAllSockets: closeAllSocketsSpy,
+      create: sinon.stub().resolves(fakeInfo),
+      bind: sinon.stub().resolves(),
+      joinGroup: sinon.stub().rejects('auto reject')
     }
-  );
+  });
 
-  mockedController.getSocket()
+  dnsController.getSocket()
   .then(res => {
     t.fail(res);
     t.end();
@@ -504,27 +498,45 @@ test('initializeNetworkInterfaceCache initializes cache', function(t) {
 
   var getInterfacesStub = sinon.stub().resolves(ifaces);
 
-  var mockedController = proxyquire(
-    '../../../app/scripts/dnssd/dns-controller.js',
-    {
-      '../chrome-apis/udp': {
-        getNetworkInterfaces: getInterfacesStub
-      }
+  proxyquireDnsController({
+    '../chrome-apis/udp': {
+      getNetworkInterfaces: getInterfacesStub
     }
-  );
-  mockedController.isStarted = sinon.stub().returns(true);
+  });
+  dnsController.isStarted = sinon.stub().returns(true);
   
-  t.deepEqual(mockedController.getIPv4Interfaces(), []);
+  t.deepEqual(dnsController.getIPv4Interfaces(), []);
 
-  mockedController.initializeNetworkInterfaceCache()
+  dnsController.initializeNetworkInterfaceCache()
   .then(function addedInterfaces() {
     var expectedInterfaces = [iface];
-    t.deepEqual(mockedController.getIPv4Interfaces(), expectedInterfaces);
+    t.deepEqual(dnsController.getIPv4Interfaces(), expectedInterfaces);
     t.end();
     resetDnsController();
   })
   .catch(err => {
     t.fail(err);
+    t.end();
+    resetDnsController();
+  });
+});
+
+test('initializeNetworkInterfaceCache rejects if error', function(t) {
+  var expected = { error: 'trouble town' };
+  proxyquireDnsController({
+    '../chrome-apis/udp': {
+      getNetworkInterfaces: sinon.stub().rejects(expected)
+    }
+  });
+
+  dnsController.initializeNetworkInterfaceCache()
+  .then(res => {
+    t.fail(res);
+    t.end();
+    resetDnsController();
+  })
+  .catch(actual => {
+    t.equal(actual, expected);
     t.end();
     resetDnsController();
   });
@@ -657,14 +669,11 @@ test('handleIncomingPacket sends packet for each question', function(t) {
   };
   var waitInRangeSpy = sinon.stub().resolves();
 
-  dnsController = proxyquire(
-    '../../../app/scripts/dnssd/dns-controller',
-    {
-      '../util': {
-        waitInRange: waitInRangeSpy
-      }
+  proxyquireDnsController({
+    '../util': {
+      waitInRange: waitInRangeSpy
     }
-  );
+  });
   dnsController.sendPacket = sendPacketSpy;
 
   var createResponsePacketSpy = sinon.stub();
@@ -913,26 +922,23 @@ test('onReceiveListener calls to send', function(t) {
   var packetMock = 'fake packet';
   var createPacketStub = sinon.stub().returns(packetMock);
 
-  var mockedController = proxyquire(
-    '../../../app/scripts/dnssd/dns-controller.js',
-    {
-      './byte-array': {
-        ByteArray: byteArrayConstructorStub
-      },
-      './dns-packet': {
-        createPacketFromReader: createPacketStub
-      }
+  proxyquireDnsController({
+    './byte-array': {
+      ByteArray: byteArrayConstructorStub
+    },
+    './dns-packet': {
+      createPacketFromReader: createPacketStub
     }
-  );
+  });
 
   var incomingInfo = {
     remoteAddress: 'remote addr',
     remotePort: 4433
   };
 
-  mockedController.socket = {};
-  mockedController.handleIncomingPacket = handleIncomingPacketSpy;
-  mockedController.onReceiveListener(incomingInfo);
+  dnsController.socket = {};
+  dnsController.handleIncomingPacket = handleIncomingPacketSpy;
+  dnsController.onReceiveListener(incomingInfo);
 
   // We should parse the packet and call handleIncomingPacket with the address
   // and port.
@@ -1054,24 +1060,21 @@ test('stop clears state', function(t) {
   var closeAllSocketsSpy = sinon.stub();
   var clearAllRecordsSpy = sinon.stub();
 
-  var mockedController = proxyquire(
-    '../../../app/scripts/dnssd/dns-controller.js',
-    {
-      '../chrome-apis/udp': {
-        closeAllSockets: closeAllSocketsSpy
-      }
+  proxyquireDnsController({
+    '../chrome-apis/udp': {
+      closeAllSockets: closeAllSocketsSpy
     }
-  );
+  });
 
-  mockedController.isStarted = sinon.stub().returns(true);
-  mockedController.socket = 'foo';
-  mockedController.getIPv4Interfaces().push('old interface');
-  mockedController.clearAllRecords = clearAllRecordsSpy;
+  dnsController.isStarted = sinon.stub().returns(true);
+  dnsController.socket = 'foo';
+  dnsController.getIPv4Interfaces().push('old interface');
+  dnsController.clearAllRecords = clearAllRecordsSpy;
 
-  mockedController.stop();
+  dnsController.stop();
 
   // We should delete the existing interfaces.
-  t.deepEqual(mockedController.getIPv4Interfaces(), []);
+  t.deepEqual(dnsController.getIPv4Interfaces(), []);
 
   t.true(closeAllSocketsSpy.calledOnce);
   t.deepEqual(closeAllSocketsSpy.args[0], []);
@@ -1079,7 +1082,7 @@ test('stop clears state', function(t) {
   t.true(clearAllRecordsSpy.calledOnce);
   t.deepEqual(clearAllRecordsSpy.args[0], []);
 
-  t.equal(mockedController.socket, null);
+  t.equal(dnsController.socket, null);
 
   t.end();
   resetDnsController();

@@ -152,6 +152,26 @@ test('getTimeValues returns null if not present', function(t) {
   });
 });
 
+test('getTimeValues rejects if error', function(t) {
+  var expected = { error: 'sigh' };
+  proxyquireEvaluation({
+    './chrome-apis/storage': {
+      get: sinon.stub().rejects(expected)
+    }
+  });
+  evaluation.getTimeValues()
+  .then(res => {
+    t.fail(res);
+    t.end();
+    resetEvaluation();
+  })
+  .catch(actual => {
+    t.equal(actual, expected);
+    t.end();
+    resetEvaluation();
+  }); 
+});
+
 test('fulfillPromises all resolve', function(t) {
   var expected = [ 
     { resolved: 0.1 },
@@ -496,6 +516,22 @@ test('logTime calls storage correctly if appending to stream', function(t) {
     t.fail(err);
     t.end();
     resetEvaluation(); 
+  });
+});
+
+test('logTime rejects with error', function(t) {
+  var expected = { error: 'nope' };
+  evaluation.getTimeValues = sinon.stub().rejects(expected);
+  evaluation.logTime()
+  .then(res => {
+    t.fail(res);
+    t.end();
+    resetEvaluation();
+  })
+  .catch(actual => {
+    t.equal(actual, expected);
+    t.end();
+    resetEvaluation();
   });
 });
 

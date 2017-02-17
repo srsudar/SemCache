@@ -19,6 +19,11 @@ function resetSettings() {
   settings = require('../../app/scripts/settings');
 }
 
+function proxyquireSettings(proxies) {
+  settings = proxyquire('../../app/scripts/settings', proxies);
+}
+
+
 /**
  * Asserts that the internal get machinery is called for the given key.
  *
@@ -100,15 +105,12 @@ test('set calls storage.set and resolves with updated cache', function(t) {
 
   var setSpy = sinon.stub().resolves();
 
-  settings = proxyquire(
-    '../../app/scripts/settings',
+  proxyquireSettings({
+    './chrome-apis/storage':
     {
-      './chrome-apis/storage':
-      {
-        set: setSpy
-      }
+      set: setSpy
     }
-  );
+  });
   settings.SETTINGS_OBJ = oldSettings;
 
   settings.set(key, newValue)
@@ -122,6 +124,26 @@ test('set calls storage.set and resolves with updated cache', function(t) {
   })
   .catch(err => {
     t.fail(err);
+    t.end();
+    resetSettings();
+  });
+});
+
+test('set rejects with error', function(t) {
+  var expected = { error: 'much suffering' };
+  proxyquireSettings({
+    './chrome-apis/storage': {
+      set: sinon.stub().rejects(expected)
+    }
+  });
+  settings.set()
+  .then(res => {
+    t.fail(res);
+    t.end();
+    resetSettings();
+  })
+  .catch(actual => {
+    t.equal(actual, expected);
     t.end();
     resetSettings();
   });
@@ -183,15 +205,12 @@ test('init initializes cache', function(t) {
   var getStub = sinon.stub().resolves(rawSettings);
   var getAllKeysStub = sinon.stub().returns(settingKeys);
 
-  settings = proxyquire(
-    '../../app/scripts/settings',
+  proxyquireSettings({
+    './chrome-apis/storage':
     {
-      './chrome-apis/storage':
-      {
-        get: getStub
-      }
+      get: getStub
     }
-  );
+  });
   settings.getAllSettingKeys = getAllKeysStub;
 
   settings.init()
@@ -206,6 +225,26 @@ test('init initializes cache', function(t) {
   })
   .catch(err => {
     t.fail(err);
+    t.end();
+    resetSettings();
+  });
+});
+
+test('init rejects if error', function(t) {
+  var expected = { error: 'strug' };
+  proxyquireSettings({
+    './chrome-apis/storage': {
+      get: sinon.stub().rejects(expected)
+    }
+  });
+  settings.init()
+  .then(res => {
+    t.fail(res);
+    t.end();
+    resetSettings();
+  })
+  .catch(actual => {
+    t.equal(actual, expected);
     t.end();
     resetSettings();
   });
@@ -347,20 +386,16 @@ test('promptAndSetNewBaseDir calls storage APIs', function(t) {
   var setBaseDirIdSpy = sinon.spy();
   var setBaseDirPathSpy = sinon.spy();
 
-  settings = proxyquire(
-    '../../app/scripts/settings', {
-      './chrome-apis/file-system':
-        {
-          retainEntrySync: retainEntrySyncSpy,
-          getDisplayPath: getDisplayPathSpy
-        },
-        './persistence/file-system':
-          {
-            promptForDir: promptForDirSpy,
-            setBaseCacheDir: setBaseCacheDirSpy,
-          }
-        }
-  );
+  proxyquireSettings({
+    './chrome-apis/file-system': {
+        retainEntrySync: retainEntrySyncSpy,
+        getDisplayPath: getDisplayPathSpy
+      },
+      './persistence/file-system': {
+          promptForDir: promptForDirSpy,
+          setBaseCacheDir: setBaseCacheDirSpy,
+      }
+  });
   settings.setBaseDirId = setBaseDirIdSpy;
   settings.setBaseDirPath = setBaseDirPathSpy;
 
@@ -382,6 +417,26 @@ test('promptAndSetNewBaseDir calls storage APIs', function(t) {
   })
   .catch(err => {
     t.fail(err);
+    t.end();
+    resetSettings();
+  });
+});
+
+test('promptAndSetNewBaseDir rejects if error', function(t) {
+  var expected = { error: 'morals arent worth what a pig would spit' };
+  proxyquireSettings({
+    './persistence/file-system': {
+        promptForDir: sinon.stub().rejects(expected)
+    }
+  });
+  settings.promptAndSetNewBaseDir()
+  .then(res => {
+    t.fail(res);
+    t.end();
+    resetSettings();
+  })
+  .catch(actual => {
+    t.equal(actual, expected);
     t.end();
     resetSettings();
   });

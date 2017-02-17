@@ -713,7 +713,7 @@ exports.queryForServiceInstances = function(
   waitTime = waitTime || exports.DEFAULT_QUERY_WAIT_TIME;
   var rType = dnsCodes.RECORD_TYPES.PTR;
   var rClass = dnsCodes.CLASS_CODES.IN;
-  return new Promise(function(resolve) {
+  return new Promise(function(resolve, reject) {
     exports.queryForResponses(
       serviceType,
       rType,
@@ -745,6 +745,9 @@ exports.queryForServiceInstances = function(
       result = _.uniqWith(result, _.isEqual);
 
       resolve(result);
+    })
+    .catch(err => {
+      reject(err);
     });
   });
 };
@@ -771,7 +774,7 @@ exports.queryForIpAddress = function(domainName, timeout, numRetries) {
   timeout = timeout || exports.DEFAULT_QUERY_WAIT_TIME;
   var rType = dnsCodes.RECORD_TYPES.A;
   var rClass = dnsCodes.CLASS_CODES.IN;
-  return new Promise(function(resolve) {
+  return new Promise(function(resolve, reject) {
     exports.queryForResponses(
       domainName,
       rType,
@@ -795,6 +798,9 @@ exports.queryForIpAddress = function(domainName, timeout, numRetries) {
         });
       });
       resolve(result);
+    })
+    .catch(err => {
+      reject(err);
     });
   });
 };
@@ -820,7 +826,7 @@ exports.queryForInstanceInfo = function(instanceName, timeout, numRetries) {
   timeout = timeout || exports.DEFAULT_QUERY_WAIT_TIME;
   var rType = dnsCodes.RECORD_TYPES.SRV;
   var rClass = dnsCodes.CLASS_CODES.IN;
-  return new Promise(function(resolve) {
+  return new Promise(function(resolve, reject) {
     exports.queryForResponses(
       instanceName,
       rType,
@@ -845,6 +851,9 @@ exports.queryForInstanceInfo = function(instanceName, timeout, numRetries) {
         });
       });
       resolve(result);
+    })
+    .catch(err => {
+      reject(err);
     });
   });
 };
@@ -900,6 +909,8 @@ exports.queryForResponses = function(
   // include a general standing query (if multipleResponses is true), or a
   // query for the first response (if multipleResponses is false).
 
+  // Not immediately obvious where something should reject in this case, so not
+  // including a reject parameter yet.
   return new Promise(function(resolve) {
     // Code executes even after a promise resolves, so we will use this flag to
     // make sure we never try to resolve more than once.

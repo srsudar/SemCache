@@ -201,22 +201,25 @@ exports.getPeerCacheNames = function() {
     return Promise.resolve(result);
   }
 
-  return new Promise(function(resolve) {
+  return new Promise(function(resolve, reject) {
     dnssdSem.browseForSemCacheInstanceNames()
-      .then(instanceNames => {
-        // sort by instance name.
-        instanceNames.sort(function(a, b) {
-          return a.serviceName.localeCompare(b.serviceName);
-        });
-        instanceNames.forEach(instance => {
-          if (instance.serviceName === thisCacheName.serviceName) {
-            // We've found ourselves. Don't add it.
-            return;
-          }
-          result.push(instance);
-        });
-        resolve(result);
+    .then(instanceNames => {
+      // sort by instance name.
+      instanceNames.sort(function(a, b) {
+        return a.serviceName.localeCompare(b.serviceName);
       });
+      instanceNames.forEach(instance => {
+        if (instance.serviceName === thisCacheName.serviceName) {
+          // We've found ourselves. Don't add it.
+          return;
+        }
+        result.push(instance);
+      });
+      resolve(result);
+    })
+    .catch(err => {
+      reject(err);
+    });
   });
 };
 
@@ -256,26 +259,29 @@ exports.getBrowseableCaches = function() {
 
   var ipAddress = exports.getListeningHttpInterface().address;
 
-  return new Promise(function(resolve) {
+  return new Promise(function(resolve, reject) {
     dnssdSem.browseForSemCacheInstances()
-      .then(instances => {
-        // sort by instance name.
-        instances.sort(function(a, b) {
-          return a.instanceName.localeCompare(b.instanceName);
-        });
-        instances.forEach(instance => {
-          if (instance.ipAddress === ipAddress) {
-            // We've found ourselves. Don't add it.
-            return;
-          }
-          instance.listUrl = serverApi.getListPageUrlForCache(
-            instance.ipAddress,
-            instance.port
-          );
-          result.push(instance);
-        });
-        resolve(result);
+    .then(instances => {
+      // sort by instance name.
+      instances.sort(function(a, b) {
+        return a.instanceName.localeCompare(b.instanceName);
       });
+      instances.forEach(instance => {
+        if (instance.ipAddress === ipAddress) {
+          // We've found ourselves. Don't add it.
+          return;
+        }
+        instance.listUrl = serverApi.getListPageUrlForCache(
+          instance.ipAddress,
+          instance.port
+        );
+        result.push(instance);
+      });
+      resolve(result);
+    })
+    .catch(err => {
+      reject(err);
+    });
   });
 };
 
@@ -341,13 +347,16 @@ exports.stopServers = function() {
 exports.start = function() {
   extBridge.attachListeners();
 
-  return new Promise(function(resolve) {
+  return new Promise(function(resolve, reject) {
       settings.init()
       .then(settingsObj => {
         console.log('initialized settings: ', settingsObj);
         exports.updateCachesForSettings();
         resolve();
-      });
+      })
+    .catch(err => {
+      reject(err);
+    });
   });
 };
 

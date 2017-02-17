@@ -77,7 +77,7 @@ exports.getDirectoryForCacheEntries = function() {
  * directory has not been set.
  */
 exports.getPersistedBaseDir = function() {
-  return new Promise(function(resolve) {
+  return new Promise(function(resolve, reject) {
     exports.baseDirIsSet()
     .then(isSet => {
       if (isSet) {
@@ -93,6 +93,9 @@ exports.getPersistedBaseDir = function() {
         // Null if not set.
         resolve(null);
       }
+    })
+    .catch(err => {
+      reject(err);
     });
   });
 };
@@ -101,7 +104,7 @@ exports.getPersistedBaseDir = function() {
  * @return {Promise} Promise that resolves with a boolean
  */
 exports.baseDirIsSet = function() {
-  return new Promise(function(resolve) {
+  return new Promise(function(resolve, reject) {
     chromeStorage.get(exports.KEY_BASE_DIR)
     .then(keyValue => {
       var isSet = false;
@@ -109,6 +112,9 @@ exports.baseDirIsSet = function() {
         isSet = true;
       }
       resolve(isSet);
+    })
+    .catch(err => {
+      reject(err);
     });
   });
 };
@@ -132,10 +138,13 @@ exports.setBaseCacheDir = function(dirEntry) {
  * been chosen by the user.
  */
 exports.promptForDir = function() {
-  return new Promise(function(resolve) {
+  return new Promise(function(resolve, reject) {
     chromefs.chooseEntry({type: 'openDirectory'})
     .then(entry => {
       resolve(entry);
+    })
+    .catch(err => {
+      reject(err);
     });
   });
 };

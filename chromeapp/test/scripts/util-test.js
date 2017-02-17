@@ -43,6 +43,22 @@ test('fetchJson invokes promises and resolves', function(t) {
   });
 });
 
+test('fetchJson rejects with error', function(t) {
+  var expected = { error: 'whoops' };
+  util.fetch = sinon.stub().rejects(expected);
+  util.fetchJson()
+  .then(res => {
+    t.fail(res);
+    t.end();
+    resetUtil();
+  })
+  .catch(actual => {
+    t.equal(actual, expected);
+    t.end();
+    resetUtil();
+  });
+});
+
 test('waitInRange calls random int and wait with result', function(t) {
   var waitTime = 111;
   var randomIntSpy = sinon.stub().returns(waitTime);

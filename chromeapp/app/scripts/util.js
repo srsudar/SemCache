@@ -9,10 +9,13 @@
  * parsed from url.
  */
 exports.fetchJson = function(url) {
-  return new Promise(function(resolve) {
+  return new Promise(function(resolve, reject) {
     exports.fetch(url)
     .then(response => {
       resolve(response.json());
+    })
+    .catch(err => {
+      reject(err);
     });
   });
 };

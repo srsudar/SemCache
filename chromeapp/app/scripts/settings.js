@@ -79,19 +79,22 @@ exports.getSettingsObj = function() {
  */
 exports.init = function() {
   // Get all the known settings
-  return new Promise(function(resolve) {
+  return new Promise(function(resolve, reject) {
     storage.get(exports.getAllSettingKeys())
-      .then(allKvPairs => {
-        var processedSettings = {};
-        Object.keys(allKvPairs).forEach(rawKey => {
-          // we're dealing with the raw keys here, e.g. setting_absPath
-          var processedKey = exports.removeNameSpaceFromKey(rawKey);
-          var value = allKvPairs[rawKey];
-          processedSettings[processedKey] = value;
-        });
-        exports.SETTINGS_OBJ = processedSettings;
-        resolve(processedSettings);
+    .then(allKvPairs => {
+      var processedSettings = {};
+      Object.keys(allKvPairs).forEach(rawKey => {
+        // we're dealing with the raw keys here, e.g. setting_absPath
+        var processedKey = exports.removeNameSpaceFromKey(rawKey);
+        var value = allKvPairs[rawKey];
+        processedSettings[processedKey] = value;
       });
+      exports.SETTINGS_OBJ = processedSettings;
+      resolve(processedSettings);
+    })
+    .catch(err => {
+      reject(err);
+    });
   });
 
 };
@@ -104,18 +107,21 @@ exports.init = function() {
  * after the set completes
  */
 exports.set = function(key, value) {
-  var namespacedKey = exports.createNameSpacedKey(key);
-  var kvPair = {};
-  kvPair[namespacedKey] = value;
-  var useSync = false;
+  return new Promise(function(resolve, reject) {
+    var namespacedKey = exports.createNameSpacedKey(key);
+    var kvPair = {};
+    kvPair[namespacedKey] = value;
+    var useSync = false;
 
-  return new Promise(function(resolve) {
     storage.set(kvPair, useSync)
-      .then(() => {
-        exports.SETTINGS_OBJ[key] = value;
-        // Now that the set has succeeded, update the cache of settings.
-        resolve(exports.getSettingsObj());
-      });
+    .then(() => {
+      exports.SETTINGS_OBJ[key] = value;
+      // Now that the set has succeeded, update the cache of settings.
+      resolve(exports.getSettingsObj());
+    })
+    .catch(err => {
+      reject(err);
+    });
   });
 };
 
@@ -309,7 +315,7 @@ exports.setTransportWebrtc = function() {
  * }
  */
 exports.promptAndSetNewBaseDir = function() {
-  return new Promise(function(resolve) {
+  return new Promise(function(resolve, reject) {
     var dirId;
     fileSystem.promptForDir()
     .then(dirEntry => {
@@ -334,6 +340,9 @@ exports.promptAndSetNewBaseDir = function() {
           baseDirPath: displayPath
         }
       );
+    })
+    .catch(err => {
+      reject(err);
     });
   });
 };

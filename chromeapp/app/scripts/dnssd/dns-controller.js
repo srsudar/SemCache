@@ -425,13 +425,13 @@ exports.filterResourcesForQuery = function(resources, qName, qType, qClass) {
 exports.getSocket = function() {
   if (exports.socket) {
     // Already started, resolve immediately.
-    return new Promise(resolve => { resolve(exports.socket); });
+    return Promise.resolve(exports.socket);
   }
 
   // Attach our listeners.
   chromeUdp.addOnReceiveListener(exports.onReceiveListener);
 
-  return new Promise((resolve, reject) => {
+  return new Promise(function(resolve, reject) {
     // We have two steps to do here: create a socket and bind that socket to
     // the mDNS port.
     var createPromise = chromeUdp.create({});
@@ -494,8 +494,9 @@ exports.start = function() {
  * @return {Promise} resolves when the cache is initialized
  */
 exports.initializeNetworkInterfaceCache = function() {
-  return new Promise(function(resolve) {
-    chromeUdp.getNetworkInterfaces().then(function success(interfaces) {
+  return new Promise(function(resolve, reject) {
+    chromeUdp.getNetworkInterfaces()
+    .then(function success(interfaces) {
       interfaces.forEach(iface => {
         if (iface.address.indexOf(':') !== -1) {
           console.log('Not yet supporting IPv6: ', iface);
@@ -504,6 +505,9 @@ exports.initializeNetworkInterfaceCache = function() {
         }
       });
       resolve();
+    })
+    .catch(err => {
+      reject(err);
     });
   });
 };
