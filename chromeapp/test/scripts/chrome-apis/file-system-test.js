@@ -56,6 +56,7 @@ function helperResolve(methodName, t, cbIndex) {
     if (cbIndex !== 0) {
       t.equal(methodStub.args[0][0], entry);
     }
+    t.equal(methodStub.callCount, 1);
     end(t);
   })
   .catch(err => {
@@ -86,6 +87,7 @@ function helperReject(methodName, t, cbIndex) {
     if (cbIndex !== 0) {
       t.equal(methodStub.args[0][0], entry);
     }
+    t.equal(methodStub.callCount, 1);
     end(t);
   });
 }

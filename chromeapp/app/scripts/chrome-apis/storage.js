@@ -1,5 +1,6 @@
-/* globals Promise, chrome */
 'use strict';
+
+var util = require('./util');
 
 /**
  * This module provides a wrapper around the chrome.storage.local API and
@@ -7,95 +8,90 @@
  */
 
 /**
- * @param {boolean} useSync
- *
- * @return {StorageArea} chrome.storage.sync or chrome.storage.local depending
- * on the value of useSync
- */
-function getStorageArea(useSync) {
-  if (useSync) {
-    return chrome.storage.sync;
-  } else {
-    return chrome.storage.local;
-  }
-}
-
-/**
  * @param {string|Array<string>} keyOrKeys
- * @param {boolean} useSync true to use chrome.storage.sync, otherwise will use
- * chrome.storage.local
  *
- * @return {Promise} Promise that resolves with an object of key value mappings
+ * @return {Promise.<Object, Error>} Promise that resolves with an object of
+ * key value mappings or rejects with an Error
  */
-exports.get = function(keyOrKeys, useSync) {
-  var storageArea = getStorageArea(useSync);
-  return new Promise(function(resolve) {
-    storageArea.get(keyOrKeys, function(items) {
-      resolve(items);
+exports.get = function(keyOrKeys) {
+  return new Promise(function(resolve, reject) {
+    util.getStorageLocal().get(keyOrKeys, function(items) {
+      if (util.wasError()) {
+        reject(util.getError());
+      } else {
+        resolve(items);
+      }
     });
   });
 };
 
 /**
  * @param {string|Array<string>} keyOrKeys
- * @param {boolean} useSync true to use chrome.storage.sync, otherwise will use
- * chrome.storage.local
  *
- * @return {Promise} Promise that resolves with an integer of the number of
- * bytes in use for the given key or keys
+ * @return {Promise.<Integer, Error>} Promise that resolves with an integer of
+ * the number of bytes in use for the given key or keys, or rejects with an
+ * Error
  */
-exports.getBytesInUse = function(keyOrKeys, useSync) {
-  var storageArea = getStorageArea(useSync);
-  return new Promise(function(resolve) {
-    storageArea.getBytesInUse(keyOrKeys, function(numBytes) {
-      resolve(numBytes);
+exports.getBytesInUse = function(keyOrKeys) {
+  return new Promise(function(resolve, reject) {
+    util.getStorageLocal().getBytesInUse(keyOrKeys, function(numBytes) {
+      if (util.wasError()) {
+        reject(util.getError());
+      } else {
+        resolve(numBytes);
+      }
     });
   });
 };
 
 /**
  * @param {object} items an object of key value mappings
- * @param {boolean} useSync true to use chrome.storage.sync, otherwise will use
- * chrome.storage.local
  *
- * @return {Promise} Promise that resolves when the operation completes
+ * @return {Promise.<undefined, Error>} Promise that resolves when the
+ * operation completes or rejects with an Error
  */
-exports.set = function(items, useSync) {
-  var storageArea = getStorageArea(useSync);
-  return new Promise(function(resolve) {
-    storageArea.set(items, function() {
-      resolve();
+exports.set = function(items) {
+  return new Promise(function(resolve, reject) {
+    util.getStorageLocal().set(items, function() {
+      if (util.wasError()) {
+        reject(util.getError());
+      } else {
+        resolve();
+      }
     });
   });
 };
 
 /**
  * @param {string|Array<string>} keyOrKeys
- * @param {boolean} useSync true to use chrome.storage.sync, otherwise will use
- * chrome.storage.local
  *
- * @return {Promise} Promise that resolves when the operation completes
+ * @return {Promise.<undefined, Error>} Promise that resolves when the
+ * operation completes
  */
-exports.remove = function(keyOrKeys, useSync) {
-  var storageArea = getStorageArea(useSync);
-  return new Promise(function(resolve) {
-    storageArea.remove(keyOrKeys, function() {
-      resolve();
+exports.remove = function(keyOrKeys) {
+  return new Promise(function(resolve, reject) {
+    util.getStorageLocal().remove(keyOrKeys, function() {
+      if (util.wasError()) {
+        reject(util.getError());
+      } else {
+        resolve();
+      }
     });
   });
 };
 
 /**
- * @param {boolean} useSync true to use chrome.storage.sync, otherwise will use
- * chrome.storage.local
- *
- * @return {Promise} Promise that resolves when the operation completes
+ * @return {Promise.<undefined, Error>} Promise that resolves when the
+ * operation completes
  */
-exports.clear = function(useSync) {
-  var storageArea = getStorageArea(useSync);
-  return new Promise(function(resolve) {
-    storageArea.clear(function() {
-      resolve();
+exports.clear = function() {
+  return new Promise(function(resolve, reject) {
+    util.getStorageLocal().clear(function() {
+      if (util.wasError()) {
+        reject(util.getError());
+      } else {
+        resolve();
+      }
     });
   });
 };

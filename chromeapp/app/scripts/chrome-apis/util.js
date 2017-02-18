@@ -30,3 +30,10 @@ exports.getError = function() {
 exports.getFileSystem = function() {
   return chrome.fileSystem;
 };
+
+/**
+ * @returns {StorageArea} chrome.storage.local
+ */
+exports.getStorageLocal = function() {
+  return chrome.storage.local;
+};
