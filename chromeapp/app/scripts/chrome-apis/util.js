@@ -17,6 +17,13 @@ exports.wasError = function() {
 };
 
 /**
+ * @returns {runtime} returns chrome.runtime
+ */
+exports.getRuntime = function() {
+  return chrome.runtime;
+};
+
+/**
  * @return {string} the value of chrome.runtime.lastError. Does not guarantee
  * that this value is set.
  */
