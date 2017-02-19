@@ -4,6 +4,7 @@ var test = require('tape');
 var proxyquire = require('proxyquire');
 var sinon = require('sinon');
 require('sinon-as-promised');
+
 var fileSystem = require('../../../app/scripts/persistence/file-system');
 
 /**
@@ -18,7 +19,12 @@ function resetFileSystem() {
   fileSystem = require('../../../app/scripts/persistence/file-system');
 }
 
-function proxyquireFileSystem(proxies) {
+function proxyquireFileSystem(proxies, localStorageProxies, chromefsProxies) {
+  // Add the chrome proxies
+  proxies['../chrome-apis/chromep'] = {
+    getFileSystem: sinon.stub().returns(chromefsProxies),
+    getStorageLocal: sinon.stub().returns(localStorageProxies)
+  };
   fileSystem = proxyquire(
     '../../../app/scripts/persistence/file-system', proxies
   );
@@ -38,11 +44,7 @@ test('promptForDir calls chrome API and returns Entry', function(t) {
   var expectedEntry = 'foo baz bar';
   var chooseEntrySpy = sinon.stub().resolves(expectedEntry);
 
-  proxyquireFileSystem({
-    '../chrome-apis/file-system': {
-      chooseEntry: chooseEntrySpy
-    }
-  });
+  proxyquireFileSystem({}, {}, { chooseEntry: chooseEntrySpy });
 
   fileSystem.promptForDir()
   .then(actualEntry => {
@@ -61,11 +63,9 @@ test('promptForDir calls chrome API and returns Entry', function(t) {
 
 test('promptForDir rejects if error', function(t) {
   var expected = { error: 'trouble' };
-  proxyquireFileSystem({
-    '../chrome-apis/file-system': {
-      chooseEntry: sinon.stub().rejects(expected)
-    }
-  });
+  proxyquireFileSystem(
+    {}, {}, { chooseEntry: sinon.stub().rejects(expected) }
+  );
   fileSystem.promptForDir()
   .then(res => {
     t.fail(res);
@@ -80,31 +80,27 @@ test('promptForDir rejects if error', function(t) {
 test('setBaseCacheDir calls persist functions', function(t) {
   // Make the module think it has started.
   var expectedId = 'an identifier';
-  var retainEntrySyncSpy = sinon.stub().returns(expectedId);
+  var retainEntrySpy = sinon.stub().returns(expectedId);
   var setSpy = sinon.spy();
 
-  proxyquireFileSystem({
-    '../chrome-apis/file-system': {
-      retainEntrySync: retainEntrySyncSpy
-    },
-    '../chrome-apis/storage': {
-      set: setSpy
-    }
-  });
+  proxyquireFileSystem(
+    {},
+    { set: setSpy },
+    { retainEntry: retainEntrySpy }
+  );
 
   var dirEntry = 'directory entry';
 
   fileSystem.setBaseCacheDir(dirEntry);
 
-  t.true(retainEntrySyncSpy.calledOnce);
-  t.true(retainEntrySyncSpy.calledWith(dirEntry));
+  t.true(retainEntrySpy.calledOnce);
+  t.true(retainEntrySpy.calledWith(dirEntry));
 
   t.true(setSpy.calledOnce);
   t.true(setSpy.calledWith({baseDir: expectedId}));
 
   resetFileSystem();
   t.end();
-
 });
 
 test('baseDirIsSet true correctly', function(t) {
@@ -113,11 +109,7 @@ test('baseDirIsSet true correctly', function(t) {
 
   var getSpy = sinon.stub().resolves(keyValue);
 
-  proxyquireFileSystem({
-    '../chrome-apis/storage': {
-      get: getSpy
-    }
-  });
+  proxyquireFileSystem({}, { get: getSpy }, {});
 
   fileSystem.baseDirIsSet()
   .then(isSet => {
@@ -139,11 +131,7 @@ test('baseDirIsSet true correctly', function(t) {
   // Make the module think it has started.
   var getSpy = sinon.stub().resolves({});
 
-  proxyquireFileSystem({
-    '../chrome-apis/storage': {
-      get: getSpy
-    }
-  });
+  proxyquireFileSystem({}, { get: getSpy }, {});
 
   fileSystem.baseDirIsSet()
   .then(isSet => {
@@ -162,11 +150,11 @@ test('baseDirIsSet true correctly', function(t) {
 
 test('baseDirIsSet rejects if error', function(t) {
   var expected = { error: 'trouble' };
-  proxyquireFileSystem({
-    '../chrome-apis/storage': {
-      get: sinon.stub().rejects(expected)
-    }
-  });
+  proxyquireFileSystem(
+    {},
+    { get: sinon.stub().rejects(expected) },
+    {}
+  );
 
   fileSystem.baseDirIsSet()
   .then(res => {
@@ -204,14 +192,8 @@ test('getPersistedBaseDir retrieves from storage', function(t) {
   var getSpy = sinon.stub().resolves({ baseDir: savedId });
   var restoreEntrySpy = sinon.stub().resolves(expectedDirEntry);
 
-  proxyquireFileSystem({
-    '../chrome-apis/storage': {
-      get: getSpy
-    },
-    '../chrome-apis/file-system': {
-      restoreEntry: restoreEntrySpy
-    }
-  });
+  proxyquireFileSystem({}, { get: getSpy }, { restoreEntry: restoreEntrySpy });
+  fileSystem.baseDirIsSet = sinon.stub().resolves(true);
 
   fileSystem.getPersistedBaseDir()
   .then(actualDir => {

@@ -2,8 +2,7 @@
 /* globals Promise */
 'use strict';
 
-var chromefs = require('../chrome-apis/file-system');
-var chromeStorage = require('../chrome-apis/storage');
+var chromep = require('../chrome-apis/chromep');
 var fsUtil = require('./file-system-util');
 
 /** The local storage key for the entry ID of the base directory. */
@@ -81,10 +80,10 @@ exports.getPersistedBaseDir = function() {
     exports.baseDirIsSet()
     .then(isSet => {
       if (isSet) {
-        chromeStorage.get(exports.KEY_BASE_DIR)
+        chromep.getStorageLocal().get(exports.KEY_BASE_DIR)
         .then(keyValue => {
           var id = keyValue[exports.KEY_BASE_DIR];
-          return chromefs.restoreEntry(id);
+          return chromep.getFileSystem().restoreEntry(id);
         })
         .then(dirEntry => {
           resolve(dirEntry);
@@ -105,7 +104,7 @@ exports.getPersistedBaseDir = function() {
  */
 exports.baseDirIsSet = function() {
   return new Promise(function(resolve, reject) {
-    chromeStorage.get(exports.KEY_BASE_DIR)
+    chromep.getStorageLocal().get(exports.KEY_BASE_DIR)
     .then(keyValue => {
       var isSet = false;
       if (keyValue && keyValue[exports.KEY_BASE_DIR]) {
@@ -126,9 +125,10 @@ exports.baseDirIsSet = function() {
  */
 exports.setBaseCacheDir = function(dirEntry) {
   var keyObj = {};
-  var id = chromefs.retainEntrySync(dirEntry);
+  var id = chromep.getFileSystem().retainEntry(dirEntry);
   keyObj[exports.KEY_BASE_DIR] = id;
-  chromeStorage.set(keyObj);
+  console.log('going to call set');
+  chromep.getStorageLocal().set(keyObj);
 };
 
 /**
@@ -139,7 +139,7 @@ exports.setBaseCacheDir = function(dirEntry) {
  */
 exports.promptForDir = function() {
   return new Promise(function(resolve, reject) {
-    chromefs.chooseEntry({type: 'openDirectory'})
+    chromep.getFileSystem().chooseEntry({type: 'openDirectory'})
     .then(entry => {
       resolve(entry);
     })
