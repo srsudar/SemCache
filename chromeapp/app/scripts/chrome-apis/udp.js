@@ -1,6 +1,8 @@
 /* globals Promise, chrome */
 'use strict';
 
+var util = require('./util');
+
 var DEBUG = false;
 
 exports.ChromeUdpSocket = function ChromeUdpSocket(socketInfo) {
@@ -20,30 +22,40 @@ exports.ChromeUdpSocket.prototype.send = function(arrayBuffer, address, port) {
 };
 
 /**
- * Add listener via call to chrome.sockets.udp.onReceive.addListener.
+ * Add listener via call to util.getUdp().onReceive.addListener.
  */
 exports.addOnReceiveListener = function(listener) {
-  chrome.sockets.udp.onReceive.addListener(listener);
+  util.getUdp().onReceive.addListener(listener);
 };
 
 /**
- * Add listener via call to chrome.sockets.udp.onReceiveError.addListener.
+ * Add listener via call to util.getUdp().onReceiveError.addListener.
  */
 exports.addOnReceiveErrorListener = function(listener) {
-  chrome.sockets.udp.onReceiveError.addListener(listener);
+  util.getUdp().onReceiveError.addListener(listener);
 };
 
+/**
+ * @param {SocketProperties} properties optional
+ *
+ * @returns {Promise.<object, Error>} Promise that resolves with a socket info
+ * object or rejects with an Error
+ */
 exports.create = function(obj) {
-  return new Promise(function(resolve) {
-    chrome.sockets.udp.create(obj, function(socketInfo) {
-      resolve(socketInfo);
+  return new Promise(function(resolve, reject) {
+    util.getUdp().create(obj, function(socketInfo) {
+      if (util.wasError()) {
+        reject(util.getError());
+      } else {
+        resolve(socketInfo);
+      }
     });
   });
 };
 
 exports.bind = function(socketId, address, port) {
   return new Promise(function(resolve, reject) {
-    chrome.sockets.udp.bind(socketId, address, port, function(result) {
+    util.getUdp().bind(socketId, address, port, function(result) {
       if (result < 0) {
         console.log('chromeUdp.bind: result < 0, rejecting');
         console.log('    socketId: ', socketId);
@@ -71,7 +83,7 @@ exports.send = function(socketId, arrayBuffer, address, port) {
       console.log('    port: ', port);
       console.log('    arrayBuffer: ', arrayBuffer);
     }
-    chrome.sockets.udp.send(
+    util.getUdp().send(
       socketId,
       arrayBuffer,
       address,
@@ -90,7 +102,7 @@ exports.send = function(socketId, arrayBuffer, address, port) {
 
 exports.joinGroup = function(socketId, address) {
   return new Promise(function(resolve, reject) {
-    chrome.sockets.udp.joinGroup(socketId, address, function(result) {
+    util.getUdp().joinGroup(socketId, address, function(result) {
       if (DEBUG) {
         console.log('socketId: ', socketId);
         console.log('address: ', address);
@@ -107,7 +119,7 @@ exports.joinGroup = function(socketId, address) {
 
 exports.getSockets = function() {
   return new Promise(function(resolve) {
-    chrome.sockets.udp.getSockets(function(allSockets) {
+    util.getUdp().getSockets(function(allSockets) {
       resolve(allSockets);
     });
   });
@@ -115,7 +127,7 @@ exports.getSockets = function() {
 
 exports.getInfo = function(socketId) {
   return new Promise(function(resolve) {
-    chrome.sockets.udp.getInfo(socketId, function(socketInfo) {
+    util.getUdp().getInfo(socketId, function(socketInfo) {
       resolve(socketInfo);
     });
   });
@@ -125,7 +137,7 @@ exports.closeAllSockets = function() {
   exports.getSockets().then(function(allSockets) {
     allSockets.forEach(function(socketInfo) {
       console.log('Closing socket with id: ', socketInfo.socketId);
-      chrome.sockets.udp.close(socketInfo.socketId);
+      util.getUdp().close(socketInfo.socketId);
     });
   });
 };

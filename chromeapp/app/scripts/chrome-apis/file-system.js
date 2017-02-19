@@ -13,16 +13,23 @@ var util = require('./util');
  * @return {Promise.<String, Error}} Promise that resolves with the display
  * path or rejects with an Error
  */
-exports.getDisplayPath = function(entry) {
-  return new Promise(function(resolve, reject) {
-    util.getFileSystem().getDisplayPath(entry, function(displayPath) {
-      if (util.wasError()) {
-        reject(util.getError());
-      } else {
-        resolve(displayPath);
-      }
-    });
-  });
+exports.getDisplayPath = function() {
+  console.log('in getdisplaypath');
+  console.log(arguments);
+  var fn = util.getFileSystem().getDisplayPath;
+  console.log('fn: ', fn);
+  return util.applyArgsCheckLastError(
+    fn, arguments
+  );
+  // return new Promise(function(resolve, reject) {
+  //   util.getFileSystem().getDisplayPath(entry, function(displayPath) {
+  //     if (util.wasError()) {
+  //       reject(util.getError());
+  //     } else {
+  //       resolve(displayPath);
+  //     }
+  //   });
+  // });
 };
 
 /**

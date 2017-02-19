@@ -39,13 +39,10 @@ function proxyquireFileSystem(fileSystemStub, wasError, error) {
 }
 
 function helperResolve(methodName, t, cbIndex) {
-  if (cbIndex === undefined) {
-    cbIndex = 1;
-  }
-  var entry = sinon.stub();
+  var entry = 'first arg value';
   var expected = 'expected value';
   var methodStub = sinon.stub();
-  methodStub.callsArgWith(cbIndex, expected);
+  methodStub.yields(expected);
   var fileSystemStub = {};
   fileSystemStub[methodName] = methodStub;
   proxyquireFileSystem(fileSystemStub, false);
@@ -66,13 +63,10 @@ function helperResolve(methodName, t, cbIndex) {
 }
 
 function helperReject(methodName, t, cbIndex) {
-  if (cbIndex === undefined) {
-    cbIndex = 1;
-  }
-  var entry = sinon.stub();
+  var entry = 'first arg';
   var expected = 'error message';
   var methodStub = sinon.stub();
-  methodStub.callsArgWith(cbIndex, expected);
+  methodStub.yields(expected);
   var fileSystemStub = {};
   fileSystemStub[methodName] = methodStub;
   proxyquireFileSystem(fileSystemStub, true, expected);
@@ -91,6 +85,37 @@ function helperReject(methodName, t, cbIndex) {
     end(t);
   });
 }
+
+test.only('getDisplayPath resolves with apply', function(t) {
+  var expected = 'expected resolve';
+  var fnToInvoke = function() { };
+  var fsStub = {
+    getDisplayPath: fnToInvoke
+  };
+  var applyArgsStub = sinon.stub().resolves(expected);
+  fs = proxyquire('../../../app/scripts/chrome-apis/file-system', {
+    './util': {
+      applyArgsCheckLastError: applyArgsStub,
+      getFileSystem: sinon.stub().returns(fsStub)
+    }
+  });
+
+  var arg1 = 'foo';
+  var arg2 = 'bar';
+  fs.getDisplayPath(arg1, arg2)
+  .then(actual => {
+    t.equal(actual, expected);
+    t.deepEqual(applyArgsStub.args[0][0], fnToInvoke);
+    // Access the arguments parameter like this. Ugly but necessary.
+    t.equal(applyArgsStub.args[0][1]['0'], arg1);
+    t.equal(applyArgsStub.args[0][1]['1'], arg2);
+    end(t);
+  })
+  .catch(err => {
+    t.fail(err);
+    end(t);
+  });
+});
 
 test('getDisplayPath resolves with result', function(t) {
   helperResolve('getDisplayPath', t);

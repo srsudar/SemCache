@@ -4,6 +4,7 @@
   "dependencies": {
     "base-64": "^0.1.0",
     "buffer": "^5.0.3",
+    "chrome-promise": "^2.0.2",
     "json2csv": "^3.6.3",
     "lodash": "^4.15.0",
     "npm": "^4.1.2",
