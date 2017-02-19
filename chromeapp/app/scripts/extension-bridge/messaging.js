@@ -126,7 +126,11 @@ exports.getBlobFromDataUrl = function(dataUrl) {
 };
 
 exports.attachListeners = function() {
-  chromep.getRuntime().addOnMessageExternalListener(
+  var runtime = chromep.getRuntime();
+  console.log('runtime: ', runtime);
+  var ome = runtime.onMessageExternal;
+  console.log('ome: ', ome);
+  chromep.getRuntime().onMessageExternal.addListener(
     exports.handleExternalMessage
   );
 };

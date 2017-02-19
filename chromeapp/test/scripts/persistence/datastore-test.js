@@ -18,7 +18,10 @@ function resetDatastore() {
   datastore = require('../../../app/scripts/persistence/datastore');
 }
 
-function proxyquireDatastore(proxies) {
+function proxyquireDatastore(proxies, localStorageProxies) {
+  proxies['../chrome-apis/chromep'] = {
+    getStorageLocal: sinon.stub().returns(localStorageProxies),
+  };
   datastore = proxyquire(
     '../../../app/scripts/persistence/datastore', proxies
   );
@@ -433,11 +436,7 @@ test('getMetadataForEntry resolves with result to storage', function(t) {
   var createMetadataKeySpy = sinon.stub().withArgs(entry).returns(mdataKey);
   var getSpy = sinon.stub().withArgs(mdataKey).resolves(getResult);
 
-  proxyquireDatastore({
-    '../chrome-apis/storage': {
-      get: getSpy
-    }
-  });
+  proxyquireDatastore({}, { get: getSpy });
   datastore.createMetadataKey = createMetadataKeySpy;
 
   datastore.getMetadataForEntry(entry)
@@ -455,11 +454,7 @@ test('getMetadataForEntry resolves with result to storage', function(t) {
 
 test('getMetadataForEntry rejects if error', function(t) {
   var expected = { error: 'mo storage mo problems' };
-  proxyquireDatastore({
-    '../chrome-apis/storage': {
-      get: sinon.stub().rejects(expected)
-    }
-  });
+  proxyquireDatastore({}, { get: sinon.stub().rejects(expected) });
   datastore.createMetadataKey = sinon.stub();
 
   datastore.getMetadataForEntry()
@@ -484,11 +479,7 @@ test('writeMetadataForEntry resolves if set resolves', function(t) {
   var setSpy = sinon.stub().withArgs(setArgs).resolves();
   var createMetadataKeySpy = sinon.stub().withArgs(entry).returns(key);
 
-  proxyquireDatastore({
-    '../chrome-apis/storage': {
-      set: setSpy
-    }
-  });
+  proxyquireDatastore({}, { set: setSpy });
   datastore.createMetadataKey = createMetadataKeySpy;
 
   datastore.writeMetadataForEntry(entry)

@@ -27,26 +27,26 @@ exports.getChromep = function() {
  * @return {object} the Promisified version of chrome.fileSystem
  */
 exports.getFileSystem = function() {
-  return CHROMEP_SINGLETON.fileSystem;
+  return exports.getChromep().fileSystem;
 };
 
 /**
  * @return {object} the Promisified version of chrome.storage.local
  */
 exports.getStorageLocal = function() {
-  return CHROMEP_SINGLETON.storage.local;
+  return exports.getChromep().storage.local;
 };
 
 /**
  * @return {object} the Promisified version of chrome.sockets.udp
  */
 exports.getUdp = function() {
-  return CHROMEP_SINGLETON.sockets.udp;
+  return exports.getChromep().sockets.udp;
 };
 
 /**
  * @return {object} the Promisified version of chrome.runtime
  */
 exports.getRuntime = function() {
-  return CHROMEP_SINGLETON.sockets.udp;
+  return exports.getChromep().sockets.udp;
 };

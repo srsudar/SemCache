@@ -13,10 +13,10 @@
 // "www.example.com_date". This will serve for a prototype but might become
 // limiting in the future.
 
+var chromep = require('../chrome-apis/chromep');
 var fileSystem = require('./file-system');
 var fsUtil = require('./file-system-util');
 var serverApi = require('../server/server-api');
-var storage = require('../chrome-apis/storage');
 
 /** The number of characters output by Date.toISOString() */
 var LENGTH_ISO_DATE_STR = 24;
@@ -198,7 +198,7 @@ exports.getEntryAsCachedPage = function(entry) {
 exports.getMetadataForEntry = function(entry) {
   return new Promise(function(resolve, reject) {
     var key = exports.createMetadataKey(entry);
-    storage.get(key)
+    chromep.getStorageLocal().get(key)
     .then(obj => {
       // The get API resolves with the key value pair in a single object,
       // e.g. get('foo') -> { foo: bar }.
@@ -243,7 +243,7 @@ exports.writeMetadataForEntry = function(entry, metadata) {
   var key = exports.createMetadataKey(entry);
   var obj = {};
   obj[key] = metadata;
-  return storage.set(obj);
+  return chromep.getStorageLocal().set(obj);
 };
 
 /**

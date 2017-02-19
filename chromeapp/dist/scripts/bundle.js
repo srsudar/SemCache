@@ -1,275 +1,158 @@
 require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
-/* globals Promise, chrome */
 'use strict';
 
 /**
- * This module provides a wrapper around the callback-heavy chrome.fileSystem
- * API and provides an alternative based on Promises.
+ * This is a thin wrapper around the chrome-promise library. Relying on this
+ * rather than the global will allow us to more easily inject functionality
+ * during testing.
  */
 
+var ChromePromise = require('chrome-promise');
+
+var CHROMEP_SINGLETON = null;
+
 /**
- * @param {Entry} entry
+ * Return the chrome-promise singleton.
  *
- * @return {Promise} Promise that resolves with the display path
+ * @return {chrome-promise} An object that mirrors the chrome global but where
+ * all functions follow a Promise API.
  */
-exports.getDisplayPath = function(entry) {
-  return new Promise(function(resolve) {
-    chrome.fileSystem.getDisplayPath(entry, function(displayPath) {
-      resolve(displayPath);
-    });
-  });
+exports.getChromep = function() {
+  if (!CHROMEP_SINGLETON) {
+    CHROMEP_SINGLETON = new ChromePromise();
+  }
+  return CHROMEP_SINGLETON;
 };
 
 /**
- * @param {Entry} entry the starting entry that will serve as the base for a
- * writable entry
- *
- * @return {Promise} Promise that resolves with a writable entry
+ * @return {object} the Promisified version of chrome.fileSystem
  */
-exports.getWritableEntry = function(entry) {
-  return new Promise(function(resolve) {
-    chrome.fileSystem.getWritableEntry(entry, function(writableEntry) {
-      resolve(writableEntry);
-    });
-  });
+exports.getFileSystem = function() {
+  return exports.getChromep().fileSystem;
 };
 
 /**
- * @param {Entry} entry
- *
- * @return {Promise} Promise that resolves with a boolean
+ * @return {object} the Promisified version of chrome.storage.local
  */
-exports.isWritableEntry = function(entry) {
-  return new Promise(function(resolve) {
-    chrome.fileSystem.isWritableEntry(entry, function(isWritable) {
-      resolve(isWritable);
-    });
-  });
+exports.getStorageLocal = function() {
+  return exports.getChromep().storage.local;
 };
 
 /**
- * The original Chrome callback takes two parameters: an entry and an array of
- * FileEntries. No examples appear to make use of this second parameter,
- * however, nor is it documented what the second parameter is for. For this
- * reason we return only the first parameter, but callers should be aware of
- * this difference compared to the original API.
- *
- * @param {object} options
- *
- * @return {Promise} Promise that resolves with an Entry
+ * @return {object} the Promisified version of chrome.sockets.udp
  */
-exports.chooseEntry = function(options) {
-  return new Promise(function(resolve) {
-    chrome.fileSystem.chooseEntry(options, function(entry, arr) {
-      if (arr) {
-        console.warn(
-          'chrome.fileSystem.chooseEntry callback invoked with a 2nd ' +
-            'parameter that is being ignored: ',
-            arr);
-      }
-      resolve(entry);
-    });
-  });
+exports.getUdp = function() {
+  return exports.getChromep().sockets.udp;
 };
 
 /**
- * @param {string} id id of a previous entry
- *
- * @return {Promise} Promise that resolves with an Entry
+ * @return {object} the Promisified version of chrome.runtime
  */
-exports.restoreEntry = function(id) {
-  return new Promise(function(resolve) {
-    chrome.fileSystem.restoreEntry(id, function(entry) {
-      resolve(entry);
-    });
-  });
+exports.getRuntime = function() {
+  return exports.getChromep().sockets.udp;
 };
 
-/**
- * @param {string} id
- *
- * @return {Promise} Promise that resolves with a boolean
- */
-exports.isRestorable = function(id) {
-  return new Promise(function(resolve) {
-    chrome.fileSystem.isRestorable(id, function(isRestorable) {
-      resolve(isRestorable);
-    });
-  });
-};
-
-/**
- * @param {Entry} entry
- *
- * @return {Promise} Promise that resolves with a string id that can be used to
- * restore the Entry in the future. The underlying Chrome API is a synchronous
- * call, but this is provided as a Promise to keep API parity with the rest of
- * the module. A synchronous version is provided via retainEntrySync.
- */
-exports.retainEntry = function(entry) {
-  var id = chrome.fileSystem.retainEntry(entry);
-  return Promise.resolve(id);
-};
-
-/**
- * @param {Entry} entry
- *
- * @return {string} id that can be used to restore the Entry
- */
-exports.retainEntrySync = function(entry) {
-  return chrome.fileSystem.retainEntry(entry);
-};
-
-/**
- * @param {object} options
- *
- * @return {Promise} Promise that resolves with a FileSystem
- */
-exports.requestFileSystem = function(options) {
-  return new Promise(function(resolve) {
-    chrome.fileSystem.requestFileSystem(options, function(fileSystem) {
-      resolve(fileSystem);
-    });
-  });
-};
-
-/**
- * @return {Promise} Promise that resolves with a FileSystem
- */
-exports.getVolumeList = function() {
-  return new Promise(function(resolve) {
-    chrome.fileSystem.getVolumeList(function(fileSystem) {
-      resolve(fileSystem);
-    });
-  });
-};
-
-},{}],2:[function(require,module,exports){
+},{"chrome-promise":26}],2:[function(require,module,exports){
 /* globals chrome */
 'use strict';
 
 /**
- * Add a callback function via chrome.runtime.onMessageExternal.addListener.
- * @param {Function} fn
+ * Very lightweight utility class relating to the chrome apis.
  */
-exports.addOnMessageExternalListener = function(fn) {
-  chrome.runtime.onMessageExternal.addListener(fn);
+
+/**
+ * @return {boolean} true if chrome.runtime.lastError is set, else false
+ */
+exports.wasError = function() {
+  if (chrome.runtime.lastError) {
+    return true;
+  } else {
+    return false;
+  }
 };
 
 /**
- * Send a message using the chrome.runtime.sendMessage API.
- *
- * @param {string} id
- * @param {any} message must be JSON-serializable
+ * @returns {runtime} returns chrome.runtime
  */
-exports.sendMessage = function(id, message) {
-  chrome.runtime.sendMessage(id, message);
+exports.getRuntime = function() {
+  return chrome.runtime;
+};
+
+/**
+ * @return {string} the value of chrome.runtime.lastError. Does not guarantee
+ * that this value is set.
+ */
+exports.getError = function() {
+  return chrome.runtime.lastError;
+};
+
+/**
+ * @returns {filesystem} returns the chrome.filesystem object.
+ */
+exports.getFileSystem = function() {
+  return chrome.fileSystem;
+};
+
+/**
+ * @returns {StorageArea} chrome.storage.local
+ */
+exports.getStorageLocal = function() {
+  return chrome.storage.local;
+};
+
+/**
+ * @returns {chrome.sockets.udp}
+ */
+exports.getUdp = function() {
+  return chrome.sockets.udp;
+};
+
+/**
+ * This is a complicated function to understand. The need for it arises from
+ * the fact that we are trying to mirror the Chrome API. Several of its
+ * functions include optional parameters, which complicates just passing in
+ * positional arguments directly. To circumvent this issue, we can use the
+ * apply() argument to make the call with the exact arguments.
+ *
+ * Complicating this is that most of the calls also accept a callback
+ * parameter. Since we want to Promise-ify the calls and account for errors,
+ * this leads to a lot of boiler plate code. This method takes care of all of
+ * this.
+ *
+ * It takes a function and an an arguments object. The function's last
+ * parameter is expected to be a function callback. The returned Promise
+ * resolves when this function is evoked and rejects if
+ * chrome.runtime.lastError indicates that there was an error.
+ *
+ * @param {function} fn function that accepts a callback as its last parameter
+ * @param {arguments} callArgs the arguments object with which fn should be
+ * invoked
+ *
+ * @return {Promise.<any, Error>} Promise that resolves with the result to the
+ * callback parameter or rejects with an Error.
+ */
+exports.applyArgsCheckLastError = function(fn, callArgs) {
+  return new Promise(function(resolve, reject) {
+    console.log('fn in apply: ', fn);
+    console.log('callArgs: ', callArgs);
+    // Some of these parameters are "optional", which it seems like the
+    // sendMessage function interprets based on type, etc. Rather than passing
+    // directly, we are going to pass the arguments variable directly, adding a
+    // callback function.
+    var args = Array.prototype.slice.call(callArgs);
+    args.push(function(response) {
+      if (exports.wasError()) {
+        reject(exports.getError());
+      } else {
+        resolve(response);
+      }
+    });
+    console.log('going to apply');
+    fn.apply(null, args);
+  });
 };
 
 },{}],3:[function(require,module,exports){
-/* globals Promise, chrome */
-'use strict';
-
-/**
- * This module provides a wrapper around the chrome.storage.local API and
- * provides an alternative based on Promises.
- */
-
-/**
- * @param {boolean} useSync
- *
- * @return {StorageArea} chrome.storage.sync or chrome.storage.local depending
- * on the value of useSync
- */
-function getStorageArea(useSync) {
-  if (useSync) {
-    return chrome.storage.sync;
-  } else {
-    return chrome.storage.local;
-  }
-}
-
-/**
- * @param {string|Array<string>} keyOrKeys
- * @param {boolean} useSync true to use chrome.storage.sync, otherwise will use
- * chrome.storage.local
- *
- * @return {Promise} Promise that resolves with an object of key value mappings
- */
-exports.get = function(keyOrKeys, useSync) {
-  var storageArea = getStorageArea(useSync);
-  return new Promise(function(resolve) {
-    storageArea.get(keyOrKeys, function(items) {
-      resolve(items);
-    });
-  });
-};
-
-/**
- * @param {string|Array<string>} keyOrKeys
- * @param {boolean} useSync true to use chrome.storage.sync, otherwise will use
- * chrome.storage.local
- *
- * @return {Promise} Promise that resolves with an integer of the number of
- * bytes in use for the given key or keys
- */
-exports.getBytesInUse = function(keyOrKeys, useSync) {
-  var storageArea = getStorageArea(useSync);
-  return new Promise(function(resolve) {
-    storageArea.getBytesInUse(keyOrKeys, function(numBytes) {
-      resolve(numBytes);
-    });
-  });
-};
-
-/**
- * @param {object} items an object of key value mappings
- * @param {boolean} useSync true to use chrome.storage.sync, otherwise will use
- * chrome.storage.local
- *
- * @return {Promise} Promise that resolves when the operation completes
- */
-exports.set = function(items, useSync) {
-  var storageArea = getStorageArea(useSync);
-  return new Promise(function(resolve) {
-    storageArea.set(items, function() {
-      resolve();
-    });
-  });
-};
-
-/**
- * @param {string|Array<string>} keyOrKeys
- * @param {boolean} useSync true to use chrome.storage.sync, otherwise will use
- * chrome.storage.local
- *
- * @return {Promise} Promise that resolves when the operation completes
- */
-exports.remove = function(keyOrKeys, useSync) {
-  var storageArea = getStorageArea(useSync);
-  return new Promise(function(resolve) {
-    storageArea.remove(keyOrKeys, function() {
-      resolve();
-    });
-  });
-};
-
-/**
- * @param {boolean} useSync true to use chrome.storage.sync, otherwise will use
- * chrome.storage.local
- *
- * @return {Promise} Promise that resolves when the operation completes
- */
-exports.clear = function(useSync) {
-  var storageArea = getStorageArea(useSync);
-  return new Promise(function(resolve) {
-    storageArea.clear(function() {
-      resolve();
-    });
-  });
-};
-
-},{}],4:[function(require,module,exports){
 /*jshint esnext:true, bitwise: false */
 'use strict';
 
@@ -486,7 +369,7 @@ exports.getByteArrayAsUint8Array = function(byteArr) {
   return new Uint8Array(byteArr._buffer, 0, byteArr._cursor);
 };
 
-},{"./binary-utils":"binaryUtils"}],5:[function(require,module,exports){
+},{"./binary-utils":"binaryUtils"}],4:[function(require,module,exports){
 /*jshint esnext:true*/
 /*
  * https://github.com/justindarc/dns-sd.js
@@ -675,7 +558,7 @@ function defineType(values) {
   return T;
 }
 
-},{}],6:[function(require,module,exports){
+},{}],5:[function(require,module,exports){
 /*jshint esnext:true, bitwise:false */
 
 /**
@@ -1099,7 +982,7 @@ exports.getFlagsAsValue = function(qr, opcode, aa, tc, rd, ra, rcode) {
   return value;
 };
 
-},{"./byte-array":4,"./dns-codes":5,"./question-section":8,"./resource-record":9}],7:[function(require,module,exports){
+},{"./byte-array":3,"./dns-codes":4,"./question-section":7,"./resource-record":8}],6:[function(require,module,exports){
 'use strict';
 
 var byteArray = require('./byte-array');
@@ -1309,7 +1192,7 @@ exports.getIpStringFromByteArrayReader = function(reader) {
   return result;
 };
 
-},{"./byte-array":4}],8:[function(require,module,exports){
+},{"./byte-array":3}],7:[function(require,module,exports){
 /* global exports, require */
 'use strict';
 
@@ -1415,7 +1298,7 @@ exports.createQuestionFromReader = function(reader) {
   return result;
 };
 
-},{"./byte-array":4,"./dns-util":7}],9:[function(require,module,exports){
+},{"./byte-array":3,"./dns-util":6}],8:[function(require,module,exports){
 /* global exports, require */
 'use strict';
 
@@ -1936,7 +1819,7 @@ exports.peekTypeInReader = function(reader) {
   return result;
 };
 
-},{"./byte-array":4,"./dns-codes":5,"./dns-util":7}],10:[function(require,module,exports){
+},{"./byte-array":3,"./dns-codes":4,"./dns-util":6}],9:[function(require,module,exports){
 /* globals chrome */
 'use strict';
 
@@ -1960,7 +1843,7 @@ window.dnssd = require('dnssd');
 window.dnsc = require('dnsc');
 window.dnsSem = require('dnsSem');
 
-},{"dnsSem":"dnsSem","dnsc":"dnsc","dnssd":"dnssd"}],11:[function(require,module,exports){
+},{"dnsSem":"dnsSem","dnsc":"dnsc","dnssd":"dnssd"}],10:[function(require,module,exports){
 'use strict';
 
 var util = require('../util');
@@ -2033,7 +1916,7 @@ exports.createFileParams = function(ipaddr, port, fileUrl) {
   };
 };
 
-},{"../util":18}],12:[function(require,module,exports){
+},{"../util":17}],11:[function(require,module,exports){
 'use strict';
 
 var util = require('../util');
@@ -2092,7 +1975,7 @@ exports.HttpPeerAccessor.prototype.getList = function(params) {
   });
 };
 
-},{"../util":18}],13:[function(require,module,exports){
+},{"../util":17}],12:[function(require,module,exports){
 'use strict';
 
 var cmgr = require('../webrtc/connection-manager');
@@ -2155,7 +2038,7 @@ exports.WebrtcPeerAccessor.prototype.getList = function(params) {
   });
 };
 
-},{"../util":18,"../webrtc/connection-manager":"cmgr"}],14:[function(require,module,exports){
+},{"../util":17,"../webrtc/connection-manager":"cmgr"}],13:[function(require,module,exports){
 /* globals Promise */
 'use strict';
 
@@ -2171,10 +2054,10 @@ exports.WebrtcPeerAccessor.prototype.getList = function(params) {
 // "www.example.com_date". This will serve for a prototype but might become
 // limiting in the future.
 
+var chromep = require('../chrome-apis/chromep');
 var fileSystem = require('./file-system');
 var fsUtil = require('./file-system-util');
 var serverApi = require('../server/server-api');
-var storage = require('../chrome-apis/storage');
 
 /** The number of characters output by Date.toISOString() */
 var LENGTH_ISO_DATE_STR = 24;
@@ -2356,7 +2239,7 @@ exports.getEntryAsCachedPage = function(entry) {
 exports.getMetadataForEntry = function(entry) {
   return new Promise(function(resolve, reject) {
     var key = exports.createMetadataKey(entry);
-    storage.get(key)
+    chromep.getStorageLocal().get(key)
     .then(obj => {
       // The get API resolves with the key value pair in a single object,
       // e.g. get('foo') -> { foo: bar }.
@@ -2401,7 +2284,7 @@ exports.writeMetadataForEntry = function(entry, metadata) {
   var key = exports.createMetadataKey(entry);
   var obj = {};
   obj[key] = metadata;
-  return storage.set(obj);
+  return chromep.getStorageLocal().set(obj);
 };
 
 /**
@@ -2462,7 +2345,7 @@ exports.getCaptureDateFromName = function(name) {
   return result;
 };
 
-},{"../chrome-apis/storage":3,"../server/server-api":17,"./file-system":"fileSystem","./file-system-util":"fsUtil"}],15:[function(require,module,exports){
+},{"../chrome-apis/chromep":1,"../server/server-api":16,"./file-system":"fileSystem","./file-system-util":"fsUtil"}],14:[function(require,module,exports){
 /* globals WSC, _, TextEncoder */
 'use strict';
 
@@ -2492,7 +2375,7 @@ _.extend(exports.EvaluationHandler.prototype, {
   }
 }, WSC.BaseHandler.prototype);
 
-},{"../evaluation":"eval"}],16:[function(require,module,exports){
+},{"../evaluation":"eval"}],15:[function(require,module,exports){
 /* globals WSC, RTCPeerConnection, RTCSessionDescription, RTCIceCandidate */
 'use strict';
 
@@ -2708,7 +2591,7 @@ _.extend(exports.WebRtcOfferHandler.prototype,
   WSC.BaseHandler.prototype
 );
 
-},{"../dnssd/binary-utils":"binaryUtils","../persistence/file-system":"fileSystem","../persistence/file-system-util":"fsUtil","../webrtc/connection-manager":"cmgr","../webrtc/responder":22,"./server-api":17,"underscore":39}],17:[function(require,module,exports){
+},{"../dnssd/binary-utils":"binaryUtils","../persistence/file-system":"fileSystem","../persistence/file-system-util":"fsUtil","../webrtc/connection-manager":"cmgr","../webrtc/responder":21,"./server-api":16,"underscore":39}],16:[function(require,module,exports){
 'use strict';
 
 /**
@@ -2830,7 +2713,7 @@ exports.getCachedFileNameFromPath = function(path) {
   return result;
 };
 
-},{"../app-controller":"appController","../persistence/datastore":14}],18:[function(require,module,exports){
+},{"../app-controller":"appController","../persistence/datastore":13}],17:[function(require,module,exports){
 'use strict';
 
 /**
@@ -3030,7 +2913,7 @@ exports.getBufferAsBlob = function(buff) {
   );
 };
 
-},{}],19:[function(require,module,exports){
+},{}],18:[function(require,module,exports){
 'use strict';
 
 var _ = require('underscore');
@@ -3257,7 +3140,7 @@ exports.createContinueMessage = function() {
   return { message: 'next' };
 };
 
-},{"buffer":25,"underscore":39,"wolfy87-eventemitter":40}],20:[function(require,module,exports){
+},{"buffer":24,"underscore":39,"wolfy87-eventemitter":40}],19:[function(require,module,exports){
 'use strict';
 
 /**
@@ -3337,7 +3220,7 @@ exports.isFile = function(msg) {
   return msg.type && msg.type === exports.TYPE_FILE;
 };
 
-},{}],21:[function(require,module,exports){
+},{}],20:[function(require,module,exports){
 'use strict';
 
 var _ = require('underscore');
@@ -3480,7 +3363,7 @@ exports.sendAndGetResponse = function(pc, msg) {
   });
 };
 
-},{"./chunking-channel":19,"./message":20,"underscore":39,"wolfy87-eventemitter":40}],22:[function(require,module,exports){
+},{"./chunking-channel":18,"./message":19,"underscore":39,"wolfy87-eventemitter":40}],21:[function(require,module,exports){
 'use strict';
 
 var Buffer = require('buffer').Buffer;
@@ -3601,7 +3484,7 @@ exports.createCcClient = function(channel) {
   return new chunkingChannel.Client(channel);
 };
 
-},{"../dnssd/binary-utils":"binaryUtils","../persistence/file-system":"fileSystem","../server/server-api":17,"./chunking-channel":19,"./message":20,"buffer":25}],23:[function(require,module,exports){
+},{"../dnssd/binary-utils":"binaryUtils","../persistence/file-system":"fileSystem","../server/server-api":16,"./chunking-channel":18,"./message":19,"buffer":24}],22:[function(require,module,exports){
 (function (global){
 /*! http://mths.be/base64 v0.1.0 by @mathias | MIT license */
 ;(function(root) {
@@ -3770,7 +3653,7 @@ exports.createCcClient = function(channel) {
 }(this));
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],24:[function(require,module,exports){
+},{}],23:[function(require,module,exports){
 'use strict'
 
 exports.byteLength = byteLength
@@ -3886,7 +3769,7 @@ function fromByteArray (uint8) {
   return parts.join('')
 }
 
-},{}],25:[function(require,module,exports){
+},{}],24:[function(require,module,exports){
 (function (global){
 /*!
  * The buffer module from node.js, for the browser.
@@ -5679,12 +5562,107 @@ function isnan (val) {
 }
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"base64-js":24,"ieee754":28,"isarray":26}],26:[function(require,module,exports){
+},{"base64-js":23,"ieee754":28,"isarray":25}],25:[function(require,module,exports){
 var toString = {}.toString;
 
 module.exports = Array.isArray || function (arr) {
   return toString.call(arr) == '[object Array]';
 };
+
+},{}],26:[function(require,module,exports){
+/*!
+ * chrome-promise 2.0.2
+ * https://github.com/tfoxy/chrome-promise
+ *
+ * Copyright 2015 Tomás Fox
+ * Released under the MIT license
+ */
+
+(function(root, factory) {
+  if (typeof define === 'function' && define.amd) {
+    // AMD. Register as an anonymous module.
+    define([], factory.bind(null, typeof exports === 'object' ? this : root));
+  } else if (typeof exports === 'object') {
+    // Node. Does not work with strict CommonJS, but
+    // only CommonJS-like environments that support module.exports,
+    // like Node.
+    module.exports = factory(this);
+  } else {
+    // Browser globals (root is window)
+    root.ChromePromise = factory(root);
+  }
+}(this, function(root) {
+  'use strict';
+  var slice = Array.prototype.slice,
+      hasOwnProperty = Object.prototype.hasOwnProperty;
+
+  return ChromePromise;
+
+  ////////////////
+
+  function ChromePromise(options) {
+    options = options || {};
+    var chrome = options.chrome || root.chrome;
+    var Promise = options.Promise || root.Promise;
+    var runtime = chrome.runtime;
+
+    fillProperties(chrome, this);
+
+    ////////////////
+
+    function setPromiseFunction(fn, thisArg) {
+
+      return function() {
+        var args = slice.call(arguments);
+
+        return new Promise(function(resolve, reject) {
+          args.push(callback);
+
+          fn.apply(thisArg, args);
+
+          function callback() {
+            var err = runtime.lastError;
+            var results = slice.call(arguments);
+            if (err) {
+              reject(err);
+            } else {
+              switch (results.length) {
+                case 0:
+                  resolve();
+                  break;
+                case 1:
+                  resolve(results[0]);
+                  break;
+                default:
+                  resolve(results);
+              }
+            }
+          }
+        });
+
+      };
+
+    }
+
+    function fillProperties(source, target) {
+      for (var key in source) {
+        if (hasOwnProperty.call(source, key)) {
+          var val = source[key];
+          var type = typeof val;
+
+          if (type === 'object' && !(val instanceof ChromePromise)) {
+            target[key] = {};
+            fillProperties(val, target[key]);
+          } else if (type === 'function') {
+            target[key] = setPromiseFunction(val, source);
+          } else {
+            target[key] = val;
+          }
+        }
+      }
+    }
+  }
+}));
 
 },{}],27:[function(require,module,exports){
 var isBuffer = require('is-buffer')
@@ -30982,7 +30960,7 @@ exports.saveMhtmlAndOpen = function(
   });
 };
 
-},{"./dnssd/dns-controller":"dnsc","./dnssd/dns-sd-semcache":"dnsSem","./evaluation":"eval","./extension-bridge/messaging":"extBridge","./peer-interface/common":11,"./peer-interface/http-impl":12,"./peer-interface/webrtc-impl":13,"./persistence/datastore":14,"./persistence/file-system":"fileSystem","./server/server-api":17,"./server/server-controller":"serverController","./settings":"settings"}],"binaryUtils":[function(require,module,exports){
+},{"./dnssd/dns-controller":"dnsc","./dnssd/dns-sd-semcache":"dnsSem","./evaluation":"eval","./extension-bridge/messaging":"extBridge","./peer-interface/common":10,"./peer-interface/http-impl":11,"./peer-interface/webrtc-impl":12,"./persistence/datastore":13,"./persistence/file-system":"fileSystem","./server/server-api":16,"./server/server-controller":"serverController","./settings":"settings"}],"binaryUtils":[function(require,module,exports){
 /*jshint esnext:true*/
 /*
  * https://github.com/justindarc/dns-sd.js
@@ -31062,6 +31040,8 @@ return BinaryUtils;
 /* globals Promise, chrome */
 'use strict';
 
+var util = require('./util');
+
 var DEBUG = false;
 
 exports.ChromeUdpSocket = function ChromeUdpSocket(socketInfo) {
@@ -31081,30 +31061,40 @@ exports.ChromeUdpSocket.prototype.send = function(arrayBuffer, address, port) {
 };
 
 /**
- * Add listener via call to chrome.sockets.udp.onReceive.addListener.
+ * Add listener via call to util.getUdp().onReceive.addListener.
  */
 exports.addOnReceiveListener = function(listener) {
-  chrome.sockets.udp.onReceive.addListener(listener);
+  util.getUdp().onReceive.addListener(listener);
 };
 
 /**
- * Add listener via call to chrome.sockets.udp.onReceiveError.addListener.
+ * Add listener via call to util.getUdp().onReceiveError.addListener.
  */
 exports.addOnReceiveErrorListener = function(listener) {
-  chrome.sockets.udp.onReceiveError.addListener(listener);
+  util.getUdp().onReceiveError.addListener(listener);
 };
 
+/**
+ * @param {SocketProperties} properties optional
+ *
+ * @returns {Promise.<object, Error>} Promise that resolves with a socket info
+ * object or rejects with an Error
+ */
 exports.create = function(obj) {
-  return new Promise(function(resolve) {
-    chrome.sockets.udp.create(obj, function(socketInfo) {
-      resolve(socketInfo);
+  return new Promise(function(resolve, reject) {
+    util.getUdp().create(obj, function(socketInfo) {
+      if (util.wasError()) {
+        reject(util.getError());
+      } else {
+        resolve(socketInfo);
+      }
     });
   });
 };
 
 exports.bind = function(socketId, address, port) {
   return new Promise(function(resolve, reject) {
-    chrome.sockets.udp.bind(socketId, address, port, function(result) {
+    util.getUdp().bind(socketId, address, port, function(result) {
       if (result < 0) {
         console.log('chromeUdp.bind: result < 0, rejecting');
         console.log('    socketId: ', socketId);
@@ -31132,7 +31122,7 @@ exports.send = function(socketId, arrayBuffer, address, port) {
       console.log('    port: ', port);
       console.log('    arrayBuffer: ', arrayBuffer);
     }
-    chrome.sockets.udp.send(
+    util.getUdp().send(
       socketId,
       arrayBuffer,
       address,
@@ -31151,7 +31141,7 @@ exports.send = function(socketId, arrayBuffer, address, port) {
 
 exports.joinGroup = function(socketId, address) {
   return new Promise(function(resolve, reject) {
-    chrome.sockets.udp.joinGroup(socketId, address, function(result) {
+    util.getUdp().joinGroup(socketId, address, function(result) {
       if (DEBUG) {
         console.log('socketId: ', socketId);
         console.log('address: ', address);
@@ -31168,7 +31158,7 @@ exports.joinGroup = function(socketId, address) {
 
 exports.getSockets = function() {
   return new Promise(function(resolve) {
-    chrome.sockets.udp.getSockets(function(allSockets) {
+    util.getUdp().getSockets(function(allSockets) {
       resolve(allSockets);
     });
   });
@@ -31176,7 +31166,7 @@ exports.getSockets = function() {
 
 exports.getInfo = function(socketId) {
   return new Promise(function(resolve) {
-    chrome.sockets.udp.getInfo(socketId, function(socketInfo) {
+    util.getUdp().getInfo(socketId, function(socketInfo) {
       resolve(socketInfo);
     });
   });
@@ -31186,7 +31176,7 @@ exports.closeAllSockets = function() {
   exports.getSockets().then(function(allSockets) {
     allSockets.forEach(function(socketInfo) {
       console.log('Closing socket with id: ', socketInfo.socketId);
-      chrome.sockets.udp.close(socketInfo.socketId);
+      util.getUdp().close(socketInfo.socketId);
     });
   });
 };
@@ -31219,7 +31209,7 @@ exports.getNetworkInterfaces = function() {
   });
 };
 
-},{}],"cmgr":[function(require,module,exports){
+},{"./util":2}],"cmgr":[function(require,module,exports){
 /* globals RTCPeerConnection, RTCSessionDescription, RTCIceCandidate */
 'use strict';
 
@@ -31498,7 +31488,7 @@ exports.createRTCSessionDescription = function(descJson) {
   return new RTCSessionDescription(descJson);
 };
 
-},{"../../../app/scripts/webrtc/peer-connection":21,"../server/server-api":17,"../util":18,"buffer":25}],"dnsSem":[function(require,module,exports){
+},{"../../../app/scripts/webrtc/peer-connection":20,"../server/server-api":16,"../util":17,"buffer":24}],"dnsSem":[function(require,module,exports){
 /*jshint esnext:true*/
 'use strict';
 
@@ -31632,7 +31622,7 @@ exports.browseForSemCacheInstances = function() {
   return result;
 };
 
-},{"../server/server-api":17,"./dns-sd":"dnssd"}],"dnsc":[function(require,module,exports){
+},{"../server/server-api":16,"./dns-sd":"dnssd"}],"dnsc":[function(require,module,exports){
 /*jshint esnext:true*/
 /* globals Promise */
 'use strict';
@@ -32304,7 +32294,7 @@ exports.addRecord = function(name, record) {
   existingRecords.push(record);
 };
 
-},{"../chrome-apis/udp":"chromeUdp","../util":18,"./byte-array":4,"./dns-codes":5,"./dns-packet":6,"./dns-util":7,"./question-section":8}],"dnssd":[function(require,module,exports){
+},{"../chrome-apis/udp":"chromeUdp","../util":17,"./byte-array":3,"./dns-codes":4,"./dns-packet":5,"./dns-util":6,"./question-section":7}],"dnssd":[function(require,module,exports){
 /*jshint esnext:true*/
 /* globals Promise */
 'use strict';
@@ -33275,7 +33265,7 @@ exports.queryForResponses = function(
   });
 };
 
-},{"../util":18,"./dns-codes":5,"./dns-controller":"dnsc","./dns-packet":6,"./dns-util":7,"./resource-record":9,"lodash":36}],"eval":[function(require,module,exports){
+},{"../util":17,"./dns-codes":4,"./dns-controller":"dnsc","./dns-packet":5,"./dns-util":6,"./resource-record":8,"lodash":36}],"eval":[function(require,module,exports){
 'use strict';
 
 /**
@@ -33286,7 +33276,7 @@ var json2csv = require('json2csv');
 
 var datastore = require('./persistence/datastore');
 var api = require('./server/server-api');
-var storage = require('./chrome-apis/storage');
+var chromep = require('./chrome-apis/chromep');
 var appc = require('./app-controller');
 var util = require('./util');
 
@@ -33397,7 +33387,7 @@ exports.logTime = function(key, time) {
         // New value.
         setObj[scopedKey] = [ time ];
       }
-      return storage.set(setObj);
+      return chromep.getStorageLocal().set(setObj);
     })
     .then(() => {
       resolve();
@@ -33423,7 +33413,7 @@ exports.logTime = function(key, time) {
 exports.getTimeValues = function(key) {
   return new Promise(function(resolve, reject) {
     var scopedKey = exports.createTimingKey(key);
-    storage.get(scopedKey)
+    chromep.getStorageLocal().get(scopedKey)
     .then(existingValues => {
       if (existingValues && existingValues[scopedKey]) {
         resolve(existingValues[scopedKey]);
@@ -33952,12 +33942,13 @@ exports.downloadKeyAsCsv = function(key) {
   });
 };
 
-},{"./app-controller":"appController","./chrome-apis/storage":3,"./persistence/datastore":14,"./server/server-api":17,"./util":18,"json2csv":30}],"extBridge":[function(require,module,exports){
+},{"./app-controller":"appController","./chrome-apis/chromep":1,"./persistence/datastore":13,"./server/server-api":16,"./util":17,"json2csv":30}],"extBridge":[function(require,module,exports){
 'use strict';
 
-var chromeRuntime = require('../chrome-apis/runtime');
-var datastore = require('../persistence/datastore');
 var base64 = require('base-64');
+
+var chromep = require('../chrome-apis/chromep');
+var datastore = require('../persistence/datastore');
 
 /**
  * ID of the Semcache extension.
@@ -33970,7 +33961,7 @@ exports.EXTENSION_ID = 'malgfdapbefeeidjfndgioclhfpfglhe';
  * @param {any} message
  */
 exports.sendMessageToExtension = function(message) {
-  chromeRuntime.sendMessage(exports.EXTENSION_ID, message);
+  chromep.getRuntime().sendMessage(exports.EXTENSION_ID, message);
 };
 
 /**
@@ -34080,7 +34071,13 @@ exports.getBlobFromDataUrl = function(dataUrl) {
 };
 
 exports.attachListeners = function() {
-  chromeRuntime.addOnMessageExternalListener(exports.handleExternalMessage);
+  var runtime = chromep.getRuntime();
+  console.log('runtime: ', runtime);
+  var ome = runtime.onMessageExternal;
+  console.log('ome: ', ome);
+  chromep.getRuntime().onMessageExternal.addListener(
+    exports.handleExternalMessage
+  );
 };
 
 /**
@@ -34098,13 +34095,12 @@ exports.sendMessageToOpenUrl = function(url) {
   exports.sendMessageToExtension(message);
 };
 
-},{"../chrome-apis/runtime":2,"../persistence/datastore":14,"base-64":23}],"fileSystem":[function(require,module,exports){
+},{"../chrome-apis/chromep":1,"../persistence/datastore":13,"base-64":22}],"fileSystem":[function(require,module,exports){
 /*jshint esnext:true*/
 /* globals Promise */
 'use strict';
 
-var chromefs = require('../chrome-apis/file-system');
-var chromeStorage = require('../chrome-apis/storage');
+var chromep = require('../chrome-apis/chromep');
 var fsUtil = require('./file-system-util');
 
 /** The local storage key for the entry ID of the base directory. */
@@ -34182,10 +34178,10 @@ exports.getPersistedBaseDir = function() {
     exports.baseDirIsSet()
     .then(isSet => {
       if (isSet) {
-        chromeStorage.get(exports.KEY_BASE_DIR)
+        chromep.getStorageLocal().get(exports.KEY_BASE_DIR)
         .then(keyValue => {
           var id = keyValue[exports.KEY_BASE_DIR];
-          return chromefs.restoreEntry(id);
+          return chromep.getFileSystem().restoreEntry(id);
         })
         .then(dirEntry => {
           resolve(dirEntry);
@@ -34206,7 +34202,7 @@ exports.getPersistedBaseDir = function() {
  */
 exports.baseDirIsSet = function() {
   return new Promise(function(resolve, reject) {
-    chromeStorage.get(exports.KEY_BASE_DIR)
+    chromep.getStorageLocal().get(exports.KEY_BASE_DIR)
     .then(keyValue => {
       var isSet = false;
       if (keyValue && keyValue[exports.KEY_BASE_DIR]) {
@@ -34227,9 +34223,10 @@ exports.baseDirIsSet = function() {
  */
 exports.setBaseCacheDir = function(dirEntry) {
   var keyObj = {};
-  var id = chromefs.retainEntrySync(dirEntry);
+  var id = chromep.getFileSystem().retainEntry(dirEntry);
   keyObj[exports.KEY_BASE_DIR] = id;
-  chromeStorage.set(keyObj);
+  console.log('going to call set');
+  chromep.getStorageLocal().set(keyObj);
 };
 
 /**
@@ -34240,7 +34237,7 @@ exports.setBaseCacheDir = function(dirEntry) {
  */
 exports.promptForDir = function() {
   return new Promise(function(resolve, reject) {
-    chromefs.chooseEntry({type: 'openDirectory'})
+    chromep.getFileSystem().chooseEntry({type: 'openDirectory'})
     .then(entry => {
       resolve(entry);
     })
@@ -34283,7 +34280,7 @@ exports.getFileContentsFromName = function(fileName) {
   });
 };
 
-},{"../chrome-apis/file-system":1,"../chrome-apis/storage":3,"./file-system-util":"fsUtil"}],"fsUtil":[function(require,module,exports){
+},{"../chrome-apis/chromep":1,"./file-system-util":"fsUtil"}],"fsUtil":[function(require,module,exports){
 /* globals Promise */
 'use strict';
 
@@ -34492,7 +34489,7 @@ exports.createFileReader = function() {
   return new FileReader();
 };
 
-},{"buffer":25}],"moment":[function(require,module,exports){
+},{"buffer":24}],"moment":[function(require,module,exports){
 //! moment.js
 //! version : 2.17.1
 //! authors : Tim Wood, Iskren Chernev, Moment.js contributors
@@ -38863,13 +38860,12 @@ exports.start = function(host, port) {
   startServer(host, port, endpointHandlers);
 };
 
-},{"./evaluation-handler":15,"./handlers":16,"./server-api":17}],"settings":[function(require,module,exports){
+},{"./evaluation-handler":14,"./handlers":15,"./server-api":16}],"settings":[function(require,module,exports){
 /* global Promise */
 'use strict';
 
-var storage = require('./chrome-apis/storage');
+var chromep = require('./chrome-apis/chromep');
 var fileSystem = require('./persistence/file-system');
-var chromefs = require('./chrome-apis/file-system');
 
 /**
  * Settings for the application as a whole.
@@ -38946,7 +38942,7 @@ exports.getSettingsObj = function() {
 exports.init = function() {
   // Get all the known settings
   return new Promise(function(resolve, reject) {
-    storage.get(exports.getAllSettingKeys())
+    chromep.getStorageLocal().get(exports.getAllSettingKeys())
     .then(allKvPairs => {
       var processedSettings = {};
       Object.keys(allKvPairs).forEach(rawKey => {
@@ -38979,7 +38975,7 @@ exports.set = function(key, value) {
     kvPair[namespacedKey] = value;
     var useSync = false;
 
-    storage.set(kvPair, useSync)
+    chromep.getStorageLocal().set(kvPair, useSync)
     .then(() => {
       exports.SETTINGS_OBJ[key] = value;
       // Now that the set has succeeded, update the cache of settings.
@@ -39192,10 +39188,10 @@ exports.promptAndSetNewBaseDir = function() {
       }
       console.log('FULL PATH: ', dirEntry.fullPath);
       fileSystem.setBaseCacheDir(dirEntry);
-      dirId = chromefs.retainEntrySync(dirEntry);
+      dirId = chromep.getFileSystem().retainEntry(dirEntry);
       exports.setBaseDirId(dirId);
       // Set the ID
-      return chromefs.getDisplayPath(dirEntry);
+      return chromep.getFileSystem().getDisplayPath(dirEntry);
     })
     .then(displayPath => {
       // Set display path
@@ -39213,4 +39209,4 @@ exports.promptAndSetNewBaseDir = function() {
   });
 };
 
-},{"./chrome-apis/file-system":1,"./chrome-apis/storage":3,"./persistence/file-system":"fileSystem"}]},{},[10]);
+},{"./chrome-apis/chromep":1,"./persistence/file-system":"fileSystem"}]},{},[9]);
