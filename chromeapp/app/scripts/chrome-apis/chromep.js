@@ -36,3 +36,10 @@ exports.getFileSystem = function() {
 exports.getStorageLocal = function() {
   return CHROMEP_SINGLETON.storage.local;
 };
+
+/**
+ * @return {object} the Promisified version of chrome.sockets.udp
+ */
+exports.getUdp = function() {
+  return CHROMEP_SINGLETON.sockets.udp;
+};

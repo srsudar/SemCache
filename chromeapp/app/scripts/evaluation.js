@@ -8,7 +8,7 @@ var json2csv = require('json2csv');
 
 var datastore = require('./persistence/datastore');
 var api = require('./server/server-api');
-var storage = require('./chrome-apis/storage');
+var chromep = require('./chrome-apis/chromep');
 var appc = require('./app-controller');
 var util = require('./util');
 
@@ -119,7 +119,7 @@ exports.logTime = function(key, time) {
         // New value.
         setObj[scopedKey] = [ time ];
       }
-      return storage.set(setObj);
+      return chromep.getStorageLocal().set(setObj);
     })
     .then(() => {
       resolve();
@@ -145,7 +145,7 @@ exports.logTime = function(key, time) {
 exports.getTimeValues = function(key) {
   return new Promise(function(resolve, reject) {
     var scopedKey = exports.createTimingKey(key);
-    storage.get(scopedKey)
+    chromep.getStorageLocal().get(scopedKey)
     .then(existingValues => {
       if (existingValues && existingValues[scopedKey]) {
         resolve(existingValues[scopedKey]);

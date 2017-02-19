@@ -22,7 +22,10 @@ function resetEvaluation() {
 /**
  * Proxyquire the evaluation object with proxies passed as the proxied modules.
  */
-function proxyquireEvaluation(proxies) {
+function proxyquireEvaluation(proxies, localStorageProxies) {
+  proxies['./chrome-apis/chromep'] = {
+    getStorageLocal: sinon.stub().returns(localStorageProxies),
+  };
   evaluation = proxyquire(
     '../../app/scripts/evaluation',
     proxies
@@ -105,11 +108,7 @@ test('getTimeValues returns result of get', function(t) {
   getResult[scopedKey] = expected;
   var getSpy = sinon.stub().resolves(getResult);
 
-  proxyquireEvaluation({
-    './chrome-apis/storage': {
-      get: getSpy
-    }
-  });
+  proxyquireEvaluation({}, { get: getSpy });
 
   evaluation.getTimeValues(key)
   .then(actual => {
@@ -132,11 +131,7 @@ test('getTimeValues returns null if not present', function(t) {
 
   var getSpy = sinon.stub().resolves({});
 
-  proxyquireEvaluation({
-    './chrome-apis/storage': {
-      get: getSpy
-    }
-  });
+  proxyquireEvaluation({}, { get: getSpy });
 
   evaluation.getTimeValues(key)
   .then(actual => {
@@ -154,11 +149,7 @@ test('getTimeValues returns null if not present', function(t) {
 
 test('getTimeValues rejects if error', function(t) {
   var expected = { error: 'sigh' };
-  proxyquireEvaluation({
-    './chrome-apis/storage': {
-      get: sinon.stub().rejects(expected)
-    }
-  });
+  proxyquireEvaluation({}, { get: sinon.stub().rejects(expected)});
   evaluation.getTimeValues()
   .then(res => {
     t.fail(res);
@@ -460,12 +451,13 @@ test('logTime calls storage correctly if new stream', function(t) {
 
   var setSpy = sinon.stub();
   var getSpy = sinon.stub().resolves({});
-  proxyquireEvaluation({
-    './chrome-apis/storage': {
+  proxyquireEvaluation(
+    {},
+    {
       set: setSpy,
       get: getSpy
     }
-  });
+  );
 
   var expectedSet = {};
   expectedSet[scopedKey] = [ time ];
@@ -494,12 +486,13 @@ test('logTime calls storage correctly if appending to stream', function(t) {
 
   var setSpy = sinon.stub();
   var getSpy = sinon.stub().resolves(existingValues);
-  proxyquireEvaluation({
-    './chrome-apis/storage': {
+  proxyquireEvaluation(
+    {},
+    {
       set: setSpy,
       get: getSpy
     }
-  });
+  );
 
   var expectedSet = {};
   var newTimes = existingTimes.slice();
