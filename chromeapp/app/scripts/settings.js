@@ -1,9 +1,8 @@
 /* global Promise */
 'use strict';
 
-var storage = require('./chrome-apis/storage');
+var chromep = require('./chrome-apis/chromep');
 var fileSystem = require('./persistence/file-system');
-var chromefs = require('./chrome-apis/file-system');
 
 /**
  * Settings for the application as a whole.
@@ -80,7 +79,7 @@ exports.getSettingsObj = function() {
 exports.init = function() {
   // Get all the known settings
   return new Promise(function(resolve, reject) {
-    storage.get(exports.getAllSettingKeys())
+    chromep.getStorageLocal().get(exports.getAllSettingKeys())
     .then(allKvPairs => {
       var processedSettings = {};
       Object.keys(allKvPairs).forEach(rawKey => {
@@ -113,7 +112,7 @@ exports.set = function(key, value) {
     kvPair[namespacedKey] = value;
     var useSync = false;
 
-    storage.set(kvPair, useSync)
+    chromep.getStorageLocal().set(kvPair, useSync)
     .then(() => {
       exports.SETTINGS_OBJ[key] = value;
       // Now that the set has succeeded, update the cache of settings.
@@ -326,10 +325,10 @@ exports.promptAndSetNewBaseDir = function() {
       }
       console.log('FULL PATH: ', dirEntry.fullPath);
       fileSystem.setBaseCacheDir(dirEntry);
-      dirId = chromefs.retainEntrySync(dirEntry);
+      dirId = chromep.getFileSystem().retainEntry(dirEntry);
       exports.setBaseDirId(dirId);
       // Set the ID
-      return chromefs.getDisplayPath(dirEntry);
+      return chromep.getFileSystem().getDisplayPath(dirEntry);
     })
     .then(displayPath => {
       // Set display path

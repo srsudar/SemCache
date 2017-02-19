@@ -43,3 +43,10 @@ exports.getStorageLocal = function() {
 exports.getUdp = function() {
   return CHROMEP_SINGLETON.sockets.udp;
 };
+
+/**
+ * @return {object} the Promisified version of chrome.runtime
+ */
+exports.getRuntime = function() {
+  return CHROMEP_SINGLETON.sockets.udp;
+};
