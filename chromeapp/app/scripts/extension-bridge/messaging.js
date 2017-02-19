@@ -1,8 +1,9 @@
 'use strict';
 
-var chromeRuntime = require('../chrome-apis/runtime');
-var datastore = require('../persistence/datastore');
 var base64 = require('base-64');
+
+var chromep = require('../chrome-apis/chromep');
+var datastore = require('../persistence/datastore');
 
 /**
  * ID of the Semcache extension.
@@ -15,7 +16,7 @@ exports.EXTENSION_ID = 'malgfdapbefeeidjfndgioclhfpfglhe';
  * @param {any} message
  */
 exports.sendMessageToExtension = function(message) {
-  chromeRuntime.sendMessage(exports.EXTENSION_ID, message);
+  chromep.getRuntime().sendMessage(exports.EXTENSION_ID, message);
 };
 
 /**
@@ -125,7 +126,9 @@ exports.getBlobFromDataUrl = function(dataUrl) {
 };
 
 exports.attachListeners = function() {
-  chromeRuntime.addOnMessageExternalListener(exports.handleExternalMessage);
+  chromep.getRuntime().addOnMessageExternalListener(
+    exports.handleExternalMessage
+  );
 };
 
 /**

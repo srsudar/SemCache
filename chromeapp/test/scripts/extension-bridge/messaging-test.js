@@ -47,7 +47,10 @@ function getDummyWriteMessage() {
 /**
  * Proxyquire the messaging module with proxies set as the proxied modules.
  */
-function proxyquireMessaging(proxies) {
+function proxyquireMessaging(proxies, runtimeProxies) {
+  proxies['../chrome-apis/chromep'] = {
+    getRuntime: sinon.stub().returns(runtimeProxies),
+  };
   messaging = proxyquire(
     '../../../app/scripts/extension-bridge/messaging',
     proxies
@@ -174,11 +177,7 @@ test('handleExternalMessage adds page to cache for write', function(t) {
 
 test('sendMessageToExtension calls sendMessage', function(t) {
   var sendMessageSpy = sinon.spy();
-  proxyquireMessaging({
-    '../chrome-apis/runtime': {
-      sendMessage: sendMessageSpy
-    }
-  });
+  proxyquireMessaging({}, { sendMessage: sendMessageSpy });
 
   var message = {hello: 'big fella'};
 
