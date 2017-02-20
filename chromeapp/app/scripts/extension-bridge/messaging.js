@@ -130,7 +130,7 @@ exports.attachListeners = function() {
   console.log('runtime: ', runtime);
   var ome = runtime.onMessageExternal;
   console.log('ome: ', ome);
-  chromep.getRuntime().onMessageExternal.addListener(
+  chromep.getRuntimeBare().onMessageExternal.addListener(
     exports.handleExternalMessage
   );
 };

@@ -43463,6 +43463,7 @@ function onReady() {
 $(onReady);
 
 },{"appController":"appController","dnsSem":"dnsSem","dnsc":"dnsc","dnssd":"dnssd"}],2:[function(require,module,exports){
+/* globals chrome */
 'use strict';
 
 /**
@@ -43513,7 +43514,11 @@ exports.getUdp = function() {
  * @return {object} the Promisified version of chrome.runtime
  */
 exports.getRuntime = function() {
-  return exports.getChromep().sockets.udp;
+  return exports.getChromep().runtime;
+};
+
+exports.getRuntimeBare = function() {
+  return chrome.runtime;
 };
 
 },{"chrome-promise":26}],3:[function(require,module,exports){
@@ -77515,7 +77520,7 @@ exports.attachListeners = function() {
   console.log('runtime: ', runtime);
   var ome = runtime.onMessageExternal;
   console.log('ome: ', ome);
-  chromep.getRuntime().onMessageExternal.addListener(
+  chromep.getRuntimeBare().onMessageExternal.addListener(
     exports.handleExternalMessage
   );
 };

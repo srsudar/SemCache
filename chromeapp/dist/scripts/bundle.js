@@ -1,4 +1,5 @@
 require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
+/* globals chrome */
 'use strict';
 
 /**
@@ -49,7 +50,11 @@ exports.getUdp = function() {
  * @return {object} the Promisified version of chrome.runtime
  */
 exports.getRuntime = function() {
-  return exports.getChromep().sockets.udp;
+  return exports.getChromep().runtime;
+};
+
+exports.getRuntimeBare = function() {
+  return chrome.runtime;
 };
 
 },{"chrome-promise":26}],2:[function(require,module,exports){
@@ -34075,7 +34080,7 @@ exports.attachListeners = function() {
   console.log('runtime: ', runtime);
   var ome = runtime.onMessageExternal;
   console.log('ome: ', ome);
-  chromep.getRuntime().onMessageExternal.addListener(
+  chromep.getRuntimeBare().onMessageExternal.addListener(
     exports.handleExternalMessage
   );
 };

@@ -1,3 +1,4 @@
+/* globals chrome */
 'use strict';
 
 /**
@@ -48,5 +49,9 @@ exports.getUdp = function() {
  * @return {object} the Promisified version of chrome.runtime
  */
 exports.getRuntime = function() {
-  return exports.getChromep().sockets.udp;
+  return exports.getChromep().runtime;
+};
+
+exports.getRuntimeBare = function() {
+  return chrome.runtime;
 };
