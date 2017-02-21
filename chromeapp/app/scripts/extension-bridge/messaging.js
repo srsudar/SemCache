@@ -56,18 +56,18 @@ exports.handleExternalMessage = function(message, sender, response) {
     var captureDate = message.params.captureDate;
     var metadata = message.params.metadata;
     datastore.addPageToCache(captureUrl, captureDate, blob, metadata)
-      .then(() => {
-        var successMsg = exports.createResponseSuccess(message);
-        if (response) {
-          response(successMsg);
-        }
-      })
-      .catch(err => {
-        var errorMsg = exports.createResponseError(message, err);
-        if (response) {
-          response(errorMsg);
-        }
-      });
+    .then(() => {
+      var successMsg = exports.createResponseSuccess(message);
+      if (response) {
+        response(successMsg);
+      }
+    })
+    .catch(err => {
+      var errorMsg = exports.createResponseError(message, err);
+      if (response) {
+        response(errorMsg);
+      }
+    });
   } else {
     console.log('Unrecognized message type from extension: ', message.type);
   }

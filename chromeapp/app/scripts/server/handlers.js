@@ -30,13 +30,13 @@ _.extend(exports.ListCachedPagesHandler.prototype,
   {
     get: function() {
       api.getResponseForAllCachedPages()
-        .then(response => {
-          this.setHeader('content-type', 'text/json');
-          var encoder = new TextEncoder('utf-8');
-          var buffer = encoder.encode(JSON.stringify(response)).buffer;
-          this.write(buffer);
-          this.finish();
-        });
+      .then(response => {
+        this.setHeader('content-type', 'text/json');
+        var encoder = new TextEncoder('utf-8');
+        var buffer = encoder.encode(JSON.stringify(response)).buffer;
+        this.write(buffer);
+        this.finish();
+      });
     }
   },
   WSC.BaseHandler.prototype
@@ -56,37 +56,37 @@ _.extend(exports.CachedPageHandler.prototype,
       var fileName = api.getCachedFileNameFromPath(this.request.path);
 
       fileSystem.getDirectoryForCacheEntries()
-        .then(cacheDir => {
-          return fsUtil.getFile(
-            cacheDir, 
-            {
-              create: false,
-              exclusive: false
-            },
-            fileName
-          );
-        })
-        .then(fileEntry => {
-          fileEntry.file(file => {
-            var that = this;
-            var fileReader = new FileReader();
+      .then(cacheDir => {
+        return fsUtil.getFile(
+          cacheDir, 
+          {
+            create: false,
+            exclusive: false
+          },
+          fileName
+        );
+      })
+      .then(fileEntry => {
+        fileEntry.file(file => {
+          var that = this;
+          var fileReader = new FileReader();
 
-            fileReader.onload = function(evt) {
-              // set mime types etc?
-              that.write(evt.target.result);
-            };
+          fileReader.onload = function(evt) {
+            // set mime types etc?
+            that.write(evt.target.result);
+          };
 
-            fileReader.onerror = function(evt) {
-              console.error('error reading', evt.target.error);
-              that.request.connection.close();
-            };
+          fileReader.onerror = function(evt) {
+            console.error('error reading', evt.target.error);
+            that.request.connection.close();
+          };
 
-            fileReader.readAsArrayBuffer(file);
-          });
-        })
-        .catch(err => {
-          console.log('Error reading file: ', err);
+          fileReader.readAsArrayBuffer(file);
         });
+      })
+      .catch(err => {
+        console.log('Error reading file: ', err);
+      });
     }
   },
   WSC.BaseHandler.prototype
@@ -177,37 +177,37 @@ _.extend(exports.WebRtcOfferHandler.prototype,
       var fileName = api.getCachedFileNameFromPath(this.request.path);
 
       fileSystem.getDirectoryForCacheEntries()
-        .then(cacheDir => {
-          return fsUtil.getFile(
-            cacheDir, 
-            {
-              create: false,
-              exclusive: false
-            },
-            fileName
-          );
-        })
-        .then(fileEntry => {
-          fileEntry.file(file => {
-            var that = this;
-            var fileReader = new FileReader();
+      .then(cacheDir => {
+        return fsUtil.getFile(
+          cacheDir, 
+          {
+            create: false,
+            exclusive: false
+          },
+          fileName
+        );
+      })
+      .then(fileEntry => {
+        fileEntry.file(file => {
+          var that = this;
+          var fileReader = new FileReader();
 
-            fileReader.onload = function(evt) {
-              // set mime types etc?
-              that.write(evt.target.result);
-            };
+          fileReader.onload = function(evt) {
+            // set mime types etc?
+            that.write(evt.target.result);
+          };
 
-            fileReader.onerror = function(evt) {
-              console.error('error reading', evt.target.error);
-              that.request.connection.close();
-            };
+          fileReader.onerror = function(evt) {
+            console.error('error reading', evt.target.error);
+            that.request.connection.close();
+          };
 
-            fileReader.readAsArrayBuffer(file);
-          });
-        })
-        .catch(err => {
-          console.log('Error reading file: ', err);
+          fileReader.readAsArrayBuffer(file);
         });
+      })
+      .catch(err => {
+        console.log('Error reading file: ', err);
+      });
     }
   },
   WSC.BaseHandler.prototype

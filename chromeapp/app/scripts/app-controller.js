@@ -158,12 +158,12 @@ exports.resolveCache = function(fullName) {
     }
     // We need to hit the network.
     dnssdSem.resolveCache(fullName)
-      .then(cache => {
-        resolve(cache);
-      })
-      .catch(err => {
-        reject(err);
-      });
+    .then(cache => {
+      resolve(cache);
+    })
+    .catch(err => {
+      reject(err);
+    });
   });
 };
 
@@ -348,12 +348,12 @@ exports.start = function() {
   extBridge.attachListeners();
 
   return new Promise(function(resolve, reject) {
-      settings.init()
-      .then(settingsObj => {
-        console.log('initialized settings: ', settingsObj);
-        exports.updateCachesForSettings();
-        resolve();
-      })
+    settings.init()
+    .then(settingsObj => {
+      console.log('initialized settings: ', settingsObj);
+      exports.updateCachesForSettings();
+      resolve();
+    })
     .catch(err => {
       reject(err);
     });

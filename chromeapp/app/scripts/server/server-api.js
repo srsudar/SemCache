@@ -95,15 +95,15 @@ exports.getAccessUrlForCachedPage = function(fullPath) {
 exports.getResponseForAllCachedPages = function() {
   return new Promise(function(resolve, reject) {
     datastore.getAllCachedPages()
-      .then(pages => {
-        var result = {};
-        result.metadata = exports.createMetadatObj();
-        result.cachedPages = pages;
-        resolve(result);
-      })
-      .catch(err => {
-        reject(err);
-      });
+    .then(pages => {
+      var result = {};
+      result.metadata = exports.createMetadatObj();
+      result.cachedPages = pages;
+      resolve(result);
+    })
+    .catch(err => {
+      reject(err);
+    });
   });
 };
 

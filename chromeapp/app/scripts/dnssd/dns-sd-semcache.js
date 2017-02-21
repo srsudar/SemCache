@@ -98,17 +98,17 @@ exports.browseForSemCacheInstanceNames = function() {
 exports.resolveCache = function(fullName) {
   return new Promise(function(resolve, reject) {
     dnssd.resolveService(fullName)
-      .then(info => {
-        var listUrl = serverApi.getListPageUrlForCache(
-          info.ipAddress, info.port
-        );
-        info.listUrl = listUrl;
-        resolve(info);
-      })
-      .catch(err => {
-        // something went wrong.
-        reject(err);
-      });
+    .then(info => {
+      var listUrl = serverApi.getListPageUrlForCache(
+        info.ipAddress, info.port
+      );
+      info.listUrl = listUrl;
+      resolve(info);
+    })
+    .catch(err => {
+      // something went wrong.
+      reject(err);
+    });
   });
 
 };

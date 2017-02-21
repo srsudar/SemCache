@@ -328,20 +328,20 @@ exports.resolvePeers = function(cacheNames, resolveDelay, toLog) {
 
       return new Promise(function(resolve, reject) {
         util.wait(resolveDelay)
-          .then(() => {
-            startResolve = exports.getNow();
-            return appc.resolveCache(serviceName);
-          })
-          .then(cache => {
-            var endResolve = exports.getNow();
-            var totalResolve = endResolve - startResolve;
-            toLog.resolves.push(totalResolve);
-            toLog.serviceNames.push(serviceName);
-            resolve(cache);
-          })
-          .catch(err => {
-            reject(err); 
-          });
+        .then(() => {
+          startResolve = exports.getNow();
+          return appc.resolveCache(serviceName);
+        })
+        .then(cache => {
+          var endResolve = exports.getNow();
+          var totalResolve = endResolve - startResolve;
+          toLog.resolves.push(totalResolve);
+          toLog.serviceNames.push(serviceName);
+          resolve(cache);
+        })
+        .catch(err => {
+          reject(err); 
+        });
       });
     };
 
@@ -351,9 +351,9 @@ exports.resolvePeers = function(cacheNames, resolveDelay, toLog) {
     }
 
     exports.fulfillPromises(promises)
-      .then(results => {
-        resolve(results);
-      });
+    .then(results => {
+      resolve(results);
+    });
   });
 };
 
@@ -403,7 +403,6 @@ exports.runDiscoverPeerPagesIterationLazy = function(
       return exports.resolvePeers(cacheNames, resolveDelay, logInfo);
     })
     .then(cacheResults => {
-      
       // We'll create a fetch for each listUrl.
       var promises = [];
       cacheResults.forEach(cacheResult => {
@@ -556,38 +555,38 @@ exports.runLoadPageTrialForCache = function(numIterations, key, listPagesUrl) {
     // start the function, which somehow seems
     // to reliably crash chrome.
     util.wait(5000)
-      .then(() => {
-        return util.fetchJson(listPagesUrl);
-      })
-      .then(cache => {
-        // We will call runDiscoverPagesIteration and attach them all to a
-        // sequence of Promises, such that they will resolve in order.
-        var numCalls = 0;
-        var nextIter = function() {
-          var cachedPage = cache.cachedPages[numCalls];
-          numCalls += 1;
-          return exports.runLoadPageTrial(
-            numIterations,
-            key,
-            cachedPage.captureUrl,
-            cachedPage.captureDate,
-            cachedPage.accessPath,
-            cachedPage.metadata
-          );
-        };
+    .then(() => {
+      return util.fetchJson(listPagesUrl);
+    })
+    .then(cache => {
+      // We will call runDiscoverPagesIteration and attach them all to a
+      // sequence of Promises, such that they will resolve in order.
+      var numCalls = 0;
+      var nextIter = function() {
+        var cachedPage = cache.cachedPages[numCalls];
+        numCalls += 1;
+        return exports.runLoadPageTrial(
+          numIterations,
+          key,
+          cachedPage.captureUrl,
+          cachedPage.captureDate,
+          cachedPage.accessPath,
+          cachedPage.metadata
+        );
+      };
 
-        var promises = [];
-        for (var i = 0; i < cache.cachedPages.length; i++) {
-          promises.push(nextIter);
-        }
+      var promises = [];
+      for (var i = 0; i < cache.cachedPages.length; i++) {
+        promises.push(nextIter);
+      }
 
-        // Now we have an array with all our promises.
-        return exports.fulfillPromises(promises);
-      })
-      .then(results => {
-        console.warn('Trial for cache complete: ', results);
-        resolve(results);
-      });
+      // Now we have an array with all our promises.
+      return exports.fulfillPromises(promises);
+    })
+    .then(results => {
+      console.warn('Trial for cache complete: ', results);
+      resolve(results);
+    });
   });
 };
 

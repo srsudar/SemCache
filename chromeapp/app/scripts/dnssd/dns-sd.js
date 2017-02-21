@@ -189,7 +189,8 @@ exports.register = function(host, name, type, port) {
       host,
       dnsCodes.RECORD_TYPES.ANY,
       dnsCodes.CLASS_CODES.IN
-    ).then(function hostFree() {
+    )
+    .then(function hostFree() {
       foundHostFree = true;
       // We need to probe for the name under which a SRV record would be, which
       // is name.type.local
@@ -202,7 +203,8 @@ exports.register = function(host, name, type, port) {
     }, function hostTaken() {
       foundHostFree = false;
       reject(new Error('host taken: ' + host));
-    }).then(function instanceFree() {
+    })
+    .then(function instanceFree() {
       if (foundHostFree) {
         var hostRecords = exports.createHostRecords(host);
         var serviceRecords = exports.createServiceRecords(
@@ -349,55 +351,56 @@ exports.issueProbe = function(queryName, queryType, queryClass) {
   // query. 250ms after that we issue another, then another.
   var result = new Promise(function(resolve, reject) {
     exports.waitForProbeTime()
-      .then(function success() {
+    .then(function success() {
+      dnsController.query(
+        queryName,
+        queryType,
+        queryClass
+      );
+      return util.wait(MAX_PROBE_WAIT);
+    })
+    .then(function success() {
+      if (exports.receivedResponsePacket(
+        packets, queryName, queryType, queryClass
+      )) {
+        throw new Error('received a packet, jump to catch');
+      } else {
         dnsController.query(
           queryName,
           queryType,
           queryClass
         );
         return util.wait(MAX_PROBE_WAIT);
-      }).then(function success() {
-        if (exports.receivedResponsePacket(
-          packets, queryName, queryType, queryClass
-        )) {
-          throw new Error('received a packet, jump to catch');
-        } else {
-          dnsController.query(
-            queryName,
-            queryType,
-            queryClass
-          );
-          return util.wait(MAX_PROBE_WAIT);
-        }
-      })
-      .then(function success() {
-        if (exports.receivedResponsePacket(
-          packets, queryName, queryType, queryClass
-        )) {
-          throw new Error('received a packet, jump to catch');
-        } else {
-          dnsController.query(
-            queryName,
-            queryType,
-            queryClass
-          );
-          return util.wait(MAX_PROBE_WAIT);
-        }
-      })
-      .then(function success() {
-        if (exports.receivedResponsePacket(
-          packets, queryName, queryType, queryClass
-        )) {
-          throw new Error('received a packet, jump to catch');
-        } else {
-          resolve();
-          dnsController.removeOnReceiveCallback(callback);
-        }
-      })
-      .catch(function failured() {
+      }
+    })
+    .then(function success() {
+      if (exports.receivedResponsePacket(
+        packets, queryName, queryType, queryClass
+      )) {
+        throw new Error('received a packet, jump to catch');
+      } else {
+        dnsController.query(
+          queryName,
+          queryType,
+          queryClass
+        );
+        return util.wait(MAX_PROBE_WAIT);
+      }
+    })
+    .then(function success() {
+      if (exports.receivedResponsePacket(
+        packets, queryName, queryType, queryClass
+      )) {
+        throw new Error('received a packet, jump to catch');
+      } else {
+        resolve();
         dnsController.removeOnReceiveCallback(callback);
-        reject();
-      });
+      }
+    })
+    .catch(function failured() {
+      dnsController.removeOnReceiveCallback(callback);
+      reject();
+    });
   });
 
   return result;
@@ -548,110 +551,110 @@ exports.browseServiceInstances = function(serviceType) {
       exports.DEFAULT_QUERY_WAIT_TIME,
       exports.DEFAULT_NUM_PTR_RETRIES
     )
-      .then(function success(ptrInfos) {
-        if (exports.DEBUG) {
-          console.log('ptrInfos: ', ptrInfos);
-        }
-        var srvRequests = [];
-        ptrInfos.forEach(ptr => {
-          ptrResponses.push(ptr);
-          var instanceName = ptr.serviceName;
-          var req = exports.queryForInstanceInfo(
-            instanceName,
+    .then(function success(ptrInfos) {
+      if (exports.DEBUG) {
+        console.log('ptrInfos: ', ptrInfos);
+      }
+      var srvRequests = [];
+      ptrInfos.forEach(ptr => {
+        ptrResponses.push(ptr);
+        var instanceName = ptr.serviceName;
+        var req = exports.queryForInstanceInfo(
+          instanceName,
+          exports.DEFAULT_QUERY_WAIT_TIME,
+          exports.DEFAULT_NUM_RETRIES
+        );
+        srvRequests.push(req);
+      });
+      return Promise.all(srvRequests);
+    })
+    .then(function success(srvInfos) {
+      if (exports.DEBUG) {
+        console.log('srvInfos: ', srvInfos);
+      }
+      var aRequests = [];
+      for (var srvIter = 0; srvIter < srvInfos.length; srvIter++) {
+        // the query methods return an Array of responses, even if only a
+        // single response is requested. This allows for for API similarity
+        // across calls and for an eventual implementation that permits both
+        // A and AAAA records when querying for IP addresses, e.g., but means
+        // that we are effectively iterating over an array of arrays. For
+        // simplicity, however, we will assume at this stage that we only
+        // ever expect a single response, which is correct in the vast
+        // majority of cases.
+        var srv = srvInfos[srvIter];
+        if (srv.length === 0) {
+          // If no records resolved (e.g. from a dropped packet or a peer
+          // that has dropped out), fail gracefully and log that it occurred.
+          console.warn(
+            'Did not receive SRV to match PTR, ignoring. PTR: ',
+            ptrResponses[srvIter]
+          );
+        } else {
+          // Record that this PTR is active.
+          ptrsWithSrvs.push(ptrResponses[srvIter]);
+          srv = srv[0];
+          srvResponses.push(srv);
+          var hostname = srv.domain;
+          var req = exports.queryForIpAddress(
+            hostname,
             exports.DEFAULT_QUERY_WAIT_TIME,
             exports.DEFAULT_NUM_RETRIES
           );
-          srvRequests.push(req);
+          aRequests.push(req);
+        }
+      }
+      return Promise.all(aRequests);
+    })
+    .then(function success(aInfos) {
+      if (exports.DEBUG) {
+        console.log('aInfos: ', aInfos);
+      }
+
+      for (var aIter = 0; aIter < aInfos.length; aIter++) {
+        var aInfo = aInfos[aIter];
+        if (aInfo.length === 0) {
+          // We didn't receive an A. Log that both the 
+          console.warn(
+            'Did not receive A to match SRV, ignoring. SRV: ',
+            srvResponses[aIter]
+          );
+        } else {
+          aInfo = aInfo[0];
+          aResponses.push(aInfo);
+          ptrsWithAs.push(ptrsWithSrvs[aIter]);
+          srvsWithAs.push(srvResponses[aIter]);
+        }
+      }
+
+      if (
+        ptrsWithAs.length !== srvsWithAs.length ||
+        srvsWithAs.length !== aResponses.length
+      ) {
+        throw new Error('Different numbers of PTR, SRV, and A records!');
+      }
+      
+      var result = [];
+      for (var i = 0; i < aResponses.length; i++) {
+        var ptr = ptrsWithAs[i];
+        var instanceName = exports.getUserFriendlyName(ptr.serviceName);
+        var srv = srvsWithAs[i];
+        var aRec = aResponses[i];
+        result.push({
+          serviceType: serviceType,
+          instanceName: instanceName,
+          domainName: srv.domain,
+          ipAddress: aRec.ipAddress,
+          port: srv.port
         });
-        return Promise.all(srvRequests);
-      })
-      .then(function success(srvInfos) {
-        if (exports.DEBUG) {
-          console.log('srvInfos: ', srvInfos);
-        }
-        var aRequests = [];
-        for (var srvIter = 0; srvIter < srvInfos.length; srvIter++) {
-          // the query methods return an Array of responses, even if only a
-          // single response is requested. This allows for for API similarity
-          // across calls and for an eventual implementation that permits both
-          // A and AAAA records when querying for IP addresses, e.g., but means
-          // that we are effectively iterating over an array of arrays. For
-          // simplicity, however, we will assume at this stage that we only
-          // ever expect a single response, which is correct in the vast
-          // majority of cases.
-          var srv = srvInfos[srvIter];
-          if (srv.length === 0) {
-            // If no records resolved (e.g. from a dropped packet or a peer
-            // that has dropped out), fail gracefully and log that it occurred.
-            console.warn(
-              'Did not receive SRV to match PTR, ignoring. PTR: ',
-              ptrResponses[srvIter]
-            );
-          } else {
-            // Record that this PTR is active.
-            ptrsWithSrvs.push(ptrResponses[srvIter]);
-            srv = srv[0];
-            srvResponses.push(srv);
-            var hostname = srv.domain;
-            var req = exports.queryForIpAddress(
-              hostname,
-              exports.DEFAULT_QUERY_WAIT_TIME,
-              exports.DEFAULT_NUM_RETRIES
-            );
-            aRequests.push(req);
-          }
-        }
-        return Promise.all(aRequests);
-      })
-      .then(function success(aInfos) {
-        if (exports.DEBUG) {
-          console.log('aInfos: ', aInfos);
-        }
+      }
 
-        for (var aIter = 0; aIter < aInfos.length; aIter++) {
-          var aInfo = aInfos[aIter];
-          if (aInfo.length === 0) {
-            // We didn't receive an A. Log that both the 
-            console.warn(
-              'Did not receive A to match SRV, ignoring. SRV: ',
-              srvResponses[aIter]
-            );
-          } else {
-            aInfo = aInfo[0];
-            aResponses.push(aInfo);
-            ptrsWithAs.push(ptrsWithSrvs[aIter]);
-            srvsWithAs.push(srvResponses[aIter]);
-          }
-        }
-
-        if (
-          ptrsWithAs.length !== srvsWithAs.length ||
-          srvsWithAs.length !== aResponses.length
-        ) {
-          throw new Error('Different numbers of PTR, SRV, and A records!');
-        }
-        
-        var result = [];
-        for (var i = 0; i < aResponses.length; i++) {
-          var ptr = ptrsWithAs[i];
-          var instanceName = exports.getUserFriendlyName(ptr.serviceName);
-          var srv = srvsWithAs[i];
-          var aRec = aResponses[i];
-          result.push({
-            serviceType: serviceType,
-            instanceName: instanceName,
-            domainName: srv.domain,
-            ipAddress: aRec.ipAddress,
-            port: srv.port
-          });
-        }
-
-        resolve(result);
-      })
-      .catch(function failed(err) {
-        console.log(err);
-        reject('Caught error in browsing for service: ' + err);
-      });
+      resolve(result);
+    })
+    .catch(function failed(err) {
+      console.log(err);
+      reject('Caught error in browsing for service: ' + err);
+    });
   });
 };
 
@@ -943,25 +946,25 @@ exports.queryForResponses = function(
     var queryAndWait = function() {
       dnsController.query(qName, qType, qClass);
       util.wait(timeoutOrWait)
-        .then(() => {
-          if (resolved) {
-            // Already handled. Do nothing.
-            return;
-          }
-          if (retriesAttempted < numRetries) {
-            // We have more retries to attempt. Try again.
-            retriesAttempted += 1;
-            queryAndWait();
-          } else {
-            // We've waited and all of our retries are spent. Prepare to resolve.
-            dnsController.removeOnReceiveCallback(callback);
-            resolved = true;
-            resolve(packets);
-          }
-        })
-        .catch(err => {
-          console.log('Something went wrong in query: ', err);
-        });
+      .then(() => {
+        if (resolved) {
+          // Already handled. Do nothing.
+          return;
+        }
+        if (retriesAttempted < numRetries) {
+          // We have more retries to attempt. Try again.
+          retriesAttempted += 1;
+          queryAndWait();
+        } else {
+          // We've waited and all of our retries are spent. Prepare to resolve.
+          dnsController.removeOnReceiveCallback(callback);
+          resolved = true;
+          resolve(packets);
+        }
+      })
+      .catch(err => {
+        console.log('Something went wrong in query: ', err);
+      });
     };
 
     queryAndWait();
