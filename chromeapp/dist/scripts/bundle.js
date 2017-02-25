@@ -2929,7 +2929,7 @@ var protocol = require('./protocol');
 
 var EV_CHUNK = 'chunk';
 var EV_COMPLETE = 'complete';
-var EV_ERR = 'err';
+var EV_ERR = 'error';
 
 /**
  * The size of chunks that will be sent over WebRTC at a given time. This is
@@ -2985,7 +2985,7 @@ exports.Client.prototype.sendStartMessage = function() {
  * @param {ProtocolMessage} msg
  */
 exports.Client.prototype.handleErrorMessage = function(msg) {
-  throw new Error('unimplemented: ' + msg);
+  this.emitError(msg);
 };
 
 /**
@@ -3006,7 +3006,7 @@ exports.Client.prototype.start = function() {
 
     var msg = protocol.from(eventBuff);
     if (msg.isError()) {
-      this.handleError(msg);
+      self.handleErrorMessage(msg);
       return;
     }
 
@@ -3048,7 +3048,7 @@ exports.Client.prototype.requestNext = function() {
   try {
     this.channel.send(continueMsgBin);
   } catch (err) {
-    this.emit(EV_ERR, err);
+    this.emitError(err);
   }
 };
 
@@ -3059,6 +3059,15 @@ exports.Client.prototype.requestNext = function() {
  */
 exports.Client.prototype.emitChunk = function(buff) {
   this.emit(EV_CHUNK, buff);
+};
+
+/**
+ * Emit an error event.
+ *
+ * @param {any} msg the message to emit with the error
+ */
+exports.Client.prototype.emitError = function(msg) {
+  this.emit(EV_ERR, msg);
 };
 
 /**
@@ -3145,6 +3154,17 @@ exports.Server.prototype.sendBuffer = function(buff) {
   } catch (err) {
     console.log('Error sending streamInfo: ', this.streamInfo);
   }
+};
+
+/**
+ * Send a message indicating an error to the client. This is similar to
+ * replying with a 500 error for a web server.
+ *
+ * @param {any} err error to send to the client.
+ */
+exports.Server.prototype.sendError = function(err) {
+  var msg = protocol.createErrorMessage(err);
+  this.channel.send(msg.asBuffer());
 };
 
 /**
@@ -3519,7 +3539,7 @@ exports.ProtocolMessage.prototype.asBuffer = function() {
  * @return {ProtocolMessage}
  */
 exports.from = function(buff) {
-  var headerLength = buff.readUInt32BE();
+  var headerLength = buff.readUInt32BE(0);
   var offset = NUM_BYTES_HEADER_LENGTH;
   var headerStr = buff.toString('utf8', offset, offset + headerLength);
   offset += headerLength;
@@ -3650,14 +3670,15 @@ exports.onList = function(channel) {
  */
 exports.onFile = function(channel, msg) {
   return new Promise(function(resolve, reject) {
+    var ccServer = exports.createCcServer(channel);
     var fileName = api.getCachedFileNameFromPath(msg.request.accessPath);
     fileSystem.getFileContentsFromName(fileName)
     .then(buff => {
-      var ccServer = exports.createCcServer(channel);
       ccServer.sendBuffer(buff);
       resolve();
     })
     .catch(err => {
+      ccServer.sendError(err);
       reject(err);
     });
   });

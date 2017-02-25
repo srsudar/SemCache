@@ -139,8 +139,67 @@ test('client does not cache if cacheChunks false', function(t) {
 test('client calls handleErrorMessage if gets server error', function(t) {
   // The client should respond to a server error by invoking the error handling
   // logic method
-  t.fail();
-  end(t);
+  var rawConnection = sinon.stub();
+  var channel = sinon.stub();
+  channel.channelName = 'fooBar';
+  rawConnection.createDataChannel = sinon.stub().returns(channel);
+  var msg = { channelName: channel.channelName };
+  var expectedReason = 'something went wrong with the server';
+  var errorMsg = protocol.createErrorMessage(expectedReason);
+
+  // The broad setup here is that we want to say we should receive 4 chunks,
+  // send 2 chunks, then send a server error.
+  var expectedChunks = [
+    Buffer.from('hello '),
+    Buffer.from('there')
+  ];
+  var streamInfo = chunkingChannel.createStreamInfo(4);
+  var streamInfoBin = Buffer.from(JSON.stringify(streamInfo));
+
+  var client = new chunkingChannel.Client(rawConnection, false, msg);
+
+  var sentArgs = [];
+  // We need to play the role of the Server and respond appropriately.
+  channel.send = function(sendArg) {
+    sentArgs.push(sendArg);
+
+    if (sentArgs.length === 1) {
+      // First call. We're expected to reply with a streaminfo.
+      var streamInfoMsg = protocol.createSuccessMessage(streamInfoBin);
+      channel.onmessage(createMessageEvent(streamInfoMsg.asBuffer()));
+      return;
+    }
+
+    if (sentArgs.length < 4) {
+      // 1 is the stream info, 2 and 3 are chunks
+      var chunk = expectedChunks[sentArgs.length - 2];
+      var msg = protocol.createSuccessMessage(chunk);
+      channel.onmessage(createMessageEvent(msg.asBuffer()));
+      return;
+    }
+
+    // Otherwise, we create an error message.
+    channel.onmessage(createMessageEvent(errorMsg.asBuffer()));
+  };
+
+  var chunks = [];
+  client.on('chunk', chunk => {
+    chunks.push(chunk);
+  });
+
+  client.on('complete', () => {
+    t.fail('should not trigger complete event');
+    end(t);
+  });
+
+  client.on('error', actual => {
+    t.deepEqual(actual, errorMsg);
+    t.deepEqual(chunks, expectedChunks);
+    end(t);
+  });
+
+  client.start();
+  channel.onopen();
 });
 
 test('client emits chunks and complete for single chunk', function(t) {
@@ -211,4 +270,33 @@ test('server sends correct chunks to client', function(t) {
 
   var server = new chunkingChannel.Server(channel);
   server.sendBuffer(bufferToSend);
+});
+
+test('handleErrorMessage emits event', function(t) {
+  var expected = { errorReason: 'something went wrong' };
+  
+  var channelStub = sinon.stub();
+  var client = new chunkingChannel.Client(channelStub);
+
+  client.on('error', actual => {
+    t.equal(actual, expected);
+    end(t);
+  });
+  
+  client.handleErrorMessage(expected);
+});
+
+test('sendError sends err to client', function(t) {
+  var err = { message: 'could not find the file' };
+  var expected = protocol.createErrorMessage(err);
+
+  var channelStub = sinon.stub();
+  var sendStub = sinon.stub();
+  channelStub.send = sendStub;
+
+  var server = new chunkingChannel.Server(channelStub);
+  server.sendError(err);
+
+  t.deepEqual(sendStub.args[0][0], expected.asBuffer());
+  end(t);
 });

@@ -131,6 +131,9 @@ test('onFile rejects with error', function(t) {
   var accessPath = 'path/to/file';
   var msg = { request: { accessPath: accessPath } };
   var channel = { testType: 'channel' };
+  var serverMock = sinon.stub();
+  var sendErrorMock = sinon.stub();
+  serverMock.sendError = sendErrorMock;
 
   var expected = { error: 'trouble' };
 
@@ -149,6 +152,8 @@ test('onFile rejects with error', function(t) {
       }
     }
   );
+  responder.createCcServer = sinon.stub().withArgs(channel)
+    .returns(serverMock);
 
   responder.onFile(channel, msg)
   .then(res => {
@@ -157,6 +162,7 @@ test('onFile rejects with error', function(t) {
     resetResponder();
   })
   .catch(actual => {
+    t.equal(sendErrorMock.args[0][0], expected);
     t.equal(actual, expected);
     t.end();
     resetResponder();

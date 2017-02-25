@@ -79,14 +79,15 @@ exports.onList = function(channel) {
  */
 exports.onFile = function(channel, msg) {
   return new Promise(function(resolve, reject) {
+    var ccServer = exports.createCcServer(channel);
     var fileName = api.getCachedFileNameFromPath(msg.request.accessPath);
     fileSystem.getFileContentsFromName(fileName)
     .then(buff => {
-      var ccServer = exports.createCcServer(channel);
       ccServer.sendBuffer(buff);
       resolve();
     })
     .catch(err => {
+      ccServer.sendError(err);
       reject(err);
     });
   });
