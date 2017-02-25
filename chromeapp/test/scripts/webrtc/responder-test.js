@@ -1,5 +1,5 @@
 'use strict';
-var Buffer = require('buffer').Buffer;
+var Buffer = require('buffer/').Buffer;
 var test = require('tape');
 var sinon = require('sinon');
 var proxyquire = require('proxyquire');

@@ -1,5 +1,5 @@
 'use strict';
-var Buffer = require('buffer').Buffer;
+var Buffer = require('buffer/').Buffer;
 var test = require('tape');
 var proxyquire = require('proxyquire');
 var sinon = require('sinon');
@@ -413,7 +413,7 @@ test('getFileContents rejects if Buffer.concat fails', function(t) {
   var fileEntry = { stubType: 'fileEntry' };
 
   util = proxyquire('../../../app/scripts/persistence/file-system-util', {
-    'buffer': {
+    'buffer/': {
       Buffer: {
         concat: sinon.stub().throws(expected)
       }

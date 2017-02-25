@@ -1,5 +1,7 @@
 'use strict';
 
+var Buffer = require('buffer/').Buffer;
+
 /**
  * Protocol for transmitting data via WebRTC data channel.
  *
@@ -123,7 +125,7 @@ exports.ProtocolMessage.prototype.asBuffer = function() {
  * @return {ProtocolMessage}
  */
 exports.from = function(buff) {
-  var headerLength = buff.readUInt32BE();
+  var headerLength = buff.readUInt32BE(0);
   var offset = NUM_BYTES_HEADER_LENGTH;
   var headerStr = buff.toString('utf8', offset, offset + headerLength);
   offset += headerLength;

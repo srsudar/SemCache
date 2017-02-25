@@ -1,6 +1,6 @@
 'use strict';
 
-var Buffer = require('buffer').Buffer;
+var Buffer = require('buffer/').Buffer;
 
 var api = require('../server/server-api');
 var binUtil = require('../dnssd/binary-utils').BinaryUtils;

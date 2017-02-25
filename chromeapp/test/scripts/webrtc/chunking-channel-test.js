@@ -1,10 +1,11 @@
 'use strict';
-var Buffer = require('buffer').Buffer;
+var Buffer = require('buffer/').Buffer;
 var test = require('tape');
 var sinon = require('sinon');
 require('sinon-as-promised');
 
 var chunkingChannel = require('../../../app/scripts/webrtc/chunking-channel');
+var protocol = require('../../../app/scripts/webrtc/protocol');
 
 /**
  * Manipulating the object directly leads to polluting the require cache. Any
@@ -23,6 +24,27 @@ function resetChunkingChannel() {
  */
 function createMessageEvent(data) {
   return { data: data };
+}
+
+/**
+ * Wraps each chunk in a call to protocol.createSuccessMessage();
+ *
+ * @param {Array.<Chunk>} chunks
+ *
+ * @return {Array.<ProtocolMessage>}
+ */
+function wrapChunksAsSuccessMsg(chunks) {
+  var result = [];
+  chunks.forEach(chunk => {
+    result.push(protocol.createSuccessMessage(chunk).asBuffer());
+  });
+  return result;
+}
+
+function end(t) {
+  if (!t) { throw new Error('you forgot to pass t'); }
+  t.end();
+  resetChunkingChannel();
 }
 
 /**
@@ -59,12 +81,17 @@ function assertClientHelper(t, cacheChunks, expectedChunks) {
     
     if (sentArgs.length === 1) {
       // First call. We're expected to reply with a streaminfo.
-      channel.onmessage(createMessageEvent(streamInfoBin));
+      var streamInfoMsg = protocol.createSuccessMessage(streamInfoBin);
+      channel.onmessage(createMessageEvent(streamInfoMsg.asBuffer()));
       return;
     }
 
-    // Otherwise, we just send a chunk.
-    channel.onmessage(createMessageEvent(expectedChunks[sentArgs.length - 2]));
+    // Otherwise, create a message and send a chunk. Note that this isn't a
+    // perfect unit test, as we're relying on the protocol module.
+    var chunk = expectedChunks[sentArgs.length - 2];
+    var msg = protocol.createSuccessMessage(chunk);
+    channel.onmessage(createMessageEvent(msg.asBuffer()));
+    // channel.onmessage(createMessageEvent(expectedChunks[sentArgs.length - 2]));
   };
 
   var chunks = [];
@@ -83,8 +110,7 @@ function assertClientHelper(t, cacheChunks, expectedChunks) {
     } else {
       t.equal(result, undefined);
     }
-    t.end();
-    resetChunkingChannel();
+    end(t);
   });
 
   client.start();
@@ -108,6 +134,13 @@ test('client does not cache if cacheChunks false', function(t) {
     Buffer.from('if')
   ];
   assertClientHelper(t, false, expectedChunks);
+});
+
+test('client calls handleErrorMessage if gets server error', function(t) {
+  // The client should respond to a server error by invoking the error handling
+  // logic method
+  t.fail();
+  end(t);
 });
 
 test('client emits chunks and complete for single chunk', function(t) {
@@ -136,6 +169,7 @@ test('server sends correct chunks to client', function(t) {
     expectedChunks[2],
     expectedChunks[3],
   ];
+  expectedSent = wrapChunksAsSuccessMsg(expectedSent);
 
   var channel = sinon.stub();
   var argsSent = [];
@@ -156,9 +190,18 @@ test('server sends correct chunks to client', function(t) {
 
     if (argsSent.length === expectedSent.length) {
       t.deepEqual(argsSent, expectedSent);
-      t.equal(Buffer.concat(expectedChunks).toString(), strToSend);
-      resetChunkingChannel();
-      t.end();
+
+      // Now we want to make sure we can recover the original message.
+      var dataChunks = [];
+      argsSent.forEach(sentMsg => {
+        dataChunks.push(protocol.from(sentMsg).getData());
+      });
+      // Ignore the first, which is the stream info message.
+      dataChunks = dataChunks.slice(1);
+      var recoveredString = Buffer.concat(dataChunks).toString();
+
+      t.equal(recoveredString, strToSend);
+      end(t);
     } else {
       // Send a continue message.
       numContinuesSent++;

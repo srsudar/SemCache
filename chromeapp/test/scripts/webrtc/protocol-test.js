@@ -1,5 +1,5 @@
 'use strict';
-var Buffer = require('buffer').Buffer;
+var Buffer = require('buffer/').Buffer;
 var test = require('tape');
 require('sinon-as-promised');
 

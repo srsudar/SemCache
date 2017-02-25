@@ -45853,13 +45853,13 @@ _.extend(exports.ListCachedPagesHandler.prototype,
   {
     get: function() {
       api.getResponseForAllCachedPages()
-        .then(response => {
-          this.setHeader('content-type', 'text/json');
-          var encoder = new TextEncoder('utf-8');
-          var buffer = encoder.encode(JSON.stringify(response)).buffer;
-          this.write(buffer);
-          this.finish();
-        });
+      .then(response => {
+        this.setHeader('content-type', 'text/json');
+        var encoder = new TextEncoder('utf-8');
+        var buffer = encoder.encode(JSON.stringify(response)).buffer;
+        this.write(buffer);
+        this.finish();
+      });
     }
   },
   WSC.BaseHandler.prototype
@@ -45879,37 +45879,37 @@ _.extend(exports.CachedPageHandler.prototype,
       var fileName = api.getCachedFileNameFromPath(this.request.path);
 
       fileSystem.getDirectoryForCacheEntries()
-        .then(cacheDir => {
-          return fsUtil.getFile(
-            cacheDir, 
-            {
-              create: false,
-              exclusive: false
-            },
-            fileName
-          );
-        })
-        .then(fileEntry => {
-          fileEntry.file(file => {
-            var that = this;
-            var fileReader = new FileReader();
+      .then(cacheDir => {
+        return fsUtil.getFile(
+          cacheDir, 
+          {
+            create: false,
+            exclusive: false
+          },
+          fileName
+        );
+      })
+      .then(fileEntry => {
+        fileEntry.file(file => {
+          var that = this;
+          var fileReader = new FileReader();
 
-            fileReader.onload = function(evt) {
-              // set mime types etc?
-              that.write(evt.target.result);
-            };
+          fileReader.onload = function(evt) {
+            // set mime types etc?
+            that.write(evt.target.result);
+          };
 
-            fileReader.onerror = function(evt) {
-              console.error('error reading', evt.target.error);
-              that.request.connection.close();
-            };
+          fileReader.onerror = function(evt) {
+            console.error('error reading', evt.target.error);
+            that.request.connection.close();
+          };
 
-            fileReader.readAsArrayBuffer(file);
-          });
-        })
-        .catch(err => {
-          console.log('Error reading file: ', err);
+          fileReader.readAsArrayBuffer(file);
         });
+      })
+      .catch(err => {
+        console.log('Error reading file: ', err);
+      });
     }
   },
   WSC.BaseHandler.prototype
@@ -46000,43 +46000,43 @@ _.extend(exports.WebRtcOfferHandler.prototype,
       var fileName = api.getCachedFileNameFromPath(this.request.path);
 
       fileSystem.getDirectoryForCacheEntries()
-        .then(cacheDir => {
-          return fsUtil.getFile(
-            cacheDir, 
-            {
-              create: false,
-              exclusive: false
-            },
-            fileName
-          );
-        })
-        .then(fileEntry => {
-          fileEntry.file(file => {
-            var that = this;
-            var fileReader = new FileReader();
+      .then(cacheDir => {
+        return fsUtil.getFile(
+          cacheDir, 
+          {
+            create: false,
+            exclusive: false
+          },
+          fileName
+        );
+      })
+      .then(fileEntry => {
+        fileEntry.file(file => {
+          var that = this;
+          var fileReader = new FileReader();
 
-            fileReader.onload = function(evt) {
-              // set mime types etc?
-              that.write(evt.target.result);
-            };
+          fileReader.onload = function(evt) {
+            // set mime types etc?
+            that.write(evt.target.result);
+          };
 
-            fileReader.onerror = function(evt) {
-              console.error('error reading', evt.target.error);
-              that.request.connection.close();
-            };
+          fileReader.onerror = function(evt) {
+            console.error('error reading', evt.target.error);
+            that.request.connection.close();
+          };
 
-            fileReader.readAsArrayBuffer(file);
-          });
-        })
-        .catch(err => {
-          console.log('Error reading file: ', err);
+          fileReader.readAsArrayBuffer(file);
         });
+      })
+      .catch(err => {
+        console.log('Error reading file: ', err);
+      });
     }
   },
   WSC.BaseHandler.prototype
 );
 
-},{"../dnssd/binary-utils":"binaryUtils","../persistence/file-system":"fileSystem","../persistence/file-system-util":"fsUtil","../webrtc/connection-manager":"cmgr","../webrtc/responder":21,"./server-api":16,"underscore":39}],16:[function(require,module,exports){
+},{"../dnssd/binary-utils":"binaryUtils","../persistence/file-system":"fileSystem","../persistence/file-system-util":"fsUtil","../webrtc/connection-manager":"cmgr","../webrtc/responder":22,"./server-api":16,"underscore":39}],16:[function(require,module,exports){
 'use strict';
 
 /**
@@ -46134,15 +46134,15 @@ exports.getAccessUrlForCachedPage = function(fullPath) {
 exports.getResponseForAllCachedPages = function() {
   return new Promise(function(resolve, reject) {
     datastore.getAllCachedPages()
-      .then(pages => {
-        var result = {};
-        result.metadata = exports.createMetadatObj();
-        result.cachedPages = pages;
-        resolve(result);
-      })
-      .catch(err => {
-        reject(err);
-      });
+    .then(pages => {
+      var result = {};
+      result.metadata = exports.createMetadatObj();
+      result.cachedPages = pages;
+      resolve(result);
+    })
+    .catch(err => {
+      reject(err);
+    });
   });
 };
 
@@ -46362,8 +46362,10 @@ exports.getBufferAsBlob = function(buff) {
 'use strict';
 
 var _ = require('underscore');
-var Buffer = require('buffer').Buffer;
+var Buffer = require('buffer/').Buffer;
 var EventEmitter = require('wolfy87-eventemitter');
+
+var protocol = require('./protocol');
 
 var EV_CHUNK = 'chunk';
 var EV_COMPLETE = 'complete';
@@ -46418,6 +46420,15 @@ exports.Client.prototype.sendStartMessage = function() {
 };
 
 /**
+ * Handle an error from the Server.
+ *
+ * @param {ProtocolMessage} msg
+ */
+exports.Client.prototype.handleErrorMessage = function(msg) {
+  throw new Error('unimplemented: ' + msg);
+};
+
+/**
  * Request the information from the server and start receiving data.
  */
 exports.Client.prototype.start = function() {
@@ -46431,7 +46442,15 @@ exports.Client.prototype.start = function() {
   };
 
   channel.onmessage = function(event) {
-    var dataBuff = Buffer.from(event.data);
+    var eventBuff = Buffer.from(event.data);
+
+    var msg = protocol.from(eventBuff);
+    if (msg.isError()) {
+      this.handleError(msg);
+      return;
+    }
+
+    var dataBuff = msg.getData();
 
     // We expect a JSON message about our stream as the first message. All
     // subsequent messages will be ArrayBuffers. We know we receive them in
@@ -46550,7 +46569,8 @@ exports.Server.prototype.sendBuffer = function(buff) {
       // an ack comes back very quickly (impossibly quickly except in test
       // conditions?) you can send the same chunk twice.
       self.chunksSent++;
-      self.channel.send(chunk);
+      var chunkMsg = protocol.createSuccessMessage(chunk);
+      self.channel.send(chunkMsg.asBuffer());
     } catch (err) {
       console.log('Error sending chunk: ', err);
     }
@@ -46558,7 +46578,10 @@ exports.Server.prototype.sendBuffer = function(buff) {
   
   // Start the process by sending the streamInfo to the client.
   try {
-    this.channel.send(Buffer.from(JSON.stringify(this.streamInfo)));
+    var streamInfoMsg = protocol.createSuccessMessage(
+      Buffer.from(JSON.stringify(this.streamInfo))
+    );
+    this.channel.send(streamInfoMsg.asBuffer());
   } catch (err) {
     console.log('Error sending streamInfo: ', this.streamInfo);
   }
@@ -46585,7 +46608,7 @@ exports.createContinueMessage = function() {
   return { message: 'next' };
 };
 
-},{"buffer":24,"underscore":39,"wolfy87-eventemitter":40}],19:[function(require,module,exports){
+},{"./protocol":21,"buffer/":25,"underscore":39,"wolfy87-eventemitter":40}],19:[function(require,module,exports){
 'use strict';
 
 /**
@@ -46811,7 +46834,184 @@ exports.sendAndGetResponse = function(pc, msg) {
 },{"./chunking-channel":18,"./message":19,"underscore":39,"wolfy87-eventemitter":40}],21:[function(require,module,exports){
 'use strict';
 
-var Buffer = require('buffer').Buffer;
+var Buffer = require('buffer/').Buffer;
+
+/**
+ * Protocol for transmitting data via WebRTC data channel.
+ *
+ * This exists to solve the problem that we ideally would like to transmit both
+ * metadata control information (e.g. "uh oh, there's been a server error"),
+ * and the data chunks themselves. We could have a control channel and a data
+ * channel, but this requires coordination of two channels, as well as an
+ * additional channel resource.
+ *
+ * We also cannot simply pass an ArrayBuffer as a member of a JSON message.
+ * Instead, we are going to going to include header information in the message
+ * itself.
+ *
+ * This class assists in creating and reading those messages.
+ */
+
+/** The number of bytes used to indicate the length of the header. */
+var NUM_BYTES_HEADER_LENGTH = 4;
+
+/**
+ * These status codes are based on HTTP status codes, and are added as
+ * necessary.
+ */
+exports.STATUS_CODES = {
+  error: 500,
+  ok: 200
+};
+
+/**
+ * @constructor
+ * 
+ * @param {JSON} header
+ * @param {Buffer} buff
+ */
+exports.ProtocolMessage = function ProtocolMessage(header, buff) {
+  if (!(this instanceof ProtocolMessage)) {
+    throw new Error('ProtocolMessage must be called with new');
+  }
+  this.header = header;
+
+  // Distinguishing between 0 length Buffers and null is problematic for
+  // serialization. To ensure we have consistent behavior, we'll default to an
+  // empty buffer.
+  if (!buff) {
+    buff = Buffer.alloc(0);
+  }
+  this.data = buff;
+};
+
+exports.ProtocolMessage.prototype.isOk = function() {
+  var statusCode = this.getStatusCode();
+  return statusCode === exports.STATUS_CODES.ok;
+};
+
+exports.ProtocolMessage.prototype.isError = function() {
+  var statusCode = this.getStatusCode();
+  return statusCode === exports.STATUS_CODES.error;
+};
+
+exports.ProtocolMessage.prototype.getHeader = function() {
+  return this.header;
+};
+
+exports.ProtocolMessage.prototype.getData = function() {
+  return this.data;
+};
+
+exports.ProtocolMessage.prototype.getStatusCode = function() {
+  if (!this.header) {
+    return null;
+  }
+  if (!this.header.status) {
+    return null;
+  }
+  return this.header.status;
+};
+
+/**
+ * Get this ProtocolMessage as a Buffer, serializing the method. This Buffer
+ * can then be deserialized using the from() method.
+ *
+ * @return {Buffer}
+ */
+exports.ProtocolMessage.prototype.asBuffer = function() {
+  /*
+   * The data structure is outlined as follows, but is not part of the public
+   * API. The first 4 bytes correspond to an integer. This integer denotes the
+   * length of the JSON header information. All remaining bytes are data bytes.
+   */
+  var metadataLength = NUM_BYTES_HEADER_LENGTH;
+  var headerStr = '';
+  var headerLength = 0;
+  if (this.header) {
+    headerStr = JSON.stringify(this.header);
+    headerLength = headerStr.length;
+    metadataLength += headerLength;
+  }
+
+  var metadataBuff = Buffer.alloc(metadataLength);
+
+  var offset = 0;
+  metadataBuff.writeUInt32BE(headerLength);
+  offset += NUM_BYTES_HEADER_LENGTH;
+
+  metadataBuff.write(headerStr, offset, headerLength);
+
+  var buffsToJoin = [ metadataBuff ];
+  if (this.data) {
+    buffsToJoin.push(this.data);
+  }
+
+  var result = Buffer.concat(buffsToJoin);
+  return result;
+};
+
+/**
+ * Recover a ProtocolMessage from a Buffer.
+ *
+ * @param {Buffer} buff
+ *
+ * @return {ProtocolMessage}
+ */
+exports.from = function(buff) {
+  var headerLength = buff.readUInt32BE();
+  var offset = NUM_BYTES_HEADER_LENGTH;
+  var headerStr = buff.toString('utf8', offset, offset + headerLength);
+  offset += headerLength;
+
+  var header = null;
+  if (headerLength > 0) {
+    header = JSON.parse(headerStr);
+  }
+  var data = buff.slice(offset, buff.length);
+
+  var result = new exports.ProtocolMessage(header, data);
+  return result;
+};
+
+/**
+ * Create a rudimentary header object.
+ *
+ * @param {integer} status
+ *
+ * @return {JSON}
+ */
+exports.createHeader = function(status) {
+  return {
+    status: status
+  };
+};
+
+/**
+ * @param {Buffer} buff
+ *
+ * @return {ProtocolMessage}
+ */
+exports.createSuccessMessage = function(buff) {
+  var header = exports.createHeader(exports.STATUS_CODES.ok);
+  return new exports.ProtocolMessage(header, buff);
+};
+
+/**
+ * @param {any} reason the reason for the error
+ *
+ * @return {ProtocolMessage}
+ */
+exports.createErrorMessage = function(reason) {
+  var header = exports.createHeader(exports.STATUS_CODES.error);
+  header.message = reason;
+  return new exports.ProtocolMessage(header, null);
+};
+
+},{"buffer/":25}],22:[function(require,module,exports){
+'use strict';
+
+var Buffer = require('buffer/').Buffer;
 
 var api = require('../server/server-api');
 var binUtil = require('../dnssd/binary-utils').BinaryUtils;
@@ -46929,7 +47129,7 @@ exports.createCcClient = function(channel) {
   return new chunkingChannel.Client(channel);
 };
 
-},{"../dnssd/binary-utils":"binaryUtils","../persistence/file-system":"fileSystem","../server/server-api":16,"./chunking-channel":18,"./message":19,"buffer":24}],22:[function(require,module,exports){
+},{"../dnssd/binary-utils":"binaryUtils","../persistence/file-system":"fileSystem","../server/server-api":16,"./chunking-channel":18,"./message":19,"buffer/":25}],23:[function(require,module,exports){
 (function (global){
 /*! http://mths.be/base64 v0.1.0 by @mathias | MIT license */
 ;(function(root) {
@@ -47098,7 +47298,7 @@ exports.createCcClient = function(channel) {
 }(this));
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],23:[function(require,module,exports){
+},{}],24:[function(require,module,exports){
 'use strict'
 
 exports.byteLength = byteLength
@@ -47214,8 +47414,7 @@ function fromByteArray (uint8) {
   return parts.join('')
 }
 
-},{}],24:[function(require,module,exports){
-(function (global){
+},{}],25:[function(require,module,exports){
 /*!
  * The buffer module from node.js, for the browser.
  *
@@ -47228,80 +47427,57 @@ function fromByteArray (uint8) {
 
 var base64 = require('base64-js')
 var ieee754 = require('ieee754')
-var isArray = require('isarray')
 
 exports.Buffer = Buffer
 exports.SlowBuffer = SlowBuffer
 exports.INSPECT_MAX_BYTES = 50
 
+var K_MAX_LENGTH = 0x7fffffff
+exports.kMaxLength = K_MAX_LENGTH
+
 /**
  * If `Buffer.TYPED_ARRAY_SUPPORT`:
  *   === true    Use Uint8Array implementation (fastest)
- *   === false   Use Object implementation (most compatible, even IE6)
+ *   === false   Print warning and recommend using `buffer` v4.x which has an Object
+ *               implementation (most compatible, even IE6)
  *
  * Browsers that support typed arrays are IE 10+, Firefox 4+, Chrome 7+, Safari 5.1+,
  * Opera 11.6+, iOS 4.2+.
  *
- * Due to various browser bugs, sometimes the Object implementation will be used even
- * when the browser supports typed arrays.
- *
- * Note:
- *
- *   - Firefox 4-29 lacks support for adding new properties to `Uint8Array` instances,
- *     See: https://bugzilla.mozilla.org/show_bug.cgi?id=695438.
- *
- *   - Chrome 9-10 is missing the `TypedArray.prototype.subarray` function.
- *
- *   - IE10 has a broken `TypedArray.prototype.subarray` function which returns arrays of
- *     incorrect length in some situations.
-
- * We detect these buggy browsers and set `Buffer.TYPED_ARRAY_SUPPORT` to `false` so they
- * get the Object implementation, which is slower but behaves correctly.
+ * We report that the browser does not support typed arrays if the are not subclassable
+ * using __proto__. Firefox 4-29 lacks support for adding new properties to `Uint8Array`
+ * (See: https://bugzilla.mozilla.org/show_bug.cgi?id=695438). IE 10 lacks support
+ * for __proto__ and has a buggy typed array implementation.
  */
-Buffer.TYPED_ARRAY_SUPPORT = global.TYPED_ARRAY_SUPPORT !== undefined
-  ? global.TYPED_ARRAY_SUPPORT
-  : typedArraySupport()
+Buffer.TYPED_ARRAY_SUPPORT = typedArraySupport()
 
-/*
- * Export kMaxLength after typed array support is determined.
- */
-exports.kMaxLength = kMaxLength()
+if (!Buffer.TYPED_ARRAY_SUPPORT && typeof console !== 'undefined' &&
+    typeof console.error === 'function') {
+  console.error(
+    'This browser lacks typed array (Uint8Array) support which is required by ' +
+    '`buffer` v5.x. Use `buffer` v4.x if you require old browser support.'
+  )
+}
 
 function typedArraySupport () {
+  // Can typed array instances can be augmented?
   try {
     var arr = new Uint8Array(1)
     arr.__proto__ = {__proto__: Uint8Array.prototype, foo: function () { return 42 }}
-    return arr.foo() === 42 && // typed array instances can be augmented
-        typeof arr.subarray === 'function' && // chrome 9-10 lack `subarray`
-        arr.subarray(1, 1).byteLength === 0 // ie10 has broken `subarray`
+    return arr.foo() === 42
   } catch (e) {
     return false
   }
 }
 
-function kMaxLength () {
-  return Buffer.TYPED_ARRAY_SUPPORT
-    ? 0x7fffffff
-    : 0x3fffffff
-}
-
-function createBuffer (that, length) {
-  if (kMaxLength() < length) {
+function createBuffer (length) {
+  if (length > K_MAX_LENGTH) {
     throw new RangeError('Invalid typed array length')
   }
-  if (Buffer.TYPED_ARRAY_SUPPORT) {
-    // Return an augmented `Uint8Array` instance, for best performance
-    that = new Uint8Array(length)
-    that.__proto__ = Buffer.prototype
-  } else {
-    // Fallback: Return an object instance of the Buffer class
-    if (that === null) {
-      that = new Buffer(length)
-    }
-    that.length = length
-  }
-
-  return that
+  // Return an augmented `Uint8Array` instance
+  var buf = new Uint8Array(length)
+  buf.__proto__ = Buffer.prototype
+  return buf
 }
 
 /**
@@ -47315,10 +47491,6 @@ function createBuffer (that, length) {
  */
 
 function Buffer (arg, encodingOrOffset, length) {
-  if (!Buffer.TYPED_ARRAY_SUPPORT && !(this instanceof Buffer)) {
-    return new Buffer(arg, encodingOrOffset, length)
-  }
-
   // Common case.
   if (typeof arg === 'number') {
     if (typeof encodingOrOffset === 'string') {
@@ -47326,33 +47498,38 @@ function Buffer (arg, encodingOrOffset, length) {
         'If encoding is specified then the first argument must be a string'
       )
     }
-    return allocUnsafe(this, arg)
+    return allocUnsafe(arg)
   }
-  return from(this, arg, encodingOrOffset, length)
+  return from(arg, encodingOrOffset, length)
+}
+
+// Fix subarray() in ES2016. See: https://github.com/feross/buffer/pull/97
+if (typeof Symbol !== 'undefined' && Symbol.species &&
+    Buffer[Symbol.species] === Buffer) {
+  Object.defineProperty(Buffer, Symbol.species, {
+    value: null,
+    configurable: true,
+    enumerable: false,
+    writable: false
+  })
 }
 
 Buffer.poolSize = 8192 // not used by this implementation
 
-// TODO: Legacy, not needed anymore. Remove in next major version.
-Buffer._augment = function (arr) {
-  arr.__proto__ = Buffer.prototype
-  return arr
-}
-
-function from (that, value, encodingOrOffset, length) {
+function from (value, encodingOrOffset, length) {
   if (typeof value === 'number') {
     throw new TypeError('"value" argument must not be a number')
   }
 
   if (typeof ArrayBuffer !== 'undefined' && value instanceof ArrayBuffer) {
-    return fromArrayBuffer(that, value, encodingOrOffset, length)
+    return fromArrayBuffer(value, encodingOrOffset, length)
   }
 
   if (typeof value === 'string') {
-    return fromString(that, value, encodingOrOffset)
+    return fromString(value, encodingOrOffset)
   }
 
-  return fromObject(that, value)
+  return fromObject(value)
 }
 
 /**
@@ -47364,21 +47541,13 @@ function from (that, value, encodingOrOffset, length) {
  * Buffer.from(arrayBuffer[, byteOffset[, length]])
  **/
 Buffer.from = function (value, encodingOrOffset, length) {
-  return from(null, value, encodingOrOffset, length)
+  return from(value, encodingOrOffset, length)
 }
 
-if (Buffer.TYPED_ARRAY_SUPPORT) {
-  Buffer.prototype.__proto__ = Uint8Array.prototype
-  Buffer.__proto__ = Uint8Array
-  if (typeof Symbol !== 'undefined' && Symbol.species &&
-      Buffer[Symbol.species] === Buffer) {
-    // Fix subarray() in ES2016. See: https://github.com/feross/buffer/pull/97
-    Object.defineProperty(Buffer, Symbol.species, {
-      value: null,
-      configurable: true
-    })
-  }
-}
+// Note: Change prototype *after* Buffer.from is defined to workaround Chrome bug:
+// https://github.com/feross/buffer/pull/148
+Buffer.prototype.__proto__ = Uint8Array.prototype
+Buffer.__proto__ = Uint8Array
 
 function assertSize (size) {
   if (typeof size !== 'number') {
@@ -47388,20 +47557,20 @@ function assertSize (size) {
   }
 }
 
-function alloc (that, size, fill, encoding) {
+function alloc (size, fill, encoding) {
   assertSize(size)
   if (size <= 0) {
-    return createBuffer(that, size)
+    return createBuffer(size)
   }
   if (fill !== undefined) {
     // Only pay attention to encoding if it's a string. This
     // prevents accidentally sending in a number that would
     // be interpretted as a start offset.
     return typeof encoding === 'string'
-      ? createBuffer(that, size).fill(fill, encoding)
-      : createBuffer(that, size).fill(fill)
+      ? createBuffer(size).fill(fill, encoding)
+      : createBuffer(size).fill(fill)
   }
-  return createBuffer(that, size)
+  return createBuffer(size)
 }
 
 /**
@@ -47409,34 +47578,28 @@ function alloc (that, size, fill, encoding) {
  * alloc(size[, fill[, encoding]])
  **/
 Buffer.alloc = function (size, fill, encoding) {
-  return alloc(null, size, fill, encoding)
+  return alloc(size, fill, encoding)
 }
 
-function allocUnsafe (that, size) {
+function allocUnsafe (size) {
   assertSize(size)
-  that = createBuffer(that, size < 0 ? 0 : checked(size) | 0)
-  if (!Buffer.TYPED_ARRAY_SUPPORT) {
-    for (var i = 0; i < size; ++i) {
-      that[i] = 0
-    }
-  }
-  return that
+  return createBuffer(size < 0 ? 0 : checked(size) | 0)
 }
 
 /**
  * Equivalent to Buffer(num), by default creates a non-zero-filled Buffer instance.
  * */
 Buffer.allocUnsafe = function (size) {
-  return allocUnsafe(null, size)
+  return allocUnsafe(size)
 }
 /**
  * Equivalent to SlowBuffer(num), by default creates a non-zero-filled Buffer instance.
  */
 Buffer.allocUnsafeSlow = function (size) {
-  return allocUnsafe(null, size)
+  return allocUnsafe(size)
 }
 
-function fromString (that, string, encoding) {
+function fromString (string, encoding) {
   if (typeof encoding !== 'string' || encoding === '') {
     encoding = 'utf8'
   }
@@ -47446,30 +47609,30 @@ function fromString (that, string, encoding) {
   }
 
   var length = byteLength(string, encoding) | 0
-  that = createBuffer(that, length)
+  var buf = createBuffer(length)
 
-  var actual = that.write(string, encoding)
+  var actual = buf.write(string, encoding)
 
   if (actual !== length) {
     // Writing a hex string, for example, that contains invalid characters will
     // cause everything after the first invalid character to be ignored. (e.g.
     // 'abxxcd' will be treated as 'ab')
-    that = that.slice(0, actual)
+    buf = buf.slice(0, actual)
   }
 
-  return that
+  return buf
 }
 
-function fromArrayLike (that, array) {
+function fromArrayLike (array) {
   var length = array.length < 0 ? 0 : checked(array.length) | 0
-  that = createBuffer(that, length)
+  var buf = createBuffer(length)
   for (var i = 0; i < length; i += 1) {
-    that[i] = array[i] & 255
+    buf[i] = array[i] & 255
   }
-  return that
+  return buf
 }
 
-function fromArrayBuffer (that, array, byteOffset, length) {
+function fromArrayBuffer (array, byteOffset, length) {
   array.byteLength // this throws if `array` is not a valid ArrayBuffer
 
   if (byteOffset < 0 || array.byteLength < byteOffset) {
@@ -47480,49 +47643,44 @@ function fromArrayBuffer (that, array, byteOffset, length) {
     throw new RangeError('\'length\' is out of bounds')
   }
 
+  var buf
   if (byteOffset === undefined && length === undefined) {
-    array = new Uint8Array(array)
+    buf = new Uint8Array(array)
   } else if (length === undefined) {
-    array = new Uint8Array(array, byteOffset)
+    buf = new Uint8Array(array, byteOffset)
   } else {
-    array = new Uint8Array(array, byteOffset, length)
+    buf = new Uint8Array(array, byteOffset, length)
   }
 
-  if (Buffer.TYPED_ARRAY_SUPPORT) {
-    // Return an augmented `Uint8Array` instance, for best performance
-    that = array
-    that.__proto__ = Buffer.prototype
-  } else {
-    // Fallback: Return an object instance of the Buffer class
-    that = fromArrayLike(that, array)
-  }
-  return that
+  // Return an augmented `Uint8Array` instance
+  buf.__proto__ = Buffer.prototype
+  return buf
 }
 
-function fromObject (that, obj) {
+function fromObject (obj) {
   if (Buffer.isBuffer(obj)) {
     var len = checked(obj.length) | 0
-    that = createBuffer(that, len)
+    var buf = createBuffer(len)
 
-    if (that.length === 0) {
-      return that
+    if (buf.length === 0) {
+      return buf
     }
 
-    obj.copy(that, 0, 0, len)
-    return that
+    obj.copy(buf, 0, 0, len)
+    return buf
   }
 
   if (obj) {
     if ((typeof ArrayBuffer !== 'undefined' &&
         obj.buffer instanceof ArrayBuffer) || 'length' in obj) {
       if (typeof obj.length !== 'number' || isnan(obj.length)) {
-        return createBuffer(that, 0)
+        return createBuffer(0)
       }
-      return fromArrayLike(that, obj)
+      return fromArrayLike(obj)
     }
 
-    if (obj.type === 'Buffer' && isArray(obj.data)) {
-      return fromArrayLike(that, obj.data)
+    if (obj.type === 'Buffer' && Array.isArray(obj.data)) {
+      return fromArrayLike(obj.data)
     }
   }
 
@@ -47530,11 +47688,11 @@ function fromObject (that, obj) {
 }
 
 function checked (length) {
-  // Note: cannot use `length < kMaxLength()` here because that fails when
+  // Note: cannot use `length < K_MAX_LENGTH` here because that fails when
   // length is NaN (which is otherwise coerced to zero.)
-  if (length >= kMaxLength()) {
+  if (length >= K_MAX_LENGTH) {
     throw new RangeError('Attempt to allocate Buffer larger than maximum ' +
-                         'size: 0x' + kMaxLength().toString(16) + ' bytes')
+                         'size: 0x' + K_MAX_LENGTH.toString(16) + ' bytes')
   }
   return length | 0
 }
@@ -47593,7 +47751,7 @@ Buffer.isEncoding = function isEncoding (encoding) {
 }
 
 Buffer.concat = function concat (list, length) {
-  if (!isArray(list)) {
+  if (!Array.isArray(list)) {
     throw new TypeError('"list" argument must be an Array of Buffers')
   }
 
@@ -47785,7 +47943,7 @@ Buffer.prototype.swap64 = function swap64 () {
 }
 
 Buffer.prototype.toString = function toString () {
-  var length = this.length | 0
+  var length = this.length
   if (length === 0) return ''
   if (arguments.length === 0) return utf8Slice(this, 0, length)
   return slowToString.apply(this, arguments)
@@ -47918,8 +48076,7 @@ function bidirectionalIndexOf (buffer, val, byteOffset, encoding, dir) {
     return arrayIndexOf(buffer, val, byteOffset, encoding, dir)
   } else if (typeof val === 'number') {
     val = val & 0xFF // Search for a byte value [0-255]
-    if (Buffer.TYPED_ARRAY_SUPPORT &&
-        typeof Uint8Array.prototype.indexOf === 'function') {
+    if (typeof Uint8Array.prototype.indexOf === 'function') {
       if (dir) {
         return Uint8Array.prototype.indexOf.call(buffer, val, byteOffset)
       } else {
@@ -48060,15 +48217,14 @@ Buffer.prototype.write = function write (string, offset, length, encoding) {
     offset = 0
   // Buffer#write(string, offset[, length][, encoding])
   } else if (isFinite(offset)) {
-    offset = offset | 0
+    offset = offset >>> 0
     if (isFinite(length)) {
-      length = length | 0
+      length = length >>> 0
       if (encoding === undefined) encoding = 'utf8'
     } else {
       encoding = length
       length = undefined
     }
-  // legacy write(string, encoding, offset, length) - remove in v0.13
   } else {
     throw new Error(
       'Buffer.write(string, encoding, offset[, length]) is no longer supported'
@@ -48293,18 +48449,9 @@ Buffer.prototype.slice = function slice (start, end) {
 
   if (end < start) end = start
 
-  var newBuf
-  if (Buffer.TYPED_ARRAY_SUPPORT) {
-    newBuf = this.subarray(start, end)
-    newBuf.__proto__ = Buffer.prototype
-  } else {
-    var sliceLen = end - start
-    newBuf = new Buffer(sliceLen, undefined)
-    for (var i = 0; i < sliceLen; ++i) {
-      newBuf[i] = this[i + start]
-    }
-  }
-
+  var newBuf = this.subarray(start, end)
+  // Return an augmented `Uint8Array` instance
+  newBuf.__proto__ = Buffer.prototype
   return newBuf
 }
 
@@ -48317,8 +48464,8 @@ function checkOffset (offset, ext, length) {
 }
 
 Buffer.prototype.readUIntLE = function readUIntLE (offset, byteLength, noAssert) {
-  offset = offset | 0
-  byteLength = byteLength | 0
+  offset = offset >>> 0
+  byteLength = byteLength >>> 0
   if (!noAssert) checkOffset(offset, byteLength, this.length)
 
   var val = this[offset]
@@ -48332,8 +48479,8 @@ Buffer.prototype.readUIntLE = function readUIntLE (offset, byteLength, noAssert)
 }
 
 Buffer.prototype.readUIntBE = function readUIntBE (offset, byteLength, noAssert) {
-  offset = offset | 0
-  byteLength = byteLength | 0
+  offset = offset >>> 0
+  byteLength = byteLength >>> 0
   if (!noAssert) {
     checkOffset(offset, byteLength, this.length)
   }
@@ -48348,21 +48495,25 @@ Buffer.prototype.readUIntBE = function readUIntBE (offset, byteLength, noAssert)
 }
 
 Buffer.prototype.readUInt8 = function readUInt8 (offset, noAssert) {
+  offset = offset >>> 0
   if (!noAssert) checkOffset(offset, 1, this.length)
   return this[offset]
 }
 
 Buffer.prototype.readUInt16LE = function readUInt16LE (offset, noAssert) {
+  offset = offset >>> 0
   if (!noAssert) checkOffset(offset, 2, this.length)
   return this[offset] | (this[offset + 1] << 8)
 }
 
 Buffer.prototype.readUInt16BE = function readUInt16BE (offset, noAssert) {
+  offset = offset >>> 0
   if (!noAssert) checkOffset(offset, 2, this.length)
   return (this[offset] << 8) | this[offset + 1]
 }
 
 Buffer.prototype.readUInt32LE = function readUInt32LE (offset, noAssert) {
+  offset = offset >>> 0
   if (!noAssert) checkOffset(offset, 4, this.length)
 
   return ((this[offset]) |
@@ -48372,6 +48523,7 @@ Buffer.prototype.readUInt32LE = function readUInt32LE (offset, noAssert) {
 }
 
 Buffer.prototype.readUInt32BE = function readUInt32BE (offset, noAssert) {
+  offset = offset >>> 0
   if (!noAssert) checkOffset(offset, 4, this.length)
 
   return (this[offset] * 0x1000000) +
@@ -48381,8 +48533,8 @@ Buffer.prototype.readUInt32BE = function readUInt32BE (offset, noAssert) {
 }
 
 Buffer.prototype.readIntLE = function readIntLE (offset, byteLength, noAssert) {
-  offset = offset | 0
-  byteLength = byteLength | 0
+  offset = offset >>> 0
+  byteLength = byteLength >>> 0
   if (!noAssert) checkOffset(offset, byteLength, this.length)
 
   var val = this[offset]
@@ -48399,8 +48551,8 @@ Buffer.prototype.readIntLE = function readIntLE (offset, byteLength, noAssert) {
 }
 
 Buffer.prototype.readIntBE = function readIntBE (offset, byteLength, noAssert) {
-  offset = offset | 0
-  byteLength = byteLength | 0
+  offset = offset >>> 0
+  byteLength = byteLength >>> 0
   if (!noAssert) checkOffset(offset, byteLength, this.length)
 
   var i = byteLength
@@ -48417,24 +48569,28 @@ Buffer.prototype.readIntBE = function readIntBE (offset, byteLength, noAssert) {
 }
 
 Buffer.prototype.readInt8 = function readInt8 (offset, noAssert) {
+  offset = offset >>> 0
   if (!noAssert) checkOffset(offset, 1, this.length)
   if (!(this[offset] & 0x80)) return (this[offset])
   return ((0xff - this[offset] + 1) * -1)
 }
 
 Buffer.prototype.readInt16LE = function readInt16LE (offset, noAssert) {
+  offset = offset >>> 0
   if (!noAssert) checkOffset(offset, 2, this.length)
   var val = this[offset] | (this[offset + 1] << 8)
   return (val & 0x8000) ? val | 0xFFFF0000 : val
 }
 
 Buffer.prototype.readInt16BE = function readInt16BE (offset, noAssert) {
+  offset = offset >>> 0
   if (!noAssert) checkOffset(offset, 2, this.length)
   var val = this[offset + 1] | (this[offset] << 8)
   return (val & 0x8000) ? val | 0xFFFF0000 : val
 }
 
 Buffer.prototype.readInt32LE = function readInt32LE (offset, noAssert) {
+  offset = offset >>> 0
   if (!noAssert) checkOffset(offset, 4, this.length)
 
   return (this[offset]) |
@@ -48444,6 +48600,7 @@ Buffer.prototype.readInt32LE = function readInt32LE (offset, noAssert) {
 }
 
 Buffer.prototype.readInt32BE = function readInt32BE (offset, noAssert) {
+  offset = offset >>> 0
   if (!noAssert) checkOffset(offset, 4, this.length)
 
   return (this[offset] << 24) |
@@ -48453,21 +48610,25 @@ Buffer.prototype.readInt32BE = function readInt32BE (offset, noAssert) {
 }
 
 Buffer.prototype.readFloatLE = function readFloatLE (offset, noAssert) {
+  offset = offset >>> 0
   if (!noAssert) checkOffset(offset, 4, this.length)
   return ieee754.read(this, offset, true, 23, 4)
 }
 
 Buffer.prototype.readFloatBE = function readFloatBE (offset, noAssert) {
+  offset = offset >>> 0
   if (!noAssert) checkOffset(offset, 4, this.length)
   return ieee754.read(this, offset, false, 23, 4)
 }
 
 Buffer.prototype.readDoubleLE = function readDoubleLE (offset, noAssert) {
+  offset = offset >>> 0
   if (!noAssert) checkOffset(offset, 8, this.length)
   return ieee754.read(this, offset, true, 52, 8)
 }
 
 Buffer.prototype.readDoubleBE = function readDoubleBE (offset, noAssert) {
+  offset = offset >>> 0
   if (!noAssert) checkOffset(offset, 8, this.length)
   return ieee754.read(this, offset, false, 52, 8)
 }
@@ -48480,8 +48641,8 @@ function checkInt (buf, value, offset, ext, max, min) {
 
 Buffer.prototype.writeUIntLE = function writeUIntLE (value, offset, byteLength, noAssert) {
   value = +value
-  offset = offset | 0
-  byteLength = byteLength | 0
+  offset = offset >>> 0
+  byteLength = byteLength >>> 0
   if (!noAssert) {
     var maxBytes = Math.pow(2, 8 * byteLength) - 1
     checkInt(this, value, offset, byteLength, maxBytes, 0)
@@ -48499,8 +48660,8 @@ Buffer.prototype.writeUIntLE = function writeUIntLE (value, offset, byteLength, 
 
 Buffer.prototype.writeUIntBE = function writeUIntBE (value, offset, byteLength, noAssert) {
   value = +value
-  offset = offset | 0
-  byteLength = byteLength | 0
+  offset = offset >>> 0
+  byteLength = byteLength >>> 0
   if (!noAssert) {
     var maxBytes = Math.pow(2, 8 * byteLength) - 1
     checkInt(this, value, offset, byteLength, maxBytes, 0)
@@ -48518,87 +48679,55 @@ Buffer.prototype.writeUIntBE = function writeUIntBE (value, offset, byteLength, 
 
 Buffer.prototype.writeUInt8 = function writeUInt8 (value, offset, noAssert) {
   value = +value
-  offset = offset | 0
+  offset = offset >>> 0
   if (!noAssert) checkInt(this, value, offset, 1, 0xff, 0)
-  if (!Buffer.TYPED_ARRAY_SUPPORT) value = Math.floor(value)
   this[offset] = (value & 0xff)
   return offset + 1
 }
 
-function objectWriteUInt16 (buf, value, offset, littleEndian) {
-  if (value < 0) value = 0xffff + value + 1
-  for (var i = 0, j = Math.min(buf.length - offset, 2); i < j; ++i) {
-    buf[offset + i] = (value & (0xff << (8 * (littleEndian ? i : 1 - i)))) >>>
-      (littleEndian ? i : 1 - i) * 8
-  }
-}
-
 Buffer.prototype.writeUInt16LE = function writeUInt16LE (value, offset, noAssert) {
   value = +value
-  offset = offset | 0
+  offset = offset >>> 0
   if (!noAssert) checkInt(this, value, offset, 2, 0xffff, 0)
-  if (Buffer.TYPED_ARRAY_SUPPORT) {
-    this[offset] = (value & 0xff)
-    this[offset + 1] = (value >>> 8)
-  } else {
-    objectWriteUInt16(this, value, offset, true)
-  }
+  this[offset] = (value & 0xff)
+  this[offset + 1] = (value >>> 8)
   return offset + 2
 }
 
 Buffer.prototype.writeUInt16BE = function writeUInt16BE (value, offset, noAssert) {
   value = +value
-  offset = offset | 0
+  offset = offset >>> 0
   if (!noAssert) checkInt(this, value, offset, 2, 0xffff, 0)
-  if (Buffer.TYPED_ARRAY_SUPPORT) {
-    this[offset] = (value >>> 8)
-    this[offset + 1] = (value & 0xff)
-  } else {
-    objectWriteUInt16(this, value, offset, false)
-  }
+  this[offset] = (value >>> 8)
+  this[offset + 1] = (value & 0xff)
   return offset + 2
-}
-
-function objectWriteUInt32 (buf, value, offset, littleEndian) {
-  if (value < 0) value = 0xffffffff + value + 1
-  for (var i = 0, j = Math.min(buf.length - offset, 4); i < j; ++i) {
-    buf[offset + i] = (value >>> (littleEndian ? i : 3 - i) * 8) & 0xff
-  }
 }
 
 Buffer.prototype.writeUInt32LE = function writeUInt32LE (value, offset, noAssert) {
   value = +value
-  offset = offset | 0
+  offset = offset >>> 0
   if (!noAssert) checkInt(this, value, offset, 4, 0xffffffff, 0)
-  if (Buffer.TYPED_ARRAY_SUPPORT) {
-    this[offset + 3] = (value >>> 24)
-    this[offset + 2] = (value >>> 16)
-    this[offset + 1] = (value >>> 8)
-    this[offset] = (value & 0xff)
-  } else {
-    objectWriteUInt32(this, value, offset, true)
-  }
+  this[offset + 3] = (value >>> 24)
+  this[offset + 2] = (value >>> 16)
+  this[offset + 1] = (value >>> 8)
+  this[offset] = (value & 0xff)
   return offset + 4
 }
 
 Buffer.prototype.writeUInt32BE = function writeUInt32BE (value, offset, noAssert) {
   value = +value
-  offset = offset | 0
+  offset = offset >>> 0
   if (!noAssert) checkInt(this, value, offset, 4, 0xffffffff, 0)
-  if (Buffer.TYPED_ARRAY_SUPPORT) {
-    this[offset] = (value >>> 24)
-    this[offset + 1] = (value >>> 16)
-    this[offset + 2] = (value >>> 8)
-    this[offset + 3] = (value & 0xff)
-  } else {
-    objectWriteUInt32(this, value, offset, false)
-  }
+  this[offset] = (value >>> 24)
+  this[offset + 1] = (value >>> 16)
+  this[offset + 2] = (value >>> 8)
+  this[offset + 3] = (value & 0xff)
   return offset + 4
 }
 
 Buffer.prototype.writeIntLE = function writeIntLE (value, offset, byteLength, noAssert) {
   value = +value
-  offset = offset | 0
+  offset = offset >>> 0
   if (!noAssert) {
     var limit = Math.pow(2, 8 * byteLength - 1)
 
@@ -48621,7 +48750,7 @@ Buffer.prototype.writeIntLE = function writeIntLE (value, offset, byteLength, no
 
 Buffer.prototype.writeIntBE = function writeIntBE (value, offset, byteLength, noAssert) {
   value = +value
-  offset = offset | 0
+  offset = offset >>> 0
   if (!noAssert) {
     var limit = Math.pow(2, 8 * byteLength - 1)
 
@@ -48644,9 +48773,8 @@ Buffer.prototype.writeIntBE = function writeIntBE (value, offset, byteLength, no
 
 Buffer.prototype.writeInt8 = function writeInt8 (value, offset, noAssert) {
   value = +value
-  offset = offset | 0
+  offset = offset >>> 0
   if (!noAssert) checkInt(this, value, offset, 1, 0x7f, -0x80)
-  if (!Buffer.TYPED_ARRAY_SUPPORT) value = Math.floor(value)
   if (value < 0) value = 0xff + value + 1
   this[offset] = (value & 0xff)
   return offset + 1
@@ -48654,58 +48782,42 @@ Buffer.prototype.writeInt8 = function writeInt8 (value, offset, noAssert) {
 
 Buffer.prototype.writeInt16LE = function writeInt16LE (value, offset, noAssert) {
   value = +value
-  offset = offset | 0
+  offset = offset >>> 0
   if (!noAssert) checkInt(this, value, offset, 2, 0x7fff, -0x8000)
-  if (Buffer.TYPED_ARRAY_SUPPORT) {
-    this[offset] = (value & 0xff)
-    this[offset + 1] = (value >>> 8)
-  } else {
-    objectWriteUInt16(this, value, offset, true)
-  }
+  this[offset] = (value & 0xff)
+  this[offset + 1] = (value >>> 8)
   return offset + 2
 }
 
 Buffer.prototype.writeInt16BE = function writeInt16BE (value, offset, noAssert) {
   value = +value
-  offset = offset | 0
+  offset = offset >>> 0
   if (!noAssert) checkInt(this, value, offset, 2, 0x7fff, -0x8000)
-  if (Buffer.TYPED_ARRAY_SUPPORT) {
-    this[offset] = (value >>> 8)
-    this[offset + 1] = (value & 0xff)
-  } else {
-    objectWriteUInt16(this, value, offset, false)
-  }
+  this[offset] = (value >>> 8)
+  this[offset + 1] = (value & 0xff)
   return offset + 2
 }
 
 Buffer.prototype.writeInt32LE = function writeInt32LE (value, offset, noAssert) {
   value = +value
-  offset = offset | 0
+  offset = offset >>> 0
   if (!noAssert) checkInt(this, value, offset, 4, 0x7fffffff, -0x80000000)
-  if (Buffer.TYPED_ARRAY_SUPPORT) {
-    this[offset] = (value & 0xff)
-    this[offset + 1] = (value >>> 8)
-    this[offset + 2] = (value >>> 16)
-    this[offset + 3] = (value >>> 24)
-  } else {
-    objectWriteUInt32(this, value, offset, true)
-  }
+  this[offset] = (value & 0xff)
+  this[offset + 1] = (value >>> 8)
+  this[offset + 2] = (value >>> 16)
+  this[offset + 3] = (value >>> 24)
   return offset + 4
 }
 
 Buffer.prototype.writeInt32BE = function writeInt32BE (value, offset, noAssert) {
   value = +value
-  offset = offset | 0
+  offset = offset >>> 0
   if (!noAssert) checkInt(this, value, offset, 4, 0x7fffffff, -0x80000000)
   if (value < 0) value = 0xffffffff + value + 1
-  if (Buffer.TYPED_ARRAY_SUPPORT) {
-    this[offset] = (value >>> 24)
-    this[offset + 1] = (value >>> 16)
-    this[offset + 2] = (value >>> 8)
-    this[offset + 3] = (value & 0xff)
-  } else {
-    objectWriteUInt32(this, value, offset, false)
-  }
+  this[offset] = (value >>> 24)
+  this[offset + 1] = (value >>> 16)
+  this[offset + 2] = (value >>> 8)
+  this[offset + 3] = (value & 0xff)
   return offset + 4
 }
 
@@ -48715,6 +48827,8 @@ function checkIEEE754 (buf, value, offset, ext, max, min) {
 }
 
 function writeFloat (buf, value, offset, littleEndian, noAssert) {
+  value = +value
+  offset = offset >>> 0
   if (!noAssert) {
     checkIEEE754(buf, value, offset, 4, 3.4028234663852886e+38, -3.4028234663852886e+38)
   }
@@ -48731,6 +48845,8 @@ Buffer.prototype.writeFloatBE = function writeFloatBE (value, offset, noAssert) 
 }
 
 function writeDouble (buf, value, offset, littleEndian, noAssert) {
+  value = +value
+  offset = offset >>> 0
   if (!noAssert) {
     checkIEEE754(buf, value, offset, 8, 1.7976931348623157E+308, -1.7976931348623157E+308)
   }
@@ -48779,7 +48895,7 @@ Buffer.prototype.copy = function copy (target, targetStart, start, end) {
     for (i = len - 1; i >= 0; --i) {
       target[i + targetStart] = this[i + start]
     }
-  } else if (len < 1000 || !Buffer.TYPED_ARRAY_SUPPORT) {
+  } else if (len < 1000) {
     // ascending copy from start
     for (i = 0; i < len; ++i) {
       target[i + targetStart] = this[i + start]
@@ -48848,7 +48964,7 @@ Buffer.prototype.fill = function fill (val, start, end, encoding) {
   } else {
     var bytes = Buffer.isBuffer(val)
       ? val
-      : utf8ToBytes(new Buffer(val, encoding).toString())
+      : new Buffer(val, encoding)
     var len = bytes.length
     for (i = 0; i < end - start; ++i) {
       this[i + start] = bytes[i % len]
@@ -48861,7 +48977,7 @@ Buffer.prototype.fill = function fill (val, start, end, encoding) {
 // HELPER FUNCTIONS
 // ================
 
-var INVALID_BASE64_RE = /[^+\/0-9A-Za-z-_]/g
+var INVALID_BASE64_RE = /[^+/0-9A-Za-z-_]/g
 
 function base64clean (str) {
   // Node strips out invalid characters like \n and \t from the string, base64-js does not
@@ -49006,15 +49122,7 @@ function isnan (val) {
   return val !== val // eslint-disable-line no-self-compare
 }
 
-}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"base64-js":23,"ieee754":28,"isarray":25}],25:[function(require,module,exports){
-var toString = {}.toString;
-
-module.exports = Array.isArray || function (arr) {
-  return toString.call(arr) == '[object Array]';
-};
-
-},{}],26:[function(require,module,exports){
+},{"base64-js":24,"ieee754":28}],26:[function(require,module,exports){
 /*!
  * chrome-promise 2.0.2
  * https://github.com/tfoxy/chrome-promise
@@ -74079,12 +74187,12 @@ exports.resolveCache = function(fullName) {
     }
     // We need to hit the network.
     dnssdSem.resolveCache(fullName)
-      .then(cache => {
-        resolve(cache);
-      })
-      .catch(err => {
-        reject(err);
-      });
+    .then(cache => {
+      resolve(cache);
+    })
+    .catch(err => {
+      reject(err);
+    });
   });
 };
 
@@ -74269,12 +74377,12 @@ exports.start = function() {
   extBridge.attachListeners();
 
   return new Promise(function(resolve, reject) {
-      settings.init()
-      .then(settingsObj => {
-        console.log('initialized settings: ', settingsObj);
-        exports.updateCachesForSettings();
-        resolve();
-      })
+    settings.init()
+    .then(settingsObj => {
+      console.log('initialized settings: ', settingsObj);
+      exports.updateCachesForSettings();
+      resolve();
+    })
     .catch(err => {
       reject(err);
     });
@@ -74658,7 +74766,7 @@ exports.getNetworkInterfaces = function() {
 /* globals RTCPeerConnection, RTCSessionDescription, RTCIceCandidate */
 'use strict';
 
-var Buffer = require('buffer').Buffer;
+var Buffer = require('buffer/').Buffer;
 
 var util = require('../util');
 var peerConn = require('../../../app/scripts/webrtc/peer-connection');
@@ -74933,7 +75041,7 @@ exports.createRTCSessionDescription = function(descJson) {
   return new RTCSessionDescription(descJson);
 };
 
-},{"../../../app/scripts/webrtc/peer-connection":20,"../server/server-api":16,"../util":17,"buffer":24}],"dnsSem":[function(require,module,exports){
+},{"../../../app/scripts/webrtc/peer-connection":20,"../server/server-api":16,"../util":17,"buffer/":25}],"dnsSem":[function(require,module,exports){
 /*jshint esnext:true*/
 'use strict';
 
@@ -75034,17 +75142,17 @@ exports.browseForSemCacheInstanceNames = function() {
 exports.resolveCache = function(fullName) {
   return new Promise(function(resolve, reject) {
     dnssd.resolveService(fullName)
-      .then(info => {
-        var listUrl = serverApi.getListPageUrlForCache(
-          info.ipAddress, info.port
-        );
-        info.listUrl = listUrl;
-        resolve(info);
-      })
-      .catch(err => {
-        // something went wrong.
-        reject(err);
-      });
+    .then(info => {
+      var listUrl = serverApi.getListPageUrlForCache(
+        info.ipAddress, info.port
+      );
+      info.listUrl = listUrl;
+      resolve(info);
+    })
+    .catch(err => {
+      // something went wrong.
+      reject(err);
+    });
   });
 
 };
@@ -75931,7 +76039,8 @@ exports.register = function(host, name, type, port) {
       host,
       dnsCodes.RECORD_TYPES.ANY,
       dnsCodes.CLASS_CODES.IN
-    ).then(function hostFree() {
+    )
+    .then(function hostFree() {
       foundHostFree = true;
       // We need to probe for the name under which a SRV record would be, which
       // is name.type.local
@@ -75944,7 +76053,8 @@ exports.register = function(host, name, type, port) {
     }, function hostTaken() {
       foundHostFree = false;
       reject(new Error('host taken: ' + host));
-    }).then(function instanceFree() {
+    })
+    .then(function instanceFree() {
       if (foundHostFree) {
         var hostRecords = exports.createHostRecords(host);
         var serviceRecords = exports.createServiceRecords(
@@ -76091,55 +76201,56 @@ exports.issueProbe = function(queryName, queryType, queryClass) {
   // query. 250ms after that we issue another, then another.
   var result = new Promise(function(resolve, reject) {
     exports.waitForProbeTime()
-      .then(function success() {
+    .then(function success() {
+      dnsController.query(
+        queryName,
+        queryType,
+        queryClass
+      );
+      return util.wait(MAX_PROBE_WAIT);
+    })
+    .then(function success() {
+      if (exports.receivedResponsePacket(
+        packets, queryName, queryType, queryClass
+      )) {
+        throw new Error('received a packet, jump to catch');
+      } else {
         dnsController.query(
           queryName,
           queryType,
           queryClass
         );
         return util.wait(MAX_PROBE_WAIT);
-      }).then(function success() {
-        if (exports.receivedResponsePacket(
-          packets, queryName, queryType, queryClass
-        )) {
-          throw new Error('received a packet, jump to catch');
-        } else {
-          dnsController.query(
-            queryName,
-            queryType,
-            queryClass
-          );
-          return util.wait(MAX_PROBE_WAIT);
-        }
-      })
-      .then(function success() {
-        if (exports.receivedResponsePacket(
-          packets, queryName, queryType, queryClass
-        )) {
-          throw new Error('received a packet, jump to catch');
-        } else {
-          dnsController.query(
-            queryName,
-            queryType,
-            queryClass
-          );
-          return util.wait(MAX_PROBE_WAIT);
-        }
-      })
-      .then(function success() {
-        if (exports.receivedResponsePacket(
-          packets, queryName, queryType, queryClass
-        )) {
-          throw new Error('received a packet, jump to catch');
-        } else {
-          resolve();
-          dnsController.removeOnReceiveCallback(callback);
-        }
-      })
-      .catch(function failured() {
+      }
+    })
+    .then(function success() {
+      if (exports.receivedResponsePacket(
+        packets, queryName, queryType, queryClass
+      )) {
+        throw new Error('received a packet, jump to catch');
+      } else {
+        dnsController.query(
+          queryName,
+          queryType,
+          queryClass
+        );
+        return util.wait(MAX_PROBE_WAIT);
+      }
+    })
+    .then(function success() {
+      if (exports.receivedResponsePacket(
+        packets, queryName, queryType, queryClass
+      )) {
+        throw new Error('received a packet, jump to catch');
+      } else {
+        resolve();
         dnsController.removeOnReceiveCallback(callback);
-        reject();
-      });
+      }
+    })
+    .catch(function failured() {
+      dnsController.removeOnReceiveCallback(callback);
+      reject();
+    });
   });
 
   return result;
@@ -76290,110 +76401,110 @@ exports.browseServiceInstances = function(serviceType) {
       exports.DEFAULT_QUERY_WAIT_TIME,
       exports.DEFAULT_NUM_PTR_RETRIES
     )
-      .then(function success(ptrInfos) {
-        if (exports.DEBUG) {
-          console.log('ptrInfos: ', ptrInfos);
-        }
-        var srvRequests = [];
-        ptrInfos.forEach(ptr => {
-          ptrResponses.push(ptr);
-          var instanceName = ptr.serviceName;
-          var req = exports.queryForInstanceInfo(
-            instanceName,
+    .then(function success(ptrInfos) {
+      if (exports.DEBUG) {
+        console.log('ptrInfos: ', ptrInfos);
+      }
+      var srvRequests = [];
+      ptrInfos.forEach(ptr => {
+        ptrResponses.push(ptr);
+        var instanceName = ptr.serviceName;
+        var req = exports.queryForInstanceInfo(
+          instanceName,
+          exports.DEFAULT_QUERY_WAIT_TIME,
+          exports.DEFAULT_NUM_RETRIES
+        );
+        srvRequests.push(req);
+      });
+      return Promise.all(srvRequests);
+    })
+    .then(function success(srvInfos) {
+      if (exports.DEBUG) {
+        console.log('srvInfos: ', srvInfos);
+      }
+      var aRequests = [];
+      for (var srvIter = 0; srvIter < srvInfos.length; srvIter++) {
+        // the query methods return an Array of responses, even if only a
+        // single response is requested. This allows for for API similarity
+        // across calls and for an eventual implementation that permits both
+        // A and AAAA records when querying for IP addresses, e.g., but means
+        // that we are effectively iterating over an array of arrays. For
+        // simplicity, however, we will assume at this stage that we only
+        // ever expect a single response, which is correct in the vast
+        // majority of cases.
+        var srv = srvInfos[srvIter];
+        if (srv.length === 0) {
+          // If no records resolved (e.g. from a dropped packet or a peer
+          // that has dropped out), fail gracefully and log that it occurred.
+          console.warn(
+            'Did not receive SRV to match PTR, ignoring. PTR: ',
+            ptrResponses[srvIter]
+          );
+        } else {
+          // Record that this PTR is active.
+          ptrsWithSrvs.push(ptrResponses[srvIter]);
+          srv = srv[0];
+          srvResponses.push(srv);
+          var hostname = srv.domain;
+          var req = exports.queryForIpAddress(
+            hostname,
             exports.DEFAULT_QUERY_WAIT_TIME,
             exports.DEFAULT_NUM_RETRIES
           );
-          srvRequests.push(req);
+          aRequests.push(req);
+        }
+      }
+      return Promise.all(aRequests);
+    })
+    .then(function success(aInfos) {
+      if (exports.DEBUG) {
+        console.log('aInfos: ', aInfos);
+      }
+
+      for (var aIter = 0; aIter < aInfos.length; aIter++) {
+        var aInfo = aInfos[aIter];
+        if (aInfo.length === 0) {
+          // We didn't receive an A. Log that both the 
+          console.warn(
+            'Did not receive A to match SRV, ignoring. SRV: ',
+            srvResponses[aIter]
+          );
+        } else {
+          aInfo = aInfo[0];
+          aResponses.push(aInfo);
+          ptrsWithAs.push(ptrsWithSrvs[aIter]);
+          srvsWithAs.push(srvResponses[aIter]);
+        }
+      }
+
+      if (
+        ptrsWithAs.length !== srvsWithAs.length ||
+        srvsWithAs.length !== aResponses.length
+      ) {
+        throw new Error('Different numbers of PTR, SRV, and A records!');
+      }
+      
+      var result = [];
+      for (var i = 0; i < aResponses.length; i++) {
+        var ptr = ptrsWithAs[i];
+        var instanceName = exports.getUserFriendlyName(ptr.serviceName);
+        var srv = srvsWithAs[i];
+        var aRec = aResponses[i];
+        result.push({
+          serviceType: serviceType,
+          instanceName: instanceName,
+          domainName: srv.domain,
+          ipAddress: aRec.ipAddress,
+          port: srv.port
         });
-        return Promise.all(srvRequests);
-      })
-      .then(function success(srvInfos) {
-        if (exports.DEBUG) {
-          console.log('srvInfos: ', srvInfos);
-        }
-        var aRequests = [];
-        for (var srvIter = 0; srvIter < srvInfos.length; srvIter++) {
-          // the query methods return an Array of responses, even if only a
-          // single response is requested. This allows for for API similarity
-          // across calls and for an eventual implementation that permits both
-          // A and AAAA records when querying for IP addresses, e.g., but means
-          // that we are effectively iterating over an array of arrays. For
-          // simplicity, however, we will assume at this stage that we only
-          // ever expect a single response, which is correct in the vast
-          // majority of cases.
-          var srv = srvInfos[srvIter];
-          if (srv.length === 0) {
-            // If no records resolved (e.g. from a dropped packet or a peer
-            // that has dropped out), fail gracefully and log that it occurred.
-            console.warn(
-              'Did not receive SRV to match PTR, ignoring. PTR: ',
-              ptrResponses[srvIter]
-            );
-          } else {
-            // Record that this PTR is active.
-            ptrsWithSrvs.push(ptrResponses[srvIter]);
-            srv = srv[0];
-            srvResponses.push(srv);
-            var hostname = srv.domain;
-            var req = exports.queryForIpAddress(
-              hostname,
-              exports.DEFAULT_QUERY_WAIT_TIME,
-              exports.DEFAULT_NUM_RETRIES
-            );
-            aRequests.push(req);
-          }
-        }
-        return Promise.all(aRequests);
-      })
-      .then(function success(aInfos) {
-        if (exports.DEBUG) {
-          console.log('aInfos: ', aInfos);
-        }
+      }
 
-        for (var aIter = 0; aIter < aInfos.length; aIter++) {
-          var aInfo = aInfos[aIter];
-          if (aInfo.length === 0) {
-            // We didn't receive an A. Log that both the 
-            console.warn(
-              'Did not receive A to match SRV, ignoring. SRV: ',
-              srvResponses[aIter]
-            );
-          } else {
-            aInfo = aInfo[0];
-            aResponses.push(aInfo);
-            ptrsWithAs.push(ptrsWithSrvs[aIter]);
-            srvsWithAs.push(srvResponses[aIter]);
-          }
-        }
-
-        if (
-          ptrsWithAs.length !== srvsWithAs.length ||
-          srvsWithAs.length !== aResponses.length
-        ) {
-          throw new Error('Different numbers of PTR, SRV, and A records!');
-        }
-        
-        var result = [];
-        for (var i = 0; i < aResponses.length; i++) {
-          var ptr = ptrsWithAs[i];
-          var instanceName = exports.getUserFriendlyName(ptr.serviceName);
-          var srv = srvsWithAs[i];
-          var aRec = aResponses[i];
-          result.push({
-            serviceType: serviceType,
-            instanceName: instanceName,
-            domainName: srv.domain,
-            ipAddress: aRec.ipAddress,
-            port: srv.port
-          });
-        }
-
-        resolve(result);
-      })
-      .catch(function failed(err) {
-        console.log(err);
-        reject('Caught error in browsing for service: ' + err);
-      });
+      resolve(result);
+    })
+    .catch(function failed(err) {
+      console.log(err);
+      reject('Caught error in browsing for service: ' + err);
+    });
   });
 };
 
@@ -76685,25 +76796,25 @@ exports.queryForResponses = function(
     var queryAndWait = function() {
       dnsController.query(qName, qType, qClass);
       util.wait(timeoutOrWait)
-        .then(() => {
-          if (resolved) {
-            // Already handled. Do nothing.
-            return;
-          }
-          if (retriesAttempted < numRetries) {
-            // We have more retries to attempt. Try again.
-            retriesAttempted += 1;
-            queryAndWait();
-          } else {
-            // We've waited and all of our retries are spent. Prepare to resolve.
-            dnsController.removeOnReceiveCallback(callback);
-            resolved = true;
-            resolve(packets);
-          }
-        })
-        .catch(err => {
-          console.log('Something went wrong in query: ', err);
-        });
+      .then(() => {
+        if (resolved) {
+          // Already handled. Do nothing.
+          return;
+        }
+        if (retriesAttempted < numRetries) {
+          // We have more retries to attempt. Try again.
+          retriesAttempted += 1;
+          queryAndWait();
+        } else {
+          // We've waited and all of our retries are spent. Prepare to resolve.
+          dnsController.removeOnReceiveCallback(callback);
+          resolved = true;
+          resolve(packets);
+        }
+      })
+      .catch(err => {
+        console.log('Something went wrong in query: ', err);
+      });
     };
 
     queryAndWait();
@@ -77041,20 +77152,20 @@ exports.resolvePeers = function(cacheNames, resolveDelay, toLog) {
 
       return new Promise(function(resolve, reject) {
         util.wait(resolveDelay)
-          .then(() => {
-            startResolve = exports.getNow();
-            return appc.resolveCache(serviceName);
-          })
-          .then(cache => {
-            var endResolve = exports.getNow();
-            var totalResolve = endResolve - startResolve;
-            toLog.resolves.push(totalResolve);
-            toLog.serviceNames.push(serviceName);
-            resolve(cache);
-          })
-          .catch(err => {
-            reject(err); 
-          });
+        .then(() => {
+          startResolve = exports.getNow();
+          return appc.resolveCache(serviceName);
+        })
+        .then(cache => {
+          var endResolve = exports.getNow();
+          var totalResolve = endResolve - startResolve;
+          toLog.resolves.push(totalResolve);
+          toLog.serviceNames.push(serviceName);
+          resolve(cache);
+        })
+        .catch(err => {
+          reject(err); 
+        });
       });
     };
 
@@ -77064,9 +77175,9 @@ exports.resolvePeers = function(cacheNames, resolveDelay, toLog) {
     }
 
     exports.fulfillPromises(promises)
-      .then(results => {
-        resolve(results);
-      });
+    .then(results => {
+      resolve(results);
+    });
   });
 };
 
@@ -77116,7 +77227,6 @@ exports.runDiscoverPeerPagesIterationLazy = function(
       return exports.resolvePeers(cacheNames, resolveDelay, logInfo);
     })
     .then(cacheResults => {
-      
       // We'll create a fetch for each listUrl.
       var promises = [];
       cacheResults.forEach(cacheResult => {
@@ -77269,38 +77379,38 @@ exports.runLoadPageTrialForCache = function(numIterations, key, listPagesUrl) {
     // start the function, which somehow seems
     // to reliably crash chrome.
     util.wait(5000)
-      .then(() => {
-        return util.fetchJson(listPagesUrl);
-      })
-      .then(cache => {
-        // We will call runDiscoverPagesIteration and attach them all to a
-        // sequence of Promises, such that they will resolve in order.
-        var numCalls = 0;
-        var nextIter = function() {
-          var cachedPage = cache.cachedPages[numCalls];
-          numCalls += 1;
-          return exports.runLoadPageTrial(
-            numIterations,
-            key,
-            cachedPage.captureUrl,
-            cachedPage.captureDate,
-            cachedPage.accessPath,
-            cachedPage.metadata
-          );
-        };
+    .then(() => {
+      return util.fetchJson(listPagesUrl);
+    })
+    .then(cache => {
+      // We will call runDiscoverPagesIteration and attach them all to a
+      // sequence of Promises, such that they will resolve in order.
+      var numCalls = 0;
+      var nextIter = function() {
+        var cachedPage = cache.cachedPages[numCalls];
+        numCalls += 1;
+        return exports.runLoadPageTrial(
+          numIterations,
+          key,
+          cachedPage.captureUrl,
+          cachedPage.captureDate,
+          cachedPage.accessPath,
+          cachedPage.metadata
+        );
+      };
 
-        var promises = [];
-        for (var i = 0; i < cache.cachedPages.length; i++) {
-          promises.push(nextIter);
-        }
+      var promises = [];
+      for (var i = 0; i < cache.cachedPages.length; i++) {
+        promises.push(nextIter);
+      }
 
-        // Now we have an array with all our promises.
-        return exports.fulfillPromises(promises);
-      })
-      .then(results => {
-        console.warn('Trial for cache complete: ', results);
-        resolve(results);
-      });
+      // Now we have an array with all our promises.
+      return exports.fulfillPromises(promises);
+    })
+    .then(results => {
+      console.warn('Trial for cache complete: ', results);
+      resolve(results);
+    });
   });
 };
 
@@ -77446,18 +77556,18 @@ exports.handleExternalMessage = function(message, sender, response) {
     var captureDate = message.params.captureDate;
     var metadata = message.params.metadata;
     datastore.addPageToCache(captureUrl, captureDate, blob, metadata)
-      .then(() => {
-        var successMsg = exports.createResponseSuccess(message);
-        if (response) {
-          response(successMsg);
-        }
-      })
-      .catch(err => {
-        var errorMsg = exports.createResponseError(message, err);
-        if (response) {
-          response(errorMsg);
-        }
-      });
+    .then(() => {
+      var successMsg = exports.createResponseSuccess(message);
+      if (response) {
+        response(successMsg);
+      }
+    })
+    .catch(err => {
+      var errorMsg = exports.createResponseError(message, err);
+      if (response) {
+        response(errorMsg);
+      }
+    });
   } else {
     console.log('Unrecognized message type from extension: ', message.type);
   }
@@ -77540,7 +77650,7 @@ exports.sendMessageToOpenUrl = function(url) {
   exports.sendMessageToExtension(message);
 };
 
-},{"../chrome-apis/chromep":2,"../persistence/datastore":13,"base-64":22}],"fileSystem":[function(require,module,exports){
+},{"../chrome-apis/chromep":2,"../persistence/datastore":13,"base-64":23}],"fileSystem":[function(require,module,exports){
 /*jshint esnext:true*/
 /* globals Promise */
 'use strict';
@@ -77729,7 +77839,7 @@ exports.getFileContentsFromName = function(fileName) {
 /* globals Promise */
 'use strict';
 
-var Buffer = require('buffer').Buffer;
+var Buffer = require('buffer/').Buffer;
 
 /**
  * General file system operations on top of the web APIs.
@@ -77934,7 +78044,7 @@ exports.createFileReader = function() {
   return new FileReader();
 };
 
-},{"buffer":24}],"moment":[function(require,module,exports){
+},{"buffer/":25}],"moment":[function(require,module,exports){
 //! moment.js
 //! version : 2.17.1
 //! authors : Tim Wood, Iskren Chernev, Moment.js contributors

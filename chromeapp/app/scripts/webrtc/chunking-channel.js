@@ -1,8 +1,10 @@
 'use strict';
 
 var _ = require('underscore');
-var Buffer = require('buffer').Buffer;
+var Buffer = require('buffer/').Buffer;
 var EventEmitter = require('wolfy87-eventemitter');
+
+var protocol = require('./protocol');
 
 var EV_CHUNK = 'chunk';
 var EV_COMPLETE = 'complete';
@@ -57,6 +59,15 @@ exports.Client.prototype.sendStartMessage = function() {
 };
 
 /**
+ * Handle an error from the Server.
+ *
+ * @param {ProtocolMessage} msg
+ */
+exports.Client.prototype.handleErrorMessage = function(msg) {
+  throw new Error('unimplemented: ' + msg);
+};
+
+/**
  * Request the information from the server and start receiving data.
  */
 exports.Client.prototype.start = function() {
@@ -70,7 +81,15 @@ exports.Client.prototype.start = function() {
   };
 
   channel.onmessage = function(event) {
-    var dataBuff = Buffer.from(event.data);
+    var eventBuff = Buffer.from(event.data);
+
+    var msg = protocol.from(eventBuff);
+    if (msg.isError()) {
+      this.handleError(msg);
+      return;
+    }
+
+    var dataBuff = msg.getData();
 
     // We expect a JSON message about our stream as the first message. All
     // subsequent messages will be ArrayBuffers. We know we receive them in
@@ -189,7 +208,8 @@ exports.Server.prototype.sendBuffer = function(buff) {
       // an ack comes back very quickly (impossibly quickly except in test
       // conditions?) you can send the same chunk twice.
       self.chunksSent++;
-      self.channel.send(chunk);
+      var chunkMsg = protocol.createSuccessMessage(chunk);
+      self.channel.send(chunkMsg.asBuffer());
     } catch (err) {
       console.log('Error sending chunk: ', err);
     }
@@ -197,7 +217,10 @@ exports.Server.prototype.sendBuffer = function(buff) {
   
   // Start the process by sending the streamInfo to the client.
   try {
-    this.channel.send(Buffer.from(JSON.stringify(this.streamInfo)));
+    var streamInfoMsg = protocol.createSuccessMessage(
+      Buffer.from(JSON.stringify(this.streamInfo))
+    );
+    this.channel.send(streamInfoMsg.asBuffer());
   } catch (err) {
     console.log('Error sending streamInfo: ', this.streamInfo);
   }

@@ -1,7 +1,7 @@
 /* globals Promise */
 'use strict';
 
-var Buffer = require('buffer').Buffer;
+var Buffer = require('buffer/').Buffer;
 
 /**
  * General file system operations on top of the web APIs.
