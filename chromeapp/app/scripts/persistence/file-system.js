@@ -41,8 +41,9 @@ exports.constructFileSchemeUrl = function(absPathToBaseDir, fileEntryPath) {
 /**
  * Get the directory where cache entries are stored.
  *
- * @return {Promise} Promise that resolves with a DirectoryEntry that is the
- * base cache directory. Rejects if the base directory has not been set.
+ * @return {Promise.<DirectoryEntry, Error>} Promise that resolves with a
+ * DirectoryEntry that is the base cache directory. Rejects if the base
+ * directory has not been set.
  */
 exports.getDirectoryForCacheEntries = function() {
   return new Promise(function(resolve, reject) {
@@ -71,9 +72,9 @@ exports.getDirectoryForCacheEntries = function() {
  * must have already been chosen via a file chooser. If a base directory has
  * not been chosen, it will return null.
  *
- * @return {Promise} Promise that resolves with the DirectoryEntry that has
- * been set as the root of the SemCache file system. Resolves null if the
- * directory has not been set.
+ * @return {Promise.<DirectoryEntry, Error>} Promise that resolves with the
+ * DirectoryEntry that has been set as the root of the SemCache file system.
+ * Resolves null if the directory has not been set.
  */
 exports.getPersistedBaseDir = function() {
   return new Promise(function(resolve, reject) {
@@ -100,7 +101,7 @@ exports.getPersistedBaseDir = function() {
 };
 
 /**
- * @return {Promise} Promise that resolves with a boolean
+ * @return {Promise.<boolean, Error>} Promise that resolves with a boolean
  */
 exports.baseDirIsSet = function() {
   return new Promise(function(resolve, reject) {
@@ -134,8 +135,8 @@ exports.setBaseCacheDir = function(dirEntry) {
 /**
  * Prompt the user to choose a directory.
  *
- * @return {Promise} a promise that resolves with a DirectoryEntry that has
- * been chosen by the user.
+ * @return {Promise.<DirectoryEntry, Error>} a promise that resolves with a
+ * DirectoryEntry that has been chosen by the user.
  */
 exports.promptForDir = function() {
   return new Promise(function(resolve, reject) {

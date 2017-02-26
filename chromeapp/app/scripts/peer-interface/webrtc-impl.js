@@ -16,10 +16,10 @@ exports.WebrtcPeerAccessor = function WebrtcPeerAccessor() {
 /**
  * Retrieve a blob from the peer.
  *
- * @param {JSON} params parameters for the get, as created by
+ * @param {Object} params parameters for the get, as created by
  * peer-interface/common.
  *
- * @returns {Promise.<Blob, Error>}
+ * @return {Promise.<Blob, Error>}
  */
 exports.WebrtcPeerAccessor.prototype.getFileBlob = function(params) {
   return new Promise(function(resolve, reject) {
@@ -40,10 +40,10 @@ exports.WebrtcPeerAccessor.prototype.getFileBlob = function(params) {
 /**
  * Retrieve the list of pages in the peer's cache.
  *
- * @param {JSON} params parameters for list request, as created by
+ * @param {Object} params parameters for list request, as created by
  * peer-interface/common.
  *
- * @returns {Promise.<JSON, Error>}
+ * @return {Promise.<Object, Error>}
  */
 exports.WebrtcPeerAccessor.prototype.getList = function(params) {
   return new Promise(function(resolve, reject) {

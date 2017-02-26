@@ -31,11 +31,13 @@ exports.DEBUG = false;
  * This object represents a page that is stored in the cache and can be browsed
  * to.
  *
+ * @constructor
+ *
  * @param {string} captureUrl the URL of the original captured page
  * @param {string} captureDate the ISO String representation of the datetime
  * @param {string} accessPath the path in the cache that can be used to access
  * the file the page was captured
- * @param {object} metadata an object stored and associated with the page.
+ * @param {Object} metadata an object stored and associated with the page.
  * Allows additional metadata to be stored, e.g. mime type, thumbnail, etc.
  * Must be safe to serialize via chrome.storage.local.set().
  */
@@ -61,9 +63,10 @@ exports.CachedPage = function CachedPage(
  * @param {string} captureDate the toISOString() of the date the page was
  * captured
  * @param {Blob} mhtmlBlob the contents of hte page
- * @param {object} metadata metadata to store with the page
+ * @param {Object} metadata metadata to store with the page
  *
- * @return {Promise} a Promise that resolves when the write is complete
+ * @return {Promise.<FileEntry, Error>} a Promise that resolves when the write
+ * is complete
  */
 exports.addPageToCache = function(
   captureUrl, captureDate, mhtmlBlob, metadata
@@ -105,7 +108,8 @@ exports.addPageToCache = function(
 /**
  * Get all the cached pages that are stored in the cache.
  *
- * @return {Promise} Promise that resolves with an Array of CachedPage objects
+ * @return {Promise.<CachedPage, Error>} Promise that resolves with an Array of
+ * CachedPage objects
  */
 exports.getAllCachedPages = function() {
   return new Promise(function(resolve, reject) {
@@ -130,7 +134,8 @@ exports.getAllCachedPages = function() {
 /**
  * Get all the FileEntries representing saved pages.
  *
- * @return {Promise} Promise that resolves with an array of FileEntry objects
+ * @return {Promise.<Array.<CachedPage>, Error>} Promise that resolves with an
+ * array of FileEntry objects
  */
 exports.getAllFileEntriesForPages = function() {
   var flagDirNotSet = 1;
@@ -164,7 +169,8 @@ exports.getAllFileEntriesForPages = function() {
  *
  * @param {FileEntry} entry
  *
- * @return {Promise -> CachedPage} Promise that resolves with the CachedPage
+ * @return {Promise.<CachedPage, Error>} Promise that resolves with the
+ * CachedPage
  */
 exports.getEntryAsCachedPage = function(entry) {
   // Retrieve the metadata from Chrome storage.
@@ -193,7 +199,8 @@ exports.getEntryAsCachedPage = function(entry) {
  *
  * @param {FileEntry} entry 
  *
- * @return {Promise -> object} Promise that resolves with the metadata object
+ * @return {Promise.<Object, Error>} Promise that resolves with the metadata
+ * object
  */
 exports.getMetadataForEntry = function(entry) {
   return new Promise(function(resolve, reject) {
@@ -235,9 +242,10 @@ exports.createMetadataKey = function(entry) {
  * Write the metadata object for the given entry.
  *
  * @param {FileEntry} entry file pertaining to the metadata
- * @param {object} metadata the metadata to write
+ * @param {Object} metadata the metadata to write
  *
- * @return {Promise} Promise that resolves when the write is complete
+ * @return {Promise.<undefined, Error>} Promise that resolves when the write is
+ * complete
  */
 exports.writeMetadataForEntry = function(entry, metadata) {
   var key = exports.createMetadataKey(entry);

@@ -7,7 +7,12 @@ var util = require('../util');
  */
 
 /**
- * Returns the IP address, interpolating if necessary.
+ * Returns the IP address, extracting if necessary.
+ *
+ * @param {string} ipaddr
+ * @param {string} url
+ *
+ * @return {string}
  */
 function getIpAddress(ipaddr, url) {
   var result = ipaddr;
@@ -18,7 +23,12 @@ function getIpAddress(ipaddr, url) {
 }
 
 /**
- * Returns the port, interpolating if necessary.
+ * Returns the port, extracting if necessary.
+ *
+ * @param {integer} port
+ * @param {string} url
+ *
+ * @return {integer}
  */
 function getPort(port, url) {
   var result = port;
@@ -32,12 +42,12 @@ function getPort(port, url) {
  * Create parameters for a PeerAccessor getList call. If ipaddr or port is
  * missing, tries to interpolate them from listUrl.
  *
- * @param {String} ipaddr IP address of the peer
- * @param {Integer} port port of the peer
- * @param {String} listUrl the list URL for the peer's list access point. Only
+ * @param {string} ipaddr IP address of the peer
+ * @param {integer} port port of the peer
+ * @param {string} listUrl the list URL for the peer's list access point. Only
  * needed if the transport method will be HTTP.
  *
- * @returns {JSON}
+ * @return {Object}
  */
 exports.createListParams = function(ipaddr, port, listUrl) {
   ipaddr = getIpAddress(ipaddr, listUrl);
@@ -53,12 +63,12 @@ exports.createListParams = function(ipaddr, port, listUrl) {
  * Create parameters for a PeerAccessor getFile call. If ipaddr or port is
  * missing, tries to interpolate them from listUrl.
  *
- * @param {String} ipaddr IP address of the peer
- * @param {Integer} port port of the peer
- * @param {String} fileUrl the list URL for the file's access URL. Only
+ * @param {string} ipaddr IP address of the peer
+ * @param {integer} port port of the peer
+ * @param {string} fileUrl the list URL for the file's access URL. Only
  * needed if the transport method will be HTTP.
  *
- * @returns {JSON}
+ * @return {Object}
  */
 exports.createFileParams = function(ipaddr, port, fileUrl) {
   ipaddr = getIpAddress(ipaddr, fileUrl);

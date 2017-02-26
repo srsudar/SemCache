@@ -1,10 +1,13 @@
-/* globals Promise, chrome */
+/* globals chrome */
 'use strict';
 
 var util = require('./util');
 
 var DEBUG = false;
 
+/**
+ * @constructor
+ */
 exports.ChromeUdpSocket = function ChromeUdpSocket(socketInfo) {
   if (!(this instanceof ChromeUdpSocket)) {
     throw new Error('ChromeUdpSocket must be called with new');
@@ -16,6 +19,12 @@ exports.ChromeUdpSocket = function ChromeUdpSocket(socketInfo) {
 /**
  * Send data over the port and return a promise with the sendInfo result.
  * Behaves as a thin wrapper around chromeUdp.send.
+ *
+ * @param {ArrayBuffer} arrayBuffer
+ * @param {string} address
+ * @param {integer} port
+ *
+ * @return {Promise.<any, Error>}
  */
 exports.ChromeUdpSocket.prototype.send = function(arrayBuffer, address, port) {
   return exports.send(this.socketId, arrayBuffer, address, port);
@@ -23,6 +32,8 @@ exports.ChromeUdpSocket.prototype.send = function(arrayBuffer, address, port) {
 
 /**
  * Add listener via call to util.getUdp().onReceive.addListener.
+ *
+ * @param {function} listener
  */
 exports.addOnReceiveListener = function(listener) {
   util.getUdp().onReceive.addListener(listener);
@@ -30,6 +41,8 @@ exports.addOnReceiveListener = function(listener) {
 
 /**
  * Add listener via call to util.getUdp().onReceiveError.addListener.
+ *
+ * @param {function} listener
  */
 exports.addOnReceiveErrorListener = function(listener) {
   util.getUdp().onReceiveError.addListener(listener);
@@ -38,7 +51,7 @@ exports.addOnReceiveErrorListener = function(listener) {
 /**
  * @param {SocketProperties} properties optional
  *
- * @returns {Promise.<object, Error>} Promise that resolves with a socket info
+ * @return {Promise.<object, Error>} Promise that resolves with a socket info
  * object or rejects with an Error
  */
 exports.create = function(obj) {
@@ -53,6 +66,13 @@ exports.create = function(obj) {
   });
 };
 
+/**
+ * @param {integer} socketId
+ * @param {string} address
+ * @param {integer} port
+ *
+ * @return {Promise.<integer, Error>}
+ */
 exports.bind = function(socketId, address, port) {
   return new Promise(function(resolve, reject) {
     util.getUdp().bind(socketId, address, port, function(result) {
@@ -69,6 +89,14 @@ exports.bind = function(socketId, address, port) {
   });
 };
 
+/**
+ * @param {integer} socketId
+ * @param {ArrayBuffer} arrayBuffer
+ * @param {string} address
+ * @param {integer} port
+ *
+ * @return {Promise.<integer, Error>}
+ */
 exports.send = function(socketId, arrayBuffer, address, port) {
   if (!socketId || !arrayBuffer || !address || !port) {
     console.warn(
@@ -100,6 +128,12 @@ exports.send = function(socketId, arrayBuffer, address, port) {
   });
 };
 
+/**
+ * @param {integer} socketId
+ * @param {string} address
+ *
+ * @return {Promise.<integer, Error>}
+ */
 exports.joinGroup = function(socketId, address) {
   return new Promise(function(resolve, reject) {
     util.getUdp().joinGroup(socketId, address, function(result) {
@@ -117,6 +151,9 @@ exports.joinGroup = function(socketId, address) {
   });
 };
 
+/**
+ * @param {Promise.<Array.<SocketInfo>, Error>}
+ */
 exports.getSockets = function() {
   return new Promise(function(resolve) {
     util.getUdp().getSockets(function(allSockets) {
@@ -125,6 +162,11 @@ exports.getSockets = function() {
   });
 };
 
+/**
+ * @param {integer} socketId
+ *
+ * @return {Promise.<SocketInfo, Error>}
+ */
 exports.getInfo = function(socketId) {
   return new Promise(function(resolve) {
     util.getUdp().getInfo(socketId, function(socketInfo) {
@@ -161,6 +203,8 @@ exports.logSocketInfo = function(info) {
 
 /**
  * Returns a Promise that resolves with a list of network interfaces.
+ *
+ * @return {Promise.<Array.<Object>, Error>}
  */
 exports.getNetworkInterfaces = function() {
   return new Promise(function(resolve) {

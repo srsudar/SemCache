@@ -62,7 +62,7 @@ function getSrvRecord(instanceName, domain) {
  * Create a DnsPacket for use in testing. This is the same object on every
  * call unless params is passed.
  *
- * @param {object} params an optional object to specify parameters to the
+ * @param {Object} params an optional object to specify parameters to the
  * DnsPacket constructor. Defaults are used if the object is missing or if any
  * properties are on params are not defined.
  */

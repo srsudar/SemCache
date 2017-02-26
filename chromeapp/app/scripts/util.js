@@ -5,8 +5,8 @@
  *
  * @param {string} url
  *
- * @return {Promise -> object} Promise that resolves with JSON fetched and
- * parsed from url.
+ * @return {Promise.<Object, Error>} Promise that resolves with JSON fetched
+ * and parsed from url.
  */
 exports.fetchJson = function(url) {
   return new Promise(function(resolve, reject) {
@@ -35,6 +35,8 @@ exports.fetch = function() {
  * Returns a promise that resolves after the given time (in ms).
  *
  * @param {integer} ms the number of milliseconds to wait before resolving
+ *
+ * @return {Promise.<undefined, undefined>}
  */
 exports.wait = function(ms) {
   return new Promise(resolve => {
@@ -48,7 +50,8 @@ exports.wait = function(ms) {
  * @param {integer} min the minimum number of milliseconds to wait
  * @param {integer} max the maximum number of milliseconds to wait, inclusive
  *
- * @return {Promise} Promise that resolves after the wait
+ * @return {Promise.<undefined, undefined>} Promise that resolves after the
+ * wait
  */
 exports.waitInRange = function(min, max) {
   // + 1 because we specify inclusive, but randomInt is exclusive.
@@ -106,9 +109,9 @@ exports.trace = function trace(arg) {
 /**
  * Extract the hostname (or IP address) from a URL.
  *
- * @param {String} url
+ * @param {string} url
  *
- * @returns {String}
+ * @return {string}
  */
 exports.getHostFromUrl = function(url) {
   // Find '//'. This will be the end of the scheme.
@@ -141,9 +144,9 @@ exports.getHostFromUrl = function(url) {
  * Extract the port from a URL. The port must be explicitly indicated in the
  * URL, or an error is thrown.
  *
- * @param {String} url
+ * @param {string} url
  *
- * @returns {Integer}
+ * @return {integer}
  */
 exports.getPortFromUrl = function(url) {
   var originalUrl = url;
@@ -186,7 +189,7 @@ exports.getPortFromUrl = function(url) {
  *
  * @param {Buffer} buff
  *
- * @returns {Blob}
+ * @return {Blob}
  */
 exports.getBufferAsBlob = function(buff) {
   return new Blob(

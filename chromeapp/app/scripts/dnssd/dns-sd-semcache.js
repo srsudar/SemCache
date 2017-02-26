@@ -37,17 +37,19 @@ exports.getFullName = function(friendlyName) {
 };
 
 /**
- * Register a SemCache instance. Returns a Promise that resolves with an object
- * like the following:
+ * Register a SemCache instance.
  *
+ * @param {string} host 
+ * @param {string} name  the user-friendly name of the instance, e.g. "Sam's
+ * @param {integer} port the port on which the SemCache instance is running.
+ *
+ * @return {Promise.<Object, Error>} Promise that resolves with an object like
+ * the following:
  * {
  *   serviceName: "Sam's SemCache",
  *   type: "_http._local",
  *   domain: "laptop.local"
  * }
- *
- * name: the user-friendly name of the instance, e.g. "Sam's SemCache".
- * port: the port on which the SemCache instance is running.
  */
 exports.registerSemCache = function(host, name, port) {
   var result = dnssd.register(host, name, SEMCACHE_SERVICE_STRING, port);
@@ -60,8 +62,8 @@ exports.registerSemCache = function(host, name, port) {
  * caches--it only returns a list of names on the network. Operational
  * information should be resolved as needed using the resolveCache() function.
  *
- * @return {Promise} Promise that resolves with an Array of objects as returned
- * from dnssd.queryForServiceInstances
+ * @return {Promise.<Array.<Object>, Error>} Promise that resolves with an
+ * Array of objects as returned from dnssd.queryForServiceInstances
  */
 exports.browseForSemCacheInstanceNames = function() {
   return dnssd.queryForServiceInstances(
@@ -83,9 +85,9 @@ exports.browseForSemCacheInstanceNames = function() {
  * @param {string} fullName the full name of the cache, e.g. `Tyrion's
  * Cache._semcache._tcp.local`
  *
- * @return {Promise} that resolves with an object like the following. The
- * promise rejects if the resolution does not succeed (e.g. from a missing SRV
- * or A record).
+ * @return {Promise.<Object, Error>} that resolves with an object like the
+ * following. The promise rejects if the resolution does not succeed (e.g. from
+ * a missing SRV or A record).
  * {
  *   friendlyName: 'Sam Cache',
  *   instanceName: 'Sam Cache._semcache._tcp.local',
@@ -114,8 +116,10 @@ exports.resolveCache = function(fullName) {
 };
 
 /**
- * Browse for SemCache instances on the local network. Returns a Promise that
- * resolves with a list of objects like the following:
+ * Browse for SemCache instances on the local network. Returns a  *
+ *
+ * @return {Promise.<Object, Error>} Promise that resolves with a list of
+ * objects like the following, or an empty list if no instances are found.
  *
  * {
  *   serviceName: "Sam's SemCache",
@@ -123,8 +127,6 @@ exports.resolveCache = function(fullName) {
  *   domain: "laptop.local",
  *   port: 8889
  * }
- *
- * Resolves with an empty list if no instances are found.
  */
 exports.browseForSemCacheInstances = function() {
   var result = dnssd.browseServiceInstances(SEMCACHE_SERVICE_STRING);

@@ -23,10 +23,10 @@ exports.local = null;
 /**
  * Creates the cache key for the given ipaddr/port combination.
  *
- * @param {String} ipaddr the IP address of the machine
- * @param {String|Number} port the port of the instance
+ * @param {string} ipaddr the IP address of the machine
+ * @param {string|integer} port the port of the instance
  *
- * @return {String} a String to be used as a key into the cache
+ * @return {string} a String to be used as a key into the cache
  */
 function createKey(ipaddr, port) {
   if (!ipaddr || !port) {
@@ -41,9 +41,9 @@ function createKey(ipaddr, port) {
  * PeerConnections added via this method will be automatically removed when
  * they emit a close event.
  *
- * @param {String} ipaddr the IP address of the peer this connects to
- * @param {number} port the port of the instance advertised via mDNS where this
- * connection is connected
+ * @param {string} ipaddr the IP address of the peer this connects to
+ * @param {integer} port the port of the instance advertised via mDNS where
+ * this connection is connected
  * @param {PeerConnection} cxn the connection being added
  */
 exports.addConnection = function(ipaddr, port, cxn) {
@@ -71,9 +71,9 @@ exports.getConnection = function(ipaddr, port) {
 /**
  * Remove the connection from the known pool.
  *
- * @param {String} ipaddr the IP address of the peer this connects to
- * @param {number} port the port of the instance advertised via mDNS where this
- * connection is connected
+ * @param {string} ipaddr the IP address of the peer this connects to
+ * @param {integer} port the port of the instance advertised via mDNS where
+ * this connection is connected
  */
 exports.removeConnection = function(ipaddr, port) {
   var key = createKey(ipaddr, port);
@@ -84,9 +84,9 @@ exports.removeConnection = function(ipaddr, port) {
  * Create a connection to the given peer, adding it to make it known to the
  * manager.
  *
- * @param {String} ipaddr the IP address of the peer this connects to
- * @param {number} port the port of the instance advertised via mDNS where this
- * connection is connected
+ * @param {string} ipaddr the IP address of the peer this connects to
+ * @param {integer} port the port of the instance advertised via mDNS where
+ * this connection is connected
  *
  * @return {Promise.<PeerConnection, Error>} Promise that resolves with the
  * PeerConnection when it is created
@@ -139,12 +139,12 @@ exports.onIceCandidate = function(e) {
 };
 
 /**
- * @param {String} wrtcEndpoint
+ * @param {string} wrtcEndpoint
  * @param {RTCPeerDescription} rawConnection
  * @param {RTCSessionDescription} desc
  * @param {Array.<RTCIceCandidate>} iceCandidates
  *
- * @return {Promise.<PeerConnection>}
+ * @return {Promise.<PeerConnection, Error>}
  */
 exports.sendOffer = function(
     wrtcEndpoint, rawConnection, desc, iceCandidates, ipaddr, port
@@ -183,6 +183,12 @@ exports.sendOffer = function(
   });
 };
 
+/**
+ * @param {string} addr
+ * @param {integer} port
+ *
+ * @return {string}
+ */
 exports.getPathForWebrtcNegotiation = function(addr, port) {
   return 'http://' +
     addr +
@@ -209,11 +215,12 @@ exports.createPeerConnection = function(rawConnection) {
  * convenience method to spare callers checking the cache and should be
  * preferred.
  *
- * @param {String} ipaddr the IP address of the peer this connects to
+ * @param {string} ipaddr the IP address of the peer this connects to
  * @param {number} port the port of the instance advertised via mDNS where this
  * connection is connected
  * 
- * @return {Promise} Promise that resolves with the PeerConnection.
+ * @return {Promise.<PeerConnection, Error>} Promise that resolves with the
+ * PeerConnection.
  */
 exports.getOrCreateConnection = function(ipaddr, port) {
   var key = createKey(ipaddr, port);
@@ -240,8 +247,8 @@ exports.getOrCreateConnection = function(ipaddr, port) {
  *
  * Exposed for testing.
  *
- * @param {JSON} servers
- * @param {JSON} constraings
+ * @param {Object} servers
+ * @param {Object} constraints
  *
  * @return {RTCPeerConnection}
  */
@@ -253,7 +260,7 @@ exports.createRTCPeerConnection = function(servers, constraints) {
  * Create an RTCIceCandidate. Thin wrapper around the RTCIceCandidate
  * constructor to facilitate testing.
  *
- * @param {JSON} candidateJson the JSON object representing an ICE candidate
+ * @param {Object} candidateJson the JSON object representing an ICE candidate
  * that has come across the wire
  *
  * @return {RTCIceCandidate}
@@ -268,7 +275,7 @@ exports.createRTCIceCandidate = function(candidateJson) {
  *
  * Exposed for testing.
  *
- * @param {JSON} descJson JSON representation of an RTCSessionDescription
+ * @param {Object} descJson JSON representation of an RTCSessionDescription
  *
  * @return {RTCSessionDescription}
  */

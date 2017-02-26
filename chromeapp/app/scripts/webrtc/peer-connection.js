@@ -14,12 +14,12 @@ var EV_CLOSE = 'close';
 /**
  * PeerConnection is a wrapper around the raw WebRTC machinery to provide a
  * SemCache-specific API.
+ *
+ * @constructor
  * 
  * @param {RTCPeerConnection} rawConnection the raw RTCPeerConnection that will
  * be backing this connection. This rawConnection has its onclose handler
  * modified to allow the PeerConnection to emit its own 'close' event.
- *
- * @constructor
  */
 exports.PeerConnection = function PeerConnection(rawConnection) {
   if (!(this instanceof PeerConnection)) {
@@ -46,8 +46,6 @@ exports.PeerConnection.prototype.emitClose = function() {
 /**
  * Return the raw WebRTC connection backing this PeerConnection.
  *
- * @param {String} foo
- *
  * @return {RTCPeerConnection} 
  */
 exports.PeerConnection.prototype.getRawConnection = function() {
@@ -57,8 +55,8 @@ exports.PeerConnection.prototype.getRawConnection = function() {
 /**
  * Get the list of available files from the peer.
  *
- * @return {Promise.<JSON, Error>} Promise that resolves with the JSON list of
- * the directory contents
+ * @return {Promise.<Object, Error>} Promise that resolves with the JSON list
+ * of the directory contents
  */
 exports.PeerConnection.prototype.getList = function() {
   // For now we are going to assume that all messages can be held in memory.
@@ -85,7 +83,7 @@ exports.PeerConnection.prototype.getList = function() {
 /**
  * Get a file from the peer.
  *
- * @param {String} remotePath the identifier on the remote machine
+ * @param {string} remotePath the identifier on the remote machine
  *
  * @return {Promise.<Buffer, Error>} Promise that resolves when the get is
  * complete
@@ -117,7 +115,7 @@ exports.PeerConnection.prototype.getFile = function(remotePath) {
  * received.
  *
  * @param {RTCPeerConnection} pc the connection over which to send the message
- * @param {JSON} msg the message to send to the peer
+ * @param {Object} msg the message to send to the peer
  * 
  * @return {Promise.<ArrayBuffer, Error>} Promise that resolves with the
  * ArrayBuffer message received on the channel or with an Error if something

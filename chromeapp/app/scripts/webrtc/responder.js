@@ -15,6 +15,8 @@ var serverApi = require('../server/server-api');
 
 /**
  * Handler for the connection's ondatachannel event.
+ *
+ * @param {Event} event
  */
 exports.onDataChannelHandler = function(event) {
   console.log('Data channel has been created by client');
@@ -26,6 +28,10 @@ exports.onDataChannelHandler = function(event) {
   };
 };
 
+/**
+ * @param {RTCDataChannel} channel
+ * @param {Event} event
+ */
 exports.onDataChannelMessageHandler = function(channel, event) {
   // We expect ArrayBuffers containing JSON objects as messages.
   var jsonBin = event.data;
@@ -49,7 +55,8 @@ exports.onDataChannelMessageHandler = function(channel, event) {
  * @param {RTCDataChannel} channel the data channel on which to send the
  * response
  *
- * @return {Promise} Promise that returns after sending has begun.
+ * @return {Promise.<undefined, Error>} Promise that returns after sending has
+ * begun.
  */
 exports.onList = function(channel) {
   return new Promise(function(resolve, reject) {
@@ -73,9 +80,10 @@ exports.onList = function(channel) {
  *
  * @param {RTCDataChannel} channel the data channel on which to send the
  * response
- * @param {JSON} msg the message requesting the information
+ * @param {Object} msg the message requesting the information
  *
- * @return {Promise} Promise that returns after sending has begun.
+ * @return {Promise.<undefined, Error>} Promise that returns after sending has
+ * begun.
  */
 exports.onFile = function(channel, msg) {
   return new Promise(function(resolve, reject) {

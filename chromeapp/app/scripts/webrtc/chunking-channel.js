@@ -24,11 +24,12 @@ exports.CHUNK_SIZE = 16000;
 
 /**
  * @constructor
+ *
  * @param {RTCPeerConnection} rawConnection a raw connection to a peer
  * @param {boolean} cacheChunks true if the Client it self should save
  * chunks. If true, the 'complete' event will include the final ArrayBuffer. If
  * false, chunks will be emitted only on 'chunk' events.
- * @param {JSON} msg the message for the server. The peer being connected to
+ * @param {Object} msg the message for the server. The peer being connected to
  * and represented by rawConnection is expected to know how to respond to the
  * message
  */
@@ -167,6 +168,7 @@ exports.Client.prototype.emitComplete = function() {
  * Create a Server to respond to Client requests.
  *
  * @constructor
+ *
  * @param {RTCDataChannel} channel a channel that has been initiated by a
  * Client.
  */
@@ -261,7 +263,7 @@ exports.createStreamInfo = function(numChunks) {
  * Create an object to be sent to the server to signify that the next chunk is
  * ready to be received.
  *
- * @return {JSON}
+ * @return {Object}
  */
 exports.createContinueMessage = function() {
   return { message: 'next' };

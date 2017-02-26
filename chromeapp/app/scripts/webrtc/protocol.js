@@ -33,7 +33,7 @@ exports.STATUS_CODES = {
 /**
  * @constructor
  * 
- * @param {JSON} header
+ * @param {Object} header
  * @param {Buffer} buff
  */
 exports.ProtocolMessage = function ProtocolMessage(header, buff) {
@@ -51,24 +51,40 @@ exports.ProtocolMessage = function ProtocolMessage(header, buff) {
   this.data = buff;
 };
 
+/**
+ * @return {boolean} true if is an OK message, else false
+ */
 exports.ProtocolMessage.prototype.isOk = function() {
   var statusCode = this.getStatusCode();
   return statusCode === exports.STATUS_CODES.ok;
 };
 
+/**
+ * @return {boolean} true if is an Error message, else false
+ */
 exports.ProtocolMessage.prototype.isError = function() {
   var statusCode = this.getStatusCode();
   return statusCode === exports.STATUS_CODES.error;
 };
 
+/**
+ * @return {Object} the header object from the message
+ */
 exports.ProtocolMessage.prototype.getHeader = function() {
   return this.header;
 };
 
+/**
+ * @return {Buffer} the Buffer representing the payload of the message
+ */
 exports.ProtocolMessage.prototype.getData = function() {
   return this.data;
 };
 
+/**
+ * @return {integer|null} the integer status code of the message. If no header
+ * or status code is included, returns null.
+ */
 exports.ProtocolMessage.prototype.getStatusCode = function() {
   if (!this.header) {
     return null;
@@ -145,7 +161,7 @@ exports.from = function(buff) {
  *
  * @param {integer} status
  *
- * @return {JSON}
+ * @return {Object}
  */
 exports.createHeader = function(status) {
   return {

@@ -25,33 +25,37 @@ exports.getChromep = function() {
 };
 
 /**
- * @return {object} the Promisified version of chrome.fileSystem
+ * @return {Object} the Promisified version of chrome.fileSystem
  */
 exports.getFileSystem = function() {
   return exports.getChromep().fileSystem;
 };
 
 /**
- * @return {object} the Promisified version of chrome.storage.local
+ * @return {Object} the Promisified version of chrome.storage.local
  */
 exports.getStorageLocal = function() {
   return exports.getChromep().storage.local;
 };
 
 /**
- * @return {object} the Promisified version of chrome.sockets.udp
+ * @return {Object} the Promisified version of chrome.sockets.udp
  */
 exports.getUdp = function() {
   return exports.getChromep().sockets.udp;
 };
 
 /**
- * @return {object} the Promisified version of chrome.runtime
+ * @return {Object} the Promisified version of chrome.runtime
  */
 exports.getRuntime = function() {
   return exports.getChromep().runtime;
 };
 
+/**
+ * @return {chrome.runtime} the bare chrome.runtime object that has not been
+ * wrapped by chrome-promise
+ */
 exports.getRuntimeBare = function() {
   return chrome.runtime;
 };

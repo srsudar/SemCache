@@ -46,7 +46,8 @@ var NUM_OCTETS_SECTION_LENGTHS = 2;
  * records. reader should have been moved to the correct cursor position
  * @param {integer} numRecords the number of records to parse
  *
- * @return {Array<resource record>} an Array of the parsed resource records
+ * @return {Array<ARecord|PtrRecord|SrvRecord>} an Array of the parsed resource
+ * records
  */
 exports.parseResourceRecordsFromReader = function(reader, numRecords) {
   var result = [];
@@ -78,6 +79,8 @@ exports.parseResourceRecordsFromReader = function(reader, numRecords) {
  * Create a DNS packet. This creates the packet with various flag values. The
  * packet is not converted to byte format until a call is made to
  * getAsByteArray().
+ *
+ * @constructor
  *
  * @param {integer} id a 2-octet identifier for the packet
  * @param {boolean} isQuery true if packet is a query, false if it is a
@@ -167,6 +170,8 @@ exports.DnsPacket = function DnsPacket(
  * Variable number of bytes representing authorities
  *
  * Variable number of bytes representing additional info
+ *
+ * @return {ByteArray}
  */
 exports.DnsPacket.prototype.convertToByteArray = function() {
   var result = new byteArray.ByteArray();
@@ -309,8 +314,8 @@ exports.DnsPacket.prototype.addQuestion = function(question) {
 /**
  * Add a Resource Record to the answer section.
  *
- * @param {resource record} resourceRecord the record to add to the answer
- * section
+ * @param {ARecord|PtrRecord|SrvRecord} resourceRecord the record to add to the
+ * answer section
  */
 exports.DnsPacket.prototype.addAnswer = function(resourceRecord) {
   this.answers.push(resourceRecord);
@@ -319,8 +324,8 @@ exports.DnsPacket.prototype.addAnswer = function(resourceRecord) {
 /**
  * Add a Resource Record to the authority section.
  *
- * @param {resource record} resourceRecord the record to add to the authority
- * section
+ * @param {ARecord|PtrRecord|SrvRecord} resourceRecord the record to add to the
+ * authority section
  */
 exports.DnsPacket.prototype.addAuthority = function(resourceRecord) {
   this.authority.push(resourceRecord);
@@ -329,8 +334,8 @@ exports.DnsPacket.prototype.addAuthority = function(resourceRecord) {
 /**
  * Add a Resource Record to the additional info section.
  *
- * @param {resource record} resourceRecord the record to add to the additional
- * info section
+ * @param {ARecord|PtrRecord|SrvRecord} resourceRecord the record to add to the
+ * additional info section
  */
 exports.DnsPacket.prototype.addAdditionalInfo = function(resourceRecord) {
   this.additionalInfo.push(resourceRecord);
@@ -344,7 +349,7 @@ exports.DnsPacket.prototype.addAdditionalInfo = function(resourceRecord) {
  * @param {integer} value a number those lowest order 16 bits will be parsed to
  * an object representing packet flags
  *
- * @return {object} a flag object like the following:
+ * @return {Object} a flag object like the following:
  * {
  *   qr: integer,
  *   opcode: integer,

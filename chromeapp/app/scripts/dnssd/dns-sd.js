@@ -119,7 +119,8 @@ exports.createHostName = function() {
 /**
  * Advertise the resource records.
  *
- * @param {Array<resource records>} resourceRecords the records to advertise
+ * @param {Array.<ARecord|PtrRecord|SrvRecord>} resourceRecords the records to
+ * advertise
  */
 exports.advertiseService = function(resourceRecords) {
   var advertisePacket = new dnsPacket.DnsPacket(
@@ -145,15 +146,7 @@ exports.advertiseService = function(resourceRecords) {
 };
 
 /**
- * Register a service via mDNS. Returns a Promise that resolves with an object
- * like the following:
- *
- * {
- *   serviceName: "Sam's SemCache",
- *   type: "_http._local",
- *   domain: "laptop.local",
- *   port: 1234
- * }
+ * Register a service via mDNS.
  *
  * @param {string} host the host of the service, e.g. 'laptop.local'
  * @param {string} name a user-friendly string to be the name of the instance,
@@ -161,6 +154,15 @@ exports.advertiseService = function(resourceRecords) {
  * @param {string} type the service type string. This should be the protocol
  * spoken and the transport protocol, eg "_http._tcp".
  * @param {integer} port the port the service is available on
+ *
+ * @return {Promise.<Object, Error>} Returns a Promise that resolves with an object
+ * like the following:
+ * {
+ *   serviceName: "Sam's SemCache",
+ *   type: "_http._local",
+ *   domain: "laptop.local",
+ *   port: 1234
+ * }
  */
 exports.register = function(host, name, type, port) {
   // Registration is a multi-step process. It is described in Section 8 of the
@@ -240,7 +242,8 @@ exports.register = function(host, name, type, port) {
  *
  * @param {string} host
  *
- * @return {Array<resource records>} an Array of the records that were added.
+ * @return {Array.<ARecord|PtrRecord|SrvRecord>} an Array of the records that
+ * were added.
  */
 exports.createHostRecords = function(host) {
   // This just consists of an A Record. Make an entry for every IPv4 address.
@@ -283,7 +286,8 @@ exports.createSrvName = function(userFriendlyName, type, domain) {
  * @param {string} domain target domain/host the service is running on, e.g.
  * 'blackhack.local'
  *
- * @return {Array<resource records>} an Array of the records that were added.
+ * @return {Array<ARecord|PtrRecord|SrvRecord>} an Array of the records that
+ * were added.
  */
 exports.createServiceRecords = function(name, type, port, domain) {
   // We need to add a PTR record and an SRV record.
@@ -314,6 +318,14 @@ exports.createServiceRecords = function(name, type, port, domain) {
   return result;
 };
 
+/**
+ * @param {Array.<DnsPacket>}
+ * @param {string} qName
+ * @param {integer} qType
+ * @param {integer} qClass
+ *
+ * @return {boolean}
+ */
 exports.receivedResponsePacket = function(packets, qName, qType, qClass) {
   for (var i = 0; i < packets.length; i++) {
     var packet = packets[i];
@@ -335,9 +347,9 @@ exports.receivedResponsePacket = function(packets, qName, qType, qClass) {
  * @param {integer} queryType
  * @param {integer} queryClass
  *
- * @return {Promise} Returns a promise that resolves if the probe returns
- * nothing, meaning that the queryName is available, and rejects if it is
- * taken.
+ * @return {Promise.<undefined, undefined>} Returns a promise that resolves if
+ * the probe returns nothing, meaning that the queryName is available, and
+ * rejects if it is taken.
  */
 exports.issueProbe = function(queryName, queryType, queryClass) {
   // Track the packets we receive whilst querying.
@@ -414,8 +426,10 @@ exports.issueProbe = function(queryName, queryType, queryClass) {
  * should be the full name, not just the user friendly portion of the name.
  * E.g. `Tyrion's Cache._semcache._tcp.local`, not `Tyrion's Cache`.
  *
- * @return {Promise} Promise that resolves with an object like the following if
- * resolution succeeds:
+ * @return {Promise.<Object, Error>} Promise that resolves with an object like
+ * the following if resolution succeeds. The Promise rejects if resolution
+ * cannot complete (e.g. if a SRV or A records is not found) or if an error
+ * occurs.
  * {
  *   friendlyName: 'Sam Cache',
  *   instanceName: 'Sam Cache._semcache._tcp.local',
@@ -423,8 +437,6 @@ exports.issueProbe = function(queryName, queryType, queryClass) {
  *   ipAddress: '123.4.5.6',
  *   port: 8888
  * }
- * The Promise rejects if resolution cannot complete (e.g. if a SRV or A
- * records is not found) or if an error occurs.
  */
 exports.resolveService = function(serviceName) {
   console.log('resolveService: ', serviceName);
@@ -521,8 +533,9 @@ exports.resolveService = function(serviceName) {
  *
  * @param {string} serviceType the type of the service to browse for
  *
- * @return {Promise} a Promise that resolves with operational information for
- * all instances. This is an Array of objects like the following:
+ * @return {Promise.<Array.<Object>, Error>} a Promise that resolves with
+ * operational information for all instances. This is an Array of objects like
+ * the following:
  * {
  *   serviceType: '_semcache._tcp',
  *   instanceName: 'Sam Cache',
@@ -693,15 +706,15 @@ exports.getUserFriendlyName = function(instanceTypeDomain) {
  * issueing PTR requests.
  *
  * @param {string} serviceType the service string to query for
- * @param {number} waitTime the time to wait for responses. As multiple
+ * @param {integer} waitTime the time to wait for responses. As multiple
  * responses can be expected in response to a query for instances of a service
  * (as multiple instances can exist on the same network), the Promise will
  * always resolve after this many milliseconds.
- * @param {number} numRetries the number of additional queries that should be
+ * @param {integer} numRetries the number of additional queries that should be
  * sent. This can be 0, in which case only the first query will be sent
  *
- * @return {Promise} Returns a Promise that resolves with a list of objects
- * representing services, like the following:
+ * @return {Promise.<Array.<Object>, Error>} Returns a Promise that resolves
+ * with a list of objects representing services, like the following:
  * {
  *   serviceType: '_semcache._tcp',
  *   friendlyName: 'Magic Cache',
@@ -759,12 +772,12 @@ exports.queryForServiceInstances = function(
  * Issue a query for an IP address mapping to a domain.
  *
  * @param {string} domainName the domain name to query for
- * @param {number} timeout the number of ms after which to time out
- * @param {number} numRetries the number of additional queries to send after
+ * @param {integer} timeout the number of ms after which to time out
+ * @param {integer} numRetries the number of additional queries to send after
  * the first if a response is not received.
  *
- * @return {Promise} Returns a Promise that resolves with a list of objects
- * representing services, like the following:
+ * @return {Promise.<Object, Error>} Returns a Promise that resolves with a
+ * list of objects representing services, like the following:
  * {
  *   domainName: 'example.local',
  *   ipAddress: '123.4.5.6'
@@ -813,12 +826,12 @@ exports.queryForIpAddress = function(domainName, timeout, numRetries) {
  * port and domain name on which it is active.
  *
  * @param {string} instanceName the instance name to query for
- * @param {number} timeout the number of ms after which to time out
- * @param {number} numRetries the number of additional queries to send after
+ * @param {integer} timeout the number of ms after which to time out
+ * @param {integer} numRetries the number of additional queries to send after
  * the first if a response is not received.
  *
- * @return {Promise} Returns a Promise that resolves with a list of objects
- * representing services, like the following:
+ * @return {Promise.<Object, Error>} Returns a Promise that resolves with a
+ * list of objects representing services, like the following:
  * {
  *   instanceName: 'Sam Cache',
  *   domain: 'example.local',
@@ -865,24 +878,24 @@ exports.queryForInstanceInfo = function(instanceName, timeout, numRetries) {
  * Issue a query and listen for responses. (As opposed to simply issuing a DNS
  * query without being interested in the responses.)
  * 
- * @param {String} qName the name of the query to issue
- * @param {number} qType the type of the query to issue
- * @param {number} qClass the class of the query to issue
+ * @param {string} qName the name of the query to issue
+ * @param {integer} qType the type of the query to issue
+ * @param {integer} qClass the class of the query to issue
  * @param {boolean} multipleResponses true if we can expect multiple or an open
  * ended number of responses to this query
- * @param {number} timeoutOrWait if multipleExpected is true, this is the
+ * @param {integer} timeoutOrWait if multipleExpected is true, this is the
  * amount of time we wait before returning results. If multipleExpected is
  * false (e.g. querying for an A Record, which should have a single answer),
  * this is the amount of time we wait before timing out and resolving with an
  * empty list.
- * @param {number} numRetries the number of retries to attempt if a query
+ * @param {integer} numRetries the number of retries to attempt if a query
  * doesn't generate packets.
  *
- * @return {Promise} Returns a Promise that resolves with an Array of Packets
- * received in response to the query. If multipleResponses is true, will not
- * resolve until timeoutOrWait milliseconds. If multipleResponses is false,
- * will resolve after the first packet is received or after timeoutOrWait is
- * satifised. 
+ * @return {Promise.<Array.<DnsPacket>, Error>} Returns a Promise that resolves
+ * with an Array of Packets received in response to the query. If
+ * multipleResponses is true, will not resolve until timeoutOrWait
+ * milliseconds. If multipleResponses is false, will resolve after the first
+ * packet is received or after timeoutOrWait is satifised. 
  */
 exports.queryForResponses = function(
   qName,

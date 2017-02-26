@@ -39,7 +39,7 @@ var userFriendlyKeys = {
 /**
  * Returns an array with all of the keys known to store settings.
  *
- * @return {Array<String>}
+ * @return {Array.<String>}
  */
 exports.getAllSettingKeys = function() {
   return [
@@ -74,7 +74,8 @@ exports.getSettingsObj = function() {
  * Initialize the cache of settings objects. After this call, getSettingsObj()
  * will return with the cached value.
  *
- * @return {Promise} Promise that resolves with the newly-initialized cache
+ * @return {Promise.<Object, Error>} Promise that resolves with the
+ * newly-initialized cache
  */
 exports.init = function() {
   // Get all the known settings
@@ -102,8 +103,8 @@ exports.init = function() {
  * Set the value in local storage and in the settings cache maintained by this
  * object.
  *
- * @return {Promise} Promise that resolves with the current settings object
- * after the set completes
+ * @return {Promise.<Object, Error>} Promise that resolves with the current
+ * settings object after the set completes
  */
 exports.set = function(key, value) {
   return new Promise(function(resolve, reject) {
@@ -217,7 +218,7 @@ exports.getHostName = function() {
 };
 
 /**
- * @return {String} String representing the transport method to be used by the
+ * @return {string} String representing the transport method to be used by the
  * instance to interface with peers. Options are 'http' and 'webrtc'. Defaults
  * to 'http'.
  */
@@ -281,7 +282,7 @@ exports.setHostName = function(hostName) {
  * Indicate that HTTP should be used as the transport mechanism to interface
  * with peers.
  *
- * @return {Promise.<JSON, Error>} Promise that resolves with the current
+ * @return {Promise.<Object, Error>} Promise that resolves with the current
  * settings object
  */
 exports.setTransportHttp = function() {
@@ -294,7 +295,7 @@ exports.setTransportHttp = function() {
  * Indicate that WebRTC should be used as the transport mechanism to interface
  * with peers.
  *
- * @return {Promise.<JSON, Error>} Promise that resolves with the current
+ * @return {Promise.<Object, Error>} Promise that resolves with the current
  * settings object
  */
 exports.setTransportWebrtc = function() {
@@ -307,7 +308,8 @@ exports.setTransportWebrtc = function() {
  * Prompt for and set a new base directory of the SemCache file system. It
  * persists both the ID and path.
  *
- * @return {Promise} Promise that resolves with an object like the following:
+ * @return {Promise.<Object, Error} Promise that resolves with an object like
+ * the following:
  * {
  *   baseDirId: '',
  *   baseDirPath: ''

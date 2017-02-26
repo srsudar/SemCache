@@ -34,7 +34,7 @@ function proxyquireSettings(proxies, localStorageProxies, chromefsProxies) {
  * @param {settings} settings the settings module
  * @param {function} getFn the getter function
  * @param {key} key the key expected to be passed to the get machinery
- * @param {t} t the test param
+ * @param {Tape} t the test param
  */
 function helperGetCallsInternalsForKey(settings, getFn, key, t) {
   var expected = 'value for call to get';
@@ -53,7 +53,7 @@ function helperGetCallsInternalsForKey(settings, getFn, key, t) {
  * @param {function} getFn the setter function
  * @param {key} key the key expected to be passed to the set machinery
  * @param {any} value the value to set
- * @param {t} t the test param
+ * @param {Tape} t the test param
  */
 function helperSetCallsInternalsForKey(settings, setFn, key, value, t) {
   var expected = {the: 'settings resolved'};

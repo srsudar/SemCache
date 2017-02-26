@@ -15,9 +15,9 @@ exports.HttpPeerAccessor = function HttpPeerAccessor() {
 /**
  * Retrieve a blob from the peer.
  *
- * @param {JSON} params parameter object as created by peer-interface/common
+ * @param {Object} params parameter object as created by peer-interface/common
  *
- * @returns {Promise.<Blob, Error>}
+ * @return {Promise.<Blob, Error>}
  */
 exports.HttpPeerAccessor.prototype.getFileBlob = function(params) {
   return new Promise(function(resolve, reject) {
@@ -37,9 +37,9 @@ exports.HttpPeerAccessor.prototype.getFileBlob = function(params) {
 /**
  * Retrieve the list of pages in the peer's cache.
  *
- * @param {JSON} params parameter object as created by peer-interface/common
+ * @param {Object} params parameter object as created by peer-interface/common
  *
- * @returns {Promise.<JSON, Error>}
+ * @return {Promise.<Object, Error>}
  */
 exports.HttpPeerAccessor.prototype.getList = function(params) {
   return new Promise(function(resolve, reject) {

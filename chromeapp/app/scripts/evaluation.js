@@ -36,7 +36,7 @@ exports.createTimingKey = function(key) {
  * captureUrl value of the CachedPage. This is intended to allow the querier to
  * verify that the response has been generated based solely on this request.
  *
- * @return {Array<CachedPage>}
+ * @return {Array.<CachedPage>}
  */
 exports.generateDummyPages = function(numPages, nonce) {
   var result = [];
@@ -78,7 +78,7 @@ exports.generateDummyPage = function(index, nonce) {
  * @param {integer} numPages the number of responses to return
  * @param {string} nonce a string to incorporate into answers
  *
- * @return {object} the JSON server response
+ * @return {Object} the JSON server response
  */
 exports.getDummyResponseForAllCachedPages = function(numPages, nonce) {
   var pages = exports.generateDummyPages(numPages, nonce);
@@ -139,8 +139,8 @@ exports.logTime = function(key, time) {
  *
  * @param {string} key
  *
- * @return {Promise -> any} Promise that resolves with the value paired to this
- * key in storage. Returns null if the value is not present.
+ * @return {Promise.<any, Error>} Promise that resolves with the value paired
+ * to this key in storage. Returns null if the value is not present.
  */
 exports.getTimeValues = function(key) {
   return new Promise(function(resolve, reject) {
@@ -163,9 +163,10 @@ exports.getTimeValues = function(key) {
 /**
  * Execute an array of Promise returning functions in order, one after another.
  *
- * @param{Array<function>} promises an Array of functions that return a Promise
- * that should be executed.
- * @return {Promise -> Array<object>} Promise that resolves with an array of
+ * @param{Array.<function>} promises an Array of functions that return a
+ * Promise that should be executed.
+ *
+ * @return {Promise.<Array<object>>} Promise that resolves with an array of
  * objects. Each object will be a key value pair of either { resolved: value }
  * or { rejected: value } representing the value that either resolved or
  * rejected from the Promise.
@@ -215,7 +216,7 @@ exports.fulfillPromises = function(promises) {
  * @param {integer} resolveDelay the number of ms to wait between resolutions
  * if doing a lazy resolve
  *
- * @return {Promise -> Array} Promise that resolves when all the trials
+ * @return {Promise.<Array<any>>} Promise that resolves when all the trials
  * are complete. Resolves with an Array of the resolved results of the
  * individual iterations
  */
@@ -303,13 +304,13 @@ exports.getEvalPagesUrl = function(ipAddress, port, numPages) {
 /**
  * Resolve all peers with timing information.
  *
- * @param {Array<Object>} cacheNames an Array of objects as returned by
+ * @param {Array.<Object>} cacheNames an Array of objects as returned by
  * appc.getPeerCacheNames()
  * @param {integer} resolveDelay the number of seconds to delay a resolve
  * request, in ms. Attempts to ease the burden on the network.
  * @param {Object} toLog an object that will be logged at the end of the trial
  *
- * @return {Promise -> Array<Object>} Promise that resolves with an Array of
+ * @return {Promise.<Array<Object>>} Promise that resolves with an Array of
  * objects as returned by fulfillPromises. Resolved objects will be Objects as
  * returned by appc.resolveCache(). The rejected objects will the errors
  * rejecting in resolveCache().
@@ -369,8 +370,8 @@ exports.resolvePeers = function(cacheNames, resolveDelay, toLog) {
  * @param {integer} resolveDelay the number of milliseconds to wait between
  * resolving each peer.
  *
- * @return {Promise} Promise that resolves with the timing information of the
- * trial
+ * @return {Promise.<Array.<number>>} Promise that resolves with the timing
+ * information of the trial
  */
 exports.runDiscoverPeerPagesIterationLazy = function(
     numPeers, 
@@ -465,9 +466,9 @@ exports.runDiscoverPeerPagesIterationLazy = function(
  * @param {integer} numPeers the number of peers you expect
  * @param {integer} numPages the number of pages expected to be on each peer
  *
- * @return {Promise -> number} Promise that resolves with the time it took to
- * run the trial. Rejects if it cannot find the correct number of peers or
- * pages.
+ * @return {Promise.<number, Error>} Promise that resolves with the time it
+ * took to run the trial. Rejects if it cannot find the correct number of peers
+ * or pages.
  */
 exports.runDiscoverPeerPagesIteration = function(numPeers, numPages) {
   return new Promise(function(resolve, reject) {
@@ -545,8 +546,8 @@ exports.runDiscoverPeerPagesIteration = function(numPeers, numPages) {
  * @param {string} listPagesUrl the URL of the cache the exposes the JSON end
  * point with the contents of the cache
  *
- * @return {Promise} Promise that resolves with the results of the trial when
- * it is complete
+ * @return {Promise.<Array.<number>, Error>} Promise that resolves with the
+ * results of the trial when it is complete
  */
 exports.runLoadPageTrialForCache = function(numIterations, key, listPagesUrl) {
   return new Promise(function(resolve) {

@@ -11,7 +11,7 @@
  * @param {string} serviceType
  * @param {integer} numCaches the number of caches to create
  *
- * @return {Array<Object>} Array of objects as returned by getPeerCacheNames
+ * @return {Array.<Object>} Array of objects as returned by getPeerCacheNames
  */
 exports.createCacheNames = function(serviceType, numCaches) {
   var baseName = 'Cache No ';
@@ -33,7 +33,7 @@ exports.createCacheNames = function(serviceType, numCaches) {
  * Generate cache objects like those from createCacheObj() but using only the
  * output of createCacheNames() as input.
  *
- * @return {Array<Object>}
+ * @return {Array.<Object>}
  */
 exports.createCacheObjsFromNames = function(cacheNames) {
   var result = [];

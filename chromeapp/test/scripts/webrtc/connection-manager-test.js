@@ -31,7 +31,7 @@ function proxyquireCmgr(proxies) {
 }
 
 /**
- * @returns {JSON} an event with a candidate as expected for a call to
+ * @returns {Object} an event with a candidate as expected for a call to
  * onicecandidate
  */
 function createIceEvent(candidate) {
@@ -175,8 +175,8 @@ function createConnectionAssertionHelper(
  * createRTCSessionDescription
  * @param {Tape} t the Tape test object
  *
- * @return {null|Function} a function wrapping the call to cmgr.sendOffer to ensure
- * the parameters are correct for a valid call, with the valid stubs
+ * @return {null|function} a function wrapping the call to cmgr.sendOffer to
+ * ensure the parameters are correct for a valid call, with the valid stubs
  */
 function sendOfferAssertionHelper(fetchError, createDescError, t) {
   var wrtcEndpoint = 'endpoint';

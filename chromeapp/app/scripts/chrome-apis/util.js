@@ -17,7 +17,7 @@ exports.wasError = function() {
 };
 
 /**
- * @returns {runtime} returns chrome.runtime
+ * @return {chrome.runtime} returns chrome.runtime
  */
 exports.getRuntime = function() {
   return chrome.runtime;
@@ -32,21 +32,21 @@ exports.getError = function() {
 };
 
 /**
- * @returns {filesystem} returns the chrome.filesystem object.
+ * @return {chrome.filesystem} returns the chrome.filesystem object.
  */
 exports.getFileSystem = function() {
   return chrome.fileSystem;
 };
 
 /**
- * @returns {StorageArea} chrome.storage.local
+ * @return {StorageArea} chrome.storage.local
  */
 exports.getStorageLocal = function() {
   return chrome.storage.local;
 };
 
 /**
- * @returns {chrome.sockets.udp}
+ * @return {chrome.sockets.udp}
  */
 exports.getUdp = function() {
   return chrome.sockets.udp;

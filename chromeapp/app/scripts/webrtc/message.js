@@ -29,7 +29,7 @@ var CHANNELS_CREATED = 0;
 /**
  * Creates a uuid-based channel name for a message request.
  *
- * @returns {String} name for a channel
+ * @return {string} name for a channel
  */
 exports.createChannelName = function() {
   var result = 'responseChannel_' + CHANNELS_CREATED;
@@ -44,10 +44,18 @@ exports.createChannelName = function() {
   return result;
 };
 
+/**
+ * @return {Object}
+ */
 exports.createListMessage = function() {
   return exports.createMessage(exports.TYPE_LIST);
 };
 
+/**
+ * @param {string} filePath
+ *
+ * @return {Object}
+ */
 exports.createFileMessage = function(filePath) {
   var result = exports.createMessage(exports.TYPE_FILE);
   var request = {};
@@ -56,6 +64,11 @@ exports.createFileMessage = function(filePath) {
   return result;
 };
 
+/**
+ * @param {string} type
+ *
+ * @return {Object}
+ */
 exports.createMessage = function(type) {
   if (!VALID_TYPES.includes(type)) {
     throw new Error('Unrecognized message type: ' + type);
@@ -69,10 +82,20 @@ exports.createMessage = function(type) {
   return result;
 };
 
+/**
+ * @param {Object} msg
+ *
+ * @return {boolean}
+ */
 exports.isList = function(msg) {
   return msg.type && msg.type === exports.TYPE_LIST;
 };
 
+/**
+ * @param {Object} msg
+ *
+ * @return {boolean}
+ */
 exports.isFile = function(msg) {
   return msg.type && msg.type === exports.TYPE_FILE;
 };

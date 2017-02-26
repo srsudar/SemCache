@@ -26,33 +26,37 @@ exports.getChromep = function() {
 };
 
 /**
- * @return {object} the Promisified version of chrome.fileSystem
+ * @return {Object} the Promisified version of chrome.fileSystem
  */
 exports.getFileSystem = function() {
   return exports.getChromep().fileSystem;
 };
 
 /**
- * @return {object} the Promisified version of chrome.storage.local
+ * @return {Object} the Promisified version of chrome.storage.local
  */
 exports.getStorageLocal = function() {
   return exports.getChromep().storage.local;
 };
 
 /**
- * @return {object} the Promisified version of chrome.sockets.udp
+ * @return {Object} the Promisified version of chrome.sockets.udp
  */
 exports.getUdp = function() {
   return exports.getChromep().sockets.udp;
 };
 
 /**
- * @return {object} the Promisified version of chrome.runtime
+ * @return {Object} the Promisified version of chrome.runtime
  */
 exports.getRuntime = function() {
   return exports.getChromep().runtime;
 };
 
+/**
+ * @return {chrome.runtime} the bare chrome.runtime object that has not been
+ * wrapped by chrome-promise
+ */
 exports.getRuntimeBare = function() {
   return chrome.runtime;
 };
@@ -77,7 +81,7 @@ exports.wasError = function() {
 };
 
 /**
- * @returns {runtime} returns chrome.runtime
+ * @return {chrome.runtime} returns chrome.runtime
  */
 exports.getRuntime = function() {
   return chrome.runtime;
@@ -92,21 +96,21 @@ exports.getError = function() {
 };
 
 /**
- * @returns {filesystem} returns the chrome.filesystem object.
+ * @return {chrome.filesystem} returns the chrome.filesystem object.
  */
 exports.getFileSystem = function() {
   return chrome.fileSystem;
 };
 
 /**
- * @returns {StorageArea} chrome.storage.local
+ * @return {StorageArea} chrome.storage.local
  */
 exports.getStorageLocal = function() {
   return chrome.storage.local;
 };
 
 /**
- * @returns {chrome.sockets.udp}
+ * @return {chrome.sockets.udp}
  */
 exports.getUdp = function() {
   return chrome.sockets.udp;
@@ -612,7 +616,8 @@ var NUM_OCTETS_SECTION_LENGTHS = 2;
  * records. reader should have been moved to the correct cursor position
  * @param {integer} numRecords the number of records to parse
  *
- * @return {Array<resource record>} an Array of the parsed resource records
+ * @return {Array<ARecord|PtrRecord|SrvRecord>} an Array of the parsed resource
+ * records
  */
 exports.parseResourceRecordsFromReader = function(reader, numRecords) {
   var result = [];
@@ -644,6 +649,8 @@ exports.parseResourceRecordsFromReader = function(reader, numRecords) {
  * Create a DNS packet. This creates the packet with various flag values. The
  * packet is not converted to byte format until a call is made to
  * getAsByteArray().
+ *
+ * @constructor
  *
  * @param {integer} id a 2-octet identifier for the packet
  * @param {boolean} isQuery true if packet is a query, false if it is a
@@ -733,6 +740,8 @@ exports.DnsPacket = function DnsPacket(
  * Variable number of bytes representing authorities
  *
  * Variable number of bytes representing additional info
+ *
+ * @return {ByteArray}
  */
 exports.DnsPacket.prototype.convertToByteArray = function() {
   var result = new byteArray.ByteArray();
@@ -875,8 +884,8 @@ exports.DnsPacket.prototype.addQuestion = function(question) {
 /**
  * Add a Resource Record to the answer section.
  *
- * @param {resource record} resourceRecord the record to add to the answer
- * section
+ * @param {ARecord|PtrRecord|SrvRecord} resourceRecord the record to add to the
+ * answer section
  */
 exports.DnsPacket.prototype.addAnswer = function(resourceRecord) {
   this.answers.push(resourceRecord);
@@ -885,8 +894,8 @@ exports.DnsPacket.prototype.addAnswer = function(resourceRecord) {
 /**
  * Add a Resource Record to the authority section.
  *
- * @param {resource record} resourceRecord the record to add to the authority
- * section
+ * @param {ARecord|PtrRecord|SrvRecord} resourceRecord the record to add to the
+ * authority section
  */
 exports.DnsPacket.prototype.addAuthority = function(resourceRecord) {
   this.authority.push(resourceRecord);
@@ -895,8 +904,8 @@ exports.DnsPacket.prototype.addAuthority = function(resourceRecord) {
 /**
  * Add a Resource Record to the additional info section.
  *
- * @param {resource record} resourceRecord the record to add to the additional
- * info section
+ * @param {ARecord|PtrRecord|SrvRecord} resourceRecord the record to add to the
+ * additional info section
  */
 exports.DnsPacket.prototype.addAdditionalInfo = function(resourceRecord) {
   this.additionalInfo.push(resourceRecord);
@@ -910,7 +919,7 @@ exports.DnsPacket.prototype.addAdditionalInfo = function(resourceRecord) {
  * @param {integer} value a number those lowest order 16 bits will be parsed to
  * an object representing packet flags
  *
- * @return {object} a flag object like the following:
+ * @return {Object} a flag object like the following:
  * {
  *   qr: integer,
  *   opcode: integer,
@@ -1213,6 +1222,8 @@ var MAX_QUERY_CLASS = 65535;
 /**
  * A DNS Question section.
  *
+ * @constructor
+ *
  * @param {string} qName the name of the query
  * @param {integer} qType the type of the query
  * @param {integer} qClass the class of the query
@@ -1284,6 +1295,10 @@ exports.QuestionSection.prototype.unicastResponseRequested = function() {
 /**
  * Create a QuestionSection from a ByteArrayReader as serialized by
  * convertToByteArray().
+ *
+ * @param {ByteArrayReader} reader
+ *
+ * @return {QuestionSection}
  */
 exports.createQuestionFromReader = function(reader) {
   var queryName = dnsUtil.getDomainFromByteArrayReader(reader);
@@ -1350,12 +1365,14 @@ var NUM_OCTETS_PORT = 2;
  * An A record. A records respond to queries for a domain name to an IP
  * address.
  *
- * @param {string} domainName: the domain name, e.g. www.example.com
- * @param {integer} ttl: the time to live
- * @param {string} ipAddress: the IP address of the domainName. This must be a string
- * (e.g. '192.3.34.17').
- * @param {integer} recordClass: the class of the record type. This is optional, and if not
- * present or is not truthy will be set as IN for internet traffic.
+ * @constructor
+ *
+ * @param {string} domainName the domain name, e.g. www.example.com
+ * @param {integer} ttl the time to live
+ * @param {string} ipAddress the IP address of the domainName. This must be a
+ * string (e.g. '192.3.34.17').
+ * @param {integer} recordClass the class of the record type. This is optional,
+ * and if not present or is not truthy will be set as IN for internet traffic.
  */
 exports.ARecord = function ARecord(
   domainName,
@@ -1567,6 +1584,8 @@ exports.createSrvRecordFromReader = function(reader) {
  * '_printer._tcp.local'. They return the name of an instance offering the
  * service (eg 'Printsalot._printer._tcp.local').
  *
+ * @constructor
+ *
  * @param {string} serviceType the string representation of the service that
  * has been queried for.
  * @param {integer} ttl the time to live
@@ -1650,6 +1669,8 @@ exports.PtrRecord.prototype.convertToByteArray = function() {
 /**
  * An SRV record. SRV records map the name of a service instance to the
  * information needed to connect to the service. 
+ *
+ * @constructor
  *
  * @param {string} instanceTypeDomain: the name being queried for, e.g.
  * 'PrintsALot._printer._tcp.local'
@@ -1756,6 +1777,11 @@ exports.SrvRecord.prototype.convertToByteArray = function() {
  *
  * 4 octets representing the TTL
  *
+ * @param {string} domainName
+ * @param {integer} rrType
+ * @param {integer} rrClass
+ * @param {integer} ttl
+ *
  * @return {ByteArray}
  */
 exports.getCommonFieldsAsByteArray = function(
@@ -1782,7 +1808,7 @@ exports.getCommonFieldsAsByteArray = function(
  *
  * @param {ByteArrayReader} reader
  *
- * @return {object} Returns an object with fields: domainName, rrType, rrClass,
+ * @return {Object} Returns an object with fields: domainName, rrType, rrClass,
  * and ttl.
  */
 exports.getCommonFieldsFromByteArrayReader = function(reader) {
@@ -1858,7 +1884,12 @@ var util = require('../util');
  */
 
 /**
- * Returns the IP address, interpolating if necessary.
+ * Returns the IP address, extracting if necessary.
+ *
+ * @param {string} ipaddr
+ * @param {string} url
+ *
+ * @return {string}
  */
 function getIpAddress(ipaddr, url) {
   var result = ipaddr;
@@ -1869,7 +1900,12 @@ function getIpAddress(ipaddr, url) {
 }
 
 /**
- * Returns the port, interpolating if necessary.
+ * Returns the port, extracting if necessary.
+ *
+ * @param {integer} port
+ * @param {string} url
+ *
+ * @return {integer}
  */
 function getPort(port, url) {
   var result = port;
@@ -1883,12 +1919,12 @@ function getPort(port, url) {
  * Create parameters for a PeerAccessor getList call. If ipaddr or port is
  * missing, tries to interpolate them from listUrl.
  *
- * @param {String} ipaddr IP address of the peer
- * @param {Integer} port port of the peer
- * @param {String} listUrl the list URL for the peer's list access point. Only
+ * @param {string} ipaddr IP address of the peer
+ * @param {integer} port port of the peer
+ * @param {string} listUrl the list URL for the peer's list access point. Only
  * needed if the transport method will be HTTP.
  *
- * @returns {JSON}
+ * @return {Object}
  */
 exports.createListParams = function(ipaddr, port, listUrl) {
   ipaddr = getIpAddress(ipaddr, listUrl);
@@ -1904,12 +1940,12 @@ exports.createListParams = function(ipaddr, port, listUrl) {
  * Create parameters for a PeerAccessor getFile call. If ipaddr or port is
  * missing, tries to interpolate them from listUrl.
  *
- * @param {String} ipaddr IP address of the peer
- * @param {Integer} port port of the peer
- * @param {String} fileUrl the list URL for the file's access URL. Only
+ * @param {string} ipaddr IP address of the peer
+ * @param {integer} port port of the peer
+ * @param {string} fileUrl the list URL for the file's access URL. Only
  * needed if the transport method will be HTTP.
  *
- * @returns {JSON}
+ * @return {Object}
  */
 exports.createFileParams = function(ipaddr, port, fileUrl) {
   ipaddr = getIpAddress(ipaddr, fileUrl);
@@ -1939,9 +1975,9 @@ exports.HttpPeerAccessor = function HttpPeerAccessor() {
 /**
  * Retrieve a blob from the peer.
  *
- * @param {JSON} params parameter object as created by peer-interface/common
+ * @param {Object} params parameter object as created by peer-interface/common
  *
- * @returns {Promise.<Blob, Error>}
+ * @return {Promise.<Blob, Error>}
  */
 exports.HttpPeerAccessor.prototype.getFileBlob = function(params) {
   return new Promise(function(resolve, reject) {
@@ -1961,9 +1997,9 @@ exports.HttpPeerAccessor.prototype.getFileBlob = function(params) {
 /**
  * Retrieve the list of pages in the peer's cache.
  *
- * @param {JSON} params parameter object as created by peer-interface/common
+ * @param {Object} params parameter object as created by peer-interface/common
  *
- * @returns {Promise.<JSON, Error>}
+ * @return {Promise.<Object, Error>}
  */
 exports.HttpPeerAccessor.prototype.getList = function(params) {
   return new Promise(function(resolve, reject) {
@@ -1999,10 +2035,10 @@ exports.WebrtcPeerAccessor = function WebrtcPeerAccessor() {
 /**
  * Retrieve a blob from the peer.
  *
- * @param {JSON} params parameters for the get, as created by
+ * @param {Object} params parameters for the get, as created by
  * peer-interface/common.
  *
- * @returns {Promise.<Blob, Error>}
+ * @return {Promise.<Blob, Error>}
  */
 exports.WebrtcPeerAccessor.prototype.getFileBlob = function(params) {
   return new Promise(function(resolve, reject) {
@@ -2023,10 +2059,10 @@ exports.WebrtcPeerAccessor.prototype.getFileBlob = function(params) {
 /**
  * Retrieve the list of pages in the peer's cache.
  *
- * @param {JSON} params parameters for list request, as created by
+ * @param {Object} params parameters for list request, as created by
  * peer-interface/common.
  *
- * @returns {Promise.<JSON, Error>}
+ * @return {Promise.<Object, Error>}
  */
 exports.WebrtcPeerAccessor.prototype.getList = function(params) {
   return new Promise(function(resolve, reject) {
@@ -2077,11 +2113,13 @@ exports.DEBUG = false;
  * This object represents a page that is stored in the cache and can be browsed
  * to.
  *
+ * @constructor
+ *
  * @param {string} captureUrl the URL of the original captured page
  * @param {string} captureDate the ISO String representation of the datetime
  * @param {string} accessPath the path in the cache that can be used to access
  * the file the page was captured
- * @param {object} metadata an object stored and associated with the page.
+ * @param {Object} metadata an object stored and associated with the page.
  * Allows additional metadata to be stored, e.g. mime type, thumbnail, etc.
  * Must be safe to serialize via chrome.storage.local.set().
  */
@@ -2107,9 +2145,10 @@ exports.CachedPage = function CachedPage(
  * @param {string} captureDate the toISOString() of the date the page was
  * captured
  * @param {Blob} mhtmlBlob the contents of hte page
- * @param {object} metadata metadata to store with the page
+ * @param {Object} metadata metadata to store with the page
  *
- * @return {Promise} a Promise that resolves when the write is complete
+ * @return {Promise.<FileEntry, Error>} a Promise that resolves when the write
+ * is complete
  */
 exports.addPageToCache = function(
   captureUrl, captureDate, mhtmlBlob, metadata
@@ -2151,7 +2190,8 @@ exports.addPageToCache = function(
 /**
  * Get all the cached pages that are stored in the cache.
  *
- * @return {Promise} Promise that resolves with an Array of CachedPage objects
+ * @return {Promise.<CachedPage, Error>} Promise that resolves with an Array of
+ * CachedPage objects
  */
 exports.getAllCachedPages = function() {
   return new Promise(function(resolve, reject) {
@@ -2176,7 +2216,8 @@ exports.getAllCachedPages = function() {
 /**
  * Get all the FileEntries representing saved pages.
  *
- * @return {Promise} Promise that resolves with an array of FileEntry objects
+ * @return {Promise.<Array.<CachedPage>, Error>} Promise that resolves with an
+ * array of FileEntry objects
  */
 exports.getAllFileEntriesForPages = function() {
   var flagDirNotSet = 1;
@@ -2210,7 +2251,8 @@ exports.getAllFileEntriesForPages = function() {
  *
  * @param {FileEntry} entry
  *
- * @return {Promise -> CachedPage} Promise that resolves with the CachedPage
+ * @return {Promise.<CachedPage, Error>} Promise that resolves with the
+ * CachedPage
  */
 exports.getEntryAsCachedPage = function(entry) {
   // Retrieve the metadata from Chrome storage.
@@ -2239,7 +2281,8 @@ exports.getEntryAsCachedPage = function(entry) {
  *
  * @param {FileEntry} entry 
  *
- * @return {Promise -> object} Promise that resolves with the metadata object
+ * @return {Promise.<Object, Error>} Promise that resolves with the metadata
+ * object
  */
 exports.getMetadataForEntry = function(entry) {
   return new Promise(function(resolve, reject) {
@@ -2281,9 +2324,10 @@ exports.createMetadataKey = function(entry) {
  * Write the metadata object for the given entry.
  *
  * @param {FileEntry} entry file pertaining to the metadata
- * @param {object} metadata the metadata to write
+ * @param {Object} metadata the metadata to write
  *
- * @return {Promise} Promise that resolves when the write is complete
+ * @return {Promise.<undefined, Error>} Promise that resolves when the write is
+ * complete
  */
 exports.writeMetadataForEntry = function(entry, metadata) {
   var key = exports.createMetadataKey(entry);
@@ -2634,7 +2678,7 @@ exports.createMetadatObj = function() {
  * (e.g. 'foo' or 'foo/bar' but never '/foo/bar'). The paths do not contain
  * scheme, host, or port.
  *
- * @return {object} an object mapping API end points to string paths, like the
+ * @return {Object} an object mapping API end points to string paths, like the
  * following:
  * {
  *   pageCache: '',
@@ -2654,7 +2698,7 @@ exports.getApiEndpoints = function() {
  * Return the URL where the list of cached pages can be accessed.
  *
  * @param {string} ipAddress the IP address of the cache
- * @param {number} port the port where the server is listening at ipAddress
+ * @param {integer} port the port where the server is listening at ipAddress
  */
 exports.getListPageUrlForCache = function(ipAddress, port) {
   var scheme = HTTP_SCHEME;
@@ -2685,7 +2729,8 @@ exports.getAccessUrlForCachedPage = function(fullPath) {
 /**
  * Return a JSON object response for the all cached pages endpoing.
  *
- * @return {Promise} Promise that resolves with an object like the following:
+ * @return {Promise.<Object, Error} Promise that resolves with an object like
+ * the following:
  * {
  *   metadata: {},
  *   cachedPages: [CachedPage, CachedPage]
@@ -2726,8 +2771,8 @@ exports.getCachedFileNameFromPath = function(path) {
  *
  * @param {string} url
  *
- * @return {Promise -> object} Promise that resolves with JSON fetched and
- * parsed from url.
+ * @return {Promise.<Object, Error>} Promise that resolves with JSON fetched
+ * and parsed from url.
  */
 exports.fetchJson = function(url) {
   return new Promise(function(resolve, reject) {
@@ -2756,6 +2801,8 @@ exports.fetch = function() {
  * Returns a promise that resolves after the given time (in ms).
  *
  * @param {integer} ms the number of milliseconds to wait before resolving
+ *
+ * @return {Promise.<undefined, undefined>}
  */
 exports.wait = function(ms) {
   return new Promise(resolve => {
@@ -2769,7 +2816,8 @@ exports.wait = function(ms) {
  * @param {integer} min the minimum number of milliseconds to wait
  * @param {integer} max the maximum number of milliseconds to wait, inclusive
  *
- * @return {Promise} Promise that resolves after the wait
+ * @return {Promise.<undefined, undefined>} Promise that resolves after the
+ * wait
  */
 exports.waitInRange = function(min, max) {
   // + 1 because we specify inclusive, but randomInt is exclusive.
@@ -2827,9 +2875,9 @@ exports.trace = function trace(arg) {
 /**
  * Extract the hostname (or IP address) from a URL.
  *
- * @param {String} url
+ * @param {string} url
  *
- * @returns {String}
+ * @return {string}
  */
 exports.getHostFromUrl = function(url) {
   // Find '//'. This will be the end of the scheme.
@@ -2862,9 +2910,9 @@ exports.getHostFromUrl = function(url) {
  * Extract the port from a URL. The port must be explicitly indicated in the
  * URL, or an error is thrown.
  *
- * @param {String} url
+ * @param {string} url
  *
- * @returns {Integer}
+ * @return {integer}
  */
 exports.getPortFromUrl = function(url) {
   var originalUrl = url;
@@ -2907,7 +2955,7 @@ exports.getPortFromUrl = function(url) {
  *
  * @param {Buffer} buff
  *
- * @returns {Blob}
+ * @return {Blob}
  */
 exports.getBufferAsBlob = function(buff) {
   return new Blob(
@@ -2945,11 +2993,12 @@ exports.CHUNK_SIZE = 16000;
 
 /**
  * @constructor
+ *
  * @param {RTCPeerConnection} rawConnection a raw connection to a peer
  * @param {boolean} cacheChunks true if the Client it self should save
  * chunks. If true, the 'complete' event will include the final ArrayBuffer. If
  * false, chunks will be emitted only on 'chunk' events.
- * @param {JSON} msg the message for the server. The peer being connected to
+ * @param {Object} msg the message for the server. The peer being connected to
  * and represented by rawConnection is expected to know how to respond to the
  * message
  */
@@ -3088,6 +3137,7 @@ exports.Client.prototype.emitComplete = function() {
  * Create a Server to respond to Client requests.
  *
  * @constructor
+ *
  * @param {RTCDataChannel} channel a channel that has been initiated by a
  * Client.
  */
@@ -3182,7 +3232,7 @@ exports.createStreamInfo = function(numChunks) {
  * Create an object to be sent to the server to signify that the next chunk is
  * ready to be received.
  *
- * @return {JSON}
+ * @return {Object}
  */
 exports.createContinueMessage = function() {
   return { message: 'next' };
@@ -3220,7 +3270,7 @@ var CHANNELS_CREATED = 0;
 /**
  * Creates a uuid-based channel name for a message request.
  *
- * @returns {String} name for a channel
+ * @return {string} name for a channel
  */
 exports.createChannelName = function() {
   var result = 'responseChannel_' + CHANNELS_CREATED;
@@ -3235,10 +3285,18 @@ exports.createChannelName = function() {
   return result;
 };
 
+/**
+ * @return {Object}
+ */
 exports.createListMessage = function() {
   return exports.createMessage(exports.TYPE_LIST);
 };
 
+/**
+ * @param {string} filePath
+ *
+ * @return {Object}
+ */
 exports.createFileMessage = function(filePath) {
   var result = exports.createMessage(exports.TYPE_FILE);
   var request = {};
@@ -3247,6 +3305,11 @@ exports.createFileMessage = function(filePath) {
   return result;
 };
 
+/**
+ * @param {string} type
+ *
+ * @return {Object}
+ */
 exports.createMessage = function(type) {
   if (!VALID_TYPES.includes(type)) {
     throw new Error('Unrecognized message type: ' + type);
@@ -3260,10 +3323,20 @@ exports.createMessage = function(type) {
   return result;
 };
 
+/**
+ * @param {Object} msg
+ *
+ * @return {boolean}
+ */
 exports.isList = function(msg) {
   return msg.type && msg.type === exports.TYPE_LIST;
 };
 
+/**
+ * @param {Object} msg
+ *
+ * @return {boolean}
+ */
 exports.isFile = function(msg) {
   return msg.type && msg.type === exports.TYPE_FILE;
 };
@@ -3285,12 +3358,12 @@ var EV_CLOSE = 'close';
 /**
  * PeerConnection is a wrapper around the raw WebRTC machinery to provide a
  * SemCache-specific API.
+ *
+ * @constructor
  * 
  * @param {RTCPeerConnection} rawConnection the raw RTCPeerConnection that will
  * be backing this connection. This rawConnection has its onclose handler
  * modified to allow the PeerConnection to emit its own 'close' event.
- *
- * @constructor
  */
 exports.PeerConnection = function PeerConnection(rawConnection) {
   if (!(this instanceof PeerConnection)) {
@@ -3317,8 +3390,6 @@ exports.PeerConnection.prototype.emitClose = function() {
 /**
  * Return the raw WebRTC connection backing this PeerConnection.
  *
- * @param {String} foo
- *
  * @return {RTCPeerConnection} 
  */
 exports.PeerConnection.prototype.getRawConnection = function() {
@@ -3328,8 +3399,8 @@ exports.PeerConnection.prototype.getRawConnection = function() {
 /**
  * Get the list of available files from the peer.
  *
- * @return {Promise.<JSON, Error>} Promise that resolves with the JSON list of
- * the directory contents
+ * @return {Promise.<Object, Error>} Promise that resolves with the JSON list
+ * of the directory contents
  */
 exports.PeerConnection.prototype.getList = function() {
   // For now we are going to assume that all messages can be held in memory.
@@ -3356,7 +3427,7 @@ exports.PeerConnection.prototype.getList = function() {
 /**
  * Get a file from the peer.
  *
- * @param {String} remotePath the identifier on the remote machine
+ * @param {string} remotePath the identifier on the remote machine
  *
  * @return {Promise.<Buffer, Error>} Promise that resolves when the get is
  * complete
@@ -3388,7 +3459,7 @@ exports.PeerConnection.prototype.getFile = function(remotePath) {
  * received.
  *
  * @param {RTCPeerConnection} pc the connection over which to send the message
- * @param {JSON} msg the message to send to the peer
+ * @param {Object} msg the message to send to the peer
  * 
  * @return {Promise.<ArrayBuffer, Error>} Promise that resolves with the
  * ArrayBuffer message received on the channel or with an Error if something
@@ -3447,7 +3518,7 @@ exports.STATUS_CODES = {
 /**
  * @constructor
  * 
- * @param {JSON} header
+ * @param {Object} header
  * @param {Buffer} buff
  */
 exports.ProtocolMessage = function ProtocolMessage(header, buff) {
@@ -3465,24 +3536,40 @@ exports.ProtocolMessage = function ProtocolMessage(header, buff) {
   this.data = buff;
 };
 
+/**
+ * @return {boolean} true if is an OK message, else false
+ */
 exports.ProtocolMessage.prototype.isOk = function() {
   var statusCode = this.getStatusCode();
   return statusCode === exports.STATUS_CODES.ok;
 };
 
+/**
+ * @return {boolean} true if is an Error message, else false
+ */
 exports.ProtocolMessage.prototype.isError = function() {
   var statusCode = this.getStatusCode();
   return statusCode === exports.STATUS_CODES.error;
 };
 
+/**
+ * @return {Object} the header object from the message
+ */
 exports.ProtocolMessage.prototype.getHeader = function() {
   return this.header;
 };
 
+/**
+ * @return {Buffer} the Buffer representing the payload of the message
+ */
 exports.ProtocolMessage.prototype.getData = function() {
   return this.data;
 };
 
+/**
+ * @return {integer|null} the integer status code of the message. If no header
+ * or status code is included, returns null.
+ */
 exports.ProtocolMessage.prototype.getStatusCode = function() {
   if (!this.header) {
     return null;
@@ -3559,7 +3646,7 @@ exports.from = function(buff) {
  *
  * @param {integer} status
  *
- * @return {JSON}
+ * @return {Object}
  */
 exports.createHeader = function(status) {
   return {
@@ -3606,6 +3693,8 @@ var serverApi = require('../server/server-api');
 
 /**
  * Handler for the connection's ondatachannel event.
+ *
+ * @param {Event} event
  */
 exports.onDataChannelHandler = function(event) {
   console.log('Data channel has been created by client');
@@ -3617,6 +3706,10 @@ exports.onDataChannelHandler = function(event) {
   };
 };
 
+/**
+ * @param {RTCDataChannel} channel
+ * @param {Event} event
+ */
 exports.onDataChannelMessageHandler = function(channel, event) {
   // We expect ArrayBuffers containing JSON objects as messages.
   var jsonBin = event.data;
@@ -3640,7 +3733,8 @@ exports.onDataChannelMessageHandler = function(channel, event) {
  * @param {RTCDataChannel} channel the data channel on which to send the
  * response
  *
- * @return {Promise} Promise that returns after sending has begun.
+ * @return {Promise.<undefined, Error>} Promise that returns after sending has
+ * begun.
  */
 exports.onList = function(channel) {
   return new Promise(function(resolve, reject) {
@@ -3664,9 +3758,10 @@ exports.onList = function(channel) {
  *
  * @param {RTCDataChannel} channel the data channel on which to send the
  * response
- * @param {JSON} msg the message requesting the information
+ * @param {Object} msg the message requesting the information
  *
- * @return {Promise} Promise that returns after sending has begun.
+ * @return {Promise.<undefined, Error>} Promise that returns after sending has
+ * begun.
  */
 exports.onFile = function(channel, msg) {
   return new Promise(function(resolve, reject) {
@@ -30608,7 +30703,6 @@ process.umask = function() { return 0; };
 }(this || {}));
 
 },{}],"appController":[function(require,module,exports){
-/* globals Promise, fetch */
 'use strict';
 
 /**
@@ -30645,7 +30739,7 @@ exports.getServerController = function() {
  * Get the interface on which the app is listening for incoming http
  * connections.
  *
- * @return {object} an object of the form:
+ * @return {Object} an object of the form:
  * {
  *   name: string,
  *   address: string,
@@ -30687,7 +30781,7 @@ exports.getListUrlForSelf = function() {
 };
 
 /**
- * @return {object} the cache object that represents this machine's own cache.
+ * @return {Object} the cache object that represents this machine's own cache.
  */
 exports.getOwnCache = function() {
   var friendlyName = settings.getInstanceName();
@@ -30721,7 +30815,7 @@ exports.networkIsActive = function() {
  * people should be able to browse on their own machine even if the network
  * doesn't support UDP.
  *
- * @return {object} Object identical to that returned by getPeerCacheNames, but
+ * @return {Object} Object identical to that returned by getPeerCacheNames, but
  * for this device
  */
 exports.getOwnCacheName = function() {
@@ -30747,8 +30841,8 @@ exports.getOwnCacheName = function() {
  * @param {string} fullName the full <instance>.<type>.<domain> name of the
  * service
  *
- * @return {Promise} Promise that resolves with an object like the following,
- * or rejects if something went wrong.
+ * @return {Promise.<Object, Error>} Promise that resolves with an object like
+ * the following, or rejects if something went wrong.
  * {
  *   domainName: 'laptop.local',
  *   friendlyName: 'My Cache',
@@ -30786,8 +30880,8 @@ exports.resolveCache = function(fullName) {
  * be required to obtain operational information (like the IP address) of these
  * caches.
  *
- * @return {Promise} Promise that resolves a list of objects like the
- * following:
+ * @return {Promise.<Array.<Object>, Error>} Promise that resolves a list of
+ * objects like the following:
  * {
  *   serviceType: '_semcache._tcp',
  *   friendlyName: 'Magic Cache',
@@ -30840,8 +30934,9 @@ exports.getPeerCacheNames = function() {
  * The current machine's cache is always returned, and is always the first
  * element in the array.
  *
- * @return {Promise} Promise that resolves with an Array of object representing
- * operational info for each cache. An example element:
+ * @return {Promise.<Array.<Object>, Error>} Promise that resolves with an
+ * Array of object representing operational info for each cache. An example
+ * element:
  * {
  *   domainName: 'laptop.local',
  *   instanceName: 'My Cache._semcache._tcp.local',
@@ -30899,8 +30994,8 @@ exports.getBrowseableCaches = function() {
  * Start the mDNS, DNS-SD, and HTTP servers and register the local instance on
  * the network.
  *
- * @return {Promise} Promise that resolves if the service starts successfully,
- * else rejects with a message as to why.
+ * @return {Promise.<undefined, Error>} Promise that resolves if the service
+ * starts successfully, else rejects with a message as to why.
  */
 exports.startServersAndRegister = function() {
   return new Promise(function(resolve, reject) {
@@ -30952,7 +31047,8 @@ exports.stopServers = function() {
 /**
  * Start the app.
  *
- * @return {Promise} Promise that resolves when the app is started
+ * @return {Promise.<undefined, Error>} Promise that resolves when the app is
+ * started
  */
 exports.start = function() {
   extBridge.attachListeners();
@@ -30978,14 +31074,6 @@ exports.updateCachesForSettings = function() {
 };
 
 /**
- * A thin wrapper around fetch to allow mocking during tests. Expose parameters
- * are needed.
- */
-exports.fetch = function(url) {
-  return fetch(url);
-};
-
-/**
  * Return the absolute path to the base directory where SemCache is mounted on
  * the file system.
  *
@@ -31003,6 +31091,8 @@ exports.getAbsPathToBaseDir = function() {
 
 /**
  * Create a PeerAccessor based on the configured settings.
+ *
+ * @return {HttpPeerAccessor|WebrtcPeerAccessor}
  */
 exports.getPeerAccessor = function() {
   var transportMethod = settings.getTransportMethod();
@@ -31021,7 +31111,7 @@ exports.getPeerAccessor = function() {
  * @param {string} serviceName the full <instance>.<type>.<domain> name of the
  * service
  *
- * @returns {Promise.<JSON, Error>} Promise that resolves with the JSON
+ * @return {Promise.<Object, Error>} Promise that resolves with the JSON
  * response representing the list, or rejects with an Error
  */
 exports.getListFromService = function(serviceName) {
@@ -31049,11 +31139,12 @@ exports.getListFromService = function(serviceName) {
  * @param {captureUrl} captureUrl
  * @param {captureDate} captureDate
  * @param {string} mhtmlUrl the url of the mhtml file to save and open
- * @param {object} metadata the metadata that is stored along with the file
- * @param {String} ipaddr IP address of the peer
+ * @param {Object} metadata the metadata that is stored along with the file
+ * @param {string} ipaddr IP address of the peer
  * @param {integer} port port of the peer
  *
- * @return {Promise} a Promise that resolves after open has been called.
+ * @return {Promise.<number, Error>} a Promise that resolves with the total
+ * time to save the MHTML and open the file.
  */
 exports.saveMhtmlAndOpen = function(
   captureUrl,
@@ -31171,13 +31262,16 @@ return BinaryUtils;
 })();
 
 },{}],"chromeUdp":[function(require,module,exports){
-/* globals Promise, chrome */
+/* globals chrome */
 'use strict';
 
 var util = require('./util');
 
 var DEBUG = false;
 
+/**
+ * @constructor
+ */
 exports.ChromeUdpSocket = function ChromeUdpSocket(socketInfo) {
   if (!(this instanceof ChromeUdpSocket)) {
     throw new Error('ChromeUdpSocket must be called with new');
@@ -31189,6 +31283,12 @@ exports.ChromeUdpSocket = function ChromeUdpSocket(socketInfo) {
 /**
  * Send data over the port and return a promise with the sendInfo result.
  * Behaves as a thin wrapper around chromeUdp.send.
+ *
+ * @param {ArrayBuffer} arrayBuffer
+ * @param {string} address
+ * @param {integer} port
+ *
+ * @return {Promise.<any, Error>}
  */
 exports.ChromeUdpSocket.prototype.send = function(arrayBuffer, address, port) {
   return exports.send(this.socketId, arrayBuffer, address, port);
@@ -31196,6 +31296,8 @@ exports.ChromeUdpSocket.prototype.send = function(arrayBuffer, address, port) {
 
 /**
  * Add listener via call to util.getUdp().onReceive.addListener.
+ *
+ * @param {function} listener
  */
 exports.addOnReceiveListener = function(listener) {
   util.getUdp().onReceive.addListener(listener);
@@ -31203,6 +31305,8 @@ exports.addOnReceiveListener = function(listener) {
 
 /**
  * Add listener via call to util.getUdp().onReceiveError.addListener.
+ *
+ * @param {function} listener
  */
 exports.addOnReceiveErrorListener = function(listener) {
   util.getUdp().onReceiveError.addListener(listener);
@@ -31211,7 +31315,7 @@ exports.addOnReceiveErrorListener = function(listener) {
 /**
  * @param {SocketProperties} properties optional
  *
- * @returns {Promise.<object, Error>} Promise that resolves with a socket info
+ * @return {Promise.<object, Error>} Promise that resolves with a socket info
  * object or rejects with an Error
  */
 exports.create = function(obj) {
@@ -31226,6 +31330,13 @@ exports.create = function(obj) {
   });
 };
 
+/**
+ * @param {integer} socketId
+ * @param {string} address
+ * @param {integer} port
+ *
+ * @return {Promise.<integer, Error>}
+ */
 exports.bind = function(socketId, address, port) {
   return new Promise(function(resolve, reject) {
     util.getUdp().bind(socketId, address, port, function(result) {
@@ -31242,6 +31353,14 @@ exports.bind = function(socketId, address, port) {
   });
 };
 
+/**
+ * @param {integer} socketId
+ * @param {ArrayBuffer} arrayBuffer
+ * @param {string} address
+ * @param {integer} port
+ *
+ * @return {Promise.<integer, Error>}
+ */
 exports.send = function(socketId, arrayBuffer, address, port) {
   if (!socketId || !arrayBuffer || !address || !port) {
     console.warn(
@@ -31273,6 +31392,12 @@ exports.send = function(socketId, arrayBuffer, address, port) {
   });
 };
 
+/**
+ * @param {integer} socketId
+ * @param {string} address
+ *
+ * @return {Promise.<integer, Error>}
+ */
 exports.joinGroup = function(socketId, address) {
   return new Promise(function(resolve, reject) {
     util.getUdp().joinGroup(socketId, address, function(result) {
@@ -31290,6 +31415,9 @@ exports.joinGroup = function(socketId, address) {
   });
 };
 
+/**
+ * @param {Promise.<Array.<SocketInfo>, Error>}
+ */
 exports.getSockets = function() {
   return new Promise(function(resolve) {
     util.getUdp().getSockets(function(allSockets) {
@@ -31298,6 +31426,11 @@ exports.getSockets = function() {
   });
 };
 
+/**
+ * @param {integer} socketId
+ *
+ * @return {Promise.<SocketInfo, Error>}
+ */
 exports.getInfo = function(socketId) {
   return new Promise(function(resolve) {
     util.getUdp().getInfo(socketId, function(socketInfo) {
@@ -31334,6 +31467,8 @@ exports.logSocketInfo = function(info) {
 
 /**
  * Returns a Promise that resolves with a list of network interfaces.
+ *
+ * @return {Promise.<Array.<Object>, Error>}
  */
 exports.getNetworkInterfaces = function() {
   return new Promise(function(resolve) {
@@ -31369,10 +31504,10 @@ exports.local = null;
 /**
  * Creates the cache key for the given ipaddr/port combination.
  *
- * @param {String} ipaddr the IP address of the machine
- * @param {String|Number} port the port of the instance
+ * @param {string} ipaddr the IP address of the machine
+ * @param {string|integer} port the port of the instance
  *
- * @return {String} a String to be used as a key into the cache
+ * @return {string} a String to be used as a key into the cache
  */
 function createKey(ipaddr, port) {
   if (!ipaddr || !port) {
@@ -31387,9 +31522,9 @@ function createKey(ipaddr, port) {
  * PeerConnections added via this method will be automatically removed when
  * they emit a close event.
  *
- * @param {String} ipaddr the IP address of the peer this connects to
- * @param {number} port the port of the instance advertised via mDNS where this
- * connection is connected
+ * @param {string} ipaddr the IP address of the peer this connects to
+ * @param {integer} port the port of the instance advertised via mDNS where
+ * this connection is connected
  * @param {PeerConnection} cxn the connection being added
  */
 exports.addConnection = function(ipaddr, port, cxn) {
@@ -31417,9 +31552,9 @@ exports.getConnection = function(ipaddr, port) {
 /**
  * Remove the connection from the known pool.
  *
- * @param {String} ipaddr the IP address of the peer this connects to
- * @param {number} port the port of the instance advertised via mDNS where this
- * connection is connected
+ * @param {string} ipaddr the IP address of the peer this connects to
+ * @param {integer} port the port of the instance advertised via mDNS where
+ * this connection is connected
  */
 exports.removeConnection = function(ipaddr, port) {
   var key = createKey(ipaddr, port);
@@ -31430,9 +31565,9 @@ exports.removeConnection = function(ipaddr, port) {
  * Create a connection to the given peer, adding it to make it known to the
  * manager.
  *
- * @param {String} ipaddr the IP address of the peer this connects to
- * @param {number} port the port of the instance advertised via mDNS where this
- * connection is connected
+ * @param {string} ipaddr the IP address of the peer this connects to
+ * @param {integer} port the port of the instance advertised via mDNS where
+ * this connection is connected
  *
  * @return {Promise.<PeerConnection, Error>} Promise that resolves with the
  * PeerConnection when it is created
@@ -31485,12 +31620,12 @@ exports.onIceCandidate = function(e) {
 };
 
 /**
- * @param {String} wrtcEndpoint
+ * @param {string} wrtcEndpoint
  * @param {RTCPeerDescription} rawConnection
  * @param {RTCSessionDescription} desc
  * @param {Array.<RTCIceCandidate>} iceCandidates
  *
- * @return {Promise.<PeerConnection>}
+ * @return {Promise.<PeerConnection, Error>}
  */
 exports.sendOffer = function(
     wrtcEndpoint, rawConnection, desc, iceCandidates, ipaddr, port
@@ -31529,6 +31664,12 @@ exports.sendOffer = function(
   });
 };
 
+/**
+ * @param {string} addr
+ * @param {integer} port
+ *
+ * @return {string}
+ */
 exports.getPathForWebrtcNegotiation = function(addr, port) {
   return 'http://' +
     addr +
@@ -31555,11 +31696,12 @@ exports.createPeerConnection = function(rawConnection) {
  * convenience method to spare callers checking the cache and should be
  * preferred.
  *
- * @param {String} ipaddr the IP address of the peer this connects to
+ * @param {string} ipaddr the IP address of the peer this connects to
  * @param {number} port the port of the instance advertised via mDNS where this
  * connection is connected
  * 
- * @return {Promise} Promise that resolves with the PeerConnection.
+ * @return {Promise.<PeerConnection, Error>} Promise that resolves with the
+ * PeerConnection.
  */
 exports.getOrCreateConnection = function(ipaddr, port) {
   var key = createKey(ipaddr, port);
@@ -31586,8 +31728,8 @@ exports.getOrCreateConnection = function(ipaddr, port) {
  *
  * Exposed for testing.
  *
- * @param {JSON} servers
- * @param {JSON} constraings
+ * @param {Object} servers
+ * @param {Object} constraints
  *
  * @return {RTCPeerConnection}
  */
@@ -31599,7 +31741,7 @@ exports.createRTCPeerConnection = function(servers, constraints) {
  * Create an RTCIceCandidate. Thin wrapper around the RTCIceCandidate
  * constructor to facilitate testing.
  *
- * @param {JSON} candidateJson the JSON object representing an ICE candidate
+ * @param {Object} candidateJson the JSON object representing an ICE candidate
  * that has come across the wire
  *
  * @return {RTCIceCandidate}
@@ -31614,7 +31756,7 @@ exports.createRTCIceCandidate = function(candidateJson) {
  *
  * Exposed for testing.
  *
- * @param {JSON} descJson JSON representation of an RTCSessionDescription
+ * @param {Object} descJson JSON representation of an RTCSessionDescription
  *
  * @return {RTCSessionDescription}
  */
@@ -31662,17 +31804,19 @@ exports.getFullName = function(friendlyName) {
 };
 
 /**
- * Register a SemCache instance. Returns a Promise that resolves with an object
- * like the following:
+ * Register a SemCache instance.
  *
+ * @param {string} host 
+ * @param {string} name  the user-friendly name of the instance, e.g. "Sam's
+ * @param {integer} port the port on which the SemCache instance is running.
+ *
+ * @return {Promise.<Object, Error>} Promise that resolves with an object like
+ * the following:
  * {
  *   serviceName: "Sam's SemCache",
  *   type: "_http._local",
  *   domain: "laptop.local"
  * }
- *
- * name: the user-friendly name of the instance, e.g. "Sam's SemCache".
- * port: the port on which the SemCache instance is running.
  */
 exports.registerSemCache = function(host, name, port) {
   var result = dnssd.register(host, name, SEMCACHE_SERVICE_STRING, port);
@@ -31685,8 +31829,8 @@ exports.registerSemCache = function(host, name, port) {
  * caches--it only returns a list of names on the network. Operational
  * information should be resolved as needed using the resolveCache() function.
  *
- * @return {Promise} Promise that resolves with an Array of objects as returned
- * from dnssd.queryForServiceInstances
+ * @return {Promise.<Array.<Object>, Error>} Promise that resolves with an
+ * Array of objects as returned from dnssd.queryForServiceInstances
  */
 exports.browseForSemCacheInstanceNames = function() {
   return dnssd.queryForServiceInstances(
@@ -31708,9 +31852,9 @@ exports.browseForSemCacheInstanceNames = function() {
  * @param {string} fullName the full name of the cache, e.g. `Tyrion's
  * Cache._semcache._tcp.local`
  *
- * @return {Promise} that resolves with an object like the following. The
- * promise rejects if the resolution does not succeed (e.g. from a missing SRV
- * or A record).
+ * @return {Promise.<Object, Error>} that resolves with an object like the
+ * following. The promise rejects if the resolution does not succeed (e.g. from
+ * a missing SRV or A record).
  * {
  *   friendlyName: 'Sam Cache',
  *   instanceName: 'Sam Cache._semcache._tcp.local',
@@ -31739,8 +31883,10 @@ exports.resolveCache = function(fullName) {
 };
 
 /**
- * Browse for SemCache instances on the local network. Returns a Promise that
- * resolves with a list of objects like the following:
+ * Browse for SemCache instances on the local network. Returns a  *
+ *
+ * @return {Promise.<Object, Error>} Promise that resolves with a list of
+ * objects like the following, or an empty list if no instances are found.
  *
  * {
  *   serviceName: "Sam's SemCache",
@@ -31748,8 +31894,6 @@ exports.resolveCache = function(fullName) {
  *   domain: "laptop.local",
  *   port: 8889
  * }
- *
- * Resolves with an empty list if no instances are found.
  */
 exports.browseForSemCacheInstances = function() {
   var result = dnssd.browseServiceInstances(SEMCACHE_SERVICE_STRING);
@@ -31844,8 +31988,8 @@ var ipv4Interfaces = [];
 /**
  * Returns all records known to this module.
  *
- * @return {Array<resource record>} all the resource records known to this
- * module
+ * @return {Array.<ARecord|PtrRecord|SrvRecord>} all the resource records known
+ * to this module
  */
 exports.getRecords = function() {
   return records;
@@ -31855,7 +31999,7 @@ exports.getRecords = function() {
  * Returns all the callbacks currently registered to be invoked with incoming
  * packets.
  *
- * @return {Set<function>} all the onReceive callbacks that have been
+ * @return {Set.<function>} all the onReceive callbacks that have been
  * registered
  */
 exports.getOnReceiveCallbacks = function() {
@@ -31882,7 +32026,7 @@ exports.isStarted = function() {
 /**
  * Return a cached array of IPv4 interfaces for this machine.
  *
- * @return {object} an array of all the IPv4 interfaces known to this machine.
+ * @return {Object} an array of all the IPv4 interfaces known to this machine.
  * The objects have the form: 
  * {
  *   name: string,
@@ -31926,7 +32070,7 @@ exports.removeOnReceiveCallback = function(callback) {
  * The listener that is attached to chrome.sockets.udp.onReceive.addListener
  * when the service is started.
  *
- * @param {object} info the object that is called by the chrome.sockets.udp
+ * @param {Object} info the object that is called by the chrome.sockets.udp
  * API. It is expected to look like:
  * {
  *   data: ArrayBuffer,
@@ -32088,12 +32232,12 @@ exports.createResponsePacket = function(queryPacket) {
  * any cache we are maintaining, unless those records originated from us and
  * are thus considered authoritative.
  *
- * @param {String} qName the query name
- * @param {number} qType the query type
- * @param {number} qClass the query class
+ * @param {string} qName the query name
+ * @param {integer} qType the query type
+ * @param {integer} qClass the query class
  *
- * @return {Array<resource record>} the array of resource records appropriate
- * for this query
+ * @return {Array.<ARecord|SrvRecord|PtrRecord>} the array of resource records
+ * appropriate for this query
  */
 exports.getResourcesForQuery = function(qName, qType, qClass) {
   // According to RFC section 6: 
@@ -32142,14 +32286,14 @@ exports.getResourcesForQuery = function(qName, qType, qClass) {
  * Return an Array with only the elements of resources that match the query
  * terms.
  * 
- * @param {Array<resource record>} resources an Array of resource records that
- * will be filtered
+ * @param {Array.<ARecord|PtrRecord|SrvRecord>} resources an Array of resource
+ * records that will be filtered
  * @param {string} qName the name of the query
  * @param {integer} qType the type of the query
  * @param {integer} qClass the class of the query
  *
- * @return {Array<resource record>} the subset of resources that match the
- * query terms
+ * @return {Array.<ARecord|PtrRecord|SrvRecord>} the subset of resources that
+ * match the query terms
  */
 exports.filterResourcesForQuery = function(resources, qName, qType, qClass) {
   var result = [];
@@ -32179,7 +32323,8 @@ exports.filterResourcesForQuery = function(resources, qName, qType, qClass) {
 /**
  * Returns a promise that resolves with the socket.
  *
- * @return {Promise} that resolves with a ChromeUdpSocket
+ * @return {Promise.<ChromeUdpSocket, Error>} that resolves with a
+ * ChromeUdpSocket
  */
 exports.getSocket = function() {
   if (exports.socket) {
@@ -32227,7 +32372,7 @@ exports.getSocket = function() {
  *
  * Returns a Promise that resolves when everything is up and running.
  *
- * @return {Promise}
+ * @return {Promise.<undefined, Error>}
  */
 exports.start = function() {
   // All the initialization we need to do is create the socket (so that we
@@ -32241,8 +32386,8 @@ exports.start = function() {
     .then(function initializedInterfaces() {
       resolve();
     })
-    .catch(function startWhenWrong() {
-      reject();
+    .catch(function startWentWrong(err) {
+      reject(err);
     });
   });
 };
@@ -32250,7 +32395,7 @@ exports.start = function() {
 /**
  * Initialize the cache of network interfaces known to this machine.
  *
- * @return {Promise} resolves when the cache is initialized
+ * @return {Promise.<undefined, Error>} resolves when the cache is initialized
  */
 exports.initializeNetworkInterfaceCache = function() {
   return new Promise(function(resolve, reject) {
@@ -32305,7 +32450,7 @@ exports.stop = function() {
  *
  * @param {DnsPacket} packet the packet to send
  * @param {string} address the address to which to send the packet
- * @param {number} port the port to sent the packet to
+ * @param {integer} port the port to sent the packet to
  */
 exports.sendPacket = function(packet, address, port) {
   // For now, change the ID of the packet. We want to allow debugging, so we
@@ -32366,8 +32511,8 @@ exports.query = function(queryName, queryType, queryClass) {
  *
  * @param {string} domainName the domain name for which to return A Records
  *
- * @return {Array<resource record>} the A Records corresponding to this domain
- * name
+ * @return {Array<ARecord|PtrRecord|SrvRecord>} the A Records corresponding to
+ * this domain name
  */
 exports.queryForARecord = function(domainName) {
   return exports.getResourcesForQuery(
@@ -32385,7 +32530,7 @@ exports.queryForARecord = function(domainName) {
  * @param {string} serviceName the serviceName for which to query for PTR
  * Records
  *
- * @return {Array<resource record> the PTR Records for the service
+ * @return {Array<ARecord|PtrRecord|SrvRecord>} the PTR Records for the service
  */
 exports.queryForPtrRecord = function(serviceName) {
   return exports.getResourcesForQuery(
@@ -32403,7 +32548,8 @@ exports.queryForPtrRecord = function(serviceName) {
  * @param {string} instanceName the instance name for which you are querying
  * for SRV Records
  *
- * @return {Array<resource record>} the SRV Records matching this query
+ * @return {Array<rARecord|PtrRecord|SrvRecord>} the SRV Records matching this
+ * query
  */
 exports.queryForSrvRecord = function(instanceName) {
   return exports.getResourcesForQuery(
@@ -32417,7 +32563,7 @@ exports.queryForSrvRecord = function(instanceName) {
  * Add a record corresponding to name to the internal data structures.
  *
  * @param {string} name the name of the resource record to add
- * @param {resource record} record the record to add
+ * @param {ARecord|PtrRecord|SrvRecord} record the record to add
  */
 exports.addRecord = function(name, record) {
   var existingRecords = records[name];
@@ -32550,7 +32696,8 @@ exports.createHostName = function() {
 /**
  * Advertise the resource records.
  *
- * @param {Array<resource records>} resourceRecords the records to advertise
+ * @param {Array.<ARecord|PtrRecord|SrvRecord>} resourceRecords the records to
+ * advertise
  */
 exports.advertiseService = function(resourceRecords) {
   var advertisePacket = new dnsPacket.DnsPacket(
@@ -32576,15 +32723,7 @@ exports.advertiseService = function(resourceRecords) {
 };
 
 /**
- * Register a service via mDNS. Returns a Promise that resolves with an object
- * like the following:
- *
- * {
- *   serviceName: "Sam's SemCache",
- *   type: "_http._local",
- *   domain: "laptop.local",
- *   port: 1234
- * }
+ * Register a service via mDNS.
  *
  * @param {string} host the host of the service, e.g. 'laptop.local'
  * @param {string} name a user-friendly string to be the name of the instance,
@@ -32592,6 +32731,15 @@ exports.advertiseService = function(resourceRecords) {
  * @param {string} type the service type string. This should be the protocol
  * spoken and the transport protocol, eg "_http._tcp".
  * @param {integer} port the port the service is available on
+ *
+ * @return {Promise.<Object, Error>} Returns a Promise that resolves with an object
+ * like the following:
+ * {
+ *   serviceName: "Sam's SemCache",
+ *   type: "_http._local",
+ *   domain: "laptop.local",
+ *   port: 1234
+ * }
  */
 exports.register = function(host, name, type, port) {
   // Registration is a multi-step process. It is described in Section 8 of the
@@ -32671,7 +32819,8 @@ exports.register = function(host, name, type, port) {
  *
  * @param {string} host
  *
- * @return {Array<resource records>} an Array of the records that were added.
+ * @return {Array.<ARecord|PtrRecord|SrvRecord>} an Array of the records that
+ * were added.
  */
 exports.createHostRecords = function(host) {
   // This just consists of an A Record. Make an entry for every IPv4 address.
@@ -32714,7 +32863,8 @@ exports.createSrvName = function(userFriendlyName, type, domain) {
  * @param {string} domain target domain/host the service is running on, e.g.
  * 'blackhack.local'
  *
- * @return {Array<resource records>} an Array of the records that were added.
+ * @return {Array<ARecord|PtrRecord|SrvRecord>} an Array of the records that
+ * were added.
  */
 exports.createServiceRecords = function(name, type, port, domain) {
   // We need to add a PTR record and an SRV record.
@@ -32745,6 +32895,14 @@ exports.createServiceRecords = function(name, type, port, domain) {
   return result;
 };
 
+/**
+ * @param {Array.<DnsPacket>}
+ * @param {string} qName
+ * @param {integer} qType
+ * @param {integer} qClass
+ *
+ * @return {boolean}
+ */
 exports.receivedResponsePacket = function(packets, qName, qType, qClass) {
   for (var i = 0; i < packets.length; i++) {
     var packet = packets[i];
@@ -32766,9 +32924,9 @@ exports.receivedResponsePacket = function(packets, qName, qType, qClass) {
  * @param {integer} queryType
  * @param {integer} queryClass
  *
- * @return {Promise} Returns a promise that resolves if the probe returns
- * nothing, meaning that the queryName is available, and rejects if it is
- * taken.
+ * @return {Promise.<undefined, undefined>} Returns a promise that resolves if
+ * the probe returns nothing, meaning that the queryName is available, and
+ * rejects if it is taken.
  */
 exports.issueProbe = function(queryName, queryType, queryClass) {
   // Track the packets we receive whilst querying.
@@ -32845,8 +33003,10 @@ exports.issueProbe = function(queryName, queryType, queryClass) {
  * should be the full name, not just the user friendly portion of the name.
  * E.g. `Tyrion's Cache._semcache._tcp.local`, not `Tyrion's Cache`.
  *
- * @return {Promise} Promise that resolves with an object like the following if
- * resolution succeeds:
+ * @return {Promise.<Object, Error>} Promise that resolves with an object like
+ * the following if resolution succeeds. The Promise rejects if resolution
+ * cannot complete (e.g. if a SRV or A records is not found) or if an error
+ * occurs.
  * {
  *   friendlyName: 'Sam Cache',
  *   instanceName: 'Sam Cache._semcache._tcp.local',
@@ -32854,8 +33014,6 @@ exports.issueProbe = function(queryName, queryType, queryClass) {
  *   ipAddress: '123.4.5.6',
  *   port: 8888
  * }
- * The Promise rejects if resolution cannot complete (e.g. if a SRV or A
- * records is not found) or if an error occurs.
  */
 exports.resolveService = function(serviceName) {
   console.log('resolveService: ', serviceName);
@@ -32952,8 +33110,9 @@ exports.resolveService = function(serviceName) {
  *
  * @param {string} serviceType the type of the service to browse for
  *
- * @return {Promise} a Promise that resolves with operational information for
- * all instances. This is an Array of objects like the following:
+ * @return {Promise.<Array.<Object>, Error>} a Promise that resolves with
+ * operational information for all instances. This is an Array of objects like
+ * the following:
  * {
  *   serviceType: '_semcache._tcp',
  *   instanceName: 'Sam Cache',
@@ -33124,15 +33283,15 @@ exports.getUserFriendlyName = function(instanceTypeDomain) {
  * issueing PTR requests.
  *
  * @param {string} serviceType the service string to query for
- * @param {number} waitTime the time to wait for responses. As multiple
+ * @param {integer} waitTime the time to wait for responses. As multiple
  * responses can be expected in response to a query for instances of a service
  * (as multiple instances can exist on the same network), the Promise will
  * always resolve after this many milliseconds.
- * @param {number} numRetries the number of additional queries that should be
+ * @param {integer} numRetries the number of additional queries that should be
  * sent. This can be 0, in which case only the first query will be sent
  *
- * @return {Promise} Returns a Promise that resolves with a list of objects
- * representing services, like the following:
+ * @return {Promise.<Array.<Object>, Error>} Returns a Promise that resolves
+ * with a list of objects representing services, like the following:
  * {
  *   serviceType: '_semcache._tcp',
  *   friendlyName: 'Magic Cache',
@@ -33190,12 +33349,12 @@ exports.queryForServiceInstances = function(
  * Issue a query for an IP address mapping to a domain.
  *
  * @param {string} domainName the domain name to query for
- * @param {number} timeout the number of ms after which to time out
- * @param {number} numRetries the number of additional queries to send after
+ * @param {integer} timeout the number of ms after which to time out
+ * @param {integer} numRetries the number of additional queries to send after
  * the first if a response is not received.
  *
- * @return {Promise} Returns a Promise that resolves with a list of objects
- * representing services, like the following:
+ * @return {Promise.<Object, Error>} Returns a Promise that resolves with a
+ * list of objects representing services, like the following:
  * {
  *   domainName: 'example.local',
  *   ipAddress: '123.4.5.6'
@@ -33244,12 +33403,12 @@ exports.queryForIpAddress = function(domainName, timeout, numRetries) {
  * port and domain name on which it is active.
  *
  * @param {string} instanceName the instance name to query for
- * @param {number} timeout the number of ms after which to time out
- * @param {number} numRetries the number of additional queries to send after
+ * @param {integer} timeout the number of ms after which to time out
+ * @param {integer} numRetries the number of additional queries to send after
  * the first if a response is not received.
  *
- * @return {Promise} Returns a Promise that resolves with a list of objects
- * representing services, like the following:
+ * @return {Promise.<Object, Error>} Returns a Promise that resolves with a
+ * list of objects representing services, like the following:
  * {
  *   instanceName: 'Sam Cache',
  *   domain: 'example.local',
@@ -33296,24 +33455,24 @@ exports.queryForInstanceInfo = function(instanceName, timeout, numRetries) {
  * Issue a query and listen for responses. (As opposed to simply issuing a DNS
  * query without being interested in the responses.)
  * 
- * @param {String} qName the name of the query to issue
- * @param {number} qType the type of the query to issue
- * @param {number} qClass the class of the query to issue
+ * @param {string} qName the name of the query to issue
+ * @param {integer} qType the type of the query to issue
+ * @param {integer} qClass the class of the query to issue
  * @param {boolean} multipleResponses true if we can expect multiple or an open
  * ended number of responses to this query
- * @param {number} timeoutOrWait if multipleExpected is true, this is the
+ * @param {integer} timeoutOrWait if multipleExpected is true, this is the
  * amount of time we wait before returning results. If multipleExpected is
  * false (e.g. querying for an A Record, which should have a single answer),
  * this is the amount of time we wait before timing out and resolving with an
  * empty list.
- * @param {number} numRetries the number of retries to attempt if a query
+ * @param {integer} numRetries the number of retries to attempt if a query
  * doesn't generate packets.
  *
- * @return {Promise} Returns a Promise that resolves with an Array of Packets
- * received in response to the query. If multipleResponses is true, will not
- * resolve until timeoutOrWait milliseconds. If multipleResponses is false,
- * will resolve after the first packet is received or after timeoutOrWait is
- * satifised. 
+ * @return {Promise.<Array.<DnsPacket>, Error>} Returns a Promise that resolves
+ * with an Array of Packets received in response to the query. If
+ * multipleResponses is true, will not resolve until timeoutOrWait
+ * milliseconds. If multipleResponses is false, will resolve after the first
+ * packet is received or after timeoutOrWait is satifised. 
  */
 exports.queryForResponses = function(
   qName,
@@ -33441,7 +33600,7 @@ exports.createTimingKey = function(key) {
  * captureUrl value of the CachedPage. This is intended to allow the querier to
  * verify that the response has been generated based solely on this request.
  *
- * @return {Array<CachedPage>}
+ * @return {Array.<CachedPage>}
  */
 exports.generateDummyPages = function(numPages, nonce) {
   var result = [];
@@ -33483,7 +33642,7 @@ exports.generateDummyPage = function(index, nonce) {
  * @param {integer} numPages the number of responses to return
  * @param {string} nonce a string to incorporate into answers
  *
- * @return {object} the JSON server response
+ * @return {Object} the JSON server response
  */
 exports.getDummyResponseForAllCachedPages = function(numPages, nonce) {
   var pages = exports.generateDummyPages(numPages, nonce);
@@ -33544,8 +33703,8 @@ exports.logTime = function(key, time) {
  *
  * @param {string} key
  *
- * @return {Promise -> any} Promise that resolves with the value paired to this
- * key in storage. Returns null if the value is not present.
+ * @return {Promise.<any, Error>} Promise that resolves with the value paired
+ * to this key in storage. Returns null if the value is not present.
  */
 exports.getTimeValues = function(key) {
   return new Promise(function(resolve, reject) {
@@ -33568,9 +33727,10 @@ exports.getTimeValues = function(key) {
 /**
  * Execute an array of Promise returning functions in order, one after another.
  *
- * @param{Array<function>} promises an Array of functions that return a Promise
- * that should be executed.
- * @return {Promise -> Array<object>} Promise that resolves with an array of
+ * @param{Array.<function>} promises an Array of functions that return a
+ * Promise that should be executed.
+ *
+ * @return {Promise.<Array<object>>} Promise that resolves with an array of
  * objects. Each object will be a key value pair of either { resolved: value }
  * or { rejected: value } representing the value that either resolved or
  * rejected from the Promise.
@@ -33620,7 +33780,7 @@ exports.fulfillPromises = function(promises) {
  * @param {integer} resolveDelay the number of ms to wait between resolutions
  * if doing a lazy resolve
  *
- * @return {Promise -> Array} Promise that resolves when all the trials
+ * @return {Promise.<Array<any>>} Promise that resolves when all the trials
  * are complete. Resolves with an Array of the resolved results of the
  * individual iterations
  */
@@ -33708,13 +33868,13 @@ exports.getEvalPagesUrl = function(ipAddress, port, numPages) {
 /**
  * Resolve all peers with timing information.
  *
- * @param {Array<Object>} cacheNames an Array of objects as returned by
+ * @param {Array.<Object>} cacheNames an Array of objects as returned by
  * appc.getPeerCacheNames()
  * @param {integer} resolveDelay the number of seconds to delay a resolve
  * request, in ms. Attempts to ease the burden on the network.
  * @param {Object} toLog an object that will be logged at the end of the trial
  *
- * @return {Promise -> Array<Object>} Promise that resolves with an Array of
+ * @return {Promise.<Array<Object>>} Promise that resolves with an Array of
  * objects as returned by fulfillPromises. Resolved objects will be Objects as
  * returned by appc.resolveCache(). The rejected objects will the errors
  * rejecting in resolveCache().
@@ -33774,8 +33934,8 @@ exports.resolvePeers = function(cacheNames, resolveDelay, toLog) {
  * @param {integer} resolveDelay the number of milliseconds to wait between
  * resolving each peer.
  *
- * @return {Promise} Promise that resolves with the timing information of the
- * trial
+ * @return {Promise.<Array.<number>>} Promise that resolves with the timing
+ * information of the trial
  */
 exports.runDiscoverPeerPagesIterationLazy = function(
     numPeers, 
@@ -33870,9 +34030,9 @@ exports.runDiscoverPeerPagesIterationLazy = function(
  * @param {integer} numPeers the number of peers you expect
  * @param {integer} numPages the number of pages expected to be on each peer
  *
- * @return {Promise -> number} Promise that resolves with the time it took to
- * run the trial. Rejects if it cannot find the correct number of peers or
- * pages.
+ * @return {Promise.<number, Error>} Promise that resolves with the time it
+ * took to run the trial. Rejects if it cannot find the correct number of peers
+ * or pages.
  */
 exports.runDiscoverPeerPagesIteration = function(numPeers, numPages) {
   return new Promise(function(resolve, reject) {
@@ -33950,8 +34110,8 @@ exports.runDiscoverPeerPagesIteration = function(numPeers, numPages) {
  * @param {string} listPagesUrl the URL of the cache the exposes the JSON end
  * point with the contents of the cache
  *
- * @return {Promise} Promise that resolves with the results of the trial when
- * it is complete
+ * @return {Promise.<Array.<number>, Error>} Promise that resolves with the
+ * results of the trial when it is complete
  */
 exports.runLoadPageTrialForCache = function(numIterations, key, listPagesUrl) {
   return new Promise(function(resolve) {
@@ -34103,7 +34263,7 @@ exports.sendMessageToExtension = function(message) {
 /**
  * Function to handle messages coming from the SemCache extension.
  *
- * @param {object} message message sent by the extension. Expected to have the
+ * @param {Object} message message sent by the extension. Expected to have the
  * following format:
  * {
  *   type: 'write'
@@ -34114,8 +34274,8 @@ exports.sendMessageToExtension = function(message) {
  *     metadata: {}
  *   }
  * }
- * @param {MessageSender}
- * @param {function}
+ * @param {MessageSender} sender
+ * @param {function} response
  */
 exports.handleExternalMessage = function(message, sender, response) {
   // Methods via onMessagExternal.addListener must respond true if the response
@@ -34158,9 +34318,9 @@ exports.handleExternalMessage = function(message, sender, response) {
 /**
  * Create a message to send to the extension upon a successful action.
  *
- * @param {object} message the original message that generated the request
+ * @param {Object} message the original message that generated the request
  *
- * @return {object} a response object. Contains at a result key, indicating
+ * @return {Object} a response object. Contains at a result key, indicating
  * 'success', a type key, indicating the type of the original message, and an
  * optional params key with additional values.
  */
@@ -34174,7 +34334,7 @@ exports.createResponseSuccess = function(message) {
 /**
  * Create a message to send to the extension upon an error.
  *
- * @param {object} message the original message that generated the request
+ * @param {Object} message the original message that generated the request
  * @param {any} err the error info to send to the extension
  */
 exports.createResponseError = function(message, err) {
@@ -34275,8 +34435,9 @@ exports.constructFileSchemeUrl = function(absPathToBaseDir, fileEntryPath) {
 /**
  * Get the directory where cache entries are stored.
  *
- * @return {Promise} Promise that resolves with a DirectoryEntry that is the
- * base cache directory. Rejects if the base directory has not been set.
+ * @return {Promise.<DirectoryEntry, Error>} Promise that resolves with a
+ * DirectoryEntry that is the base cache directory. Rejects if the base
+ * directory has not been set.
  */
 exports.getDirectoryForCacheEntries = function() {
   return new Promise(function(resolve, reject) {
@@ -34305,9 +34466,9 @@ exports.getDirectoryForCacheEntries = function() {
  * must have already been chosen via a file chooser. If a base directory has
  * not been chosen, it will return null.
  *
- * @return {Promise} Promise that resolves with the DirectoryEntry that has
- * been set as the root of the SemCache file system. Resolves null if the
- * directory has not been set.
+ * @return {Promise.<DirectoryEntry, Error>} Promise that resolves with the
+ * DirectoryEntry that has been set as the root of the SemCache file system.
+ * Resolves null if the directory has not been set.
  */
 exports.getPersistedBaseDir = function() {
   return new Promise(function(resolve, reject) {
@@ -34334,7 +34495,7 @@ exports.getPersistedBaseDir = function() {
 };
 
 /**
- * @return {Promise} Promise that resolves with a boolean
+ * @return {Promise.<boolean, Error>} Promise that resolves with a boolean
  */
 exports.baseDirIsSet = function() {
   return new Promise(function(resolve, reject) {
@@ -34368,8 +34529,8 @@ exports.setBaseCacheDir = function(dirEntry) {
 /**
  * Prompt the user to choose a directory.
  *
- * @return {Promise} a promise that resolves with a DirectoryEntry that has
- * been chosen by the user.
+ * @return {Promise.<DirectoryEntry, Error>} a promise that resolves with a
+ * DirectoryEntry that has been chosen by the user.
  */
 exports.promptForDir = function() {
   return new Promise(function(resolve, reject) {
@@ -34437,8 +34598,8 @@ function toArray(list) {
 /**
  * @param {DirectoryEntry} dirEntry the directory to list
  *
- * @return {Promise} Promise that resolves with an Array of Entry objects
- * that are the contents of the directory
+ * @return {Promise.<Array.<Entry>, Error>} Promise that resolves with an Array
+ * of Entry objects that are the contents of the directory
  */
 exports.listEntries = function(dirEntry) {
   // This code is based on the Mozilla and HTML5Rocks examples shown here:
@@ -34470,8 +34631,8 @@ exports.listEntries = function(dirEntry) {
  * @param {FileEntry} fileEntry the file that will be written to
  * @param {Blob} fileBlob the content to write
  *
- * @return {Promise} Promise that resolves when the write is complete or
- * rejects with an error
+ * @return {Promise.<undefined, Error>} Promise that resolves when the write is
+ * complete or rejects with an error
  */
 exports.writeToFile = function(fileEntry, fileBlob) {
   return new Promise(function(resolve, reject) {
@@ -34494,11 +34655,11 @@ exports.writeToFile = function(fileEntry, fileBlob) {
  * A Promise-ified version of DirectoryEntry.getFile().
  *
  * @param {DirectoryEntry} dirEntry the parent directory
- * @param {object} options object to pass to getFile function
+ * @param {Object} options object to pass to getFile function
  * @param {string} name the file name in dirEntry
  *
- * @return {Promise} Promise that resolves with the FileEntry or rejects with
- * an error
+ * @return {Promise.<FileEntry, Error>} Promise that resolves with the
+ * FileEntry or rejects with an error
  */
 exports.getFile = function(dirEntry, options, name) {
   return new Promise(function(resolve, reject) {
@@ -34515,11 +34676,11 @@ exports.getFile = function(dirEntry, options, name) {
  * A Promise-ified version of DirectoryEntry.getDirectory().
  *
  * @param {DirectoryEntry} dirEntry the parent directory
- * @param {object} options object to pass to getDirectory function
+ * @param {Object} options object to pass to getDirectory function
  * @param {string} name the file name in dirEntry
  *
- * @return {Promise} Promise that resolves with the DirectoryEntry or rejects
- * with an error
+ * @return {Promise.<DirectoryEntry, Error>} Promise that resolves with the
+ * DirectoryEntry or rejects with an error
  */
 exports.getDirectory = function(dirEntry, options, name) {
   return new Promise(function(resolve, reject) {
@@ -39038,7 +39199,7 @@ var userFriendlyKeys = {
 /**
  * Returns an array with all of the keys known to store settings.
  *
- * @return {Array<String>}
+ * @return {Array.<String>}
  */
 exports.getAllSettingKeys = function() {
   return [
@@ -39073,7 +39234,8 @@ exports.getSettingsObj = function() {
  * Initialize the cache of settings objects. After this call, getSettingsObj()
  * will return with the cached value.
  *
- * @return {Promise} Promise that resolves with the newly-initialized cache
+ * @return {Promise.<Object, Error>} Promise that resolves with the
+ * newly-initialized cache
  */
 exports.init = function() {
   // Get all the known settings
@@ -39101,8 +39263,8 @@ exports.init = function() {
  * Set the value in local storage and in the settings cache maintained by this
  * object.
  *
- * @return {Promise} Promise that resolves with the current settings object
- * after the set completes
+ * @return {Promise.<Object, Error>} Promise that resolves with the current
+ * settings object after the set completes
  */
 exports.set = function(key, value) {
   return new Promise(function(resolve, reject) {
@@ -39216,7 +39378,7 @@ exports.getHostName = function() {
 };
 
 /**
- * @return {String} String representing the transport method to be used by the
+ * @return {string} String representing the transport method to be used by the
  * instance to interface with peers. Options are 'http' and 'webrtc'. Defaults
  * to 'http'.
  */
@@ -39280,7 +39442,7 @@ exports.setHostName = function(hostName) {
  * Indicate that HTTP should be used as the transport mechanism to interface
  * with peers.
  *
- * @return {Promise.<JSON, Error>} Promise that resolves with the current
+ * @return {Promise.<Object, Error>} Promise that resolves with the current
  * settings object
  */
 exports.setTransportHttp = function() {
@@ -39293,7 +39455,7 @@ exports.setTransportHttp = function() {
  * Indicate that WebRTC should be used as the transport mechanism to interface
  * with peers.
  *
- * @return {Promise.<JSON, Error>} Promise that resolves with the current
+ * @return {Promise.<Object, Error>} Promise that resolves with the current
  * settings object
  */
 exports.setTransportWebrtc = function() {
@@ -39306,7 +39468,8 @@ exports.setTransportWebrtc = function() {
  * Prompt for and set a new base directory of the SemCache file system. It
  * persists both the ID and path.
  *
- * @return {Promise} Promise that resolves with an object like the following:
+ * @return {Promise.<Object, Error} Promise that resolves with an object like
+ * the following:
  * {
  *   baseDirId: '',
  *   baseDirPath: ''

@@ -35,7 +35,7 @@ exports.createMetadatObj = function() {
  * (e.g. 'foo' or 'foo/bar' but never '/foo/bar'). The paths do not contain
  * scheme, host, or port.
  *
- * @return {object} an object mapping API end points to string paths, like the
+ * @return {Object} an object mapping API end points to string paths, like the
  * following:
  * {
  *   pageCache: '',
@@ -55,7 +55,7 @@ exports.getApiEndpoints = function() {
  * Return the URL where the list of cached pages can be accessed.
  *
  * @param {string} ipAddress the IP address of the cache
- * @param {number} port the port where the server is listening at ipAddress
+ * @param {integer} port the port where the server is listening at ipAddress
  */
 exports.getListPageUrlForCache = function(ipAddress, port) {
   var scheme = HTTP_SCHEME;
@@ -86,7 +86,8 @@ exports.getAccessUrlForCachedPage = function(fullPath) {
 /**
  * Return a JSON object response for the all cached pages endpoing.
  *
- * @return {Promise} Promise that resolves with an object like the following:
+ * @return {Promise.<Object, Error} Promise that resolves with an object like
+ * the following:
  * {
  *   metadata: {},
  *   cachedPages: [CachedPage, CachedPage]

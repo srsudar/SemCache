@@ -18,8 +18,8 @@ function toArray(list) {
 /**
  * @param {DirectoryEntry} dirEntry the directory to list
  *
- * @return {Promise} Promise that resolves with an Array of Entry objects
- * that are the contents of the directory
+ * @return {Promise.<Array.<Entry>, Error>} Promise that resolves with an Array
+ * of Entry objects that are the contents of the directory
  */
 exports.listEntries = function(dirEntry) {
   // This code is based on the Mozilla and HTML5Rocks examples shown here:
@@ -51,8 +51,8 @@ exports.listEntries = function(dirEntry) {
  * @param {FileEntry} fileEntry the file that will be written to
  * @param {Blob} fileBlob the content to write
  *
- * @return {Promise} Promise that resolves when the write is complete or
- * rejects with an error
+ * @return {Promise.<undefined, Error>} Promise that resolves when the write is
+ * complete or rejects with an error
  */
 exports.writeToFile = function(fileEntry, fileBlob) {
   return new Promise(function(resolve, reject) {
@@ -75,11 +75,11 @@ exports.writeToFile = function(fileEntry, fileBlob) {
  * A Promise-ified version of DirectoryEntry.getFile().
  *
  * @param {DirectoryEntry} dirEntry the parent directory
- * @param {object} options object to pass to getFile function
+ * @param {Object} options object to pass to getFile function
  * @param {string} name the file name in dirEntry
  *
- * @return {Promise} Promise that resolves with the FileEntry or rejects with
- * an error
+ * @return {Promise.<FileEntry, Error>} Promise that resolves with the
+ * FileEntry or rejects with an error
  */
 exports.getFile = function(dirEntry, options, name) {
   return new Promise(function(resolve, reject) {
@@ -96,11 +96,11 @@ exports.getFile = function(dirEntry, options, name) {
  * A Promise-ified version of DirectoryEntry.getDirectory().
  *
  * @param {DirectoryEntry} dirEntry the parent directory
- * @param {object} options object to pass to getDirectory function
+ * @param {Object} options object to pass to getDirectory function
  * @param {string} name the file name in dirEntry
  *
- * @return {Promise} Promise that resolves with the DirectoryEntry or rejects
- * with an error
+ * @return {Promise.<DirectoryEntry, Error>} Promise that resolves with the
+ * DirectoryEntry or rejects with an error
  */
 exports.getDirectory = function(dirEntry, options, name) {
   return new Promise(function(resolve, reject) {

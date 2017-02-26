@@ -22,7 +22,7 @@ exports.sendMessageToExtension = function(message) {
 /**
  * Function to handle messages coming from the SemCache extension.
  *
- * @param {object} message message sent by the extension. Expected to have the
+ * @param {Object} message message sent by the extension. Expected to have the
  * following format:
  * {
  *   type: 'write'
@@ -33,8 +33,8 @@ exports.sendMessageToExtension = function(message) {
  *     metadata: {}
  *   }
  * }
- * @param {MessageSender}
- * @param {function}
+ * @param {MessageSender} sender
+ * @param {function} response
  */
 exports.handleExternalMessage = function(message, sender, response) {
   // Methods via onMessagExternal.addListener must respond true if the response
@@ -77,9 +77,9 @@ exports.handleExternalMessage = function(message, sender, response) {
 /**
  * Create a message to send to the extension upon a successful action.
  *
- * @param {object} message the original message that generated the request
+ * @param {Object} message the original message that generated the request
  *
- * @return {object} a response object. Contains at a result key, indicating
+ * @return {Object} a response object. Contains at a result key, indicating
  * 'success', a type key, indicating the type of the original message, and an
  * optional params key with additional values.
  */
@@ -93,7 +93,7 @@ exports.createResponseSuccess = function(message) {
 /**
  * Create a message to send to the extension upon an error.
  *
- * @param {object} message the original message that generated the request
+ * @param {Object} message the original message that generated the request
  * @param {any} err the error info to send to the extension
  */
 exports.createResponseError = function(message, err) {

@@ -44,12 +44,14 @@ var NUM_OCTETS_PORT = 2;
  * An A record. A records respond to queries for a domain name to an IP
  * address.
  *
- * @param {string} domainName: the domain name, e.g. www.example.com
- * @param {integer} ttl: the time to live
- * @param {string} ipAddress: the IP address of the domainName. This must be a string
- * (e.g. '192.3.34.17').
- * @param {integer} recordClass: the class of the record type. This is optional, and if not
- * present or is not truthy will be set as IN for internet traffic.
+ * @constructor
+ *
+ * @param {string} domainName the domain name, e.g. www.example.com
+ * @param {integer} ttl the time to live
+ * @param {string} ipAddress the IP address of the domainName. This must be a
+ * string (e.g. '192.3.34.17').
+ * @param {integer} recordClass the class of the record type. This is optional,
+ * and if not present or is not truthy will be set as IN for internet traffic.
  */
 exports.ARecord = function ARecord(
   domainName,
@@ -261,6 +263,8 @@ exports.createSrvRecordFromReader = function(reader) {
  * '_printer._tcp.local'. They return the name of an instance offering the
  * service (eg 'Printsalot._printer._tcp.local').
  *
+ * @constructor
+ *
  * @param {string} serviceType the string representation of the service that
  * has been queried for.
  * @param {integer} ttl the time to live
@@ -344,6 +348,8 @@ exports.PtrRecord.prototype.convertToByteArray = function() {
 /**
  * An SRV record. SRV records map the name of a service instance to the
  * information needed to connect to the service. 
+ *
+ * @constructor
  *
  * @param {string} instanceTypeDomain: the name being queried for, e.g.
  * 'PrintsALot._printer._tcp.local'
@@ -450,6 +456,11 @@ exports.SrvRecord.prototype.convertToByteArray = function() {
  *
  * 4 octets representing the TTL
  *
+ * @param {string} domainName
+ * @param {integer} rrType
+ * @param {integer} rrClass
+ * @param {integer} ttl
+ *
  * @return {ByteArray}
  */
 exports.getCommonFieldsAsByteArray = function(
@@ -476,7 +487,7 @@ exports.getCommonFieldsAsByteArray = function(
  *
  * @param {ByteArrayReader} reader
  *
- * @return {object} Returns an object with fields: domainName, rrType, rrClass,
+ * @return {Object} Returns an object with fields: domainName, rrType, rrClass,
  * and ttl.
  */
 exports.getCommonFieldsFromByteArrayReader = function(reader) {

@@ -13,6 +13,8 @@ var MAX_QUERY_CLASS = 65535;
 /**
  * A DNS Question section.
  *
+ * @constructor
+ *
  * @param {string} qName the name of the query
  * @param {integer} qType the type of the query
  * @param {integer} qClass the class of the query
@@ -84,6 +86,10 @@ exports.QuestionSection.prototype.unicastResponseRequested = function() {
 /**
  * Create a QuestionSection from a ByteArrayReader as serialized by
  * convertToByteArray().
+ *
+ * @param {ByteArrayReader} reader
+ *
+ * @return {QuestionSection}
  */
 exports.createQuestionFromReader = function(reader) {
   var queryName = dnsUtil.getDomainFromByteArrayReader(reader);

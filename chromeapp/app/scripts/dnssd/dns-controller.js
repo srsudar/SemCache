@@ -85,8 +85,8 @@ var ipv4Interfaces = [];
 /**
  * Returns all records known to this module.
  *
- * @return {Array<resource record>} all the resource records known to this
- * module
+ * @return {Array.<ARecord|PtrRecord|SrvRecord>} all the resource records known
+ * to this module
  */
 exports.getRecords = function() {
   return records;
@@ -96,7 +96,7 @@ exports.getRecords = function() {
  * Returns all the callbacks currently registered to be invoked with incoming
  * packets.
  *
- * @return {Set<function>} all the onReceive callbacks that have been
+ * @return {Set.<function>} all the onReceive callbacks that have been
  * registered
  */
 exports.getOnReceiveCallbacks = function() {
@@ -123,7 +123,7 @@ exports.isStarted = function() {
 /**
  * Return a cached array of IPv4 interfaces for this machine.
  *
- * @return {object} an array of all the IPv4 interfaces known to this machine.
+ * @return {Object} an array of all the IPv4 interfaces known to this machine.
  * The objects have the form: 
  * {
  *   name: string,
@@ -167,7 +167,7 @@ exports.removeOnReceiveCallback = function(callback) {
  * The listener that is attached to chrome.sockets.udp.onReceive.addListener
  * when the service is started.
  *
- * @param {object} info the object that is called by the chrome.sockets.udp
+ * @param {Object} info the object that is called by the chrome.sockets.udp
  * API. It is expected to look like:
  * {
  *   data: ArrayBuffer,
@@ -329,12 +329,12 @@ exports.createResponsePacket = function(queryPacket) {
  * any cache we are maintaining, unless those records originated from us and
  * are thus considered authoritative.
  *
- * @param {String} qName the query name
- * @param {number} qType the query type
- * @param {number} qClass the query class
+ * @param {string} qName the query name
+ * @param {integer} qType the query type
+ * @param {integer} qClass the query class
  *
- * @return {Array<resource record>} the array of resource records appropriate
- * for this query
+ * @return {Array.<ARecord|SrvRecord|PtrRecord>} the array of resource records
+ * appropriate for this query
  */
 exports.getResourcesForQuery = function(qName, qType, qClass) {
   // According to RFC section 6: 
@@ -383,14 +383,14 @@ exports.getResourcesForQuery = function(qName, qType, qClass) {
  * Return an Array with only the elements of resources that match the query
  * terms.
  * 
- * @param {Array<resource record>} resources an Array of resource records that
- * will be filtered
+ * @param {Array.<ARecord|PtrRecord|SrvRecord>} resources an Array of resource
+ * records that will be filtered
  * @param {string} qName the name of the query
  * @param {integer} qType the type of the query
  * @param {integer} qClass the class of the query
  *
- * @return {Array<resource record>} the subset of resources that match the
- * query terms
+ * @return {Array.<ARecord|PtrRecord|SrvRecord>} the subset of resources that
+ * match the query terms
  */
 exports.filterResourcesForQuery = function(resources, qName, qType, qClass) {
   var result = [];
@@ -420,7 +420,8 @@ exports.filterResourcesForQuery = function(resources, qName, qType, qClass) {
 /**
  * Returns a promise that resolves with the socket.
  *
- * @return {Promise} that resolves with a ChromeUdpSocket
+ * @return {Promise.<ChromeUdpSocket, Error>} that resolves with a
+ * ChromeUdpSocket
  */
 exports.getSocket = function() {
   if (exports.socket) {
@@ -468,7 +469,7 @@ exports.getSocket = function() {
  *
  * Returns a Promise that resolves when everything is up and running.
  *
- * @return {Promise}
+ * @return {Promise.<undefined, Error>}
  */
 exports.start = function() {
   // All the initialization we need to do is create the socket (so that we
@@ -482,8 +483,8 @@ exports.start = function() {
     .then(function initializedInterfaces() {
       resolve();
     })
-    .catch(function startWhenWrong() {
-      reject();
+    .catch(function startWentWrong(err) {
+      reject(err);
     });
   });
 };
@@ -491,7 +492,7 @@ exports.start = function() {
 /**
  * Initialize the cache of network interfaces known to this machine.
  *
- * @return {Promise} resolves when the cache is initialized
+ * @return {Promise.<undefined, Error>} resolves when the cache is initialized
  */
 exports.initializeNetworkInterfaceCache = function() {
   return new Promise(function(resolve, reject) {
@@ -546,7 +547,7 @@ exports.stop = function() {
  *
  * @param {DnsPacket} packet the packet to send
  * @param {string} address the address to which to send the packet
- * @param {number} port the port to sent the packet to
+ * @param {integer} port the port to sent the packet to
  */
 exports.sendPacket = function(packet, address, port) {
   // For now, change the ID of the packet. We want to allow debugging, so we
@@ -607,8 +608,8 @@ exports.query = function(queryName, queryType, queryClass) {
  *
  * @param {string} domainName the domain name for which to return A Records
  *
- * @return {Array<resource record>} the A Records corresponding to this domain
- * name
+ * @return {Array<ARecord|PtrRecord|SrvRecord>} the A Records corresponding to
+ * this domain name
  */
 exports.queryForARecord = function(domainName) {
   return exports.getResourcesForQuery(
@@ -626,7 +627,7 @@ exports.queryForARecord = function(domainName) {
  * @param {string} serviceName the serviceName for which to query for PTR
  * Records
  *
- * @return {Array<resource record> the PTR Records for the service
+ * @return {Array<ARecord|PtrRecord|SrvRecord>} the PTR Records for the service
  */
 exports.queryForPtrRecord = function(serviceName) {
   return exports.getResourcesForQuery(
@@ -644,7 +645,8 @@ exports.queryForPtrRecord = function(serviceName) {
  * @param {string} instanceName the instance name for which you are querying
  * for SRV Records
  *
- * @return {Array<resource record>} the SRV Records matching this query
+ * @return {Array<rARecord|PtrRecord|SrvRecord>} the SRV Records matching this
+ * query
  */
 exports.queryForSrvRecord = function(instanceName) {
   return exports.getResourcesForQuery(
@@ -658,7 +660,7 @@ exports.queryForSrvRecord = function(instanceName) {
  * Add a record corresponding to name to the internal data structures.
  *
  * @param {string} name the name of the resource record to add
- * @param {resource record} record the record to add
+ * @param {ARecord|PtrRecord|SrvRecord} record the record to add
  */
 exports.addRecord = function(name, record) {
   var existingRecords = records[name];

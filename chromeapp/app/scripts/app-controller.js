@@ -1,4 +1,3 @@
-/* globals Promise, fetch */
 'use strict';
 
 /**
@@ -35,7 +34,7 @@ exports.getServerController = function() {
  * Get the interface on which the app is listening for incoming http
  * connections.
  *
- * @return {object} an object of the form:
+ * @return {Object} an object of the form:
  * {
  *   name: string,
  *   address: string,
@@ -77,7 +76,7 @@ exports.getListUrlForSelf = function() {
 };
 
 /**
- * @return {object} the cache object that represents this machine's own cache.
+ * @return {Object} the cache object that represents this machine's own cache.
  */
 exports.getOwnCache = function() {
   var friendlyName = settings.getInstanceName();
@@ -111,7 +110,7 @@ exports.networkIsActive = function() {
  * people should be able to browse on their own machine even if the network
  * doesn't support UDP.
  *
- * @return {object} Object identical to that returned by getPeerCacheNames, but
+ * @return {Object} Object identical to that returned by getPeerCacheNames, but
  * for this device
  */
 exports.getOwnCacheName = function() {
@@ -137,8 +136,8 @@ exports.getOwnCacheName = function() {
  * @param {string} fullName the full <instance>.<type>.<domain> name of the
  * service
  *
- * @return {Promise} Promise that resolves with an object like the following,
- * or rejects if something went wrong.
+ * @return {Promise.<Object, Error>} Promise that resolves with an object like
+ * the following, or rejects if something went wrong.
  * {
  *   domainName: 'laptop.local',
  *   friendlyName: 'My Cache',
@@ -176,8 +175,8 @@ exports.resolveCache = function(fullName) {
  * be required to obtain operational information (like the IP address) of these
  * caches.
  *
- * @return {Promise} Promise that resolves a list of objects like the
- * following:
+ * @return {Promise.<Array.<Object>, Error>} Promise that resolves a list of
+ * objects like the following:
  * {
  *   serviceType: '_semcache._tcp',
  *   friendlyName: 'Magic Cache',
@@ -230,8 +229,9 @@ exports.getPeerCacheNames = function() {
  * The current machine's cache is always returned, and is always the first
  * element in the array.
  *
- * @return {Promise} Promise that resolves with an Array of object representing
- * operational info for each cache. An example element:
+ * @return {Promise.<Array.<Object>, Error>} Promise that resolves with an
+ * Array of object representing operational info for each cache. An example
+ * element:
  * {
  *   domainName: 'laptop.local',
  *   instanceName: 'My Cache._semcache._tcp.local',
@@ -289,8 +289,8 @@ exports.getBrowseableCaches = function() {
  * Start the mDNS, DNS-SD, and HTTP servers and register the local instance on
  * the network.
  *
- * @return {Promise} Promise that resolves if the service starts successfully,
- * else rejects with a message as to why.
+ * @return {Promise.<undefined, Error>} Promise that resolves if the service
+ * starts successfully, else rejects with a message as to why.
  */
 exports.startServersAndRegister = function() {
   return new Promise(function(resolve, reject) {
@@ -342,7 +342,8 @@ exports.stopServers = function() {
 /**
  * Start the app.
  *
- * @return {Promise} Promise that resolves when the app is started
+ * @return {Promise.<undefined, Error>} Promise that resolves when the app is
+ * started
  */
 exports.start = function() {
   extBridge.attachListeners();
@@ -368,14 +369,6 @@ exports.updateCachesForSettings = function() {
 };
 
 /**
- * A thin wrapper around fetch to allow mocking during tests. Expose parameters
- * are needed.
- */
-exports.fetch = function(url) {
-  return fetch(url);
-};
-
-/**
  * Return the absolute path to the base directory where SemCache is mounted on
  * the file system.
  *
@@ -393,6 +386,8 @@ exports.getAbsPathToBaseDir = function() {
 
 /**
  * Create a PeerAccessor based on the configured settings.
+ *
+ * @return {HttpPeerAccessor|WebrtcPeerAccessor}
  */
 exports.getPeerAccessor = function() {
   var transportMethod = settings.getTransportMethod();
@@ -411,7 +406,7 @@ exports.getPeerAccessor = function() {
  * @param {string} serviceName the full <instance>.<type>.<domain> name of the
  * service
  *
- * @returns {Promise.<JSON, Error>} Promise that resolves with the JSON
+ * @return {Promise.<Object, Error>} Promise that resolves with the JSON
  * response representing the list, or rejects with an Error
  */
 exports.getListFromService = function(serviceName) {
@@ -439,11 +434,12 @@ exports.getListFromService = function(serviceName) {
  * @param {captureUrl} captureUrl
  * @param {captureDate} captureDate
  * @param {string} mhtmlUrl the url of the mhtml file to save and open
- * @param {object} metadata the metadata that is stored along with the file
- * @param {String} ipaddr IP address of the peer
+ * @param {Object} metadata the metadata that is stored along with the file
+ * @param {string} ipaddr IP address of the peer
  * @param {integer} port port of the peer
  *
- * @return {Promise} a Promise that resolves after open has been called.
+ * @return {Promise.<number, Error>} a Promise that resolves with the total
+ * time to save the MHTML and open the file.
  */
 exports.saveMhtmlAndOpen = function(
   captureUrl,
