@@ -18165,9 +18165,23 @@ Polymer({
           .catch(err => {
             console.log('refresh went wrong: ' + err);
             thisEl.hideLoading();
+            thisEl.showError(err);
             resolve();
           });
       });
+    },
+
+    attached: function() {
+      var controlEl = this.$.control;
+      var errorEl = this.$.toasterror;
+      errorEl.fitInto = controlEl;
+    },
+
+    showError: function(msg) {
+      var errorEl = this.$.toasterror;
+      var text = 'Could not refresh. ' + msg;
+      console.log('Error: ', msg);
+      errorEl.show({ text: text });
     },
 
     showLoading: function() {

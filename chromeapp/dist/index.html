@@ -4186,10 +4186,14 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 
     </style>
 
-    <div class="cache-controls">
+    <div id="control" class="cache-controls">
       <paper-spinner id="loading" class="ringer hide" active=""></paper-spinner>
       <paper-fab icon="refresh" class="fab" on-tap="refresh"></paper-fab>
+
+      <paper-toast id="toasterror" duration="5000" text="Something went wrong">
+      </paper-toast>
     </div>
+
 
     <template is="dom-repeat" items="{{pageList}}">
       <cached-page-summary capture-url="{{item.captureUrl}}" capture-date="{{item.captureDate}}" access-path="{{item.accessPath}}" metadata="{{item.metadata}}">

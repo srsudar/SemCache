@@ -119,12 +119,16 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
           // We should show and hide the loading animation
           var showLoadingSpy = sinon.stub();
           var hideLoadingSpy = sinon.stub();
+          var showErrorSpy = sinon.stub();
           myEl.showLoading = showLoadingSpy;
           myEl.hideLoading = hideLoadingSpy;
+          myEl.showError = showErrorSpy;
+
+          var expectedErr = { msg: 'err for test' };
 
           var getListFromServiceSpy = sinon.stub();
           getListFromServiceSpy.returns(
-            Promise.reject('expected err for test')
+            Promise.reject(expectedErr)
           );
 
           getAppControllerModuleSpy = sinon.stub().returns({
@@ -133,12 +137,17 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
           myEl.getAppControllerModule = getAppControllerModuleSpy;
 
           myEl.refresh()
-            .then(() => {
-              assert.equal(showLoadingSpy.callCount, 1);
-              assert.equal(hideLoadingSpy.callCount, 1);
+          .then(() => {
+            assert.equal(showLoadingSpy.callCount, 1);
+            assert.equal(hideLoadingSpy.callCount, 1);
+            assert.equal(showErrorSpy.callCount, 1);
+            assert.equal(showErrorSpy.args[0][0], expectedErr);
 
-              done();
-            });
+            done();
+          })
+          .catch(err => {
+            done(err);
+          });
         });
 
       });

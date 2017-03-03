@@ -13,6 +13,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 <link rel="import" href="../../../bower_components/iron-icons/iron-icons.html">
 <link rel="import" href="../../../bower_components/paper-fab/paper-fab.html">
 <link rel="import" href="../../../bower_components/paper-spinner/paper-spinner.html">
+<link rel="import" href="../../../bower_components/paper-toast/paper-toast.html">
 <link rel="import" href="cached-page-summary.html">
 
 <dom-module id="cache-page-list">
@@ -52,10 +53,17 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 
     </style>
 
-    <div class="cache-controls">
+    <div id="control" class="cache-controls">
       <paper-spinner id="loading" class="ringer hide" active></paper-spinner>
       <paper-fab icon="refresh" class="fab" on-tap="refresh"></paper-fab>
+
+      <paper-toast
+        id="toasterror"
+        duration="5000"
+        text="Something went wrong">
+      </paper-toast>
     </div>
+
 
     <template is="dom-repeat" items="{{pageList}}">
       <cached-page-summary
@@ -117,9 +125,23 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
           .catch(err => {
             console.log('refresh went wrong: ' + err);
             thisEl.hideLoading();
+            thisEl.showError(err);
             resolve();
           });
       });
+    },
+
+    attached: function() {
+      var controlEl = this.$.control;
+      var errorEl = this.$.toasterror;
+      errorEl.fitInto = controlEl;
+    },
+
+    showError: function(msg) {
+      var errorEl = this.$.toasterror;
+      var text = 'Could not refresh. ' + msg;
+      console.log('Error: ', msg);
+      errorEl.show({ text: text });
     },
 
     showLoading: function() {
