@@ -23109,6 +23109,15 @@ Polymer({
 Polymer({
       is: 'start-app-button',
 
+      properties: {
+        started: {
+          type: Boolean,
+          notify: true,
+          reflectToAttribute: true,
+          value: false
+        }
+      },
+
       getSettingsModule: function() {
         var result = require('settings');
         return result;
@@ -23119,25 +23128,39 @@ Polymer({
         return appController;
       },
 
+      shouldStart: function() {
+        var paperButton = this.$$('#start-app');
+        return paperButton.checked;
+      },
+
       onChange: function() {
-        var thisEl = this.$$('#start-app');
-        var isStart = thisEl.checked;
+        var thisEl = this;
         var appController = this.getAppControllerModule();
-        if (isStart) {
-          appController.startServersAndRegister()
-          .then(result => {
-            console.log('Started: ', result);
-          })
-          .catch(err => {
-            console.log('Start failed: ', err);
-            thisEl.checked = false;
-            this.$$('#failed-content').textContent = err.message;
-            this.$$('#failed-dialog').open();
-          });
-        } else {
-          // shut it down.
-          appController.stopServers();
-        }
+        var isStart = this.shouldStart();
+        var paperButton = this.$$('#start-app');
+        return new Promise(function(resolve, reject) {
+          if (isStart) {
+            appController.startServersAndRegister()
+            .then(result => {
+              console.log('Started: ', result);
+              thisEl.started = true;
+              resolve();
+            })
+            .catch(err => {
+              console.log('Start failed: ', err);
+              paperButton.checked = false;
+              thisEl.started = false;
+              thisEl.$$('#failed-content').textContent = err.message;
+              thisEl.$$('#failed-dialog').open();
+              reject(err);
+            });
+          } else {
+            // shut it down.
+            appController.stopServers();
+            thisEl.started = false;
+            resolve();
+          }
+        });
       }
     });
 Polymer({
@@ -23251,11 +23274,14 @@ Polymer({
          * while checking its pocket watch.
          */
         fancy: Boolean,
+        started: {
+          type: Boolean,
+        },
         caches: {
           type: Array,
           notify: true,
           reflectToAttribute: true
-        }
+        },
       },
       refresh: function() {
         console.log('HIT REFRESH CACHE LIST');
@@ -23355,12 +23381,10 @@ Polymer({
       is: 'my-app',
 
       properties: {
-
         page: {
           type: String,
           reflectToAttribute: true
         },
-
       },
 
       observers: [

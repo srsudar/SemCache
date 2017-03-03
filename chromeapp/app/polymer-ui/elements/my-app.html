@@ -83,8 +83,8 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
       <!-- Drawer content -->
       <app-drawer>
         <app-toolbar>SemCache</app-toolbar>
-        <start-app-button></start-app-button>
-        <cache-provider caches="{{retrievedCaches}}"></cache-provider>
+        <start-app-button started={{app-started}}></start-app-button>
+        <cache-provider caches="{{retrievedCaches}}" started={{app-started}}></cache-provider>
         <cache-selector incoming="{{page}}" pages="{{retrievedCaches}}">
         </cache-selector>
       </app-drawer>
@@ -117,12 +117,10 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
       is: 'my-app',
 
       properties: {
-
         page: {
           type: String,
           reflectToAttribute: true
         },
-
       },
 
       observers: [

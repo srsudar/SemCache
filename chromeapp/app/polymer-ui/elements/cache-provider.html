@@ -52,7 +52,8 @@ Provide the list of caches for other elements to consume.
 
     <div class="cache-controls">
       <paper-spinner id="loading" class="ringer hide" active></paper-spinner>
-      <paper-fab icon="refresh" class="fab" on-tap="refresh"></paper-fab>
+      <paper-fab icon="refresh" class="fab" on-tap="refresh"
+        disabled={{!started}}></paper-fab>
     </div>
 
   </template>
@@ -67,11 +68,14 @@ Provide the list of caches for other elements to consume.
          * while checking its pocket watch.
          */
         fancy: Boolean,
+        started: {
+          type: Boolean,
+        },
         caches: {
           type: Array,
           notify: true,
           reflectToAttribute: true
-        }
+        },
       },
       refresh: function() {
         console.log('HIT REFRESH CACHE LIST');

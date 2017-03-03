@@ -6733,7 +6733,7 @@ Provide the list of caches for other elements to consume.
 
     <div class="cache-controls">
       <paper-spinner id="loading" class="ringer hide" active=""></paper-spinner>
-      <paper-fab icon="refresh" class="fab" on-tap="refresh"></paper-fab>
+      <paper-fab icon="refresh" class="fab" on-tap="refresh" disabled="{{!started}}"></paper-fab>
     </div>
 
   </template>
@@ -6844,8 +6844,8 @@ Example:
       <!-- Drawer content -->
       <app-drawer>
         <app-toolbar>SemCache</app-toolbar>
-        <start-app-button></start-app-button>
-        <cache-provider caches="{{retrievedCaches}}"></cache-provider>
+        <start-app-button started="{{app-started}}"></start-app-button>
+        <cache-provider caches="{{retrievedCaches}}" started="{{app-started}}"></cache-provider>
         <cache-selector incoming="{{page}}" pages="{{retrievedCaches}}">
         </cache-selector>
       </app-drawer>

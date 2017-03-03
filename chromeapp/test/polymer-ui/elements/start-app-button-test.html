@@ -33,9 +33,12 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
       suite('<start-app-button>', function() {
 
         var myEl;
+        var appcMock;
 
         setup(function() {
+          appcMock = sinon.stub();
           myEl = fixture('my-fixture');
+          myEl.getAppControllerModule = sinon.stub().returns(appcMock);
         });
 
         test('failure dialog starts hidden', function() {
@@ -43,9 +46,58 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
           assert.equal(dialog.opened, false);
         });
 
-        // TODO:
-        // Would like to test onChange calls start functions, but can't find a
-        // way to easily hook the tests in.
+        test('when app opens, is stopped' ,function() {
+          assert.equal(myEl.started, false);
+        });
+
+        test('app starts and stops', function(done) {
+          appcMock.startServersAndRegister = sinon.stub()
+            .returns(Promise.resolve());
+          appcMock.stopServers = sinon.stub();
+          myEl.shouldStart = sinon.stub().returns(true);
+
+          myEl.onChange()
+          .then(() => {
+            var started = myEl.started;
+            // Should be on
+            assert.equal(myEl.started, true);
+          })
+          .then(() => {
+            // Now turn it off.
+            myEl.shouldStart = sinon.stub().returns(false);
+            return myEl.onChange();
+          })
+          .then(() => {
+            assert.equal(myEl.started, false);
+            assert.equal(appcMock.stopServers.callCount, 1);
+            done();
+          })
+          .catch(err => {
+            done(err);
+          });
+        });
+
+        test('app stops if error on start', function(done) {
+          var expected = { error: 'could not start' };
+          appcMock.startServersAndRegister = sinon.stub()
+            .returns(Promise.reject(expected));
+          myEl.shouldStart = sinon.stub().returns(true);
+
+          myEl.onChange()
+          .then(() => {
+            done('should not have resolved');
+          })
+          .catch(actual => {
+            assert.equal(actual, expected);
+            assert.equal(myEl.started, false);
+            done();
+          })
+          .catch(err => {
+            // Assertion errors throw as errors, so we need this last catch to
+            // end the test in case we fail an assertion
+            done(err);
+          });
+        });
       });
     </script>
 
