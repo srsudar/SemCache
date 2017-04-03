@@ -222,6 +222,53 @@ test('savePage resolves if callback invoked', function(t) {
     });
 });
 
+test('isPageSaved resolves response from app', function(t) {
+  var timeout = 7887;
+  var url = 'www.nytimes.com';
+  var options = { localhost: true };
+  var message = {
+    type: 'query',
+    params: {
+      url: url,
+      options: options 
+    }
+  };
+
+  var expected = { msg: 'why yes! it is available' };
+  var sendMessageForResponseSpy = sinon.stub().resolves(expected);
+  messaging.sendMessageForResponse = sendMessageForResponseSpy;
+
+  messaging.isPageSaved(url, options, timeout)
+  .then(actual => {
+    t.deepEqual(actual, expected);
+    t.deepEqual(sendMessageForResponseSpy.args[0], [message, timeout]);
+    end(t);
+  })
+  .catch(err => {
+    t.fail(err);
+    end(t);
+  });
+});
+
+test('isPageSaved rejects if sendMessageForResponse rejects', function(t) {
+  var url = 'carefullycraftedtobreak.com';
+  var options = { localhost: false };
+
+  var expected = { msg: 'you little devil!' };
+  var sendMessageForResponseSpy = sinon.stub().rejects(expected);
+  messaging.sendMessageForResponse = sendMessageForResponseSpy;
+
+  messaging.isPageSaved(url, options)
+  .then(actual => {
+    t.fail(actual);
+    end(t);
+  })
+  .catch(actual => {
+    t.deepEqual(actual, expected);
+    end(t);
+  });
+});
+
 test('openUrl calls chromeTabs correctly', function(t) {
   var updateSpy = sinon.spy();
 

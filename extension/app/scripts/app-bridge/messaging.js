@@ -77,15 +77,21 @@ exports.sendMessageForResponse = function(message, timeout) {
  *
  * @param {string} url the url of the page you are querying for
  * @param {Object} options
+ * @param {number} timeout number of milliseconds to wait. If falsey, uses
+ * default.
  *
- * @return {Promise.<Object|null, Error>} Promise that resolves with the
- * result of the query. If the page is not available, the result will be null.
- * If the page is available, the object will include information about how to
- * access the page.
+ * @return {Promise.<Object, Error>} Promise that resolves with the
+ * result of the query.
  */
-exports.isPageAvailableLocally = function(url, options) {
-  console.log(url);
-  console.log(options);
+exports.isPageSaved = function(url, options, timeout) {
+  var message = {
+    type: 'query',
+    params: {
+      url: url,
+      options: options
+    }
+  };
+  return exports.sendMessageForResponse(message, timeout);
 };
 
 /**
