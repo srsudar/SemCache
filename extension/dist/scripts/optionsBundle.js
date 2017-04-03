@@ -1,5 +1,4 @@
 require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
-/* globals Promise, fetch */
 'use strict';
 
 /**
@@ -7,13 +6,16 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
  */
 
 var datastore = require('./persistence/datastore');
+var dnsController = require('./dnssd/dns-controller');
+var dnssdSem = require('./dnssd/dns-sd-semcache');
+var evaluation = require('./evaluation');
 var extBridge = require('./extension-bridge/messaging');
 var fileSystem = require('./persistence/file-system');
+var ifCommon = require('./peer-interface/common');
+var ifHttp = require('./peer-interface/http-impl');
+var ifWebrtc = require('./peer-interface/webrtc-impl');
 var settings = require('./settings');
-var dnssdSem = require('./dnssd/dns-sd-semcache');
 var serverApi = require('./server/server-api');
-var dnsController = require('./dnssd/dns-controller');
-var evaluation = require('./evaluation');
 
 var ABS_PATH_TO_BASE_DIR = null;
 
@@ -33,7 +35,7 @@ exports.getServerController = function() {
  * Get the interface on which the app is listening for incoming http
  * connections.
  *
- * @return {object} an object of the form:
+ * @return {Object} an object of the form:
  * {
  *   name: string,
  *   address: string,
@@ -75,7 +77,7 @@ exports.getListUrlForSelf = function() {
 };
 
 /**
- * @return {object} the cache object that represents this machine's own cache.
+ * @return {Object} the cache object that represents this machine's own cache.
  */
 exports.getOwnCache = function() {
   var friendlyName = settings.getInstanceName();
@@ -109,7 +111,7 @@ exports.networkIsActive = function() {
  * people should be able to browse on their own machine even if the network
  * doesn't support UDP.
  *
- * @return {object} Object identical to that returned by getPeerCacheNames, but
+ * @return {Object} Object identical to that returned by getPeerCacheNames, but
  * for this device
  */
 exports.getOwnCacheName = function() {
@@ -135,8 +137,8 @@ exports.getOwnCacheName = function() {
  * @param {string} fullName the full <instance>.<type>.<domain> name of the
  * service
  *
- * @return {Promise} Promise that resolves with an object like the following,
- * or rejects if something went wrong.
+ * @return {Promise.<Object, Error>} Promise that resolves with an object like
+ * the following, or rejects if something went wrong.
  * {
  *   domainName: 'laptop.local',
  *   friendlyName: 'My Cache',
@@ -156,12 +158,12 @@ exports.resolveCache = function(fullName) {
     }
     // We need to hit the network.
     dnssdSem.resolveCache(fullName)
-      .then(cache => {
-        resolve(cache);
-      })
-      .catch(err => {
-        reject(err);
-      });
+    .then(cache => {
+      resolve(cache);
+    })
+    .catch(err => {
+      reject(err);
+    });
   });
 };
 
@@ -174,8 +176,8 @@ exports.resolveCache = function(fullName) {
  * be required to obtain operational information (like the IP address) of these
  * caches.
  *
- * @return {Promise} Promise that resolves a list of objects like the
- * following:
+ * @return {Promise.<Array.<Object>, Error>} Promise that resolves a list of
+ * objects like the following:
  * {
  *   serviceType: '_semcache._tcp',
  *   friendlyName: 'Magic Cache',
@@ -199,22 +201,25 @@ exports.getPeerCacheNames = function() {
     return Promise.resolve(result);
   }
 
-  return new Promise(function(resolve) {
+  return new Promise(function(resolve, reject) {
     dnssdSem.browseForSemCacheInstanceNames()
-      .then(instanceNames => {
-        // sort by instance name.
-        instanceNames.sort(function(a, b) {
-          return a.serviceName.localeCompare(b.serviceName);
-        });
-        instanceNames.forEach(instance => {
-          if (instance.serviceName === thisCacheName.serviceName) {
-            // We've found ourselves. Don't add it.
-            return;
-          }
-          result.push(instance);
-        });
-        resolve(result);
+    .then(instanceNames => {
+      // sort by instance name.
+      instanceNames.sort(function(a, b) {
+        return a.serviceName.localeCompare(b.serviceName);
       });
+      instanceNames.forEach(instance => {
+        if (instance.serviceName === thisCacheName.serviceName) {
+          // We've found ourselves. Don't add it.
+          return;
+        }
+        result.push(instance);
+      });
+      resolve(result);
+    })
+    .catch(err => {
+      reject(err);
+    });
   });
 };
 
@@ -225,8 +230,9 @@ exports.getPeerCacheNames = function() {
  * The current machine's cache is always returned, and is always the first
  * element in the array.
  *
- * @return {Promise} Promise that resolves with an Array of object representing
- * operational info for each cache. An example element:
+ * @return {Promise.<Array.<Object>, Error>} Promise that resolves with an
+ * Array of object representing operational info for each cache. An example
+ * element:
  * {
  *   domainName: 'laptop.local',
  *   instanceName: 'My Cache._semcache._tcp.local',
@@ -254,26 +260,29 @@ exports.getBrowseableCaches = function() {
 
   var ipAddress = exports.getListeningHttpInterface().address;
 
-  return new Promise(function(resolve) {
+  return new Promise(function(resolve, reject) {
     dnssdSem.browseForSemCacheInstances()
-      .then(instances => {
-        // sort by instance name.
-        instances.sort(function(a, b) {
-          return a.instanceName.localeCompare(b.instanceName);
-        });
-        instances.forEach(instance => {
-          if (instance.ipAddress === ipAddress) {
-            // We've found ourselves. Don't add it.
-            return;
-          }
-          instance.listUrl = serverApi.getListPageUrlForCache(
-            instance.ipAddress,
-            instance.port
-          );
-          result.push(instance);
-        });
-        resolve(result);
+    .then(instances => {
+      // sort by instance name.
+      instances.sort(function(a, b) {
+        return a.instanceName.localeCompare(b.instanceName);
       });
+      instances.forEach(instance => {
+        if (instance.ipAddress === ipAddress) {
+          // We've found ourselves. Don't add it.
+          return;
+        }
+        instance.listUrl = serverApi.getListPageUrlForCache(
+          instance.ipAddress,
+          instance.port
+        );
+        result.push(instance);
+      });
+      resolve(result);
+    })
+    .catch(err => {
+      reject(err);
+    });
   });
 };
 
@@ -281,8 +290,8 @@ exports.getBrowseableCaches = function() {
  * Start the mDNS, DNS-SD, and HTTP servers and register the local instance on
  * the network.
  *
- * @return {Promise} Promise that resolves if the service starts successfully,
- * else rejects with a message as to why.
+ * @return {Promise.<undefined, Error>} Promise that resolves if the service
+ * starts successfully, else rejects with a message as to why.
  */
 exports.startServersAndRegister = function() {
   return new Promise(function(resolve, reject) {
@@ -334,18 +343,22 @@ exports.stopServers = function() {
 /**
  * Start the app.
  *
- * @return {Promise} Promise that resolves when the app is started
+ * @return {Promise.<undefined, Error>} Promise that resolves when the app is
+ * started
  */
 exports.start = function() {
   extBridge.attachListeners();
 
-  return new Promise(function(resolve) {
-      settings.init()
-      .then(settingsObj => {
-        console.log('initialized settings: ', settingsObj);
-        exports.updateCachesForSettings();
-        resolve();
-      });
+  return new Promise(function(resolve, reject) {
+    settings.init()
+    .then(settingsObj => {
+      console.log('initialized settings: ', settingsObj);
+      exports.updateCachesForSettings();
+      resolve();
+    })
+    .catch(err => {
+      reject(err);
+    });
   });
 };
 
@@ -354,14 +367,6 @@ exports.start = function() {
  */
 exports.updateCachesForSettings = function() {
   exports.setAbsPathToBaseDir(settings.getAbsPath());
-};
-
-/**
- * A thin wrapper around fetch to allow mocking during tests. Expose parameters
- * are needed.
- */
-exports.fetch = function(url) {
-  return fetch(url);
 };
 
 /**
@@ -381,328 +386,175 @@ exports.getAbsPathToBaseDir = function() {
 };
 
 /**
+ * Create a PeerAccessor based on the configured settings.
+ *
+ * @return {HttpPeerAccessor|WebrtcPeerAccessor}
+ */
+exports.getPeerAccessor = function() {
+  var transportMethod = settings.getTransportMethod();
+  if (transportMethod === 'http') {
+    return new ifHttp.HttpPeerAccessor(); 
+  } else if (transportMethod === 'webrtc') {
+    return new ifWebrtc.WebrtcPeerAccessor(); 
+  } else {
+    throw new Error('Unrecognized transport method: ' + transportMethod);
+  }
+};
+
+/**
+ * Obtain the list of cached pages from a service, given its full name.
+ *
+ * @param {string} serviceName the full <instance>.<type>.<domain> name of the
+ * service
+ *
+ * @return {Promise.<Object, Error>} Promise that resolves with the JSON
+ * response representing the list, or rejects with an Error
+ */
+exports.getListFromService = function(serviceName) {
+  return new Promise(function(resolve, reject) {
+    var peerAccessor = exports.getPeerAccessor();
+    exports.resolveCache(serviceName)
+    .then(cacheInfo => {
+      var listParams = ifCommon.createListParams(
+        cacheInfo.ipAddress, cacheInfo.port, cacheInfo.listUrl
+      );
+      return peerAccessor.getList(listParams);
+    })
+    .then(pageList => {
+      resolve(pageList);
+    })
+    .catch(err => {
+      reject(err);
+    });
+  });
+};
+
+/**
  * Save the MHTML file at mhtmlUrl into the local cache and open the URL.
  *
  * @param {captureUrl} captureUrl
  * @param {captureDate} captureDate
  * @param {string} mhtmlUrl the url of the mhtml file to save and open
- * @param {object} metadata the metadata that is stored along with the file
+ * @param {Object} metadata the metadata that is stored along with the file
+ * @param {string} ipaddr IP address of the peer
+ * @param {integer} port port of the peer
  *
- * @return {Promise} a Promise that resolves after open has been called.
+ * @return {Promise.<number, Error>} a Promise that resolves with the total
+ * time to save the MHTML and open the file.
  */
 exports.saveMhtmlAndOpen = function(
   captureUrl,
   captureDate,
   mhtmlUrl,
-  metadata
+  metadata,
+  ipaddr,
+  port
 ) {
-  return new Promise(function(resolve) {
+  return new Promise(function(resolve, reject) {
     var start = evaluation.getNow();
     var streamName = 'open_' + captureUrl;
-    exports.fetch(mhtmlUrl)
-      .then(response => {
-        return response.blob();
-      })
-      .then(mhtmlBlob => {
-        return datastore.addPageToCache(
-          captureUrl,
-          captureDate,
-          mhtmlBlob,
-          metadata
-        );
-      })
-      .then((entry) => {
-        var fileUrl = fileSystem.constructFileSchemeUrl(
-          exports.getAbsPathToBaseDir(),
-          entry.fullPath
-        );
-        extBridge.sendMessageToOpenUrl(fileUrl);
-        var end = evaluation.getNow();
-        var totalTime = end - start;
-        evaluation.logTime(streamName, totalTime);
-        console.warn('totalTime to fetch: ', totalTime);
-        resolve(totalTime);
-      });
-  });
-};
-
-},{"./dnssd/dns-controller":9,"./dnssd/dns-sd-semcache":11,"./evaluation":16,"./extension-bridge/messaging":17,"./persistence/datastore":18,"./persistence/file-system":20,"./server/server-api":23,"./server/server-controller":24,"./settings":25}],2:[function(require,module,exports){
-/* globals Promise, chrome */
-'use strict';
-
-/**
- * This module provides a wrapper around the callback-heavy chrome.fileSystem
- * API and provides an alternative based on Promises.
- */
-
-/**
- * @param {Entry} entry
- *
- * @return {Promise} Promise that resolves with the display path
- */
-exports.getDisplayPath = function(entry) {
-  return new Promise(function(resolve) {
-    chrome.fileSystem.getDisplayPath(entry, function(displayPath) {
-      resolve(displayPath);
+    var params = ifCommon.createFileParams(ipaddr, port, mhtmlUrl);
+    exports.getPeerAccessor().getFileBlob(params)
+    .then(blob => {
+      return datastore.addPageToCache(
+        captureUrl,
+        captureDate,
+        blob,
+        metadata
+      );
+    })
+    .then((entry) => {
+      var fileUrl = fileSystem.constructFileSchemeUrl(
+        exports.getAbsPathToBaseDir(),
+        entry.fullPath
+      );
+      extBridge.sendMessageToOpenUrl(fileUrl);
+      var end = evaluation.getNow();
+      var totalTime = end - start;
+      evaluation.logTime(streamName, totalTime);
+      console.warn('totalTime to fetch: ', totalTime);
+      resolve(totalTime);
+    })
+    .catch(err => {
+      reject(err);
     });
   });
 };
 
-/**
- * @param {Entry} entry the starting entry that will serve as the base for a
- * writable entry
- *
- * @return {Promise} Promise that resolves with a writable entry
- */
-exports.getWritableEntry = function(entry) {
-  return new Promise(function(resolve) {
-    chrome.fileSystem.getWritableEntry(entry, function(writableEntry) {
-      resolve(writableEntry);
-    });
-  });
-};
-
-/**
- * @param {Entry} entry
- *
- * @return {Promise} Promise that resolves with a boolean
- */
-exports.isWritableEntry = function(entry) {
-  return new Promise(function(resolve) {
-    chrome.fileSystem.isWritableEntry(entry, function(isWritable) {
-      resolve(isWritable);
-    });
-  });
-};
-
-/**
- * The original Chrome callback takes two parameters: an entry and an array of
- * FileEntries. No examples appear to make use of this second parameter,
- * however, nor is it documented what the second parameter is for. For this
- * reason we return only the first parameter, but callers should be aware of
- * this difference compared to the original API.
- *
- * @param {object} options
- *
- * @return {Promise} Promise that resolves with an Entry
- */
-exports.chooseEntry = function(options) {
-  return new Promise(function(resolve) {
-    chrome.fileSystem.chooseEntry(options, function(entry, arr) {
-      if (arr) {
-        console.warn(
-          'chrome.fileSystem.chooseEntry callback invoked with a 2nd ' +
-            'parameter that is being ignored: ',
-            arr);
-      }
-      resolve(entry);
-    });
-  });
-};
-
-/**
- * @param {string} id id of a previous entry
- *
- * @return {Promise} Promise that resolves with an Entry
- */
-exports.restoreEntry = function(id) {
-  return new Promise(function(resolve) {
-    chrome.fileSystem.restoreEntry(id, function(entry) {
-      resolve(entry);
-    });
-  });
-};
-
-/**
- * @param {string} id
- *
- * @return {Promise} Promise that resolves with a boolean
- */
-exports.isRestorable = function(id) {
-  return new Promise(function(resolve) {
-    chrome.fileSystem.isRestorable(id, function(isRestorable) {
-      resolve(isRestorable);
-    });
-  });
-};
-
-/**
- * @param {Entry} entry
- *
- * @return {Promise} Promise that resolves with a string id that can be used to
- * restore the Entry in the future. The underlying Chrome API is a synchronous
- * call, but this is provided as a Promise to keep API parity with the rest of
- * the module. A synchronous version is provided via retainEntrySync.
- */
-exports.retainEntry = function(entry) {
-  var id = chrome.fileSystem.retainEntry(entry);
-  return Promise.resolve(id);
-};
-
-/**
- * @param {Entry} entry
- *
- * @return {string} id that can be used to restore the Entry
- */
-exports.retainEntrySync = function(entry) {
-  return chrome.fileSystem.retainEntry(entry);
-};
-
-/**
- * @param {object} options
- *
- * @return {Promise} Promise that resolves with a FileSystem
- */
-exports.requestFileSystem = function(options) {
-  return new Promise(function(resolve) {
-    chrome.fileSystem.requestFileSystem(options, function(fileSystem) {
-      resolve(fileSystem);
-    });
-  });
-};
-
-/**
- * @return {Promise} Promise that resolves with a FileSystem
- */
-exports.getVolumeList = function() {
-  return new Promise(function(resolve) {
-    chrome.fileSystem.getVolumeList(function(fileSystem) {
-      resolve(fileSystem);
-    });
-  });
-};
-
-},{}],3:[function(require,module,exports){
+},{"./dnssd/dns-controller":8,"./dnssd/dns-sd-semcache":10,"./evaluation":15,"./extension-bridge/messaging":16,"./peer-interface/common":17,"./peer-interface/http-impl":18,"./peer-interface/webrtc-impl":19,"./persistence/datastore":20,"./persistence/file-system":22,"./server/server-api":25,"./server/server-controller":26,"./settings":27}],2:[function(require,module,exports){
 /* globals chrome */
 'use strict';
 
 /**
- * Add a callback function via chrome.runtime.onMessageExternal.addListener.
- * @param {Function} fn
+ * This is a thin wrapper around the chrome-promise library. Relying on this
+ * rather than the global will allow us to more easily inject functionality
+ * during testing.
  */
-exports.addOnMessageExternalListener = function(fn) {
-  chrome.runtime.onMessageExternal.addListener(fn);
-};
+
+var ChromePromise = require('chrome-promise');
+
+var CHROMEP_SINGLETON = null;
 
 /**
- * Send a message using the chrome.runtime.sendMessage API.
+ * Return the chrome-promise singleton.
  *
- * @param {string} id
- * @param {any} message must be JSON-serializable
+ * @return {chrome-promise} An object that mirrors the chrome global but where
+ * all functions follow a Promise API.
  */
-exports.sendMessage = function(id, message) {
-  chrome.runtime.sendMessage(id, message);
-};
-
-},{}],4:[function(require,module,exports){
-/* globals Promise, chrome */
-'use strict';
-
-/**
- * This module provides a wrapper around the chrome.storage.local API and
- * provides an alternative based on Promises.
- */
-
-/**
- * @param {boolean} useSync
- *
- * @return {StorageArea} chrome.storage.sync or chrome.storage.local depending
- * on the value of useSync
- */
-function getStorageArea(useSync) {
-  if (useSync) {
-    return chrome.storage.sync;
-  } else {
-    return chrome.storage.local;
+exports.getChromep = function() {
+  if (!CHROMEP_SINGLETON) {
+    CHROMEP_SINGLETON = new ChromePromise();
   }
-}
-
-/**
- * @param {string|Array<string>} keyOrKeys
- * @param {boolean} useSync true to use chrome.storage.sync, otherwise will use
- * chrome.storage.local
- *
- * @return {Promise} Promise that resolves with an object of key value mappings
- */
-exports.get = function(keyOrKeys, useSync) {
-  var storageArea = getStorageArea(useSync);
-  return new Promise(function(resolve) {
-    storageArea.get(keyOrKeys, function(items) {
-      resolve(items);
-    });
-  });
+  return CHROMEP_SINGLETON;
 };
 
 /**
- * @param {string|Array<string>} keyOrKeys
- * @param {boolean} useSync true to use chrome.storage.sync, otherwise will use
- * chrome.storage.local
- *
- * @return {Promise} Promise that resolves with an integer of the number of
- * bytes in use for the given key or keys
+ * @return {Object} the Promisified version of chrome.fileSystem
  */
-exports.getBytesInUse = function(keyOrKeys, useSync) {
-  var storageArea = getStorageArea(useSync);
-  return new Promise(function(resolve) {
-    storageArea.getBytesInUse(keyOrKeys, function(numBytes) {
-      resolve(numBytes);
-    });
-  });
+exports.getFileSystem = function() {
+  return exports.getChromep().fileSystem;
 };
 
 /**
- * @param {object} items an object of key value mappings
- * @param {boolean} useSync true to use chrome.storage.sync, otherwise will use
- * chrome.storage.local
- *
- * @return {Promise} Promise that resolves when the operation completes
+ * @return {Object} the Promisified version of chrome.storage.local
  */
-exports.set = function(items, useSync) {
-  var storageArea = getStorageArea(useSync);
-  return new Promise(function(resolve) {
-    storageArea.set(items, function() {
-      resolve();
-    });
-  });
+exports.getStorageLocal = function() {
+  return exports.getChromep().storage.local;
 };
 
 /**
- * @param {string|Array<string>} keyOrKeys
- * @param {boolean} useSync true to use chrome.storage.sync, otherwise will use
- * chrome.storage.local
- *
- * @return {Promise} Promise that resolves when the operation completes
+ * @return {Object} the Promisified version of chrome.sockets.udp
  */
-exports.remove = function(keyOrKeys, useSync) {
-  var storageArea = getStorageArea(useSync);
-  return new Promise(function(resolve) {
-    storageArea.remove(keyOrKeys, function() {
-      resolve();
-    });
-  });
+exports.getUdp = function() {
+  return exports.getChromep().sockets.udp;
 };
 
 /**
- * @param {boolean} useSync true to use chrome.storage.sync, otherwise will use
- * chrome.storage.local
- *
- * @return {Promise} Promise that resolves when the operation completes
+ * @return {Object} the Promisified version of chrome.runtime
  */
-exports.clear = function(useSync) {
-  var storageArea = getStorageArea(useSync);
-  return new Promise(function(resolve) {
-    storageArea.clear(function() {
-      resolve();
-    });
-  });
+exports.getRuntime = function() {
+  return exports.getChromep().runtime;
 };
 
-},{}],5:[function(require,module,exports){
-/* globals Promise, chrome */
+/**
+ * @return {chrome.runtime} the bare chrome.runtime object that has not been
+ * wrapped by chrome-promise
+ */
+exports.getRuntimeBare = function() {
+  return chrome.runtime;
+};
+
+},{"chrome-promise":38}],3:[function(require,module,exports){
+/* globals chrome */
 'use strict';
+
+var util = require('./util');
 
 var DEBUG = false;
 
+/**
+ * @constructor
+ */
 exports.ChromeUdpSocket = function ChromeUdpSocket(socketInfo) {
   if (!(this instanceof ChromeUdpSocket)) {
     throw new Error('ChromeUdpSocket must be called with new');
@@ -714,36 +566,63 @@ exports.ChromeUdpSocket = function ChromeUdpSocket(socketInfo) {
 /**
  * Send data over the port and return a promise with the sendInfo result.
  * Behaves as a thin wrapper around chromeUdp.send.
+ *
+ * @param {ArrayBuffer} arrayBuffer
+ * @param {string} address
+ * @param {integer} port
+ *
+ * @return {Promise.<any, Error>}
  */
 exports.ChromeUdpSocket.prototype.send = function(arrayBuffer, address, port) {
   return exports.send(this.socketId, arrayBuffer, address, port);
 };
 
 /**
- * Add listener via call to chrome.sockets.udp.onReceive.addListener.
+ * Add listener via call to util.getUdp().onReceive.addListener.
+ *
+ * @param {function} listener
  */
 exports.addOnReceiveListener = function(listener) {
-  chrome.sockets.udp.onReceive.addListener(listener);
+  util.getUdp().onReceive.addListener(listener);
 };
 
 /**
- * Add listener via call to chrome.sockets.udp.onReceiveError.addListener.
+ * Add listener via call to util.getUdp().onReceiveError.addListener.
+ *
+ * @param {function} listener
  */
 exports.addOnReceiveErrorListener = function(listener) {
-  chrome.sockets.udp.onReceiveError.addListener(listener);
+  util.getUdp().onReceiveError.addListener(listener);
 };
 
+/**
+ * @param {SocketProperties} properties optional
+ *
+ * @return {Promise.<object, Error>} Promise that resolves with a socket info
+ * object or rejects with an Error
+ */
 exports.create = function(obj) {
-  return new Promise(function(resolve) {
-    chrome.sockets.udp.create(obj, function(socketInfo) {
-      resolve(socketInfo);
+  return new Promise(function(resolve, reject) {
+    util.getUdp().create(obj, function(socketInfo) {
+      if (util.wasError()) {
+        reject(util.getError());
+      } else {
+        resolve(socketInfo);
+      }
     });
   });
 };
 
+/**
+ * @param {integer} socketId
+ * @param {string} address
+ * @param {integer} port
+ *
+ * @return {Promise.<integer, Error>}
+ */
 exports.bind = function(socketId, address, port) {
   return new Promise(function(resolve, reject) {
-    chrome.sockets.udp.bind(socketId, address, port, function(result) {
+    util.getUdp().bind(socketId, address, port, function(result) {
       if (result < 0) {
         console.log('chromeUdp.bind: result < 0, rejecting');
         console.log('    socketId: ', socketId);
@@ -757,6 +636,14 @@ exports.bind = function(socketId, address, port) {
   });
 };
 
+/**
+ * @param {integer} socketId
+ * @param {ArrayBuffer} arrayBuffer
+ * @param {string} address
+ * @param {integer} port
+ *
+ * @return {Promise.<integer, Error>}
+ */
 exports.send = function(socketId, arrayBuffer, address, port) {
   if (!socketId || !arrayBuffer || !address || !port) {
     console.warn(
@@ -771,7 +658,7 @@ exports.send = function(socketId, arrayBuffer, address, port) {
       console.log('    port: ', port);
       console.log('    arrayBuffer: ', arrayBuffer);
     }
-    chrome.sockets.udp.send(
+    util.getUdp().send(
       socketId,
       arrayBuffer,
       address,
@@ -788,9 +675,15 @@ exports.send = function(socketId, arrayBuffer, address, port) {
   });
 };
 
+/**
+ * @param {integer} socketId
+ * @param {string} address
+ *
+ * @return {Promise.<integer, Error>}
+ */
 exports.joinGroup = function(socketId, address) {
   return new Promise(function(resolve, reject) {
-    chrome.sockets.udp.joinGroup(socketId, address, function(result) {
+    util.getUdp().joinGroup(socketId, address, function(result) {
       if (DEBUG) {
         console.log('socketId: ', socketId);
         console.log('address: ', address);
@@ -805,17 +698,25 @@ exports.joinGroup = function(socketId, address) {
   });
 };
 
+/**
+ * @param {Promise.<Array.<SocketInfo>, Error>}
+ */
 exports.getSockets = function() {
   return new Promise(function(resolve) {
-    chrome.sockets.udp.getSockets(function(allSockets) {
+    util.getUdp().getSockets(function(allSockets) {
       resolve(allSockets);
     });
   });
 };
 
+/**
+ * @param {integer} socketId
+ *
+ * @return {Promise.<SocketInfo, Error>}
+ */
 exports.getInfo = function(socketId) {
   return new Promise(function(resolve) {
-    chrome.sockets.udp.getInfo(socketId, function(socketInfo) {
+    util.getUdp().getInfo(socketId, function(socketInfo) {
       resolve(socketInfo);
     });
   });
@@ -825,7 +726,7 @@ exports.closeAllSockets = function() {
   exports.getSockets().then(function(allSockets) {
     allSockets.forEach(function(socketInfo) {
       console.log('Closing socket with id: ', socketInfo.socketId);
-      chrome.sockets.udp.close(socketInfo.socketId);
+      util.getUdp().close(socketInfo.socketId);
     });
   });
 };
@@ -849,6 +750,8 @@ exports.logSocketInfo = function(info) {
 
 /**
  * Returns a Promise that resolves with a list of network interfaces.
+ *
+ * @return {Promise.<Array.<Object>, Error>}
  */
 exports.getNetworkInterfaces = function() {
   return new Promise(function(resolve) {
@@ -858,7 +761,107 @@ exports.getNetworkInterfaces = function() {
   });
 };
 
-},{}],6:[function(require,module,exports){
+},{"./util":4}],4:[function(require,module,exports){
+/* globals chrome */
+'use strict';
+
+/**
+ * Very lightweight utility class relating to the chrome apis.
+ */
+
+/**
+ * @return {boolean} true if chrome.runtime.lastError is set, else false
+ */
+exports.wasError = function() {
+  if (chrome.runtime.lastError) {
+    return true;
+  } else {
+    return false;
+  }
+};
+
+/**
+ * @return {chrome.runtime} returns chrome.runtime
+ */
+exports.getRuntime = function() {
+  return chrome.runtime;
+};
+
+/**
+ * @return {string} the value of chrome.runtime.lastError. Does not guarantee
+ * that this value is set.
+ */
+exports.getError = function() {
+  return chrome.runtime.lastError;
+};
+
+/**
+ * @return {chrome.filesystem} returns the chrome.filesystem object.
+ */
+exports.getFileSystem = function() {
+  return chrome.fileSystem;
+};
+
+/**
+ * @return {StorageArea} chrome.storage.local
+ */
+exports.getStorageLocal = function() {
+  return chrome.storage.local;
+};
+
+/**
+ * @return {chrome.sockets.udp}
+ */
+exports.getUdp = function() {
+  return chrome.sockets.udp;
+};
+
+/**
+ * This is a complicated function to understand. The need for it arises from
+ * the fact that we are trying to mirror the Chrome API. Several of its
+ * functions include optional parameters, which complicates just passing in
+ * positional arguments directly. To circumvent this issue, we can use the
+ * apply() argument to make the call with the exact arguments.
+ *
+ * Complicating this is that most of the calls also accept a callback
+ * parameter. Since we want to Promise-ify the calls and account for errors,
+ * this leads to a lot of boiler plate code. This method takes care of all of
+ * this.
+ *
+ * It takes a function and an an arguments object. The function's last
+ * parameter is expected to be a function callback. The returned Promise
+ * resolves when this function is evoked and rejects if
+ * chrome.runtime.lastError indicates that there was an error.
+ *
+ * @param {function} fn function that accepts a callback as its last parameter
+ * @param {arguments} callArgs the arguments object with which fn should be
+ * invoked
+ *
+ * @return {Promise.<any, Error>} Promise that resolves with the result to the
+ * callback parameter or rejects with an Error.
+ */
+exports.applyArgsCheckLastError = function(fn, callArgs) {
+  return new Promise(function(resolve, reject) {
+    console.log('fn in apply: ', fn);
+    console.log('callArgs: ', callArgs);
+    // Some of these parameters are "optional", which it seems like the
+    // sendMessage function interprets based on type, etc. Rather than passing
+    // directly, we are going to pass the arguments variable directly, adding a
+    // callback function.
+    var args = Array.prototype.slice.call(callArgs);
+    args.push(function(response) {
+      if (exports.wasError()) {
+        reject(exports.getError());
+      } else {
+        resolve(response);
+      }
+    });
+    console.log('going to apply');
+    fn.apply(null, args);
+  });
+};
+
+},{}],5:[function(require,module,exports){
 /*jshint esnext:true*/
 /*
  * https://github.com/justindarc/dns-sd.js
@@ -934,7 +937,7 @@ return BinaryUtils;
 
 })();
 
-},{}],7:[function(require,module,exports){
+},{}],6:[function(require,module,exports){
 /*jshint esnext:true, bitwise: false */
 'use strict';
 
@@ -1151,7 +1154,7 @@ exports.getByteArrayAsUint8Array = function(byteArr) {
   return new Uint8Array(byteArr._buffer, 0, byteArr._cursor);
 };
 
-},{"./binary-utils":6}],8:[function(require,module,exports){
+},{"./binary-utils":5}],7:[function(require,module,exports){
 /*jshint esnext:true*/
 /*
  * https://github.com/justindarc/dns-sd.js
@@ -1340,7 +1343,7 @@ function defineType(values) {
   return T;
 }
 
-},{}],9:[function(require,module,exports){
+},{}],8:[function(require,module,exports){
 /*jshint esnext:true*/
 /* globals Promise */
 'use strict';
@@ -1428,8 +1431,8 @@ var ipv4Interfaces = [];
 /**
  * Returns all records known to this module.
  *
- * @return {Array<resource record>} all the resource records known to this
- * module
+ * @return {Array.<ARecord|PtrRecord|SrvRecord>} all the resource records known
+ * to this module
  */
 exports.getRecords = function() {
   return records;
@@ -1439,7 +1442,7 @@ exports.getRecords = function() {
  * Returns all the callbacks currently registered to be invoked with incoming
  * packets.
  *
- * @return {Set<function>} all the onReceive callbacks that have been
+ * @return {Set.<function>} all the onReceive callbacks that have been
  * registered
  */
 exports.getOnReceiveCallbacks = function() {
@@ -1466,7 +1469,7 @@ exports.isStarted = function() {
 /**
  * Return a cached array of IPv4 interfaces for this machine.
  *
- * @return {object} an array of all the IPv4 interfaces known to this machine.
+ * @return {Object} an array of all the IPv4 interfaces known to this machine.
  * The objects have the form: 
  * {
  *   name: string,
@@ -1510,7 +1513,7 @@ exports.removeOnReceiveCallback = function(callback) {
  * The listener that is attached to chrome.sockets.udp.onReceive.addListener
  * when the service is started.
  *
- * @param {object} info the object that is called by the chrome.sockets.udp
+ * @param {Object} info the object that is called by the chrome.sockets.udp
  * API. It is expected to look like:
  * {
  *   data: ArrayBuffer,
@@ -1672,12 +1675,12 @@ exports.createResponsePacket = function(queryPacket) {
  * any cache we are maintaining, unless those records originated from us and
  * are thus considered authoritative.
  *
- * @param {String} qName the query name
- * @param {number} qType the query type
- * @param {number} qClass the query class
+ * @param {string} qName the query name
+ * @param {integer} qType the query type
+ * @param {integer} qClass the query class
  *
- * @return {Array<resource record>} the array of resource records appropriate
- * for this query
+ * @return {Array.<ARecord|SrvRecord|PtrRecord>} the array of resource records
+ * appropriate for this query
  */
 exports.getResourcesForQuery = function(qName, qType, qClass) {
   // According to RFC section 6: 
@@ -1726,14 +1729,14 @@ exports.getResourcesForQuery = function(qName, qType, qClass) {
  * Return an Array with only the elements of resources that match the query
  * terms.
  * 
- * @param {Array<resource record>} resources an Array of resource records that
- * will be filtered
+ * @param {Array.<ARecord|PtrRecord|SrvRecord>} resources an Array of resource
+ * records that will be filtered
  * @param {string} qName the name of the query
  * @param {integer} qType the type of the query
  * @param {integer} qClass the class of the query
  *
- * @return {Array<resource record>} the subset of resources that match the
- * query terms
+ * @return {Array.<ARecord|PtrRecord|SrvRecord>} the subset of resources that
+ * match the query terms
  */
 exports.filterResourcesForQuery = function(resources, qName, qType, qClass) {
   var result = [];
@@ -1763,18 +1766,19 @@ exports.filterResourcesForQuery = function(resources, qName, qType, qClass) {
 /**
  * Returns a promise that resolves with the socket.
  *
- * @return {Promise} that resolves with a ChromeUdpSocket
+ * @return {Promise.<ChromeUdpSocket, Error>} that resolves with a
+ * ChromeUdpSocket
  */
 exports.getSocket = function() {
   if (exports.socket) {
     // Already started, resolve immediately.
-    return new Promise(resolve => { resolve(exports.socket); });
+    return Promise.resolve(exports.socket);
   }
 
   // Attach our listeners.
   chromeUdp.addOnReceiveListener(exports.onReceiveListener);
 
-  return new Promise((resolve, reject) => {
+  return new Promise(function(resolve, reject) {
     // We have two steps to do here: create a socket and bind that socket to
     // the mDNS port.
     var createPromise = chromeUdp.create({});
@@ -1811,7 +1815,7 @@ exports.getSocket = function() {
  *
  * Returns a Promise that resolves when everything is up and running.
  *
- * @return {Promise}
+ * @return {Promise.<undefined, Error>}
  */
 exports.start = function() {
   // All the initialization we need to do is create the socket (so that we
@@ -1825,8 +1829,8 @@ exports.start = function() {
     .then(function initializedInterfaces() {
       resolve();
     })
-    .catch(function startWhenWrong() {
-      reject();
+    .catch(function startWentWrong(err) {
+      reject(err);
     });
   });
 };
@@ -1834,11 +1838,12 @@ exports.start = function() {
 /**
  * Initialize the cache of network interfaces known to this machine.
  *
- * @return {Promise} resolves when the cache is initialized
+ * @return {Promise.<undefined, Error>} resolves when the cache is initialized
  */
 exports.initializeNetworkInterfaceCache = function() {
-  return new Promise(function(resolve) {
-    chromeUdp.getNetworkInterfaces().then(function success(interfaces) {
+  return new Promise(function(resolve, reject) {
+    chromeUdp.getNetworkInterfaces()
+    .then(function success(interfaces) {
       interfaces.forEach(iface => {
         if (iface.address.indexOf(':') !== -1) {
           console.log('Not yet supporting IPv6: ', iface);
@@ -1847,6 +1852,9 @@ exports.initializeNetworkInterfaceCache = function() {
         }
       });
       resolve();
+    })
+    .catch(err => {
+      reject(err);
     });
   });
 };
@@ -1885,7 +1893,7 @@ exports.stop = function() {
  *
  * @param {DnsPacket} packet the packet to send
  * @param {string} address the address to which to send the packet
- * @param {number} port the port to sent the packet to
+ * @param {integer} port the port to sent the packet to
  */
 exports.sendPacket = function(packet, address, port) {
   // For now, change the ID of the packet. We want to allow debugging, so we
@@ -1946,8 +1954,8 @@ exports.query = function(queryName, queryType, queryClass) {
  *
  * @param {string} domainName the domain name for which to return A Records
  *
- * @return {Array<resource record>} the A Records corresponding to this domain
- * name
+ * @return {Array<ARecord|PtrRecord|SrvRecord>} the A Records corresponding to
+ * this domain name
  */
 exports.queryForARecord = function(domainName) {
   return exports.getResourcesForQuery(
@@ -1965,7 +1973,7 @@ exports.queryForARecord = function(domainName) {
  * @param {string} serviceName the serviceName for which to query for PTR
  * Records
  *
- * @return {Array<resource record> the PTR Records for the service
+ * @return {Array<ARecord|PtrRecord|SrvRecord>} the PTR Records for the service
  */
 exports.queryForPtrRecord = function(serviceName) {
   return exports.getResourcesForQuery(
@@ -1983,7 +1991,8 @@ exports.queryForPtrRecord = function(serviceName) {
  * @param {string} instanceName the instance name for which you are querying
  * for SRV Records
  *
- * @return {Array<resource record>} the SRV Records matching this query
+ * @return {Array<rARecord|PtrRecord|SrvRecord>} the SRV Records matching this
+ * query
  */
 exports.queryForSrvRecord = function(instanceName) {
   return exports.getResourcesForQuery(
@@ -1997,7 +2006,7 @@ exports.queryForSrvRecord = function(instanceName) {
  * Add a record corresponding to name to the internal data structures.
  *
  * @param {string} name the name of the resource record to add
- * @param {resource record} record the record to add
+ * @param {ARecord|PtrRecord|SrvRecord} record the record to add
  */
 exports.addRecord = function(name, record) {
   var existingRecords = records[name];
@@ -2008,7 +2017,7 @@ exports.addRecord = function(name, record) {
   existingRecords.push(record);
 };
 
-},{"../chrome-apis/udp":5,"../util":26,"./byte-array":7,"./dns-codes":8,"./dns-packet":10,"./dns-util":13,"./question-section":14}],10:[function(require,module,exports){
+},{"../chrome-apis/udp":3,"../util":28,"./byte-array":6,"./dns-codes":7,"./dns-packet":9,"./dns-util":12,"./question-section":13}],9:[function(require,module,exports){
 /*jshint esnext:true, bitwise:false */
 
 /**
@@ -2057,7 +2066,8 @@ var NUM_OCTETS_SECTION_LENGTHS = 2;
  * records. reader should have been moved to the correct cursor position
  * @param {integer} numRecords the number of records to parse
  *
- * @return {Array<resource record>} an Array of the parsed resource records
+ * @return {Array<ARecord|PtrRecord|SrvRecord>} an Array of the parsed resource
+ * records
  */
 exports.parseResourceRecordsFromReader = function(reader, numRecords) {
   var result = [];
@@ -2089,6 +2099,8 @@ exports.parseResourceRecordsFromReader = function(reader, numRecords) {
  * Create a DNS packet. This creates the packet with various flag values. The
  * packet is not converted to byte format until a call is made to
  * getAsByteArray().
+ *
+ * @constructor
  *
  * @param {integer} id a 2-octet identifier for the packet
  * @param {boolean} isQuery true if packet is a query, false if it is a
@@ -2178,6 +2190,8 @@ exports.DnsPacket = function DnsPacket(
  * Variable number of bytes representing authorities
  *
  * Variable number of bytes representing additional info
+ *
+ * @return {ByteArray}
  */
 exports.DnsPacket.prototype.convertToByteArray = function() {
   var result = new byteArray.ByteArray();
@@ -2320,8 +2334,8 @@ exports.DnsPacket.prototype.addQuestion = function(question) {
 /**
  * Add a Resource Record to the answer section.
  *
- * @param {resource record} resourceRecord the record to add to the answer
- * section
+ * @param {ARecord|PtrRecord|SrvRecord} resourceRecord the record to add to the
+ * answer section
  */
 exports.DnsPacket.prototype.addAnswer = function(resourceRecord) {
   this.answers.push(resourceRecord);
@@ -2330,8 +2344,8 @@ exports.DnsPacket.prototype.addAnswer = function(resourceRecord) {
 /**
  * Add a Resource Record to the authority section.
  *
- * @param {resource record} resourceRecord the record to add to the authority
- * section
+ * @param {ARecord|PtrRecord|SrvRecord} resourceRecord the record to add to the
+ * authority section
  */
 exports.DnsPacket.prototype.addAuthority = function(resourceRecord) {
   this.authority.push(resourceRecord);
@@ -2340,8 +2354,8 @@ exports.DnsPacket.prototype.addAuthority = function(resourceRecord) {
 /**
  * Add a Resource Record to the additional info section.
  *
- * @param {resource record} resourceRecord the record to add to the additional
- * info section
+ * @param {ARecord|PtrRecord|SrvRecord} resourceRecord the record to add to the
+ * additional info section
  */
 exports.DnsPacket.prototype.addAdditionalInfo = function(resourceRecord) {
   this.additionalInfo.push(resourceRecord);
@@ -2355,7 +2369,7 @@ exports.DnsPacket.prototype.addAdditionalInfo = function(resourceRecord) {
  * @param {integer} value a number those lowest order 16 bits will be parsed to
  * an object representing packet flags
  *
- * @return {object} a flag object like the following:
+ * @return {Object} a flag object like the following:
  * {
  *   qr: integer,
  *   opcode: integer,
@@ -2432,7 +2446,7 @@ exports.getFlagsAsValue = function(qr, opcode, aa, tc, rd, ra, rcode) {
   return value;
 };
 
-},{"./byte-array":7,"./dns-codes":8,"./question-section":14,"./resource-record":15}],11:[function(require,module,exports){
+},{"./byte-array":6,"./dns-codes":7,"./question-section":13,"./resource-record":14}],10:[function(require,module,exports){
 /*jshint esnext:true*/
 'use strict';
 
@@ -2472,17 +2486,19 @@ exports.getFullName = function(friendlyName) {
 };
 
 /**
- * Register a SemCache instance. Returns a Promise that resolves with an object
- * like the following:
+ * Register a SemCache instance.
  *
+ * @param {string} host 
+ * @param {string} name  the user-friendly name of the instance, e.g. "Sam's
+ * @param {integer} port the port on which the SemCache instance is running.
+ *
+ * @return {Promise.<Object, Error>} Promise that resolves with an object like
+ * the following:
  * {
  *   serviceName: "Sam's SemCache",
  *   type: "_http._local",
  *   domain: "laptop.local"
  * }
- *
- * name: the user-friendly name of the instance, e.g. "Sam's SemCache".
- * port: the port on which the SemCache instance is running.
  */
 exports.registerSemCache = function(host, name, port) {
   var result = dnssd.register(host, name, SEMCACHE_SERVICE_STRING, port);
@@ -2495,8 +2511,8 @@ exports.registerSemCache = function(host, name, port) {
  * caches--it only returns a list of names on the network. Operational
  * information should be resolved as needed using the resolveCache() function.
  *
- * @return {Promise} Promise that resolves with an Array of objects as returned
- * from dnssd.queryForServiceInstances
+ * @return {Promise.<Array.<Object>, Error>} Promise that resolves with an
+ * Array of objects as returned from dnssd.queryForServiceInstances
  */
 exports.browseForSemCacheInstanceNames = function() {
   return dnssd.queryForServiceInstances(
@@ -2518,9 +2534,9 @@ exports.browseForSemCacheInstanceNames = function() {
  * @param {string} fullName the full name of the cache, e.g. `Tyrion's
  * Cache._semcache._tcp.local`
  *
- * @return {Promise} that resolves with an object like the following. The
- * promise rejects if the resolution does not succeed (e.g. from a missing SRV
- * or A record).
+ * @return {Promise.<Object, Error>} that resolves with an object like the
+ * following. The promise rejects if the resolution does not succeed (e.g. from
+ * a missing SRV or A record).
  * {
  *   friendlyName: 'Sam Cache',
  *   instanceName: 'Sam Cache._semcache._tcp.local',
@@ -2533,24 +2549,26 @@ exports.browseForSemCacheInstanceNames = function() {
 exports.resolveCache = function(fullName) {
   return new Promise(function(resolve, reject) {
     dnssd.resolveService(fullName)
-      .then(info => {
-        var listUrl = serverApi.getListPageUrlForCache(
-          info.ipAddress, info.port
-        );
-        info.listUrl = listUrl;
-        resolve(info);
-      })
-      .catch(err => {
-        // something went wrong.
-        reject(err);
-      });
+    .then(info => {
+      var listUrl = serverApi.getListPageUrlForCache(
+        info.ipAddress, info.port
+      );
+      info.listUrl = listUrl;
+      resolve(info);
+    })
+    .catch(err => {
+      // something went wrong.
+      reject(err);
+    });
   });
 
 };
 
 /**
- * Browse for SemCache instances on the local network. Returns a Promise that
- * resolves with a list of objects like the following:
+ * Browse for SemCache instances on the local network. Returns a  *
+ *
+ * @return {Promise.<Object, Error>} Promise that resolves with a list of
+ * objects like the following, or an empty list if no instances are found.
  *
  * {
  *   serviceName: "Sam's SemCache",
@@ -2558,15 +2576,13 @@ exports.resolveCache = function(fullName) {
  *   domain: "laptop.local",
  *   port: 8889
  * }
- *
- * Resolves with an empty list if no instances are found.
  */
 exports.browseForSemCacheInstances = function() {
   var result = dnssd.browseServiceInstances(SEMCACHE_SERVICE_STRING);
   return result;
 };
 
-},{"../server/server-api":23,"./dns-sd":12}],12:[function(require,module,exports){
+},{"../server/server-api":25,"./dns-sd":11}],11:[function(require,module,exports){
 /*jshint esnext:true*/
 /* globals Promise */
 'use strict';
@@ -2688,7 +2704,8 @@ exports.createHostName = function() {
 /**
  * Advertise the resource records.
  *
- * @param {Array<resource records>} resourceRecords the records to advertise
+ * @param {Array.<ARecord|PtrRecord|SrvRecord>} resourceRecords the records to
+ * advertise
  */
 exports.advertiseService = function(resourceRecords) {
   var advertisePacket = new dnsPacket.DnsPacket(
@@ -2709,20 +2726,12 @@ exports.advertiseService = function(resourceRecords) {
   dnsController.sendPacket(
     advertisePacket,
     dnsController.DNSSD_MULTICAST_GROUP,
-    dnsController.DNSSD_PORT
+    dnsController.MDNS_PORT
   );
 };
 
 /**
- * Register a service via mDNS. Returns a Promise that resolves with an object
- * like the following:
- *
- * {
- *   serviceName: "Sam's SemCache",
- *   type: "_http._local",
- *   domain: "laptop.local",
- *   port: 1234
- * }
+ * Register a service via mDNS.
  *
  * @param {string} host the host of the service, e.g. 'laptop.local'
  * @param {string} name a user-friendly string to be the name of the instance,
@@ -2730,6 +2739,15 @@ exports.advertiseService = function(resourceRecords) {
  * @param {string} type the service type string. This should be the protocol
  * spoken and the transport protocol, eg "_http._tcp".
  * @param {integer} port the port the service is available on
+ *
+ * @return {Promise.<Object, Error>} Returns a Promise that resolves with an object
+ * like the following:
+ * {
+ *   serviceName: "Sam's SemCache",
+ *   type: "_http._local",
+ *   domain: "laptop.local",
+ *   port: 1234
+ * }
  */
 exports.register = function(host, name, type, port) {
   // Registration is a multi-step process. It is described in Section 8 of the
@@ -2758,7 +2776,8 @@ exports.register = function(host, name, type, port) {
       host,
       dnsCodes.RECORD_TYPES.ANY,
       dnsCodes.CLASS_CODES.IN
-    ).then(function hostFree() {
+    )
+    .then(function hostFree() {
       foundHostFree = true;
       // We need to probe for the name under which a SRV record would be, which
       // is name.type.local
@@ -2771,7 +2790,8 @@ exports.register = function(host, name, type, port) {
     }, function hostTaken() {
       foundHostFree = false;
       reject(new Error('host taken: ' + host));
-    }).then(function instanceFree() {
+    })
+    .then(function instanceFree() {
       if (foundHostFree) {
         var hostRecords = exports.createHostRecords(host);
         var serviceRecords = exports.createServiceRecords(
@@ -2807,7 +2827,8 @@ exports.register = function(host, name, type, port) {
  *
  * @param {string} host
  *
- * @return {Array<resource records>} an Array of the records that were added.
+ * @return {Array.<ARecord|PtrRecord|SrvRecord>} an Array of the records that
+ * were added.
  */
 exports.createHostRecords = function(host) {
   // This just consists of an A Record. Make an entry for every IPv4 address.
@@ -2850,7 +2871,8 @@ exports.createSrvName = function(userFriendlyName, type, domain) {
  * @param {string} domain target domain/host the service is running on, e.g.
  * 'blackhack.local'
  *
- * @return {Array<resource records>} an Array of the records that were added.
+ * @return {Array<ARecord|PtrRecord|SrvRecord>} an Array of the records that
+ * were added.
  */
 exports.createServiceRecords = function(name, type, port, domain) {
   // We need to add a PTR record and an SRV record.
@@ -2881,6 +2903,14 @@ exports.createServiceRecords = function(name, type, port, domain) {
   return result;
 };
 
+/**
+ * @param {Array.<DnsPacket>}
+ * @param {string} qName
+ * @param {integer} qType
+ * @param {integer} qClass
+ *
+ * @return {boolean}
+ */
 exports.receivedResponsePacket = function(packets, qName, qType, qClass) {
   for (var i = 0; i < packets.length; i++) {
     var packet = packets[i];
@@ -2902,9 +2932,9 @@ exports.receivedResponsePacket = function(packets, qName, qType, qClass) {
  * @param {integer} queryType
  * @param {integer} queryClass
  *
- * @return {Promise} Returns a promise that resolves if the probe returns
- * nothing, meaning that the queryName is available, and rejects if it is
- * taken.
+ * @return {Promise.<undefined, undefined>} Returns a promise that resolves if
+ * the probe returns nothing, meaning that the queryName is available, and
+ * rejects if it is taken.
  */
 exports.issueProbe = function(queryName, queryType, queryClass) {
   // Track the packets we receive whilst querying.
@@ -2918,55 +2948,56 @@ exports.issueProbe = function(queryName, queryType, queryClass) {
   // query. 250ms after that we issue another, then another.
   var result = new Promise(function(resolve, reject) {
     exports.waitForProbeTime()
-      .then(function success() {
+    .then(function success() {
+      dnsController.query(
+        queryName,
+        queryType,
+        queryClass
+      );
+      return util.wait(MAX_PROBE_WAIT);
+    })
+    .then(function success() {
+      if (exports.receivedResponsePacket(
+        packets, queryName, queryType, queryClass
+      )) {
+        throw new Error('received a packet, jump to catch');
+      } else {
         dnsController.query(
           queryName,
           queryType,
           queryClass
         );
         return util.wait(MAX_PROBE_WAIT);
-      }).then(function success() {
-        if (exports.receivedResponsePacket(
-          packets, queryName, queryType, queryClass
-        )) {
-          throw new Error('received a packet, jump to catch');
-        } else {
-          dnsController.query(
-            queryName,
-            queryType,
-            queryClass
-          );
-          return util.wait(MAX_PROBE_WAIT);
-        }
-      })
-      .then(function success() {
-        if (exports.receivedResponsePacket(
-          packets, queryName, queryType, queryClass
-        )) {
-          throw new Error('received a packet, jump to catch');
-        } else {
-          dnsController.query(
-            queryName,
-            queryType,
-            queryClass
-          );
-          return util.wait(MAX_PROBE_WAIT);
-        }
-      })
-      .then(function success() {
-        if (exports.receivedResponsePacket(
-          packets, queryName, queryType, queryClass
-        )) {
-          throw new Error('received a packet, jump to catch');
-        } else {
-          resolve();
-          dnsController.removeOnReceiveCallback(callback);
-        }
-      })
-      .catch(function failured() {
+      }
+    })
+    .then(function success() {
+      if (exports.receivedResponsePacket(
+        packets, queryName, queryType, queryClass
+      )) {
+        throw new Error('received a packet, jump to catch');
+      } else {
+        dnsController.query(
+          queryName,
+          queryType,
+          queryClass
+        );
+        return util.wait(MAX_PROBE_WAIT);
+      }
+    })
+    .then(function success() {
+      if (exports.receivedResponsePacket(
+        packets, queryName, queryType, queryClass
+      )) {
+        throw new Error('received a packet, jump to catch');
+      } else {
+        resolve();
         dnsController.removeOnReceiveCallback(callback);
-        reject();
-      });
+      }
+    })
+    .catch(function failured() {
+      dnsController.removeOnReceiveCallback(callback);
+      reject();
+    });
   });
 
   return result;
@@ -2980,8 +3011,10 @@ exports.issueProbe = function(queryName, queryType, queryClass) {
  * should be the full name, not just the user friendly portion of the name.
  * E.g. `Tyrion's Cache._semcache._tcp.local`, not `Tyrion's Cache`.
  *
- * @return {Promise} Promise that resolves with an object like the following if
- * resolution succeeds:
+ * @return {Promise.<Object, Error>} Promise that resolves with an object like
+ * the following if resolution succeeds. The Promise rejects if resolution
+ * cannot complete (e.g. if a SRV or A records is not found) or if an error
+ * occurs.
  * {
  *   friendlyName: 'Sam Cache',
  *   instanceName: 'Sam Cache._semcache._tcp.local',
@@ -2989,8 +3022,6 @@ exports.issueProbe = function(queryName, queryType, queryClass) {
  *   ipAddress: '123.4.5.6',
  *   port: 8888
  * }
- * The Promise rejects if resolution cannot complete (e.g. if a SRV or A
- * records is not found) or if an error occurs.
  */
 exports.resolveService = function(serviceName) {
   console.log('resolveService: ', serviceName);
@@ -3087,8 +3118,9 @@ exports.resolveService = function(serviceName) {
  *
  * @param {string} serviceType the type of the service to browse for
  *
- * @return {Promise} a Promise that resolves with operational information for
- * all instances. This is an Array of objects like the following:
+ * @return {Promise.<Array.<Object>, Error>} a Promise that resolves with
+ * operational information for all instances. This is an Array of objects like
+ * the following:
  * {
  *   serviceType: '_semcache._tcp',
  *   instanceName: 'Sam Cache',
@@ -3117,110 +3149,110 @@ exports.browseServiceInstances = function(serviceType) {
       exports.DEFAULT_QUERY_WAIT_TIME,
       exports.DEFAULT_NUM_PTR_RETRIES
     )
-      .then(function success(ptrInfos) {
-        if (exports.DEBUG) {
-          console.log('ptrInfos: ', ptrInfos);
-        }
-        var srvRequests = [];
-        ptrInfos.forEach(ptr => {
-          ptrResponses.push(ptr);
-          var instanceName = ptr.serviceName;
-          var req = exports.queryForInstanceInfo(
-            instanceName,
+    .then(function success(ptrInfos) {
+      if (exports.DEBUG) {
+        console.log('ptrInfos: ', ptrInfos);
+      }
+      var srvRequests = [];
+      ptrInfos.forEach(ptr => {
+        ptrResponses.push(ptr);
+        var instanceName = ptr.serviceName;
+        var req = exports.queryForInstanceInfo(
+          instanceName,
+          exports.DEFAULT_QUERY_WAIT_TIME,
+          exports.DEFAULT_NUM_RETRIES
+        );
+        srvRequests.push(req);
+      });
+      return Promise.all(srvRequests);
+    })
+    .then(function success(srvInfos) {
+      if (exports.DEBUG) {
+        console.log('srvInfos: ', srvInfos);
+      }
+      var aRequests = [];
+      for (var srvIter = 0; srvIter < srvInfos.length; srvIter++) {
+        // the query methods return an Array of responses, even if only a
+        // single response is requested. This allows for for API similarity
+        // across calls and for an eventual implementation that permits both
+        // A and AAAA records when querying for IP addresses, e.g., but means
+        // that we are effectively iterating over an array of arrays. For
+        // simplicity, however, we will assume at this stage that we only
+        // ever expect a single response, which is correct in the vast
+        // majority of cases.
+        var srv = srvInfos[srvIter];
+        if (srv.length === 0) {
+          // If no records resolved (e.g. from a dropped packet or a peer
+          // that has dropped out), fail gracefully and log that it occurred.
+          console.warn(
+            'Did not receive SRV to match PTR, ignoring. PTR: ',
+            ptrResponses[srvIter]
+          );
+        } else {
+          // Record that this PTR is active.
+          ptrsWithSrvs.push(ptrResponses[srvIter]);
+          srv = srv[0];
+          srvResponses.push(srv);
+          var hostname = srv.domain;
+          var req = exports.queryForIpAddress(
+            hostname,
             exports.DEFAULT_QUERY_WAIT_TIME,
             exports.DEFAULT_NUM_RETRIES
           );
-          srvRequests.push(req);
+          aRequests.push(req);
+        }
+      }
+      return Promise.all(aRequests);
+    })
+    .then(function success(aInfos) {
+      if (exports.DEBUG) {
+        console.log('aInfos: ', aInfos);
+      }
+
+      for (var aIter = 0; aIter < aInfos.length; aIter++) {
+        var aInfo = aInfos[aIter];
+        if (aInfo.length === 0) {
+          // We didn't receive an A. Log that both the 
+          console.warn(
+            'Did not receive A to match SRV, ignoring. SRV: ',
+            srvResponses[aIter]
+          );
+        } else {
+          aInfo = aInfo[0];
+          aResponses.push(aInfo);
+          ptrsWithAs.push(ptrsWithSrvs[aIter]);
+          srvsWithAs.push(srvResponses[aIter]);
+        }
+      }
+
+      if (
+        ptrsWithAs.length !== srvsWithAs.length ||
+        srvsWithAs.length !== aResponses.length
+      ) {
+        throw new Error('Different numbers of PTR, SRV, and A records!');
+      }
+      
+      var result = [];
+      for (var i = 0; i < aResponses.length; i++) {
+        var ptr = ptrsWithAs[i];
+        var instanceName = exports.getUserFriendlyName(ptr.serviceName);
+        var srv = srvsWithAs[i];
+        var aRec = aResponses[i];
+        result.push({
+          serviceType: serviceType,
+          instanceName: instanceName,
+          domainName: srv.domain,
+          ipAddress: aRec.ipAddress,
+          port: srv.port
         });
-        return Promise.all(srvRequests);
-      })
-      .then(function success(srvInfos) {
-        if (exports.DEBUG) {
-          console.log('srvInfos: ', srvInfos);
-        }
-        var aRequests = [];
-        for (var srvIter = 0; srvIter < srvInfos.length; srvIter++) {
-          // the query methods return an Array of responses, even if only a
-          // single response is requested. This allows for for API similarity
-          // across calls and for an eventual implementation that permits both
-          // A and AAAA records when querying for IP addresses, e.g., but means
-          // that we are effectively iterating over an array of arrays. For
-          // simplicity, however, we will assume at this stage that we only
-          // ever expect a single response, which is correct in the vast
-          // majority of cases.
-          var srv = srvInfos[srvIter];
-          if (srv.length === 0) {
-            // If no records resolved (e.g. from a dropped packet or a peer
-            // that has dropped out), fail gracefully and log that it occurred.
-            console.warn(
-              'Did not receive SRV to match PTR, ignoring. PTR: ',
-              ptrResponses[srvIter]
-            );
-          } else {
-            // Record that this PTR is active.
-            ptrsWithSrvs.push(ptrResponses[srvIter]);
-            srv = srv[0];
-            srvResponses.push(srv);
-            var hostname = srv.domain;
-            var req = exports.queryForIpAddress(
-              hostname,
-              exports.DEFAULT_QUERY_WAIT_TIME,
-              exports.DEFAULT_NUM_RETRIES
-            );
-            aRequests.push(req);
-          }
-        }
-        return Promise.all(aRequests);
-      })
-      .then(function success(aInfos) {
-        if (exports.DEBUG) {
-          console.log('aInfos: ', aInfos);
-        }
+      }
 
-        for (var aIter = 0; aIter < aInfos.length; aIter++) {
-          var aInfo = aInfos[aIter];
-          if (aInfo.length === 0) {
-            // We didn't receive an A. Log that both the 
-            console.warn(
-              'Did not receive A to match SRV, ignoring. SRV: ',
-              srvResponses[aIter]
-            );
-          } else {
-            aInfo = aInfo[0];
-            aResponses.push(aInfo);
-            ptrsWithAs.push(ptrsWithSrvs[aIter]);
-            srvsWithAs.push(srvResponses[aIter]);
-          }
-        }
-
-        if (
-          ptrsWithAs.length !== srvsWithAs.length ||
-          srvsWithAs.length !== aResponses.length
-        ) {
-          throw new Error('Different numbers of PTR, SRV, and A records!');
-        }
-        
-        var result = [];
-        for (var i = 0; i < aResponses.length; i++) {
-          var ptr = ptrsWithAs[i];
-          var instanceName = exports.getUserFriendlyName(ptr.serviceName);
-          var srv = srvsWithAs[i];
-          var aRec = aResponses[i];
-          result.push({
-            serviceType: serviceType,
-            instanceName: instanceName,
-            domainName: srv.domain,
-            ipAddress: aRec.ipAddress,
-            port: srv.port
-          });
-        }
-
-        resolve(result);
-      })
-      .catch(function failed(err) {
-        console.log(err);
-        reject('Caught error in browsing for service: ' + err);
-      });
+      resolve(result);
+    })
+    .catch(function failed(err) {
+      console.log(err);
+      reject('Caught error in browsing for service: ' + err);
+    });
   });
 };
 
@@ -3259,15 +3291,15 @@ exports.getUserFriendlyName = function(instanceTypeDomain) {
  * issueing PTR requests.
  *
  * @param {string} serviceType the service string to query for
- * @param {number} waitTime the time to wait for responses. As multiple
+ * @param {integer} waitTime the time to wait for responses. As multiple
  * responses can be expected in response to a query for instances of a service
  * (as multiple instances can exist on the same network), the Promise will
  * always resolve after this many milliseconds.
- * @param {number} numRetries the number of additional queries that should be
+ * @param {integer} numRetries the number of additional queries that should be
  * sent. This can be 0, in which case only the first query will be sent
  *
- * @return {Promise} Returns a Promise that resolves with a list of objects
- * representing services, like the following:
+ * @return {Promise.<Array.<Object>, Error>} Returns a Promise that resolves
+ * with a list of objects representing services, like the following:
  * {
  *   serviceType: '_semcache._tcp',
  *   friendlyName: 'Magic Cache',
@@ -3282,7 +3314,7 @@ exports.queryForServiceInstances = function(
   waitTime = waitTime || exports.DEFAULT_QUERY_WAIT_TIME;
   var rType = dnsCodes.RECORD_TYPES.PTR;
   var rClass = dnsCodes.CLASS_CODES.IN;
-  return new Promise(function(resolve) {
+  return new Promise(function(resolve, reject) {
     exports.queryForResponses(
       serviceType,
       rType,
@@ -3314,6 +3346,9 @@ exports.queryForServiceInstances = function(
       result = _.uniqWith(result, _.isEqual);
 
       resolve(result);
+    })
+    .catch(err => {
+      reject(err);
     });
   });
 };
@@ -3322,12 +3357,12 @@ exports.queryForServiceInstances = function(
  * Issue a query for an IP address mapping to a domain.
  *
  * @param {string} domainName the domain name to query for
- * @param {number} timeout the number of ms after which to time out
- * @param {number} numRetries the number of additional queries to send after
+ * @param {integer} timeout the number of ms after which to time out
+ * @param {integer} numRetries the number of additional queries to send after
  * the first if a response is not received.
  *
- * @return {Promise} Returns a Promise that resolves with a list of objects
- * representing services, like the following:
+ * @return {Promise.<Object, Error>} Returns a Promise that resolves with a
+ * list of objects representing services, like the following:
  * {
  *   domainName: 'example.local',
  *   ipAddress: '123.4.5.6'
@@ -3340,7 +3375,7 @@ exports.queryForIpAddress = function(domainName, timeout, numRetries) {
   timeout = timeout || exports.DEFAULT_QUERY_WAIT_TIME;
   var rType = dnsCodes.RECORD_TYPES.A;
   var rClass = dnsCodes.CLASS_CODES.IN;
-  return new Promise(function(resolve) {
+  return new Promise(function(resolve, reject) {
     exports.queryForResponses(
       domainName,
       rType,
@@ -3364,6 +3399,9 @@ exports.queryForIpAddress = function(domainName, timeout, numRetries) {
         });
       });
       resolve(result);
+    })
+    .catch(err => {
+      reject(err);
     });
   });
 };
@@ -3373,12 +3411,12 @@ exports.queryForIpAddress = function(domainName, timeout, numRetries) {
  * port and domain name on which it is active.
  *
  * @param {string} instanceName the instance name to query for
- * @param {number} timeout the number of ms after which to time out
- * @param {number} numRetries the number of additional queries to send after
+ * @param {integer} timeout the number of ms after which to time out
+ * @param {integer} numRetries the number of additional queries to send after
  * the first if a response is not received.
  *
- * @return {Promise} Returns a Promise that resolves with a list of objects
- * representing services, like the following:
+ * @return {Promise.<Object, Error>} Returns a Promise that resolves with a
+ * list of objects representing services, like the following:
  * {
  *   instanceName: 'Sam Cache',
  *   domain: 'example.local',
@@ -3389,7 +3427,7 @@ exports.queryForInstanceInfo = function(instanceName, timeout, numRetries) {
   timeout = timeout || exports.DEFAULT_QUERY_WAIT_TIME;
   var rType = dnsCodes.RECORD_TYPES.SRV;
   var rClass = dnsCodes.CLASS_CODES.IN;
-  return new Promise(function(resolve) {
+  return new Promise(function(resolve, reject) {
     exports.queryForResponses(
       instanceName,
       rType,
@@ -3414,6 +3452,9 @@ exports.queryForInstanceInfo = function(instanceName, timeout, numRetries) {
         });
       });
       resolve(result);
+    })
+    .catch(err => {
+      reject(err);
     });
   });
 };
@@ -3422,24 +3463,24 @@ exports.queryForInstanceInfo = function(instanceName, timeout, numRetries) {
  * Issue a query and listen for responses. (As opposed to simply issuing a DNS
  * query without being interested in the responses.)
  * 
- * @param {String} qName the name of the query to issue
- * @param {number} qType the type of the query to issue
- * @param {number} qClass the class of the query to issue
+ * @param {string} qName the name of the query to issue
+ * @param {integer} qType the type of the query to issue
+ * @param {integer} qClass the class of the query to issue
  * @param {boolean} multipleResponses true if we can expect multiple or an open
  * ended number of responses to this query
- * @param {number} timeoutOrWait if multipleExpected is true, this is the
+ * @param {integer} timeoutOrWait if multipleExpected is true, this is the
  * amount of time we wait before returning results. If multipleExpected is
  * false (e.g. querying for an A Record, which should have a single answer),
  * this is the amount of time we wait before timing out and resolving with an
  * empty list.
- * @param {number} numRetries the number of retries to attempt if a query
+ * @param {integer} numRetries the number of retries to attempt if a query
  * doesn't generate packets.
  *
- * @return {Promise} Returns a Promise that resolves with an Array of Packets
- * received in response to the query. If multipleResponses is true, will not
- * resolve until timeoutOrWait milliseconds. If multipleResponses is false,
- * will resolve after the first packet is received or after timeoutOrWait is
- * satifised. 
+ * @return {Promise.<Array.<DnsPacket>, Error>} Returns a Promise that resolves
+ * with an Array of Packets received in response to the query. If
+ * multipleResponses is true, will not resolve until timeoutOrWait
+ * milliseconds. If multipleResponses is false, will resolve after the first
+ * packet is received or after timeoutOrWait is satifised. 
  */
 exports.queryForResponses = function(
   qName,
@@ -3469,6 +3510,8 @@ exports.queryForResponses = function(
   // include a general standing query (if multipleResponses is true), or a
   // query for the first response (if multipleResponses is false).
 
+  // Not immediately obvious where something should reject in this case, so not
+  // including a reject parameter yet.
   return new Promise(function(resolve) {
     // Code executes even after a promise resolves, so we will use this flag to
     // make sure we never try to resolve more than once.
@@ -3501,32 +3544,32 @@ exports.queryForResponses = function(
     var queryAndWait = function() {
       dnsController.query(qName, qType, qClass);
       util.wait(timeoutOrWait)
-        .then(() => {
-          if (resolved) {
-            // Already handled. Do nothing.
-            return;
-          }
-          if (retriesAttempted < numRetries) {
-            // We have more retries to attempt. Try again.
-            retriesAttempted += 1;
-            queryAndWait();
-          } else {
-            // We've waited and all of our retries are spent. Prepare to resolve.
-            dnsController.removeOnReceiveCallback(callback);
-            resolved = true;
-            resolve(packets);
-          }
-        })
-        .catch(err => {
-          console.log('Something went wrong in query: ', err);
-        });
+      .then(() => {
+        if (resolved) {
+          // Already handled. Do nothing.
+          return;
+        }
+        if (retriesAttempted < numRetries) {
+          // We have more retries to attempt. Try again.
+          retriesAttempted += 1;
+          queryAndWait();
+        } else {
+          // We've waited and all of our retries are spent. Prepare to resolve.
+          dnsController.removeOnReceiveCallback(callback);
+          resolved = true;
+          resolve(packets);
+        }
+      })
+      .catch(err => {
+        console.log('Something went wrong in query: ', err);
+      });
     };
 
     queryAndWait();
   });
 };
 
-},{"../util":26,"./dns-codes":8,"./dns-controller":9,"./dns-packet":10,"./dns-util":13,"./resource-record":15,"lodash":40}],13:[function(require,module,exports){
+},{"../util":28,"./dns-codes":7,"./dns-controller":8,"./dns-packet":9,"./dns-util":12,"./resource-record":14,"lodash":48}],12:[function(require,module,exports){
 'use strict';
 
 var byteArray = require('./byte-array');
@@ -3736,7 +3779,7 @@ exports.getIpStringFromByteArrayReader = function(reader) {
   return result;
 };
 
-},{"./byte-array":7}],14:[function(require,module,exports){
+},{"./byte-array":6}],13:[function(require,module,exports){
 /* global exports, require */
 'use strict';
 
@@ -3751,6 +3794,8 @@ var MAX_QUERY_CLASS = 65535;
 
 /**
  * A DNS Question section.
+ *
+ * @constructor
  *
  * @param {string} qName the name of the query
  * @param {integer} qType the type of the query
@@ -3823,6 +3868,10 @@ exports.QuestionSection.prototype.unicastResponseRequested = function() {
 /**
  * Create a QuestionSection from a ByteArrayReader as serialized by
  * convertToByteArray().
+ *
+ * @param {ByteArrayReader} reader
+ *
+ * @return {QuestionSection}
  */
 exports.createQuestionFromReader = function(reader) {
   var queryName = dnsUtil.getDomainFromByteArrayReader(reader);
@@ -3842,7 +3891,7 @@ exports.createQuestionFromReader = function(reader) {
   return result;
 };
 
-},{"./byte-array":7,"./dns-util":13}],15:[function(require,module,exports){
+},{"./byte-array":6,"./dns-util":12}],14:[function(require,module,exports){
 /* global exports, require */
 'use strict';
 
@@ -3889,12 +3938,14 @@ var NUM_OCTETS_PORT = 2;
  * An A record. A records respond to queries for a domain name to an IP
  * address.
  *
- * @param {string} domainName: the domain name, e.g. www.example.com
- * @param {integer} ttl: the time to live
- * @param {string} ipAddress: the IP address of the domainName. This must be a string
- * (e.g. '192.3.34.17').
- * @param {integer} recordClass: the class of the record type. This is optional, and if not
- * present or is not truthy will be set as IN for internet traffic.
+ * @constructor
+ *
+ * @param {string} domainName the domain name, e.g. www.example.com
+ * @param {integer} ttl the time to live
+ * @param {string} ipAddress the IP address of the domainName. This must be a
+ * string (e.g. '192.3.34.17').
+ * @param {integer} recordClass the class of the record type. This is optional,
+ * and if not present or is not truthy will be set as IN for internet traffic.
  */
 exports.ARecord = function ARecord(
   domainName,
@@ -4106,6 +4157,8 @@ exports.createSrvRecordFromReader = function(reader) {
  * '_printer._tcp.local'. They return the name of an instance offering the
  * service (eg 'Printsalot._printer._tcp.local').
  *
+ * @constructor
+ *
  * @param {string} serviceType the string representation of the service that
  * has been queried for.
  * @param {integer} ttl the time to live
@@ -4189,6 +4242,8 @@ exports.PtrRecord.prototype.convertToByteArray = function() {
 /**
  * An SRV record. SRV records map the name of a service instance to the
  * information needed to connect to the service. 
+ *
+ * @constructor
  *
  * @param {string} instanceTypeDomain: the name being queried for, e.g.
  * 'PrintsALot._printer._tcp.local'
@@ -4295,6 +4350,11 @@ exports.SrvRecord.prototype.convertToByteArray = function() {
  *
  * 4 octets representing the TTL
  *
+ * @param {string} domainName
+ * @param {integer} rrType
+ * @param {integer} rrClass
+ * @param {integer} ttl
+ *
  * @return {ByteArray}
  */
 exports.getCommonFieldsAsByteArray = function(
@@ -4321,7 +4381,7 @@ exports.getCommonFieldsAsByteArray = function(
  *
  * @param {ByteArrayReader} reader
  *
- * @return {object} Returns an object with fields: domainName, rrType, rrClass,
+ * @return {Object} Returns an object with fields: domainName, rrType, rrClass,
  * and ttl.
  */
 exports.getCommonFieldsFromByteArrayReader = function(reader) {
@@ -4363,7 +4423,7 @@ exports.peekTypeInReader = function(reader) {
   return result;
 };
 
-},{"./byte-array":7,"./dns-codes":8,"./dns-util":13}],16:[function(require,module,exports){
+},{"./byte-array":6,"./dns-codes":7,"./dns-util":12}],15:[function(require,module,exports){
 'use strict';
 
 /**
@@ -4374,7 +4434,7 @@ var json2csv = require('json2csv');
 
 var datastore = require('./persistence/datastore');
 var api = require('./server/server-api');
-var storage = require('./chrome-apis/storage');
+var chromep = require('./chrome-apis/chromep');
 var appc = require('./app-controller');
 var util = require('./util');
 
@@ -4402,7 +4462,7 @@ exports.createTimingKey = function(key) {
  * captureUrl value of the CachedPage. This is intended to allow the querier to
  * verify that the response has been generated based solely on this request.
  *
- * @return {Array<CachedPage>}
+ * @return {Array.<CachedPage>}
  */
 exports.generateDummyPages = function(numPages, nonce) {
   var result = [];
@@ -4444,7 +4504,7 @@ exports.generateDummyPage = function(index, nonce) {
  * @param {integer} numPages the number of responses to return
  * @param {string} nonce a string to incorporate into answers
  *
- * @return {object} the JSON server response
+ * @return {Object} the JSON server response
  */
 exports.getDummyResponseForAllCachedPages = function(numPages, nonce) {
   var pages = exports.generateDummyPages(numPages, nonce);
@@ -4473,23 +4533,26 @@ exports.getNow = function() {
  * @return {Promise} Promise that resolves when the write completes
  */
 exports.logTime = function(key, time) {
-  var scopedKey = exports.createTimingKey(key);
-  return new Promise(function(resolve) {
+  return new Promise(function(resolve, reject) {
+    var scopedKey = exports.createTimingKey(key);
     exports.getTimeValues(key)
-      .then(existingValues => {
-        var setObj = {};
-        if (existingValues) {
-          existingValues.push(time);
-          setObj[scopedKey] = existingValues;
-        } else {
-          // New value.
-          setObj[scopedKey] = [ time ];
-        }
-        return storage.set(setObj);
-      })
-      .then(() => {
-        resolve();
-      });
+    .then(existingValues => {
+      var setObj = {};
+      if (existingValues) {
+        existingValues.push(time);
+        setObj[scopedKey] = existingValues;
+      } else {
+        // New value.
+        setObj[scopedKey] = [ time ];
+      }
+      return chromep.getStorageLocal().set(setObj);
+    })
+    .then(() => {
+      resolve();
+    })
+    .catch(err => {
+      reject(err);
+    });
   });
 };
 
@@ -4502,13 +4565,13 @@ exports.logTime = function(key, time) {
  *
  * @param {string} key
  *
- * @return {Promise -> any} Promise that resolves with the value paired to this
- * key in storage. Returns null if the value is not present.
+ * @return {Promise.<any, Error>} Promise that resolves with the value paired
+ * to this key in storage. Returns null if the value is not present.
  */
 exports.getTimeValues = function(key) {
-  return new Promise(function(resolve) {
+  return new Promise(function(resolve, reject) {
     var scopedKey = exports.createTimingKey(key);
-    storage.get(scopedKey)
+    chromep.getStorageLocal().get(scopedKey)
     .then(existingValues => {
       if (existingValues && existingValues[scopedKey]) {
         resolve(existingValues[scopedKey]);
@@ -4516,6 +4579,9 @@ exports.getTimeValues = function(key) {
         // Not present.
         resolve(null);
       }
+    })
+    .catch(err => {
+      reject(err);
     });
   });
 };
@@ -4523,9 +4589,10 @@ exports.getTimeValues = function(key) {
 /**
  * Execute an array of Promise returning functions in order, one after another.
  *
- * @param{Array<function>} promises an Array of functions that return a Promise
- * that should be executed.
- * @return {Promise -> Array<object>} Promise that resolves with an array of
+ * @param{Array.<function>} promises an Array of functions that return a
+ * Promise that should be executed.
+ *
+ * @return {Promise.<Array<object>>} Promise that resolves with an array of
  * objects. Each object will be a key value pair of either { resolved: value }
  * or { rejected: value } representing the value that either resolved or
  * rejected from the Promise.
@@ -4575,7 +4642,7 @@ exports.fulfillPromises = function(promises) {
  * @param {integer} resolveDelay the number of ms to wait between resolutions
  * if doing a lazy resolve
  *
- * @return {Promise -> Array} Promise that resolves when all the trials
+ * @return {Promise.<Array<any>>} Promise that resolves when all the trials
  * are complete. Resolves with an Array of the resolved results of the
  * individual iterations
  */
@@ -4663,13 +4730,13 @@ exports.getEvalPagesUrl = function(ipAddress, port, numPages) {
 /**
  * Resolve all peers with timing information.
  *
- * @param {Array<Object>} cacheNames an Array of objects as returned by
+ * @param {Array.<Object>} cacheNames an Array of objects as returned by
  * appc.getPeerCacheNames()
  * @param {integer} resolveDelay the number of seconds to delay a resolve
  * request, in ms. Attempts to ease the burden on the network.
  * @param {Object} toLog an object that will be logged at the end of the trial
  *
- * @return {Promise -> Array<Object>} Promise that resolves with an Array of
+ * @return {Promise.<Array<Object>>} Promise that resolves with an Array of
  * objects as returned by fulfillPromises. Resolved objects will be Objects as
  * returned by appc.resolveCache(). The rejected objects will the errors
  * rejecting in resolveCache().
@@ -4688,20 +4755,20 @@ exports.resolvePeers = function(cacheNames, resolveDelay, toLog) {
 
       return new Promise(function(resolve, reject) {
         util.wait(resolveDelay)
-          .then(() => {
-            startResolve = exports.getNow();
-            return appc.resolveCache(serviceName);
-          })
-          .then(cache => {
-            var endResolve = exports.getNow();
-            var totalResolve = endResolve - startResolve;
-            toLog.resolves.push(totalResolve);
-            toLog.serviceNames.push(serviceName);
-            resolve(cache);
-          })
-          .catch(err => {
-            reject(err); 
-          });
+        .then(() => {
+          startResolve = exports.getNow();
+          return appc.resolveCache(serviceName);
+        })
+        .then(cache => {
+          var endResolve = exports.getNow();
+          var totalResolve = endResolve - startResolve;
+          toLog.resolves.push(totalResolve);
+          toLog.serviceNames.push(serviceName);
+          resolve(cache);
+        })
+        .catch(err => {
+          reject(err); 
+        });
       });
     };
 
@@ -4711,9 +4778,9 @@ exports.resolvePeers = function(cacheNames, resolveDelay, toLog) {
     }
 
     exports.fulfillPromises(promises)
-      .then(results => {
-        resolve(results);
-      });
+    .then(results => {
+      resolve(results);
+    });
   });
 };
 
@@ -4729,8 +4796,8 @@ exports.resolvePeers = function(cacheNames, resolveDelay, toLog) {
  * @param {integer} resolveDelay the number of milliseconds to wait between
  * resolving each peer.
  *
- * @return {Promise} Promise that resolves with the timing information of the
- * trial
+ * @return {Promise.<Array.<number>>} Promise that resolves with the timing
+ * information of the trial
  */
 exports.runDiscoverPeerPagesIterationLazy = function(
     numPeers, 
@@ -4763,7 +4830,6 @@ exports.runDiscoverPeerPagesIterationLazy = function(
       return exports.resolvePeers(cacheNames, resolveDelay, logInfo);
     })
     .then(cacheResults => {
-      
       // We'll create a fetch for each listUrl.
       var promises = [];
       cacheResults.forEach(cacheResult => {
@@ -4826,9 +4892,9 @@ exports.runDiscoverPeerPagesIterationLazy = function(
  * @param {integer} numPeers the number of peers you expect
  * @param {integer} numPages the number of pages expected to be on each peer
  *
- * @return {Promise -> number} Promise that resolves with the time it took to
- * run the trial. Rejects if it cannot find the correct number of peers or
- * pages.
+ * @return {Promise.<number, Error>} Promise that resolves with the time it
+ * took to run the trial. Rejects if it cannot find the correct number of peers
+ * or pages.
  */
 exports.runDiscoverPeerPagesIteration = function(numPeers, numPages) {
   return new Promise(function(resolve, reject) {
@@ -4906,8 +4972,8 @@ exports.runDiscoverPeerPagesIteration = function(numPeers, numPages) {
  * @param {string} listPagesUrl the URL of the cache the exposes the JSON end
  * point with the contents of the cache
  *
- * @return {Promise} Promise that resolves with the results of the trial when
- * it is complete
+ * @return {Promise.<Array.<number>, Error>} Promise that resolves with the
+ * results of the trial when it is complete
  */
 exports.runLoadPageTrialForCache = function(numIterations, key, listPagesUrl) {
   return new Promise(function(resolve) {
@@ -4916,38 +4982,38 @@ exports.runLoadPageTrialForCache = function(numIterations, key, listPagesUrl) {
     // start the function, which somehow seems
     // to reliably crash chrome.
     util.wait(5000)
-      .then(() => {
-        return util.fetchJson(listPagesUrl);
-      })
-      .then(cache => {
-        // We will call runDiscoverPagesIteration and attach them all to a
-        // sequence of Promises, such that they will resolve in order.
-        var numCalls = 0;
-        var nextIter = function() {
-          var cachedPage = cache.cachedPages[numCalls];
-          numCalls += 1;
-          return exports.runLoadPageTrial(
-            numIterations,
-            key,
-            cachedPage.captureUrl,
-            cachedPage.captureDate,
-            cachedPage.accessPath,
-            cachedPage.metadata
-          );
-        };
+    .then(() => {
+      return util.fetchJson(listPagesUrl);
+    })
+    .then(cache => {
+      // We will call runDiscoverPagesIteration and attach them all to a
+      // sequence of Promises, such that they will resolve in order.
+      var numCalls = 0;
+      var nextIter = function() {
+        var cachedPage = cache.cachedPages[numCalls];
+        numCalls += 1;
+        return exports.runLoadPageTrial(
+          numIterations,
+          key,
+          cachedPage.captureUrl,
+          cachedPage.captureDate,
+          cachedPage.accessPath,
+          cachedPage.metadata
+        );
+      };
 
-        var promises = [];
-        for (var i = 0; i < cache.cachedPages.length; i++) {
-          promises.push(nextIter);
-        }
+      var promises = [];
+      for (var i = 0; i < cache.cachedPages.length; i++) {
+        promises.push(nextIter);
+      }
 
-        // Now we have an array with all our promises.
-        return exports.fulfillPromises(promises);
-      })
-      .then(results => {
-        console.warn('Trial for cache complete: ', results);
-        resolve(results);
-      });
+      // Now we have an array with all our promises.
+      return exports.fulfillPromises(promises);
+    })
+    .then(results => {
+      console.warn('Trial for cache complete: ', results);
+      resolve(results);
+    });
   });
 };
 
@@ -5034,12 +5100,13 @@ exports.downloadKeyAsCsv = function(key) {
   });
 };
 
-},{"./app-controller":1,"./chrome-apis/storage":4,"./persistence/datastore":18,"./server/server-api":23,"./util":26,"json2csv":34}],17:[function(require,module,exports){
+},{"./app-controller":1,"./chrome-apis/chromep":2,"./persistence/datastore":20,"./server/server-api":25,"./util":28,"json2csv":42}],16:[function(require,module,exports){
 'use strict';
 
-var chromeRuntime = require('../chrome-apis/runtime');
-var datastore = require('../persistence/datastore');
 var base64 = require('base-64');
+
+var chromep = require('../chrome-apis/chromep');
+var datastore = require('../persistence/datastore');
 
 /**
  * ID of the Semcache extension.
@@ -5052,13 +5119,13 @@ exports.EXTENSION_ID = 'malgfdapbefeeidjfndgioclhfpfglhe';
  * @param {any} message
  */
 exports.sendMessageToExtension = function(message) {
-  chromeRuntime.sendMessage(exports.EXTENSION_ID, message);
+  chromep.getRuntime().sendMessage(exports.EXTENSION_ID, message);
 };
 
 /**
  * Function to handle messages coming from the SemCache extension.
  *
- * @param {object} message message sent by the extension. Expected to have the
+ * @param {Object} message message sent by the extension. Expected to have the
  * following format:
  * {
  *   type: 'write'
@@ -5069,8 +5136,8 @@ exports.sendMessageToExtension = function(message) {
  *     metadata: {}
  *   }
  * }
- * @param {MessageSender}
- * @param {function}
+ * @param {MessageSender} sender
+ * @param {function} response
  */
 exports.handleExternalMessage = function(message, sender, response) {
   // Methods via onMessagExternal.addListener must respond true if the response
@@ -5092,18 +5159,18 @@ exports.handleExternalMessage = function(message, sender, response) {
     var captureDate = message.params.captureDate;
     var metadata = message.params.metadata;
     datastore.addPageToCache(captureUrl, captureDate, blob, metadata)
-      .then(() => {
-        var successMsg = exports.createResponseSuccess(message);
-        if (response) {
-          response(successMsg);
-        }
-      })
-      .catch(err => {
-        var errorMsg = exports.createResponseError(message, err);
-        if (response) {
-          response(errorMsg);
-        }
-      });
+    .then(() => {
+      var successMsg = exports.createResponseSuccess(message);
+      if (response) {
+        response(successMsg);
+      }
+    })
+    .catch(err => {
+      var errorMsg = exports.createResponseError(message, err);
+      if (response) {
+        response(errorMsg);
+      }
+    });
   } else {
     console.log('Unrecognized message type from extension: ', message.type);
   }
@@ -5113,9 +5180,9 @@ exports.handleExternalMessage = function(message, sender, response) {
 /**
  * Create a message to send to the extension upon a successful action.
  *
- * @param {object} message the original message that generated the request
+ * @param {Object} message the original message that generated the request
  *
- * @return {object} a response object. Contains at a result key, indicating
+ * @return {Object} a response object. Contains at a result key, indicating
  * 'success', a type key, indicating the type of the original message, and an
  * optional params key with additional values.
  */
@@ -5129,7 +5196,7 @@ exports.createResponseSuccess = function(message) {
 /**
  * Create a message to send to the extension upon an error.
  *
- * @param {object} message the original message that generated the request
+ * @param {Object} message the original message that generated the request
  * @param {any} err the error info to send to the extension
  */
 exports.createResponseError = function(message, err) {
@@ -5162,7 +5229,13 @@ exports.getBlobFromDataUrl = function(dataUrl) {
 };
 
 exports.attachListeners = function() {
-  chromeRuntime.addOnMessageExternalListener(exports.handleExternalMessage);
+  var runtime = chromep.getRuntime();
+  console.log('runtime: ', runtime);
+  var ome = runtime.onMessageExternal;
+  console.log('ome: ', ome);
+  chromep.getRuntimeBare().onMessageExternal.addListener(
+    exports.handleExternalMessage
+  );
 };
 
 /**
@@ -5180,7 +5253,212 @@ exports.sendMessageToOpenUrl = function(url) {
   exports.sendMessageToExtension(message);
 };
 
-},{"../chrome-apis/runtime":3,"../persistence/datastore":18,"base-64":31}],18:[function(require,module,exports){
+},{"../chrome-apis/chromep":2,"../persistence/datastore":20,"base-64":35}],17:[function(require,module,exports){
+'use strict';
+
+var util = require('../util');
+
+/**
+ * Code shared across the peer-interface implementations.
+ */
+
+/**
+ * Returns the IP address, extracting if necessary.
+ *
+ * @param {string} ipaddr
+ * @param {string} url
+ *
+ * @return {string}
+ */
+function getIpAddress(ipaddr, url) {
+  var result = ipaddr;
+  if (!result) {
+    result = util.getHostFromUrl(url);
+  }
+  return result;
+}
+
+/**
+ * Returns the port, extracting if necessary.
+ *
+ * @param {integer} port
+ * @param {string} url
+ *
+ * @return {integer}
+ */
+function getPort(port, url) {
+  var result = port;
+  if (!result) {
+    result = util.getPortFromUrl(url);
+  }
+  return result;
+}
+
+/**
+ * Create parameters for a PeerAccessor getList call. If ipaddr or port is
+ * missing, tries to interpolate them from listUrl.
+ *
+ * @param {string} ipaddr IP address of the peer
+ * @param {integer} port port of the peer
+ * @param {string} listUrl the list URL for the peer's list access point. Only
+ * needed if the transport method will be HTTP.
+ *
+ * @return {Object}
+ */
+exports.createListParams = function(ipaddr, port, listUrl) {
+  ipaddr = getIpAddress(ipaddr, listUrl);
+  port = getPort(port, listUrl);
+  return {
+    ipAddress: ipaddr,
+    port: port,
+    listUrl: listUrl
+  };
+};
+
+/**
+ * Create parameters for a PeerAccessor getFile call. If ipaddr or port is
+ * missing, tries to interpolate them from listUrl.
+ *
+ * @param {string} ipaddr IP address of the peer
+ * @param {integer} port port of the peer
+ * @param {string} fileUrl the list URL for the file's access URL. Only
+ * needed if the transport method will be HTTP.
+ *
+ * @return {Object}
+ */
+exports.createFileParams = function(ipaddr, port, fileUrl) {
+  ipaddr = getIpAddress(ipaddr, fileUrl);
+  port = getPort(port, fileUrl);
+  return {
+    ipAddress: ipaddr,
+    port: port,
+    fileUrl: fileUrl
+  };
+};
+
+},{"../util":28}],18:[function(require,module,exports){
+'use strict';
+
+var util = require('../util');
+
+/**
+ * @constructor
+ */
+exports.HttpPeerAccessor = function HttpPeerAccessor() {
+  if (!(this instanceof HttpPeerAccessor)) {
+    throw new Error('PeerAccessor must be called with new');
+  }
+  
+};
+
+/**
+ * Retrieve a blob from the peer.
+ *
+ * @param {Object} params parameter object as created by peer-interface/common
+ *
+ * @return {Promise.<Blob, Error>}
+ */
+exports.HttpPeerAccessor.prototype.getFileBlob = function(params) {
+  return new Promise(function(resolve, reject) {
+    return util.fetch(params.fileUrl)
+    .then(response => {
+      return response.blob();
+    })
+    .then(blob => {
+      resolve(blob);
+    })
+    .catch(err => {
+      reject(err);
+    });
+  });
+};
+
+/**
+ * Retrieve the list of pages in the peer's cache.
+ *
+ * @param {Object} params parameter object as created by peer-interface/common
+ *
+ * @return {Promise.<Object, Error>}
+ */
+exports.HttpPeerAccessor.prototype.getList = function(params) {
+  return new Promise(function(resolve, reject) {
+    util.fetch(params.listUrl)
+    .then(response => {
+      return response.json();
+    })
+    .then(json => {
+      resolve(json);
+    })
+    .catch(err => {
+      reject(err);
+    });
+  });
+};
+
+},{"../util":28}],19:[function(require,module,exports){
+'use strict';
+
+var cmgr = require('../webrtc/connection-manager');
+var util = require('../util');
+
+/**
+ * @constructor
+ */
+exports.WebrtcPeerAccessor = function WebrtcPeerAccessor() {
+  if (!(this instanceof WebrtcPeerAccessor)) {
+    throw new Error('PeerAccessor must be called with new');
+  }
+  
+};
+
+/**
+ * Retrieve a blob from the peer.
+ *
+ * @param {Object} params parameters for the get, as created by
+ * peer-interface/common.
+ *
+ * @return {Promise.<Blob, Error>}
+ */
+exports.WebrtcPeerAccessor.prototype.getFileBlob = function(params) {
+  return new Promise(function(resolve, reject) {
+    cmgr.getOrCreateConnection(params.ipAddress, params.port)
+    .then(peerConnection => {
+      return peerConnection.getFile(params.fileUrl);
+    })
+    .then(binary => {
+      var blob = util.getBufferAsBlob(binary);
+      resolve(blob);
+    })
+    .catch(err => {
+      reject(err);
+    });
+  });
+};
+
+/**
+ * Retrieve the list of pages in the peer's cache.
+ *
+ * @param {Object} params parameters for list request, as created by
+ * peer-interface/common.
+ *
+ * @return {Promise.<Object, Error>}
+ */
+exports.WebrtcPeerAccessor.prototype.getList = function(params) {
+  return new Promise(function(resolve, reject) {
+    cmgr.getOrCreateConnection(params.ipAddress, params.port)
+    .then(peerConnection => {
+      return peerConnection.getList();
+    })
+    .then(json => {
+      resolve(json);
+    })
+    .catch(err => {
+      reject(err);
+    });
+  });
+};
+
+},{"../util":28,"../webrtc/connection-manager":30}],20:[function(require,module,exports){
 /* globals Promise */
 'use strict';
 
@@ -5196,10 +5474,10 @@ exports.sendMessageToOpenUrl = function(url) {
 // "www.example.com_date". This will serve for a prototype but might become
 // limiting in the future.
 
+var chromep = require('../chrome-apis/chromep');
 var fileSystem = require('./file-system');
 var fsUtil = require('./file-system-util');
 var serverApi = require('../server/server-api');
-var storage = require('../chrome-apis/storage');
 
 /** The number of characters output by Date.toISOString() */
 var LENGTH_ISO_DATE_STR = 24;
@@ -5208,15 +5486,19 @@ var URL_DATE_DELIMITER = '_';
 
 exports.MHTML_EXTENSION = '.mhtml';
 
+exports.DEBUG = false;
+
 /**
  * This object represents a page that is stored in the cache and can be browsed
  * to.
+ *
+ * @constructor
  *
  * @param {string} captureUrl the URL of the original captured page
  * @param {string} captureDate the ISO String representation of the datetime
  * @param {string} accessPath the path in the cache that can be used to access
  * the file the page was captured
- * @param {object} metadata an object stored and associated with the page.
+ * @param {Object} metadata an object stored and associated with the page.
  * Allows additional metadata to be stored, e.g. mime type, thumbnail, etc.
  * Must be safe to serialize via chrome.storage.local.set().
  */
@@ -5242,9 +5524,10 @@ exports.CachedPage = function CachedPage(
  * @param {string} captureDate the toISOString() of the date the page was
  * captured
  * @param {Blob} mhtmlBlob the contents of hte page
- * @param {object} metadata metadata to store with the page
+ * @param {Object} metadata metadata to store with the page
  *
- * @return {Promise} a Promise that resolves when the write is complete
+ * @return {Promise.<FileEntry, Error>} a Promise that resolves when the write
+ * is complete
  */
 exports.addPageToCache = function(
   captureUrl, captureDate, mhtmlBlob, metadata
@@ -5286,7 +5569,8 @@ exports.addPageToCache = function(
 /**
  * Get all the cached pages that are stored in the cache.
  *
- * @return {Promise} Promise that resolves with an Array of CachedPage objects
+ * @return {Promise.<CachedPage, Error>} Promise that resolves with an Array of
+ * CachedPage objects
  */
 exports.getAllCachedPages = function() {
   return new Promise(function(resolve, reject) {
@@ -5311,7 +5595,8 @@ exports.getAllCachedPages = function() {
 /**
  * Get all the FileEntries representing saved pages.
  *
- * @return {Promise} Promise that resolves with an array of FileEntry objects
+ * @return {Promise.<Array.<CachedPage>, Error>} Promise that resolves with an
+ * array of FileEntry objects
  */
 exports.getAllFileEntriesForPages = function() {
   var flagDirNotSet = 1;
@@ -5345,22 +5630,26 @@ exports.getAllFileEntriesForPages = function() {
  *
  * @param {FileEntry} entry
  *
- * @return {Promise -> CachedPage} Promise that resolves with the CachedPage
+ * @return {Promise.<CachedPage, Error>} Promise that resolves with the
+ * CachedPage
  */
 exports.getEntryAsCachedPage = function(entry) {
-  var captureUrl = exports.getCaptureUrlFromName(entry.name);
-  var captureDate = exports.getCaptureDateFromName(entry.name);
-  var accessUrl = serverApi.getAccessUrlForCachedPage(entry.fullPath);
-
   // Retrieve the metadata from Chrome storage.
-  return new Promise(function(resolve) {
+  return new Promise(function(resolve, reject) {
+    var captureUrl = exports.getCaptureUrlFromName(entry.name);
+    var captureDate = exports.getCaptureDateFromName(entry.name);
+    var accessUrl = serverApi.getAccessUrlForCachedPage(entry.fullPath);
+
     exports.getMetadataForEntry(entry)
-      .then(mdata => {
-        var result = new exports.CachedPage(
-          captureUrl, captureDate, accessUrl, mdata
-        );
-        resolve(result);
-      });
+    .then(mdata => {
+      var result = new exports.CachedPage(
+        captureUrl, captureDate, accessUrl, mdata
+      );
+      resolve(result);
+    })
+    .catch(err => {
+      reject(err);
+    });
   });
 };
 
@@ -5371,24 +5660,30 @@ exports.getEntryAsCachedPage = function(entry) {
  *
  * @param {FileEntry} entry 
  *
- * @return {Promise -> object} Promise that resolves with the metadata object
+ * @return {Promise.<Object, Error>} Promise that resolves with the metadata
+ * object
  */
 exports.getMetadataForEntry = function(entry) {
-  var key = exports.createMetadataKey(entry);
-  return new Promise(function(resolve) {
-    storage.get(key)
-      .then(obj => {
-        // The get API resolves with the key value pair in a single object,
-        // e.g. get('foo') -> { foo: bar }.
-        var result = {};
-        if (obj && obj[key]) {
-          result = obj[key];
-        }
+  return new Promise(function(resolve, reject) {
+    var key = exports.createMetadataKey(entry);
+    chromep.getStorageLocal().get(key)
+    .then(obj => {
+      // The get API resolves with the key value pair in a single object,
+      // e.g. get('foo') -> { foo: bar }.
+      var result = {};
+      if (obj && obj[key]) {
+        result = obj[key];
+      }
+      if (exports.DEBUG) {
         console.log('querying for key: ', key);
         console.log('  get result: ', obj);
         console.log('  metadata: ', result);
-        resolve(result);
-      });
+      }
+      resolve(result);
+    })
+    .catch(err => {
+      reject(err);
+    });
   });
 };
 
@@ -5408,15 +5703,16 @@ exports.createMetadataKey = function(entry) {
  * Write the metadata object for the given entry.
  *
  * @param {FileEntry} entry file pertaining to the metadata
- * @param {object} metadata the metadata to write
+ * @param {Object} metadata the metadata to write
  *
- * @return {Promise} Promise that resolves when the write is complete
+ * @return {Promise.<undefined, Error>} Promise that resolves when the write is
+ * complete
  */
 exports.writeMetadataForEntry = function(entry, metadata) {
   var key = exports.createMetadataKey(entry);
   var obj = {};
   obj[key] = metadata;
-  return storage.set(obj);
+  return chromep.getStorageLocal().set(obj);
 };
 
 /**
@@ -5477,9 +5773,11 @@ exports.getCaptureDateFromName = function(name) {
   return result;
 };
 
-},{"../chrome-apis/storage":4,"../server/server-api":23,"./file-system":20,"./file-system-util":19}],19:[function(require,module,exports){
+},{"../chrome-apis/chromep":2,"../server/server-api":25,"./file-system":22,"./file-system-util":21}],21:[function(require,module,exports){
 /* globals Promise */
 'use strict';
+
+var Buffer = require('buffer/').Buffer;
 
 /**
  * General file system operations on top of the web APIs.
@@ -5496,8 +5794,8 @@ function toArray(list) {
 /**
  * @param {DirectoryEntry} dirEntry the directory to list
  *
- * @return {Promise} Promise that resolves with an Array of Entry objects
- * that are the contents of the directory
+ * @return {Promise.<Array.<Entry>, Error>} Promise that resolves with an Array
+ * of Entry objects that are the contents of the directory
  */
 exports.listEntries = function(dirEntry) {
   // This code is based on the Mozilla and HTML5Rocks examples shown here:
@@ -5529,8 +5827,8 @@ exports.listEntries = function(dirEntry) {
  * @param {FileEntry} fileEntry the file that will be written to
  * @param {Blob} fileBlob the content to write
  *
- * @return {Promise} Promise that resolves when the write is complete or
- * rejects with an error
+ * @return {Promise.<undefined, Error>} Promise that resolves when the write is
+ * complete or rejects with an error
  */
 exports.writeToFile = function(fileEntry, fileBlob) {
   return new Promise(function(resolve, reject) {
@@ -5553,11 +5851,11 @@ exports.writeToFile = function(fileEntry, fileBlob) {
  * A Promise-ified version of DirectoryEntry.getFile().
  *
  * @param {DirectoryEntry} dirEntry the parent directory
- * @param {object} options object to pass to getFile function
+ * @param {Object} options object to pass to getFile function
  * @param {string} name the file name in dirEntry
  *
- * @return {Promise} Promise that resolves with the FileEntry or rejects with
- * an error
+ * @return {Promise.<FileEntry, Error>} Promise that resolves with the
+ * FileEntry or rejects with an error
  */
 exports.getFile = function(dirEntry, options, name) {
   return new Promise(function(resolve, reject) {
@@ -5574,11 +5872,11 @@ exports.getFile = function(dirEntry, options, name) {
  * A Promise-ified version of DirectoryEntry.getDirectory().
  *
  * @param {DirectoryEntry} dirEntry the parent directory
- * @param {object} options object to pass to getDirectory function
+ * @param {Object} options object to pass to getDirectory function
  * @param {string} name the file name in dirEntry
  *
- * @return {Promise} Promise that resolves with the DirectoryEntry or rejects
- * with an error
+ * @return {Promise.<DirectoryEntry, Error>} Promise that resolves with the
+ * DirectoryEntry or rejects with an error
  */
 exports.getDirectory = function(dirEntry, options, name) {
   return new Promise(function(resolve, reject) {
@@ -5591,13 +5889,105 @@ exports.getDirectory = function(dirEntry, options, name) {
   });
 };
 
-},{}],20:[function(require,module,exports){
+/**
+ * @param {FileSystemEntry} entry
+ *
+ * @return {Promise.<Metadata, Error>} Promise that resolves with the size of
+ * the file or rejects with an Error
+ */
+exports.getMetadata = function(entry) {
+  return new Promise(function(resolve, reject) {
+    entry.getMetadata(
+      function success(metadata) {
+        resolve(metadata);
+      },
+      function error(err) {
+        reject(err); 
+      }
+    );
+  });
+};
+
+/**
+ * Promise-ified wrapper around the FileSystemFileEntry.file() method.
+ *
+ * @param {FileSystemFileEntry} fileEntry
+ *
+ * @return {Promise.<File, Error>} Promise that resolves with the File or
+ * rejects with an Error
+ */
+exports.getFileFromEntry = function(fileEntry) {
+  return new Promise(function(resolve, reject) {
+    fileEntry.file(
+      function success(file) {
+        resolve(file);
+      },
+      function error(err) {
+        reject(err); 
+      }
+    );
+  });
+};
+
+/**
+ * Retrieves the binary contents of a file.
+ *
+ * @param {FileEntry} fileEntry the fileEntry for which you want the contents
+ *
+ * @return {Promise.<Buffer, Error>} Promise that resolves with a Buffer object
+ * containing the binary content of the file or rejects with an Error.
+ */
+exports.getFileContents = function(fileEntry) {
+  return new Promise(function(resolve, reject) {
+    // Array of Buffers that we write chunks to as we receive them.
+    var chunks = [];
+    exports.getFileFromEntry(fileEntry)
+    .then(file => {
+      var fileReader = exports.createFileReader();
+
+      fileReader.onload = function(evt) {
+        // We want to push Buffers, not ArrayBuffers.
+        var arrayBuffer = evt.target.result;
+        chunks.push(Buffer.from(arrayBuffer));
+      };
+
+      fileReader.onloadend = function() {
+        try {
+          var result = Buffer.concat(chunks);
+          resolve(result);
+        } catch (err) {
+          reject(err);
+        }
+      };
+
+      fileReader.onerror = function(evt) {
+        console.error('error reading ', evt.target.error);
+        reject(evt.target.error);
+      };
+
+      fileReader.readAsArrayBuffer(file);
+    })
+    .catch(err => {
+      reject(err);
+    });
+  }); 
+};
+
+/**
+ * Exposed for testing.
+ *
+ * @return {FileReader} result of a straight call to new FileReader()
+ */
+exports.createFileReader = function() {
+  return new FileReader();
+};
+
+},{"buffer/":37}],22:[function(require,module,exports){
 /*jshint esnext:true*/
 /* globals Promise */
 'use strict';
 
-var chromefs = require('../chrome-apis/file-system');
-var chromeStorage = require('../chrome-apis/storage');
+var chromep = require('../chrome-apis/chromep');
 var fsUtil = require('./file-system-util');
 
 /** The local storage key for the entry ID of the base directory. */
@@ -5636,8 +6026,9 @@ exports.constructFileSchemeUrl = function(absPathToBaseDir, fileEntryPath) {
 /**
  * Get the directory where cache entries are stored.
  *
- * @return {Promise} Promise that resolves with a DirectoryEntry that is the
- * base cache directory. Rejects if the base directory has not been set.
+ * @return {Promise.<DirectoryEntry, Error>} Promise that resolves with a
+ * DirectoryEntry that is the base cache directory. Rejects if the base
+ * directory has not been set.
  */
 exports.getDirectoryForCacheEntries = function() {
   return new Promise(function(resolve, reject) {
@@ -5666,19 +6057,19 @@ exports.getDirectoryForCacheEntries = function() {
  * must have already been chosen via a file chooser. If a base directory has
  * not been chosen, it will return null.
  *
- * @return {Promise} Promise that resolves with the DirectoryEntry that has
- * been set as the root of the SemCache file system. Resolves null if the
- * directory has not been set.
+ * @return {Promise.<DirectoryEntry, Error>} Promise that resolves with the
+ * DirectoryEntry that has been set as the root of the SemCache file system.
+ * Resolves null if the directory has not been set.
  */
 exports.getPersistedBaseDir = function() {
-  return new Promise(function(resolve) {
+  return new Promise(function(resolve, reject) {
     exports.baseDirIsSet()
     .then(isSet => {
       if (isSet) {
-        chromeStorage.get(exports.KEY_BASE_DIR)
+        chromep.getStorageLocal().get(exports.KEY_BASE_DIR)
         .then(keyValue => {
           var id = keyValue[exports.KEY_BASE_DIR];
-          return chromefs.restoreEntry(id);
+          return chromep.getFileSystem().restoreEntry(id);
         })
         .then(dirEntry => {
           resolve(dirEntry);
@@ -5687,22 +6078,28 @@ exports.getPersistedBaseDir = function() {
         // Null if not set.
         resolve(null);
       }
+    })
+    .catch(err => {
+      reject(err);
     });
   });
 };
 
 /**
- * @return {Promise} Promise that resolves with a boolean
+ * @return {Promise.<boolean, Error>} Promise that resolves with a boolean
  */
 exports.baseDirIsSet = function() {
-  return new Promise(function(resolve) {
-    chromeStorage.get(exports.KEY_BASE_DIR)
+  return new Promise(function(resolve, reject) {
+    chromep.getStorageLocal().get(exports.KEY_BASE_DIR)
     .then(keyValue => {
       var isSet = false;
       if (keyValue && keyValue[exports.KEY_BASE_DIR]) {
         isSet = true;
       }
       resolve(isSet);
+    })
+    .catch(err => {
+      reject(err);
     });
   });
 };
@@ -5714,27 +6111,64 @@ exports.baseDirIsSet = function() {
  */
 exports.setBaseCacheDir = function(dirEntry) {
   var keyObj = {};
-  var id = chromefs.retainEntrySync(dirEntry);
+  var id = chromep.getFileSystem().retainEntry(dirEntry);
   keyObj[exports.KEY_BASE_DIR] = id;
-  chromeStorage.set(keyObj);
+  console.log('going to call set');
+  chromep.getStorageLocal().set(keyObj);
 };
 
 /**
  * Prompt the user to choose a directory.
  *
- * @return {Promise} a promise that resolves with a DirectoryEntry that has
- * been chosen by the user.
+ * @return {Promise.<DirectoryEntry, Error>} a promise that resolves with a
+ * DirectoryEntry that has been chosen by the user.
  */
 exports.promptForDir = function() {
-  return new Promise(function(resolve) {
-    chromefs.chooseEntry({type: 'openDirectory'})
+  return new Promise(function(resolve, reject) {
+    chromep.getFileSystem().chooseEntry({type: 'openDirectory'})
     .then(entry => {
       resolve(entry);
+    })
+    .catch(err => {
+      reject(err);
     });
   });
 };
 
-},{"../chrome-apis/file-system":2,"../chrome-apis/storage":4,"./file-system-util":19}],21:[function(require,module,exports){
+/**
+ * Retrieve the binary contents of the file at the specified fileName.
+ *
+ * @param {String} fileName the name of the file
+ *
+ * @return {Promise.<Buffer, Error>} Promise that resolves with a Buffer
+ * containing the contents of the file or rejects with an Error
+ */
+exports.getFileContentsFromName = function(fileName) {
+  return new Promise(function(resolve, reject) {
+    exports.getDirectoryForCacheEntries()
+    .then(cacheDir => {
+      return fsUtil.getFile(
+        cacheDir,
+        {
+          create: false,
+          exclusive: false
+        },
+        fileName
+      );
+    })
+    .then(fileEntry => {
+      return fsUtil.getFileContents(fileEntry);
+    })
+    .then(buff => {
+      resolve(buff);
+    })
+    .catch(err => {
+      reject(err);
+    });
+  });
+};
+
+},{"../chrome-apis/chromep":2,"./file-system-util":21}],23:[function(require,module,exports){
 /* globals WSC, _, TextEncoder */
 'use strict';
 
@@ -5764,7 +6198,7 @@ _.extend(exports.EvaluationHandler.prototype, {
   }
 }, WSC.BaseHandler.prototype);
 
-},{"../evaluation":16}],22:[function(require,module,exports){
+},{"../evaluation":15}],24:[function(require,module,exports){
 /* globals WSC, RTCPeerConnection, RTCSessionDescription, RTCIceCandidate */
 'use strict';
 
@@ -5774,7 +6208,7 @@ var fileSystem = require('../persistence/file-system');
 var fsUtil = require('../persistence/file-system-util');
 var binUtil = require('../dnssd/binary-utils').BinaryUtils;
 var rtcConnMgr = require('../webrtc/connection-manager');
-var webrtcUtil = require('../webrtc/util');
+var wrtcResponder = require('../webrtc/responder');
 
 /**
  * Handlers for the webserver backing SemCache. The idea for handlers is based
@@ -5797,13 +6231,13 @@ _.extend(exports.ListCachedPagesHandler.prototype,
   {
     get: function() {
       api.getResponseForAllCachedPages()
-        .then(response => {
-          this.setHeader('content-type', 'text/json');
-          var encoder = new TextEncoder('utf-8');
-          var buffer = encoder.encode(JSON.stringify(response)).buffer;
-          this.write(buffer);
-          this.finish();
-        });
+      .then(response => {
+        this.setHeader('content-type', 'text/json');
+        var encoder = new TextEncoder('utf-8');
+        var buffer = encoder.encode(JSON.stringify(response)).buffer;
+        this.write(buffer);
+        this.finish();
+      });
     }
   },
   WSC.BaseHandler.prototype
@@ -5823,37 +6257,37 @@ _.extend(exports.CachedPageHandler.prototype,
       var fileName = api.getCachedFileNameFromPath(this.request.path);
 
       fileSystem.getDirectoryForCacheEntries()
-        .then(cacheDir => {
-          return fsUtil.getFile(
-            cacheDir, 
-            {
-              create: false,
-              exclusive: false
-            },
-            fileName
-          );
-        })
-        .then(fileEntry => {
-          fileEntry.file(file => {
-            var that = this;
-            var fileReader = new FileReader();
+      .then(cacheDir => {
+        return fsUtil.getFile(
+          cacheDir, 
+          {
+            create: false,
+            exclusive: false
+          },
+          fileName
+        );
+      })
+      .then(fileEntry => {
+        fileEntry.file(file => {
+          var that = this;
+          var fileReader = new FileReader();
 
-            fileReader.onload = function(evt) {
-              // set mime types etc?
-              that.write(evt.target.result);
-            };
+          fileReader.onload = function(evt) {
+            // set mime types etc?
+            that.write(evt.target.result);
+          };
 
-            fileReader.onerror = function(evt) {
-              console.error('error reading', evt.target.error);
-              that.request.connection.close();
-            };
+          fileReader.onerror = function(evt) {
+            console.error('error reading', evt.target.error);
+            that.request.connection.close();
+          };
 
-            fileReader.readAsArrayBuffer(file);
-          });
-        })
-        .catch(err => {
-          console.log('Error reading file: ', err);
+          fileReader.readAsArrayBuffer(file);
         });
+      })
+      .catch(err => {
+        console.log('Error reading file: ', err);
+      });
     }
   },
   WSC.BaseHandler.prototype
@@ -5885,7 +6319,7 @@ _.extend(exports.WebRtcOfferHandler.prototype,
 
       var bodyJson = JSON.parse(bodyStr);
 
-      var pc = new RTCPeerConnection(null, webrtcUtil.optionalCreateArgs);
+      var pc = new RTCPeerConnection(null, null);
       pc.onicecandidate = onIceCandidate;
       var remoteDescription = new RTCSessionDescription(bodyJson.description);
       pc.setRemoteDescription(remoteDescription);
@@ -5929,13 +6363,10 @@ _.extend(exports.WebRtcOfferHandler.prototype,
         console.log('responding with description: ', desc);
         pc.setLocalDescription(desc);
 
-        pc.ondatachannel = webrtcUtil.channelCallback;
+
+        pc.ondatachannel = wrtcResponder.onDataChannelHandler;
 
         maybeRespond();
-
-        // var descJson = JSON.stringify(desc);
-        // var descBin = binUtil.stringToArrayBuffer(descJson);
-        // that.write(descBin);
       }, err => {
         console.log('err creating desc: ', err);
       });
@@ -5947,43 +6378,43 @@ _.extend(exports.WebRtcOfferHandler.prototype,
       var fileName = api.getCachedFileNameFromPath(this.request.path);
 
       fileSystem.getDirectoryForCacheEntries()
-        .then(cacheDir => {
-          return fsUtil.getFile(
-            cacheDir, 
-            {
-              create: false,
-              exclusive: false
-            },
-            fileName
-          );
-        })
-        .then(fileEntry => {
-          fileEntry.file(file => {
-            var that = this;
-            var fileReader = new FileReader();
+      .then(cacheDir => {
+        return fsUtil.getFile(
+          cacheDir, 
+          {
+            create: false,
+            exclusive: false
+          },
+          fileName
+        );
+      })
+      .then(fileEntry => {
+        fileEntry.file(file => {
+          var that = this;
+          var fileReader = new FileReader();
 
-            fileReader.onload = function(evt) {
-              // set mime types etc?
-              that.write(evt.target.result);
-            };
+          fileReader.onload = function(evt) {
+            // set mime types etc?
+            that.write(evt.target.result);
+          };
 
-            fileReader.onerror = function(evt) {
-              console.error('error reading', evt.target.error);
-              that.request.connection.close();
-            };
+          fileReader.onerror = function(evt) {
+            console.error('error reading', evt.target.error);
+            that.request.connection.close();
+          };
 
-            fileReader.readAsArrayBuffer(file);
-          });
-        })
-        .catch(err => {
-          console.log('Error reading file: ', err);
+          fileReader.readAsArrayBuffer(file);
         });
+      })
+      .catch(err => {
+        console.log('Error reading file: ', err);
+      });
     }
   },
   WSC.BaseHandler.prototype
 );
 
-},{"../dnssd/binary-utils":6,"../persistence/file-system":20,"../persistence/file-system-util":19,"../webrtc/connection-manager":27,"../webrtc/util":30,"./server-api":23,"underscore":41}],23:[function(require,module,exports){
+},{"../dnssd/binary-utils":5,"../persistence/file-system":22,"../persistence/file-system-util":21,"../webrtc/connection-manager":30,"../webrtc/responder":34,"./server-api":25,"underscore":49}],25:[function(require,module,exports){
 'use strict';
 
 /**
@@ -6021,7 +6452,7 @@ exports.createMetadatObj = function() {
  * (e.g. 'foo' or 'foo/bar' but never '/foo/bar'). The paths do not contain
  * scheme, host, or port.
  *
- * @return {object} an object mapping API end points to string paths, like the
+ * @return {Object} an object mapping API end points to string paths, like the
  * following:
  * {
  *   pageCache: '',
@@ -6041,7 +6472,7 @@ exports.getApiEndpoints = function() {
  * Return the URL where the list of cached pages can be accessed.
  *
  * @param {string} ipAddress the IP address of the cache
- * @param {number} port the port where the server is listening at ipAddress
+ * @param {integer} port the port where the server is listening at ipAddress
  */
 exports.getListPageUrlForCache = function(ipAddress, port) {
   var scheme = HTTP_SCHEME;
@@ -6072,7 +6503,8 @@ exports.getAccessUrlForCachedPage = function(fullPath) {
 /**
  * Return a JSON object response for the all cached pages endpoing.
  *
- * @return {Promise} Promise that resolves with an object like the following:
+ * @return {Promise.<Object, Error} Promise that resolves with an object like
+ * the following:
  * {
  *   metadata: {},
  *   cachedPages: [CachedPage, CachedPage]
@@ -6081,15 +6513,15 @@ exports.getAccessUrlForCachedPage = function(fullPath) {
 exports.getResponseForAllCachedPages = function() {
   return new Promise(function(resolve, reject) {
     datastore.getAllCachedPages()
-      .then(pages => {
-        var result = {};
-        result.metadata = exports.createMetadatObj();
-        result.cachedPages = pages;
-        resolve(result);
-      })
-      .catch(err => {
-        reject(err);
-      });
+    .then(pages => {
+      var result = {};
+      result.metadata = exports.createMetadatObj();
+      result.cachedPages = pages;
+      resolve(result);
+    })
+    .catch(err => {
+      reject(err);
+    });
   });
 };
 
@@ -6105,7 +6537,7 @@ exports.getCachedFileNameFromPath = function(path) {
   return result;
 };
 
-},{"../app-controller":1,"../persistence/datastore":18}],24:[function(require,module,exports){
+},{"../app-controller":1,"../persistence/datastore":20}],26:[function(require,module,exports){
 /* global WSC, DummyHandler */
 'use strict';
 
@@ -6173,13 +6605,12 @@ exports.start = function(host, port) {
   startServer(host, port, endpointHandlers);
 };
 
-},{"./evaluation-handler":21,"./handlers":22,"./server-api":23}],25:[function(require,module,exports){
+},{"./evaluation-handler":23,"./handlers":24,"./server-api":25}],27:[function(require,module,exports){
 /* global Promise */
 'use strict';
 
-var storage = require('./chrome-apis/storage');
+var chromep = require('./chrome-apis/chromep');
 var fileSystem = require('./persistence/file-system');
-var chromefs = require('./chrome-apis/file-system');
 
 /**
  * Settings for the application as a whole.
@@ -6193,6 +6624,14 @@ var chromefs = require('./chrome-apis/file-system');
 /** The prefix that we use to namespace setting keys. */
 var SETTING_NAMESPACE_PREFIX = 'setting_';
 
+/**
+ * The strings we use to represent transport mechanisms in the database.
+ */
+var TRANSPORT_METHOD_STRINGS = {
+  http: 'http',
+  webrtc: 'webrtc'
+};
+
 exports.SETTINGS_OBJ = null;
 
 var userFriendlyKeys = {
@@ -6201,13 +6640,14 @@ var userFriendlyKeys = {
   baseDirId: 'baseDirId',
   baseDirPath: 'baseDirPath',
   serverPort: 'serverPort',
-  hostName: 'hostName'
+  hostName: 'hostName',
+  transportMethod: 'transportMethod'
 };
 
 /**
  * Returns an array with all of the keys known to store settings.
  *
- * @return {Array<String>}
+ * @return {Array.<String>}
  */
 exports.getAllSettingKeys = function() {
   return [
@@ -6216,7 +6656,8 @@ exports.getAllSettingKeys = function() {
     exports.createNameSpacedKey(userFriendlyKeys.baseDirId),
     exports.createNameSpacedKey(userFriendlyKeys.baseDirPath),
     exports.createNameSpacedKey(userFriendlyKeys.serverPort),
-    exports.createNameSpacedKey(userFriendlyKeys.hostName)
+    exports.createNameSpacedKey(userFriendlyKeys.hostName),
+    exports.createNameSpacedKey(userFriendlyKeys.transportMethod)
   ];
 };
 
@@ -6241,23 +6682,27 @@ exports.getSettingsObj = function() {
  * Initialize the cache of settings objects. After this call, getSettingsObj()
  * will return with the cached value.
  *
- * @return {Promise} Promise that resolves with the newly-initialized cache
+ * @return {Promise.<Object, Error>} Promise that resolves with the
+ * newly-initialized cache
  */
 exports.init = function() {
   // Get all the known settings
-  return new Promise(function(resolve) {
-    storage.get(exports.getAllSettingKeys())
-      .then(allKvPairs => {
-        var processedSettings = {};
-        Object.keys(allKvPairs).forEach(rawKey => {
-          // we're dealing with the raw keys here, e.g. setting_absPath
-          var processedKey = exports.removeNameSpaceFromKey(rawKey);
-          var value = allKvPairs[rawKey];
-          processedSettings[processedKey] = value;
-        });
-        exports.SETTINGS_OBJ = processedSettings;
-        resolve(processedSettings);
+  return new Promise(function(resolve, reject) {
+    chromep.getStorageLocal().get(exports.getAllSettingKeys())
+    .then(allKvPairs => {
+      var processedSettings = {};
+      Object.keys(allKvPairs).forEach(rawKey => {
+        // we're dealing with the raw keys here, e.g. setting_absPath
+        var processedKey = exports.removeNameSpaceFromKey(rawKey);
+        var value = allKvPairs[rawKey];
+        processedSettings[processedKey] = value;
       });
+      exports.SETTINGS_OBJ = processedSettings;
+      resolve(processedSettings);
+    })
+    .catch(err => {
+      reject(err);
+    });
   });
 
 };
@@ -6266,22 +6711,25 @@ exports.init = function() {
  * Set the value in local storage and in the settings cache maintained by this
  * object.
  *
- * @return {Promise} Promise that resolves with the current settings object
- * after the set completes
+ * @return {Promise.<Object, Error>} Promise that resolves with the current
+ * settings object after the set completes
  */
 exports.set = function(key, value) {
-  var namespacedKey = exports.createNameSpacedKey(key);
-  var kvPair = {};
-  kvPair[namespacedKey] = value;
-  var useSync = false;
+  return new Promise(function(resolve, reject) {
+    var namespacedKey = exports.createNameSpacedKey(key);
+    var kvPair = {};
+    kvPair[namespacedKey] = value;
+    var useSync = false;
 
-  return new Promise(function(resolve) {
-    storage.set(kvPair, useSync)
-      .then(() => {
-        exports.SETTINGS_OBJ[key] = value;
-        // Now that the set has succeeded, update the cache of settings.
-        resolve(exports.getSettingsObj());
-      });
+    chromep.getStorageLocal().set(kvPair, useSync)
+    .then(() => {
+      exports.SETTINGS_OBJ[key] = value;
+      // Now that the set has succeeded, update the cache of settings.
+      resolve(exports.getSettingsObj());
+    })
+    .catch(err => {
+      reject(err);
+    });
   });
 };
 
@@ -6378,6 +6826,19 @@ exports.getHostName = function() {
 };
 
 /**
+ * @return {string} String representing the transport method to be used by the
+ * instance to interface with peers. Options are 'http' and 'webrtc'. Defaults
+ * to 'http'.
+ */
+exports.getTransportMethod = function() {
+  var result = exports.get(userFriendlyKeys.transportMethod);
+  if (result === null) {
+    result = TRANSPORT_METHOD_STRINGS.http;
+  }
+  return result;
+};
+
+/**
  * @param {string} path the absolute path to the base directory of SemCache,
  * which unfortunately cannot be determined via an API
  */
@@ -6426,17 +6887,44 @@ exports.setHostName = function(hostName) {
 };
 
 /**
+ * Indicate that HTTP should be used as the transport mechanism to interface
+ * with peers.
+ *
+ * @return {Promise.<Object, Error>} Promise that resolves with the current
+ * settings object
+ */
+exports.setTransportHttp = function() {
+  return exports.set(
+    userFriendlyKeys.transportMethod, TRANSPORT_METHOD_STRINGS.http
+  );
+};
+
+/**
+ * Indicate that WebRTC should be used as the transport mechanism to interface
+ * with peers.
+ *
+ * @return {Promise.<Object, Error>} Promise that resolves with the current
+ * settings object
+ */
+exports.setTransportWebrtc = function() {
+  return exports.set(
+    userFriendlyKeys.transportMethod, TRANSPORT_METHOD_STRINGS.webrtc
+  );
+};
+
+/**
  * Prompt for and set a new base directory of the SemCache file system. It
  * persists both the ID and path.
  *
- * @return {Promise} Promise that resolves with an object like the following:
+ * @return {Promise.<Object, Error} Promise that resolves with an object like
+ * the following:
  * {
  *   baseDirId: '',
  *   baseDirPath: ''
  * }
  */
 exports.promptAndSetNewBaseDir = function() {
-  return new Promise(function(resolve) {
+  return new Promise(function(resolve, reject) {
     var dirId;
     fileSystem.promptForDir()
     .then(dirEntry => {
@@ -6447,10 +6935,10 @@ exports.promptAndSetNewBaseDir = function() {
       }
       console.log('FULL PATH: ', dirEntry.fullPath);
       fileSystem.setBaseCacheDir(dirEntry);
-      dirId = chromefs.retainEntrySync(dirEntry);
+      dirId = chromep.getFileSystem().retainEntry(dirEntry);
       exports.setBaseDirId(dirId);
       // Set the ID
-      return chromefs.getDisplayPath(dirEntry);
+      return chromep.getFileSystem().getDisplayPath(dirEntry);
     })
     .then(displayPath => {
       // Set display path
@@ -6461,11 +6949,14 @@ exports.promptAndSetNewBaseDir = function() {
           baseDirPath: displayPath
         }
       );
+    })
+    .catch(err => {
+      reject(err);
     });
   });
 };
 
-},{"./chrome-apis/file-system":2,"./chrome-apis/storage":4,"./persistence/file-system":20}],26:[function(require,module,exports){
+},{"./chrome-apis/chromep":2,"./persistence/file-system":22}],28:[function(require,module,exports){
 'use strict';
 
 /**
@@ -6473,14 +6964,17 @@ exports.promptAndSetNewBaseDir = function() {
  *
  * @param {string} url
  *
- * @return {Promise -> object} Promise that resolves with JSON fetched and
- * parsed from url.
+ * @return {Promise.<Object, Error>} Promise that resolves with JSON fetched
+ * and parsed from url.
  */
 exports.fetchJson = function(url) {
-  return new Promise(function(resolve) {
+  return new Promise(function(resolve, reject) {
     exports.fetch(url)
     .then(response => {
       resolve(response.json());
+    })
+    .catch(err => {
+      reject(err);
     });
   });
 };
@@ -6500,6 +6994,8 @@ exports.fetch = function() {
  * Returns a promise that resolves after the given time (in ms).
  *
  * @param {integer} ms the number of milliseconds to wait before resolving
+ *
+ * @return {Promise.<undefined, undefined>}
  */
 exports.wait = function(ms) {
   return new Promise(resolve => {
@@ -6513,7 +7009,8 @@ exports.wait = function(ms) {
  * @param {integer} min the minimum number of milliseconds to wait
  * @param {integer} max the maximum number of milliseconds to wait, inclusive
  *
- * @return {Promise} Promise that resolves after the wait
+ * @return {Promise.<undefined, undefined>} Promise that resolves after the
+ * wait
  */
 exports.waitInRange = function(min, max) {
   // + 1 because we specify inclusive, but randomInt is exclusive.
@@ -6568,14 +7065,383 @@ exports.trace = function trace(arg) {
   console.log(now + ': ', arg);
 };
 
-},{}],27:[function(require,module,exports){
-/* globals RTCPeerConnection, RTCSessionDescription */
+/**
+ * Extract the hostname (or IP address) from a URL.
+ *
+ * @param {string} url
+ *
+ * @return {string}
+ */
+exports.getHostFromUrl = function(url) {
+  // Find '//'. This will be the end of the scheme.
+  // Then find the minimum of '/', ':', '#', '?'. That will contain the URL.
+  var slashes = url.indexOf('//');
+  if (slashes < 0) { throw new Error('not a url: ' + url); }
+  // Truncate to ignore the slashes.
+  url = url.substring(slashes + 2);
+
+  var candidateIndices = [
+    url.indexOf(':'),
+    url.indexOf('#'),
+    url.indexOf('?'),
+    url.indexOf('/')
+  ];
+  var min = url.length;
+  candidateIndices.forEach(idx => {
+    if (idx !== -1) {
+      // It is present in the string.
+      if (idx < min) {
+        min = idx;
+      }
+    }
+  });
+  
+  return url.substr(0, min);
+};
+
+/**
+ * Extract the port from a URL. The port must be explicitly indicated in the
+ * URL, or an error is thrown.
+ *
+ * @param {string} url
+ *
+ * @return {integer}
+ */
+exports.getPortFromUrl = function(url) {
+  var originalUrl = url;
+  var host = exports.getHostFromUrl(url);
+  var idxOfHost = url.indexOf(host);
+  // Truncate the host
+  url = url.substring(idxOfHost + host.length);
+  if (!url.startsWith(':')) {
+    throw new Error('No port in url: ' + originalUrl);
+  }
+  // Truncate the colon
+  url = url.substring(1);
+  var candidateIndices = [
+    url.indexOf('#'),
+    url.indexOf('?'),
+    url.indexOf('/')
+  ];
+  var min = url.length;
+  candidateIndices.forEach(idx => {
+    if (idx !== -1) {
+      if (idx < min) {
+        min = idx;
+      }
+    }
+  });
+  var portStr = url.substring(0, min);
+  // There is no easy way that I'm aware of to check is something can be safely
+  // parsed to an int in JavaScript. Wtf. But this is will work well enough for
+  // our cases. It will permit things like '12a', '0xaf', etc, but this seems
+  // fine.
+  var result = parseInt(portStr, 10);
+  if (isNaN(result)) {
+    throw new Error('Invalid port in url: ' + originalUrl);
+  }
+  return parseInt(portStr);
+};
+
+/**
+ * Return the Buffer as a Blob with type application/octet-binary.
+ *
+ * @param {Buffer} buff
+ *
+ * @return {Blob}
+ */
+exports.getBufferAsBlob = function(buff) {
+  return new Blob(
+    [buff], 
+    {
+      type: 'application/octet-binary' 
+    }
+  );
+};
+
+},{}],29:[function(require,module,exports){
 'use strict';
 
+var _ = require('underscore');
+var Buffer = require('buffer/').Buffer;
+var EventEmitter = require('wolfy87-eventemitter');
+
+var protocol = require('./protocol');
+
+var EV_CHUNK = 'chunk';
+var EV_COMPLETE = 'complete';
+var EV_ERR = 'error';
+
+/**
+ * The size of chunks that will be sent over WebRTC at a given time. This is
+ * supposedly a reasonable value for Chrome, according to various documents
+ * online.
+ */
+exports.CHUNK_SIZE = 16000;
+
+/**
+ * This object provides a way to communicate with a peer to chunk binary data
+ * by default.
+ */
+
+/**
+ * @constructor
+ *
+ * @param {RTCPeerConnection} rawConnection a raw connection to a peer
+ * @param {boolean} cacheChunks true if the Client it self should save
+ * chunks. If true, the 'complete' event will include the final ArrayBuffer. If
+ * false, chunks will be emitted only on 'chunk' events.
+ * @param {Object} msg the message for the server. The peer being connected to
+ * and represented by rawConnection is expected to know how to respond to the
+ * message
+ */
+exports.Client = function Client(
+    rawConnection, cacheChunks, msg
+) {
+  if (!(this instanceof Client)) {
+    throw new Error('Client must be called with new');
+  }
+
+  this.cacheChunks = cacheChunks;
+  this.rawConnection = rawConnection;
+  this.numChunksReceived = 0;
+  this.streamInfo = null;
+  this.awaitingFirstResponse = true;
+  this.msg = msg;
+  this.chunks = [];
+};
+
+_.extend(exports.Client.prototype, new EventEmitter());
+
+/**
+ * Send the message to the server that initiates the transfer of the content.
+ */
+exports.Client.prototype.sendStartMessage = function() {
+  var msgBin = Buffer.from(JSON.stringify(this.msg));
+  this.channel.send(msgBin);
+};
+
+/**
+ * Handle an error from the Server.
+ *
+ * @param {ProtocolMessage} msg
+ */
+exports.Client.prototype.handleErrorMessage = function(msg) {
+  this.emitError(msg);
+};
+
+/**
+ * Request the information from the server and start receiving data.
+ */
+exports.Client.prototype.start = function() {
+  var self = this;
+  var channel = this.rawConnection.createDataChannel(this.msg.channelName);
+  this.channel = channel;
+  channel.binaryType = 'arraybuffer';
+
+  channel.onopen = function() {
+    self.sendStartMessage();
+  };
+
+  channel.onmessage = function(event) {
+    var eventBuff = Buffer.from(event.data);
+
+    var msg = protocol.from(eventBuff);
+    if (msg.isError()) {
+      self.handleErrorMessage(msg);
+      return;
+    }
+
+    var dataBuff = msg.getData();
+
+    // We expect a JSON message about our stream as the first message. All
+    // subsequent messages will be ArrayBuffers. We know we receive them in
+    // ordered fashion due to the guarantees of RTCDataChannel.
+    if (self.awaitingFirstResponse) {
+      self.streamInfo = JSON.parse(dataBuff.toString());
+      self.awaitingFirstResponse = false;
+      self.requestNext();
+      return;
+    }
+
+    // Otherwise, we've received a chunk of our data.
+    if (self.cacheChunks) {
+      self.chunks.push(dataBuff);
+    }
+    self.numChunksReceived++;
+    self.emitChunk(dataBuff);
+
+    if (self.numChunksReceived === self.streamInfo.numChunks) {
+      // We're done.
+      self.emitComplete();
+      self.channel.close();
+    } else {
+      self.requestNext();
+    }
+  };
+};
+
+/**
+ * Inform the server that we are ready for the next chunk.
+ */
+exports.Client.prototype.requestNext = function() {
+  var continueMsg = exports.createContinueMessage();
+  var continueMsgBin = Buffer.from(JSON.stringify(continueMsg));
+  try {
+    this.channel.send(continueMsgBin);
+  } catch (err) {
+    this.emitError(err);
+  }
+};
+
+/**
+ * Emit a 'chunk' event with the Buffer representing this chunk.
+ *
+ * @param {Buffer} buff the Buffer object representing this chunk
+ */
+exports.Client.prototype.emitChunk = function(buff) {
+  this.emit(EV_CHUNK, buff);
+};
+
+/**
+ * Emit an error event.
+ *
+ * @param {any} msg the message to emit with the error
+ */
+exports.Client.prototype.emitError = function(msg) {
+  this.emit(EV_ERR, msg);
+};
+
+/**
+ * Emit a 'complete' event signifying that everything has been received. If
+ * cacheChunks is true, the event will be emitted with a single buffer
+ * containing all concatenated chunks.
+ */
+exports.Client.prototype.emitComplete = function() {
+  if (this.cacheChunks) {
+    var reclaimed = Buffer.concat(this.chunks);
+    this.emit(EV_COMPLETE, reclaimed);
+  } else {
+    this.emit(EV_COMPLETE);
+  }
+};
+
+/**
+ * Create a Server to respond to Client requests.
+ *
+ * @constructor
+ *
+ * @param {RTCDataChannel} channel a channel that has been initiated by a
+ * Client.
+ */
+exports.Server = function Server(channel) {
+  if (!(this instanceof Server)) {
+    throw new Error('Server must be called with new');
+  }
+
+  this.channel = channel;
+  this.numChunks = null;
+  this.streamInfo = null;
+  this.chunksSent = null;
+};
+
+/**
+ * Send buff over the channel using chunks. The channel must have already been
+ * used to request a response--i.e. a ChannelClient must be listening.
+ *
+ * Note that currently this does not support streaming--buff must be able to be
+ * held in memory. It is not difficult to imagine this API being modified to
+ * change that, however.
+ *
+ * @param {Buffer} buff the buffer to send
+ */
+exports.Server.prototype.sendBuffer = function(buff) {
+  this.buffToSend = buff;
+  this.numChunks = Math.ceil(buff.length / exports.CHUNK_SIZE);
+  this.streamInfo = exports.createStreamInfo(this.numChunks);
+  this.chunksSent = 0;
+
+  var self = this;
+  this.channel.onmessage = function(event) {
+    var dataBuff = Buffer.from(event.data);
+    var msg = JSON.parse(dataBuff);
+
+    if (msg.message !== 'next') {
+      console.log('Unrecognized control signal: ', msg);
+      return;
+    }
+
+    var chunkStart = self.chunksSent * exports.CHUNK_SIZE;
+    var chunkEnd = chunkStart + exports.CHUNK_SIZE;
+    chunkEnd = Math.min(chunkEnd, buff.length);
+    var chunk = buff.slice(chunkStart, chunkEnd);
+
+    try {
+      // The number of chunks must be incremented before the send, otherwise if
+      // an ack comes back very quickly (impossibly quickly except in test
+      // conditions?) you can send the same chunk twice.
+      self.chunksSent++;
+      var chunkMsg = protocol.createSuccessMessage(chunk);
+      self.channel.send(chunkMsg.asBuffer());
+    } catch (err) {
+      console.log('Error sending chunk: ', err);
+    }
+  };
+  
+  // Start the process by sending the streamInfo to the client.
+  try {
+    var streamInfoMsg = protocol.createSuccessMessage(
+      Buffer.from(JSON.stringify(this.streamInfo))
+    );
+    this.channel.send(streamInfoMsg.asBuffer());
+  } catch (err) {
+    console.log('Error sending streamInfo: ', this.streamInfo);
+  }
+};
+
+/**
+ * Send a message indicating an error to the client. This is similar to
+ * replying with a 500 error for a web server.
+ *
+ * @param {any} err error to send to the client.
+ */
+exports.Server.prototype.sendError = function(err) {
+  var msg = protocol.createErrorMessage(err);
+  this.channel.send(msg.asBuffer());
+};
+
+/**
+ * Create a stream info object. This is the first message sent by the Server.
+ *
+ * @param {integer} numChunks the total number of chunks that will be sent.
+ * This is not the total number of messages, but the number of chunks in the
+ * file.
+ */
+exports.createStreamInfo = function(numChunks) {
+  return { numChunks: numChunks };
+};
+
+/**
+ * Create an object to be sent to the server to signify that the next chunk is
+ * ready to be received.
+ *
+ * @return {Object}
+ */
+exports.createContinueMessage = function() {
+  return { message: 'next' };
+};
+
+},{"./protocol":33,"buffer/":37,"underscore":49,"wolfy87-eventemitter":50}],30:[function(require,module,exports){
+/* globals RTCPeerConnection, RTCSessionDescription, RTCIceCandidate */
+'use strict';
+
+var Buffer = require('buffer/').Buffer;
+
 var util = require('../util');
-var binUtil = require('../dnssd/binary-utils').BinaryUtils;
 var peerConn = require('../../../app/scripts/webrtc/peer-connection');
 var serverApi = require('../server/server-api');
+
+var globalPc;
 
 exports.DEBUG = true;
 
@@ -6591,27 +7457,33 @@ exports.local = null;
 /**
  * Creates the cache key for the given ipaddr/port combination.
  *
- * @param {String} ipaddr the IP address of the machine
- * @param {String|Number} port the port of the instance
+ * @param {string} ipaddr the IP address of the machine
+ * @param {string|integer} port the port of the instance
  *
- * @return {String} a String to be used as a key into the cache
+ * @return {string} a String to be used as a key into the cache
  */
 function createKey(ipaddr, port) {
   if (!ipaddr || !port) {
     throw new Error('ipaddr and port must be set: ', ipaddr, port);
   }
   return ipaddr + ':' + port;
-};
+}
 
 /**
  * Add a connection to the known pool of connection.
  *
- * @param {String} ipaddr the IP address of the peer this connects to
- * @param {number} port the port of the instance advertised via mDNS where this
- * connection is connected
+ * PeerConnections added via this method will be automatically removed when
+ * they emit a close event.
+ *
+ * @param {string} ipaddr the IP address of the peer this connects to
+ * @param {integer} port the port of the instance advertised via mDNS where
+ * this connection is connected
  * @param {PeerConnection} cxn the connection being added
  */
 exports.addConnection = function(ipaddr, port, cxn) {
+  cxn.on('close', () => {
+    exports.removeConnection(ipaddr, port);
+  });
   var key = createKey(ipaddr, port);
   CONNECTIONS[key] = cxn;
 };
@@ -6631,12 +7503,24 @@ exports.getConnection = function(ipaddr, port) {
 };
 
 /**
+ * Remove the connection from the known pool.
+ *
+ * @param {string} ipaddr the IP address of the peer this connects to
+ * @param {integer} port the port of the instance advertised via mDNS where
+ * this connection is connected
+ */
+exports.removeConnection = function(ipaddr, port) {
+  var key = createKey(ipaddr, port);
+  delete CONNECTIONS[key];
+};
+
+/**
  * Create a connection to the given peer, adding it to make it known to the
  * manager.
  *
- * @param {String} ipaddr the IP address of the peer this connects to
- * @param {number} port the port of the instance advertised via mDNS where this
- * connection is connected
+ * @param {string} ipaddr the IP address of the peer this connects to
+ * @param {integer} port the port of the instance advertised via mDNS where
+ * this connection is connected
  *
  * @return {Promise.<PeerConnection, Error>} Promise that resolves with the
  * PeerConnection when it is created
@@ -6644,20 +7528,30 @@ exports.getConnection = function(ipaddr, port) {
 exports.createConnection = function(ipaddr, port) {
   var wrtcEndpoint = exports.getPathForWebrtcNegotiation(ipaddr, port);
   return new Promise(function(resolve, reject) {
-    var pc = new RTCPeerConnection(null);
+    var pc = exports.createRTCPeerConnection(null, null);
+    globalPc = pc;
+
+    // Start a channel to kick off ICE candidates. Without this or otherwise
+    // requesting media stream the ICE gathering process does not begin.
+    pc.createDataChannel('requestChannel');
 
     var iceCandidates = [];
     var description = null;
     var iceComplete = false;
 
-    pc.onIceCandidate = function(e) {
-      if (e.candidate = null) {
+    pc.onicecandidate = function(e) {
+      if (e.candidate === null) {
         // All candidates are complete.
         iceComplete = true;
         if (exports.DEBUG) { console.log('done with ICE candidates'); }
-        if (desc) {
-          return exports.sendOffer(description, iceCandidates);
-        }
+        exports.sendOffer(
+          wrtcEndpoint, pc, description, iceCandidates, ipaddr, port
+        ).then(establishedConnection => {
+          resolve(establishedConnection);
+        })
+        .catch(err => {
+          reject(err);
+        });
       } else {
         iceCandidates.push(e.candidate);
       }
@@ -6666,10 +7560,56 @@ exports.createConnection = function(ipaddr, port) {
     pc.createOffer()
     .then(desc => {
       description = desc;
-      pc.setLocalDescription(desc);
-      if (iceComplete) {
-        return exports.sendOffer(description, iceCandidates);
+      return pc.setLocalDescription(desc);
+    })
+    .catch(err => {
+      reject(err);
+    });
+  });
+};
+
+exports.onIceCandidate = function(e) {
+  console.log('got ice candidate at module level: ', e);
+};
+
+/**
+ * @param {string} wrtcEndpoint
+ * @param {RTCPeerDescription} rawConnection
+ * @param {RTCSessionDescription} desc
+ * @param {Array.<RTCIceCandidate>} iceCandidates
+ *
+ * @return {Promise.<PeerConnection, Error>}
+ */
+exports.sendOffer = function(
+    wrtcEndpoint, rawConnection, desc, iceCandidates, ipaddr, port
+) {
+  return new Promise(function(resolve, reject) {
+    var bodyJson = {};
+    bodyJson.description = desc;
+    bodyJson.iceCandidates = iceCandidates;
+
+    util.fetch(
+      wrtcEndpoint,
+      {
+        method: 'PUT',
+        body: Buffer.from(JSON.stringify(bodyJson))
       }
+    )
+    .then(resp => {
+      return resp.json();
+    })
+    .then(json => {
+      var peerDesc = exports.createRTCSessionDescription(json.description);
+      rawConnection.setRemoteDescription(peerDesc);
+
+      json.iceCandidates.forEach(candidateJson => {
+        var candidate = exports.createRTCIceCandidate(candidateJson);
+        rawConnection.addIceCandidate(candidate);
+      });
+
+      var cxn = exports.createPeerConnection(rawConnection);
+      exports.addConnection(ipaddr, port, cxn);
+      resolve(cxn);
     })
     .catch(err => {
       reject(err);
@@ -6678,46 +7618,12 @@ exports.createConnection = function(ipaddr, port) {
 };
 
 /**
- * @param {String} wrtcEndpoint
- * @param {RTCPeerDescription} pc
- * @param {RTCSessionDescription} desc
- * @param {Array.<RTCIceCandidate>} iceCandidates
+ * @param {string} addr
+ * @param {integer} port
  *
- * @return {Promise.<PeerConnection>}
+ * @return {string}
  */
-exports.sendOffer = function(
-    wrtcEndpoint, pc, desc, iceCandidates, ipaddr, port
-) {
-  var bodyJson = {};
-  bodyJson.description = desc;
-  bodyJson.iceCandidates = iceCandidates;
-
-  util.fetch(
-    wrtcEndpoint,
-    {
-      method: 'PUT',
-      body: binUtil.stringToArrayBuffer(JSON.stringify(bodyJson))
-    }
-  )
-  .then(resp => {
-    return resp.json();
-  })
-  .then(json => {
-    var peerDesc = new RTCSessionDescription(json.description);
-    pc.setRemoteDescription(peerDesc);
-
-    json.iceCandidates.forEach(candidateStr => {
-      var candidate = new RTCIceCandidate(candidateStr);
-      pc.addIceCandidate(candidate);
-    });
-
-    var cxn = new peerConn.PeerConnection(pc);
-    exports.addConnection(ipaddr, port, cxn);
-    return Promise.resolve(cxn);
-  })
-};
-
-exports.getPathForWebrtcNegotiation = function(ipaddr, port) {
+exports.getPathForWebrtcNegotiation = function(addr, port) {
   return 'http://' +
     addr +
     ':' +
@@ -6727,19 +7633,32 @@ exports.getPathForWebrtcNegotiation = function(ipaddr, port) {
 };
 
 /**
+ * Create a PeerConnection object. Thin wrapper around the constructor to
+ * facilitate testing.
+ *
+ * @param {RTCPeerConnection} rawConnection
+ *
+ * @return {PeerConnection}
+ */
+exports.createPeerConnection = function(rawConnection) {
+  return new peerConn.PeerConnection(rawConnection);
+};
+
+/**
  * Get the connection if it exists, else create a new connection. This is a
  * convenience method to spare callers checking the cache and should be
  * preferred.
  *
- * @param {String} ipaddr the IP address of the peer this connects to
+ * @param {string} ipaddr the IP address of the peer this connects to
  * @param {number} port the port of the instance advertised via mDNS where this
  * connection is connected
  * 
- * @return {Promise} Promise that resolves with the PeerConnection.
+ * @return {Promise.<PeerConnection, Error>} Promise that resolves with the
+ * PeerConnection.
  */
 exports.getOrCreateConnection = function(ipaddr, port) {
   var key = createKey(ipaddr, port);
-  return new Promise(function(resolve) {
+  return new Promise(function(resolve, reject) {
     if (CONNECTIONS[key]) {
       resolve(exports.getConnection(ipaddr, port));
     }
@@ -6757,18 +7676,48 @@ exports.getOrCreateConnection = function(ipaddr, port) {
 };
 
 /**
- * Remove the connection from the known pool.
+ * Create an RTCPeerConnection. Thin wrapper around the RTCPeerConnection
+ * constructor.
  *
- * @param {String} ipaddr the IP address of the peer this connects to
- * @param {number} port the port of the instance advertised via mDNS where this
- * connection is connected
+ * Exposed for testing.
+ *
+ * @param {Object} servers
+ * @param {Object} constraints
+ *
+ * @return {RTCPeerConnection}
  */
-exports.removeConnection = function(ipaddr, port) {
-  var key = createKey(ipaddr, port);
-  delete CONNECTIONS[key];
+exports.createRTCPeerConnection = function(servers, constraints) {
+  return new RTCPeerConnection(servers, constraints);
 };
 
-},{"../../../app/scripts/webrtc/peer-connection":29,"../dnssd/binary-utils":6,"../server/server-api":23,"../util":26}],28:[function(require,module,exports){
+/**
+ * Create an RTCIceCandidate. Thin wrapper around the RTCIceCandidate
+ * constructor to facilitate testing.
+ *
+ * @param {Object} candidateJson the JSON object representing an ICE candidate
+ * that has come across the wire
+ *
+ * @return {RTCIceCandidate}
+ */
+exports.createRTCIceCandidate = function(candidateJson) {
+  return new RTCIceCandidate(candidateJson);
+};
+
+/**
+ * Create an RTCSessionDescription from a stringified JSON description. Thing
+ * wrapper around the RTCSessionDescription constructor.
+ *
+ * Exposed for testing.
+ *
+ * @param {Object} descJson JSON representation of an RTCSessionDescription
+ *
+ * @return {RTCSessionDescription}
+ */
+exports.createRTCSessionDescription = function(descJson) {
+  return new RTCSessionDescription(descJson);
+};
+
+},{"../../../app/scripts/webrtc/peer-connection":32,"../server/server-api":25,"../util":28,"buffer/":37}],31:[function(require,module,exports){
 'use strict';
 
 /**
@@ -6800,7 +7749,7 @@ var CHANNELS_CREATED = 0;
 /**
  * Creates a uuid-based channel name for a message request.
  *
- * @returns {String} name for a channel
+ * @return {string} name for a channel
  */
 exports.createChannelName = function() {
   var result = 'responseChannel_' + CHANNELS_CREATED;
@@ -6815,18 +7764,31 @@ exports.createChannelName = function() {
   return result;
 };
 
+/**
+ * @return {Object}
+ */
 exports.createListMessage = function() {
   return exports.createMessage(exports.TYPE_LIST);
 };
 
+/**
+ * @param {string} filePath
+ *
+ * @return {Object}
+ */
 exports.createFileMessage = function(filePath) {
   var result = exports.createMessage(exports.TYPE_FILE);
   var request = {};
-  request.path = filePath;
+  request.accessPath = filePath;
   result.request = request;
   return result;
 };
 
+/**
+ * @param {string} type
+ *
+ * @return {Object}
+ */
 exports.createMessage = function(type) {
   if (!VALID_TYPES.includes(type)) {
     throw new Error('Unrecognized message type: ' + type);
@@ -6840,20 +7802,33 @@ exports.createMessage = function(type) {
   return result;
 };
 
+/**
+ * @param {Object} msg
+ *
+ * @return {boolean}
+ */
 exports.isList = function(msg) {
   return msg.type && msg.type === exports.TYPE_LIST;
 };
 
+/**
+ * @param {Object} msg
+ *
+ * @return {boolean}
+ */
 exports.isFile = function(msg) {
   return msg.type && msg.type === exports.TYPE_FILE;
 };
 
-},{}],29:[function(require,module,exports){
+},{}],32:[function(require,module,exports){
 'use strict';
 
-var binUtil = require('../dnssd/binary-utils').BinaryUtils;
+var _ = require('underscore');
+var chunkingChannel = require('./chunking-channel');
+var EventEmitter = require('wolfy87-eventemitter');
 var message = require('./message');
-var serverApi = require('../server/server-api');
+
+var EV_CLOSE = 'close';
 
 /**
  * Handles a connection to a SemCache peer. 
@@ -6862,19 +7837,37 @@ var serverApi = require('../server/server-api');
 /**
  * PeerConnection is a wrapper around the raw WebRTC machinery to provide a
  * SemCache-specific API.
+ *
+ * @constructor
+ * 
+ * @param {RTCPeerConnection} rawConnection the raw RTCPeerConnection that will
+ * be backing this connection. This rawConnection has its onclose handler
+ * modified to allow the PeerConnection to emit its own 'close' event.
  */
 exports.PeerConnection = function PeerConnection(rawConnection) {
   if (!(this instanceof PeerConnection)) {
     throw new Error('PeerConnection must be called with new');
   }
+  var self = this;
 
   this.rawConnection = rawConnection;
+
+  this.rawConnection.onclose = function() {
+    self.emitClose();
+  };
+};
+
+_.extend(exports.PeerConnection.prototype, new EventEmitter());
+
+/**
+ * Emit a close event.
+ */
+exports.PeerConnection.prototype.emitClose = function() {
+  this.emit(EV_CLOSE);
 };
 
 /**
  * Return the raw WebRTC connection backing this PeerConnection.
- *
- * @param {String} foo
  *
  * @return {RTCPeerConnection} 
  */
@@ -6885,25 +7878,22 @@ exports.PeerConnection.prototype.getRawConnection = function() {
 /**
  * Get the list of available files from the peer.
  *
- * @return {Promise.<JSON, Error>} Promise that resolves with the JSON list of
- * the directory contents
+ * @return {Promise.<Object, Error>} Promise that resolves with the JSON list
+ * of the directory contents
  */
 exports.PeerConnection.prototype.getList = function() {
-  // TODO: implement
-  // Generate a request object.
-  // Add this request to the queue you're monitoring.
-  // Issue the request.
-  // Resolve completing it. Hmm.
   // For now we are going to assume that all messages can be held in memory.
   // This means that a single message can be processed without worrying about
   // piecing it together from other messages. It is a simplification, but one
   // that seems reasonable.
-  var msg = message.createListMessage();
-
+  var self = this;
   return new Promise(function(resolve, reject) {
-    exports.sendAndGetResponse(this.getRawConnection(), msg)
-    .then(arrayBuffer => {
-      var str = binUtil.arrayBufferToString(arrayBuffer);
+    var msg = message.createListMessage();
+    var rawConnection = self.getRawConnection();
+
+    exports.sendAndGetResponse(rawConnection, msg)
+    .then(buff => {
+      var str = buff.toString();
       var result = JSON.parse(str);
       resolve(result);
     })
@@ -6916,16 +7906,27 @@ exports.PeerConnection.prototype.getList = function() {
 /**
  * Get a file from the peer.
  *
- * @param {String} remotePath the identifier on the remote machine
+ * @param {string} remotePath the identifier on the remote machine
  *
- * @return {Promise.<ArrayBuffer, Error>} Promise that resolves when the get is
+ * @return {Promise.<Buffer, Error>} Promise that resolves when the get is
  * complete
  */
-exports.PeerConnection.prototype.getFile = function(remotePath, savePath) {
-  // TODO: implement
-  // TODO: should we stream this?
-  var msg = message.createFileMessage(remotePath);
-  return exports.sendAndGetResponse(this.getRawConnection(), msg);
+exports.PeerConnection.prototype.getFile = function(remotePath) {
+  // For now we are assuming that all files can be held in memory and do not
+  // need to be written to disk as they are received. This is reasonable, I
+  // believe, given the way mhtml is displayed.
+  var self = this;
+  return new Promise(function(resolve, reject) {
+    var msg = message.createFileMessage(remotePath);
+    var rawConnection = self.getRawConnection();
+    exports.sendAndGetResponse(rawConnection, msg)
+    .then(buffer => {
+      resolve(buffer);
+    })
+    .catch(err => {
+      reject(err);
+    });
+  });
 };
 
 /**
@@ -6937,7 +7938,7 @@ exports.PeerConnection.prototype.getFile = function(remotePath, savePath) {
  * received.
  *
  * @param {RTCPeerConnection} pc the connection over which to send the message
- * @param {JSON} msg the message to send to the peer
+ * @param {Object} msg the message to send to the peer
  * 
  * @return {Promise.<ArrayBuffer, Error>} Promise that resolves with the
  * ArrayBuffer message received on the channel or with an Error if something
@@ -6946,50 +7947,248 @@ exports.PeerConnection.prototype.getFile = function(remotePath, savePath) {
  */
 exports.sendAndGetResponse = function(pc, msg) {
   return new Promise(function(resolve, reject) {
-    try {
-      var resolved = false;
-      var channel = pc.createDataChannel(msg.channelName);
-      channel.binaryType = 'arraybuffer';
+    var ccClient = new chunkingChannel.Client(pc, true, msg);
 
-      channel.onopen = function() {
-        // After we've opened the channel, send our message.
-        var msgBin = binUtil.stringToArrayBuffer(JSON.stringify(msg));
-        channel.send(msg);
-      };
+    ccClient.on('complete', buff => {
+      resolve(buff);
+    });
 
-      channel.onclose = function() {
-        if (exports.DEBUG) {
-          console.log('closed channel: ' + msg.channelName);
-        }
-        if (!resolved) {
-          resolved = true;
-          resolve();
-        }
-      };
-
-      channel.onmessage = function(event) {
-        var dataBin = event.data;
-        resolve(dataBin);
-        channel.close();
-      };
-    } catch (err) {
+    ccClient.on('error', err => {
       reject(err);
-    }
+    });
+
+    ccClient.start();
   });
 };
 
+},{"./chunking-channel":29,"./message":31,"underscore":49,"wolfy87-eventemitter":50}],33:[function(require,module,exports){
+'use strict';
+
+var Buffer = require('buffer/').Buffer;
+
+/**
+ * Protocol for transmitting data via WebRTC data channel.
+ *
+ * This exists to solve the problem that we ideally would like to transmit both
+ * metadata control information (e.g. "uh oh, there's been a server error"),
+ * and the data chunks themselves. We could have a control channel and a data
+ * channel, but this requires coordination of two channels, as well as an
+ * additional channel resource.
+ *
+ * We also cannot simply pass an ArrayBuffer as a member of a JSON message.
+ * Instead, we are going to going to include header information in the message
+ * itself.
+ *
+ * This class assists in creating and reading those messages.
+ */
+
+/** The number of bytes used to indicate the length of the header. */
+var NUM_BYTES_HEADER_LENGTH = 4;
+
+/**
+ * These status codes are based on HTTP status codes, and are added as
+ * necessary.
+ */
+exports.STATUS_CODES = {
+  error: 500,
+  ok: 200
+};
+
+/**
+ * @constructor
+ * 
+ * @param {Object} header
+ * @param {Buffer} buff
+ */
+exports.ProtocolMessage = function ProtocolMessage(header, buff) {
+  if (!(this instanceof ProtocolMessage)) {
+    throw new Error('ProtocolMessage must be called with new');
+  }
+  this.header = header;
+
+  // Distinguishing between 0 length Buffers and null is problematic for
+  // serialization. To ensure we have consistent behavior, we'll default to an
+  // empty buffer.
+  if (!buff) {
+    buff = Buffer.alloc(0);
+  }
+  this.data = buff;
+};
+
+/**
+ * @return {boolean} true if is an OK message, else false
+ */
+exports.ProtocolMessage.prototype.isOk = function() {
+  var statusCode = this.getStatusCode();
+  return statusCode === exports.STATUS_CODES.ok;
+};
+
+/**
+ * @return {boolean} true if is an Error message, else false
+ */
+exports.ProtocolMessage.prototype.isError = function() {
+  var statusCode = this.getStatusCode();
+  return statusCode === exports.STATUS_CODES.error;
+};
+
+/**
+ * @return {Object} the header object from the message
+ */
+exports.ProtocolMessage.prototype.getHeader = function() {
+  return this.header;
+};
+
+/**
+ * @return {Buffer} the Buffer representing the payload of the message
+ */
+exports.ProtocolMessage.prototype.getData = function() {
+  return this.data;
+};
+
+/**
+ * @return {integer|null} the integer status code of the message. If no header
+ * or status code is included, returns null.
+ */
+exports.ProtocolMessage.prototype.getStatusCode = function() {
+  if (!this.header) {
+    return null;
+  }
+  if (!this.header.status) {
+    return null;
+  }
+  return this.header.status;
+};
+
+/**
+ * Get this ProtocolMessage as a Buffer, serializing the method. This Buffer
+ * can then be deserialized using the from() method.
+ *
+ * @return {Buffer}
+ */
+exports.ProtocolMessage.prototype.asBuffer = function() {
+  /*
+   * The data structure is outlined as follows, but is not part of the public
+   * API. The first 4 bytes correspond to an integer. This integer denotes the
+   * length of the JSON header information. All remaining bytes are data bytes.
+   */
+  var metadataLength = NUM_BYTES_HEADER_LENGTH;
+  var headerStr = '';
+  var headerLength = 0;
+  if (this.header) {
+    headerStr = JSON.stringify(this.header);
+    headerLength = headerStr.length;
+    metadataLength += headerLength;
+  }
+
+  var metadataBuff = Buffer.alloc(metadataLength);
+
+  var offset = 0;
+  metadataBuff.writeUInt32BE(headerLength);
+  offset += NUM_BYTES_HEADER_LENGTH;
+
+  metadataBuff.write(headerStr, offset, headerLength);
+
+  var buffsToJoin = [ metadataBuff ];
+  if (this.data) {
+    buffsToJoin.push(this.data);
+  }
+
+  var result = Buffer.concat(buffsToJoin);
+  return result;
+};
+
+/**
+ * Recover a ProtocolMessage from a Buffer.
+ *
+ * @param {Buffer} buff
+ *
+ * @return {ProtocolMessage}
+ */
+exports.from = function(buff) {
+  var headerLength = buff.readUInt32BE(0);
+  var offset = NUM_BYTES_HEADER_LENGTH;
+  var headerStr = buff.toString('utf8', offset, offset + headerLength);
+  offset += headerLength;
+
+  var header = null;
+  if (headerLength > 0) {
+    header = JSON.parse(headerStr);
+  }
+  var data = buff.slice(offset, buff.length);
+
+  var result = new exports.ProtocolMessage(header, data);
+  return result;
+};
+
+/**
+ * Create a rudimentary header object.
+ *
+ * @param {integer} status
+ *
+ * @return {Object}
+ */
+exports.createHeader = function(status) {
+  return {
+    status: status
+  };
+};
+
+/**
+ * @param {Buffer} buff
+ *
+ * @return {ProtocolMessage}
+ */
+exports.createSuccessMessage = function(buff) {
+  var header = exports.createHeader(exports.STATUS_CODES.ok);
+  return new exports.ProtocolMessage(header, buff);
+};
+
+/**
+ * @param {any} reason the reason for the error
+ *
+ * @return {ProtocolMessage}
+ */
+exports.createErrorMessage = function(reason) {
+  var header = exports.createHeader(exports.STATUS_CODES.error);
+  header.message = reason;
+  return new exports.ProtocolMessage(header, null);
+};
+
+},{"buffer/":37}],34:[function(require,module,exports){
+'use strict';
+
+var Buffer = require('buffer/').Buffer;
+
+var api = require('../server/server-api');
+var binUtil = require('../dnssd/binary-utils').BinaryUtils;
+var chunkingChannel = require('./chunking-channel');
+var fileSystem = require('../persistence/file-system');
+var message = require('./message');
+var serverApi = require('../server/server-api');
+
+/**
+ * This module is responsible for responding to incoming requests.
+ */
+
 /**
  * Handler for the connection's ondatachannel event.
+ *
+ * @param {Event} event
  */
 exports.onDataChannelHandler = function(event) {
+  console.log('Data channel has been created by client');
   // Wrap the call to ensure that we can get a handle to the channel receiving
   // the message in order to directly reply.
   var channel = event.channel;
   event.channel.onmessage = function(msgEvent) {
-    exports.onDataChannelHandler(channel, msgEvent);
+    exports.onDataChannelMessageHandler(channel, msgEvent);
   };
 };
 
+/**
+ * @param {RTCDataChannel} channel
+ * @param {Event} event
+ */
 exports.onDataChannelMessageHandler = function(channel, event) {
   // We expect ArrayBuffers containing JSON objects as messages.
   var jsonBin = event.data;
@@ -7012,15 +8211,22 @@ exports.onDataChannelMessageHandler = function(channel, event) {
  * 
  * @param {RTCDataChannel} channel the data channel on which to send the
  * response
- * @param {JSON} msg the message requesting the information
+ *
+ * @return {Promise.<undefined, Error>} Promise that returns after sending has
+ * begun.
  */
-exports.onList = function(channel, msg) {
-  serverApi.getResponseForAllCachedPages()
-  .then(json => {
-    var jsonStr = JSON.stringify(json);
-    var jsonBin = binUtil.stringToArrayBuffer(jsonStr);
-    channel.send(jsonStr);
-    channel.close();
+exports.onList = function(channel) {
+  return new Promise(function(resolve, reject) {
+    serverApi.getResponseForAllCachedPages()
+    .then(json => {
+      var jsonBuff = Buffer.from(JSON.stringify(json));
+      var ccServer = exports.createCcServer(channel);
+      ccServer.sendBuffer(jsonBuff);
+      resolve();
+    })
+    .catch(err => {
+      reject(err);
+    });
   });
 };
 
@@ -7031,146 +8237,54 @@ exports.onList = function(channel, msg) {
  *
  * @param {RTCDataChannel} channel the data channel on which to send the
  * response
- * @param {JSON} msg the message requesting the information
+ * @param {Object} msg the message requesting the information
+ *
+ * @return {Promise.<undefined, Error>} Promise that returns after sending has
+ * begun.
  */
 exports.onFile = function(channel, msg) {
-  // TODO: implement
-  throw new Error('peer-connection.onFile not yet implemented');
-};
-
-},{"../dnssd/binary-utils":6,"../server/server-api":23,"./message":28}],30:[function(require,module,exports){
-/* globals RTCPeerConnection, RTCSessionDescription, RTCIceCandidate */
-'use strict';
-
-var util = require('../util');
-var settings = require('../settings');
-var binUtil = require('../dnssd/binary-utils').BinaryUtils;
-var serverApi = require('../server/server-api');
-var cxnMgr = require('./connection-manager');
-
-var pc;
-var localDesc;
-var requestChannel;
-var iceCandidates;
-
-exports.optionalCreateArgs = { };
-
-exports.getConnection = function() {
-  return pc;
-};
-
-exports.getRequestChannel = function() {
-  return requestChannel;
-};
-
-/**
- * This is taken largely from:
- * https://github.com/webrtc/samples/blob/gh-pages/src/content/datachannel/filetransfer/js/main.js
- */
-
-exports.createConnection = function() {
-  iceCandidates = [];
-  pc = new RTCPeerConnection(null, exports.optionalCreateArgs); 
-
-  requestChannel = pc.createDataChannel('requestChannel');
-  requestChannel.binaryType = 'arraybuffer';
-
-  requestChannel.onopen = exports.onChannelStateChange;
-  requestChannel.onclose = exports.onChannelStateChange;
-
-  pc.onicecandidate = function(e) {
-    exports.onIceCandidate(pc, e);
-  };
-
-  pc.createOffer().then(
-    exports.gotDescription,
-    exports.onCreateDescriptionError
-  );
-};
-
-exports.onCreateDescriptionError = function(err) {
-  util.trace('Failed to create session description: ' + err.toString());
-};
-
-exports.onChannelStateChange = function(e) {
-  util.trace(e);
-};
-
-exports.onIceCandidate = function(pc, e) {
-  if (e.candidate === null) {
-    // supposedly all candidates complete
-    util.trace('done with candidates');
-    util.trace('desc after ICE candidate: ' + pc);
-    exports.sendOffer();
-  } else {
-    console.log('got ice candidate: ', e);
-    iceCandidates.push(e.candidate);
-  }
-};
-
-exports.sendOffer = function() {
-  // Now we set up a request.
-  var port = settings.getServerPort();
-  var addr = '127.0.0.1';
-  var fullAddr = 'http://' +
-    addr +
-    ':' +
-    port +
-    '/' +
-    serverApi.getApiEndpoints().receiveWrtcOffer;
-
-  var bodyJson = {
-    description: localDesc,
-    iceCandidates: iceCandidates
-  };
-
-  util.fetch(
-    fullAddr,
-    {
-      method: 'PUT',
-      body: binUtil.stringToArrayBuffer(JSON.stringify(bodyJson))
-    }
-  )
-  .then(resp => {
-    console.log('got response from fetch, window.putResp: ' + resp);
-    window.putResp = resp;
-    return resp.json();
-  })
-  .then(json => {
-    console.log('retrieved json: ' + json);
-    var calleeDesc = new RTCSessionDescription(json.description);
-    pc.setRemoteDescription(calleeDesc);
-
-    json.iceCandidates.forEach(candidateStr => {
-      var candidate = new RTCIceCandidate(candidateStr);
-      pc.addIceCandidate(candidate);
+  return new Promise(function(resolve, reject) {
+    var ccServer = exports.createCcServer(channel);
+    var fileName = api.getCachedFileNameFromPath(msg.request.accessPath);
+    fileSystem.getFileContentsFromName(fileName)
+    .then(buff => {
+      ccServer.sendBuffer(buff);
+      resolve();
+    })
+    .catch(err => {
+      ccServer.sendError(err);
+      reject(err);
     });
-
-    pc.ondatachannel = exports.channelCallback;
-    cxnMgr.local = pc;
   });
 };
 
-exports.gotDescription = function(desc) {
-  util.trace('Got description: ' + desc.toString());
-  localDesc = desc;
-  pc.setLocalDescription(desc);  
+/**
+ * Factory method for creating a ChunkingChannel.Server object.
+ *
+ * Exposed for testing.
+ *
+ * @param {RTCDataChannel} channel
+ *
+ * @return {Server} a new ChunkingChannel.Server object wrapping the channel.
+ */
+exports.createCcServer = function(channel) {
+  return new chunkingChannel.Server(channel);
 };
 
-exports.channelCallback = function(event) {
-  util.trace('Channel Callback');
-  var channel = event.channel;
-  channel.binaryType = 'arraybuffer';
-  channel.onmessage = exports.onReceiveMessageCallback;
+/**
+ * Factory method for creating a ChunkingChannel.Client object.
+ *
+ * Exposed for testing.
+ *
+ * @param {RTCDataChannel} channel
+ *
+ * @return {Server} a new ChunkingChannel.Client object wrapping the channel.
+ */
+exports.createCcClient = function(channel) {
+  return new chunkingChannel.Client(channel);
 };
 
-exports.onReceiveMessageCallback = function(event) {
-  var dataBin = event.data;
-  var dataJson = binUtil.arrayBufferToString(dataBin);
-  console.log('received message: ', dataJson);
-};
-
-},{"../dnssd/binary-utils":6,"../server/server-api":23,"../settings":25,"../util":26,"./connection-manager":27}],31:[function(require,module,exports){
+},{"../dnssd/binary-utils":5,"../persistence/file-system":22,"../server/server-api":25,"./chunking-channel":29,"./message":31,"buffer/":37}],35:[function(require,module,exports){
 (function (global){
 /*! http://mths.be/base64 v0.1.0 by @mathias | MIT license */
 ;(function(root) {
@@ -7339,7 +8453,1926 @@ exports.onReceiveMessageCallback = function(event) {
 }(this));
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],32:[function(require,module,exports){
+},{}],36:[function(require,module,exports){
+'use strict'
+
+exports.byteLength = byteLength
+exports.toByteArray = toByteArray
+exports.fromByteArray = fromByteArray
+
+var lookup = []
+var revLookup = []
+var Arr = typeof Uint8Array !== 'undefined' ? Uint8Array : Array
+
+var code = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
+for (var i = 0, len = code.length; i < len; ++i) {
+  lookup[i] = code[i]
+  revLookup[code.charCodeAt(i)] = i
+}
+
+revLookup['-'.charCodeAt(0)] = 62
+revLookup['_'.charCodeAt(0)] = 63
+
+function placeHoldersCount (b64) {
+  var len = b64.length
+  if (len % 4 > 0) {
+    throw new Error('Invalid string. Length must be a multiple of 4')
+  }
+
+  // the number of equal signs (place holders)
+  // if there are two placeholders, than the two characters before it
+  // represent one byte
+  // if there is only one, then the three characters before it represent 2 bytes
+  // this is just a cheap hack to not do indexOf twice
+  return b64[len - 2] === '=' ? 2 : b64[len - 1] === '=' ? 1 : 0
+}
+
+function byteLength (b64) {
+  // base64 is 4/3 + up to two characters of the original data
+  return b64.length * 3 / 4 - placeHoldersCount(b64)
+}
+
+function toByteArray (b64) {
+  var i, j, l, tmp, placeHolders, arr
+  var len = b64.length
+  placeHolders = placeHoldersCount(b64)
+
+  arr = new Arr(len * 3 / 4 - placeHolders)
+
+  // if there are placeholders, only get up to the last complete 4 chars
+  l = placeHolders > 0 ? len - 4 : len
+
+  var L = 0
+
+  for (i = 0, j = 0; i < l; i += 4, j += 3) {
+    tmp = (revLookup[b64.charCodeAt(i)] << 18) | (revLookup[b64.charCodeAt(i + 1)] << 12) | (revLookup[b64.charCodeAt(i + 2)] << 6) | revLookup[b64.charCodeAt(i + 3)]
+    arr[L++] = (tmp >> 16) & 0xFF
+    arr[L++] = (tmp >> 8) & 0xFF
+    arr[L++] = tmp & 0xFF
+  }
+
+  if (placeHolders === 2) {
+    tmp = (revLookup[b64.charCodeAt(i)] << 2) | (revLookup[b64.charCodeAt(i + 1)] >> 4)
+    arr[L++] = tmp & 0xFF
+  } else if (placeHolders === 1) {
+    tmp = (revLookup[b64.charCodeAt(i)] << 10) | (revLookup[b64.charCodeAt(i + 1)] << 4) | (revLookup[b64.charCodeAt(i + 2)] >> 2)
+    arr[L++] = (tmp >> 8) & 0xFF
+    arr[L++] = tmp & 0xFF
+  }
+
+  return arr
+}
+
+function tripletToBase64 (num) {
+  return lookup[num >> 18 & 0x3F] + lookup[num >> 12 & 0x3F] + lookup[num >> 6 & 0x3F] + lookup[num & 0x3F]
+}
+
+function encodeChunk (uint8, start, end) {
+  var tmp
+  var output = []
+  for (var i = start; i < end; i += 3) {
+    tmp = (uint8[i] << 16) + (uint8[i + 1] << 8) + (uint8[i + 2])
+    output.push(tripletToBase64(tmp))
+  }
+  return output.join('')
+}
+
+function fromByteArray (uint8) {
+  var tmp
+  var len = uint8.length
+  var extraBytes = len % 3 // if we have 1 byte left, pad 2 bytes
+  var output = ''
+  var parts = []
+  var maxChunkLength = 16383 // must be multiple of 3
+
+  // go through the array every three bytes, we'll deal with trailing stuff later
+  for (var i = 0, len2 = len - extraBytes; i < len2; i += maxChunkLength) {
+    parts.push(encodeChunk(uint8, i, (i + maxChunkLength) > len2 ? len2 : (i + maxChunkLength)))
+  }
+
+  // pad the end with zeros, but make sure to not forget the extra bytes
+  if (extraBytes === 1) {
+    tmp = uint8[len - 1]
+    output += lookup[tmp >> 2]
+    output += lookup[(tmp << 4) & 0x3F]
+    output += '=='
+  } else if (extraBytes === 2) {
+    tmp = (uint8[len - 2] << 8) + (uint8[len - 1])
+    output += lookup[tmp >> 10]
+    output += lookup[(tmp >> 4) & 0x3F]
+    output += lookup[(tmp << 2) & 0x3F]
+    output += '='
+  }
+
+  parts.push(output)
+
+  return parts.join('')
+}
+
+},{}],37:[function(require,module,exports){
+/*!
+ * The buffer module from node.js, for the browser.
+ *
+ * @author   Feross Aboukhadijeh <feross@feross.org> <http://feross.org>
+ * @license  MIT
+ */
+/* eslint-disable no-proto */
+
+'use strict'
+
+var base64 = require('base64-js')
+var ieee754 = require('ieee754')
+
+exports.Buffer = Buffer
+exports.SlowBuffer = SlowBuffer
+exports.INSPECT_MAX_BYTES = 50
+
+var K_MAX_LENGTH = 0x7fffffff
+exports.kMaxLength = K_MAX_LENGTH
+
+/**
+ * If `Buffer.TYPED_ARRAY_SUPPORT`:
+ *   === true    Use Uint8Array implementation (fastest)
+ *   === false   Print warning and recommend using `buffer` v4.x which has an Object
+ *               implementation (most compatible, even IE6)
+ *
+ * Browsers that support typed arrays are IE 10+, Firefox 4+, Chrome 7+, Safari 5.1+,
+ * Opera 11.6+, iOS 4.2+.
+ *
+ * We report that the browser does not support typed arrays if the are not subclassable
+ * using __proto__. Firefox 4-29 lacks support for adding new properties to `Uint8Array`
+ * (See: https://bugzilla.mozilla.org/show_bug.cgi?id=695438). IE 10 lacks support
+ * for __proto__ and has a buggy typed array implementation.
+ */
+Buffer.TYPED_ARRAY_SUPPORT = typedArraySupport()
+
+if (!Buffer.TYPED_ARRAY_SUPPORT && typeof console !== 'undefined' &&
+    typeof console.error === 'function') {
+  console.error(
+    'This browser lacks typed array (Uint8Array) support which is required by ' +
+    '`buffer` v5.x. Use `buffer` v4.x if you require old browser support.'
+  )
+}
+
+function typedArraySupport () {
+  // Can typed array instances can be augmented?
+  try {
+    var arr = new Uint8Array(1)
+    arr.__proto__ = {__proto__: Uint8Array.prototype, foo: function () { return 42 }}
+    return arr.foo() === 42
+  } catch (e) {
+    return false
+  }
+}
+
+function createBuffer (length) {
+  if (length > K_MAX_LENGTH) {
+    throw new RangeError('Invalid typed array length')
+  }
+  // Return an augmented `Uint8Array` instance
+  var buf = new Uint8Array(length)
+  buf.__proto__ = Buffer.prototype
+  return buf
+}
+
+/**
+ * The Buffer constructor returns instances of `Uint8Array` that have their
+ * prototype changed to `Buffer.prototype`. Furthermore, `Buffer` is a subclass of
+ * `Uint8Array`, so the returned instances will have all the node `Buffer` methods
+ * and the `Uint8Array` methods. Square bracket notation works as expected -- it
+ * returns a single octet.
+ *
+ * The `Uint8Array` prototype remains unmodified.
+ */
+
+function Buffer (arg, encodingOrOffset, length) {
+  // Common case.
+  if (typeof arg === 'number') {
+    if (typeof encodingOrOffset === 'string') {
+      throw new Error(
+        'If encoding is specified then the first argument must be a string'
+      )
+    }
+    return allocUnsafe(arg)
+  }
+  return from(arg, encodingOrOffset, length)
+}
+
+// Fix subarray() in ES2016. See: https://github.com/feross/buffer/pull/97
+if (typeof Symbol !== 'undefined' && Symbol.species &&
+    Buffer[Symbol.species] === Buffer) {
+  Object.defineProperty(Buffer, Symbol.species, {
+    value: null,
+    configurable: true,
+    enumerable: false,
+    writable: false
+  })
+}
+
+Buffer.poolSize = 8192 // not used by this implementation
+
+function from (value, encodingOrOffset, length) {
+  if (typeof value === 'number') {
+    throw new TypeError('"value" argument must not be a number')
+  }
+
+  if (typeof ArrayBuffer !== 'undefined' && value instanceof ArrayBuffer) {
+    return fromArrayBuffer(value, encodingOrOffset, length)
+  }
+
+  if (typeof value === 'string') {
+    return fromString(value, encodingOrOffset)
+  }
+
+  return fromObject(value)
+}
+
+/**
+ * Functionally equivalent to Buffer(arg, encoding) but throws a TypeError
+ * if value is a number.
+ * Buffer.from(str[, encoding])
+ * Buffer.from(array)
+ * Buffer.from(buffer)
+ * Buffer.from(arrayBuffer[, byteOffset[, length]])
+ **/
+Buffer.from = function (value, encodingOrOffset, length) {
+  return from(value, encodingOrOffset, length)
+}
+
+// Note: Change prototype *after* Buffer.from is defined to workaround Chrome bug:
+// https://github.com/feross/buffer/pull/148
+Buffer.prototype.__proto__ = Uint8Array.prototype
+Buffer.__proto__ = Uint8Array
+
+function assertSize (size) {
+  if (typeof size !== 'number') {
+    throw new TypeError('"size" argument must be a number')
+  } else if (size < 0) {
+    throw new RangeError('"size" argument must not be negative')
+  }
+}
+
+function alloc (size, fill, encoding) {
+  assertSize(size)
+  if (size <= 0) {
+    return createBuffer(size)
+  }
+  if (fill !== undefined) {
+    // Only pay attention to encoding if it's a string. This
+    // prevents accidentally sending in a number that would
+    // be interpretted as a start offset.
+    return typeof encoding === 'string'
+      ? createBuffer(size).fill(fill, encoding)
+      : createBuffer(size).fill(fill)
+  }
+  return createBuffer(size)
+}
+
+/**
+ * Creates a new filled Buffer instance.
+ * alloc(size[, fill[, encoding]])
+ **/
+Buffer.alloc = function (size, fill, encoding) {
+  return alloc(size, fill, encoding)
+}
+
+function allocUnsafe (size) {
+  assertSize(size)
+  return createBuffer(size < 0 ? 0 : checked(size) | 0)
+}
+
+/**
+ * Equivalent to Buffer(num), by default creates a non-zero-filled Buffer instance.
+ * */
+Buffer.allocUnsafe = function (size) {
+  return allocUnsafe(size)
+}
+/**
+ * Equivalent to SlowBuffer(num), by default creates a non-zero-filled Buffer instance.
+ */
+Buffer.allocUnsafeSlow = function (size) {
+  return allocUnsafe(size)
+}
+
+function fromString (string, encoding) {
+  if (typeof encoding !== 'string' || encoding === '') {
+    encoding = 'utf8'
+  }
+
+  if (!Buffer.isEncoding(encoding)) {
+    throw new TypeError('"encoding" must be a valid string encoding')
+  }
+
+  var length = byteLength(string, encoding) | 0
+  var buf = createBuffer(length)
+
+  var actual = buf.write(string, encoding)
+
+  if (actual !== length) {
+    // Writing a hex string, for example, that contains invalid characters will
+    // cause everything after the first invalid character to be ignored. (e.g.
+    // 'abxxcd' will be treated as 'ab')
+    buf = buf.slice(0, actual)
+  }
+
+  return buf
+}
+
+function fromArrayLike (array) {
+  var length = array.length < 0 ? 0 : checked(array.length) | 0
+  var buf = createBuffer(length)
+  for (var i = 0; i < length; i += 1) {
+    buf[i] = array[i] & 255
+  }
+  return buf
+}
+
+function fromArrayBuffer (array, byteOffset, length) {
+  array.byteLength // this throws if `array` is not a valid ArrayBuffer
+
+  if (byteOffset < 0 || array.byteLength < byteOffset) {
+    throw new RangeError('\'offset\' is out of bounds')
+  }
+
+  if (array.byteLength < byteOffset + (length || 0)) {
+    throw new RangeError('\'length\' is out of bounds')
+  }
+
+  var buf
+  if (byteOffset === undefined && length === undefined) {
+    buf = new Uint8Array(array)
+  } else if (length === undefined) {
+    buf = new Uint8Array(array, byteOffset)
+  } else {
+    buf = new Uint8Array(array, byteOffset, length)
+  }
+
+  // Return an augmented `Uint8Array` instance
+  buf.__proto__ = Buffer.prototype
+  return buf
+}
+
+function fromObject (obj) {
+  if (Buffer.isBuffer(obj)) {
+    var len = checked(obj.length) | 0
+    var buf = createBuffer(len)
+
+    if (buf.length === 0) {
+      return buf
+    }
+
+    obj.copy(buf, 0, 0, len)
+    return buf
+  }
+
+  if (obj) {
+    if ((typeof ArrayBuffer !== 'undefined' &&
+        obj.buffer instanceof ArrayBuffer) || 'length' in obj) {
+      if (typeof obj.length !== 'number' || isnan(obj.length)) {
+        return createBuffer(0)
+      }
+      return fromArrayLike(obj)
+    }
+
+    if (obj.type === 'Buffer' && Array.isArray(obj.data)) {
+      return fromArrayLike(obj.data)
+    }
+  }
+
+  throw new TypeError('First argument must be a string, Buffer, ArrayBuffer, Array, or array-like object.')
+}
+
+function checked (length) {
+  // Note: cannot use `length < K_MAX_LENGTH` here because that fails when
+  // length is NaN (which is otherwise coerced to zero.)
+  if (length >= K_MAX_LENGTH) {
+    throw new RangeError('Attempt to allocate Buffer larger than maximum ' +
+                         'size: 0x' + K_MAX_LENGTH.toString(16) + ' bytes')
+  }
+  return length | 0
+}
+
+function SlowBuffer (length) {
+  if (+length != length) { // eslint-disable-line eqeqeq
+    length = 0
+  }
+  return Buffer.alloc(+length)
+}
+
+Buffer.isBuffer = function isBuffer (b) {
+  return !!(b != null && b._isBuffer)
+}
+
+Buffer.compare = function compare (a, b) {
+  if (!Buffer.isBuffer(a) || !Buffer.isBuffer(b)) {
+    throw new TypeError('Arguments must be Buffers')
+  }
+
+  if (a === b) return 0
+
+  var x = a.length
+  var y = b.length
+
+  for (var i = 0, len = Math.min(x, y); i < len; ++i) {
+    if (a[i] !== b[i]) {
+      x = a[i]
+      y = b[i]
+      break
+    }
+  }
+
+  if (x < y) return -1
+  if (y < x) return 1
+  return 0
+}
+
+Buffer.isEncoding = function isEncoding (encoding) {
+  switch (String(encoding).toLowerCase()) {
+    case 'hex':
+    case 'utf8':
+    case 'utf-8':
+    case 'ascii':
+    case 'latin1':
+    case 'binary':
+    case 'base64':
+    case 'ucs2':
+    case 'ucs-2':
+    case 'utf16le':
+    case 'utf-16le':
+      return true
+    default:
+      return false
+  }
+}
+
+Buffer.concat = function concat (list, length) {
+  if (!Array.isArray(list)) {
+    throw new TypeError('"list" argument must be an Array of Buffers')
+  }
+
+  if (list.length === 0) {
+    return Buffer.alloc(0)
+  }
+
+  var i
+  if (length === undefined) {
+    length = 0
+    for (i = 0; i < list.length; ++i) {
+      length += list[i].length
+    }
+  }
+
+  var buffer = Buffer.allocUnsafe(length)
+  var pos = 0
+  for (i = 0; i < list.length; ++i) {
+    var buf = list[i]
+    if (!Buffer.isBuffer(buf)) {
+      throw new TypeError('"list" argument must be an Array of Buffers')
+    }
+    buf.copy(buffer, pos)
+    pos += buf.length
+  }
+  return buffer
+}
+
+function byteLength (string, encoding) {
+  if (Buffer.isBuffer(string)) {
+    return string.length
+  }
+  if (typeof ArrayBuffer !== 'undefined' && typeof ArrayBuffer.isView === 'function' &&
+      (ArrayBuffer.isView(string) || string instanceof ArrayBuffer)) {
+    return string.byteLength
+  }
+  if (typeof string !== 'string') {
+    string = '' + string
+  }
+
+  var len = string.length
+  if (len === 0) return 0
+
+  // Use a for loop to avoid recursion
+  var loweredCase = false
+  for (;;) {
+    switch (encoding) {
+      case 'ascii':
+      case 'latin1':
+      case 'binary':
+        return len
+      case 'utf8':
+      case 'utf-8':
+      case undefined:
+        return utf8ToBytes(string).length
+      case 'ucs2':
+      case 'ucs-2':
+      case 'utf16le':
+      case 'utf-16le':
+        return len * 2
+      case 'hex':
+        return len >>> 1
+      case 'base64':
+        return base64ToBytes(string).length
+      default:
+        if (loweredCase) return utf8ToBytes(string).length // assume utf8
+        encoding = ('' + encoding).toLowerCase()
+        loweredCase = true
+    }
+  }
+}
+Buffer.byteLength = byteLength
+
+function slowToString (encoding, start, end) {
+  var loweredCase = false
+
+  // No need to verify that "this.length <= MAX_UINT32" since it's a read-only
+  // property of a typed array.
+
+  // This behaves neither like String nor Uint8Array in that we set start/end
+  // to their upper/lower bounds if the value passed is out of range.
+  // undefined is handled specially as per ECMA-262 6th Edition,
+  // Section 13.3.3.7 Runtime Semantics: KeyedBindingInitialization.
+  if (start === undefined || start < 0) {
+    start = 0
+  }
+  // Return early if start > this.length. Done here to prevent potential uint32
+  // coercion fail below.
+  if (start > this.length) {
+    return ''
+  }
+
+  if (end === undefined || end > this.length) {
+    end = this.length
+  }
+
+  if (end <= 0) {
+    return ''
+  }
+
+  // Force coersion to uint32. This will also coerce falsey/NaN values to 0.
+  end >>>= 0
+  start >>>= 0
+
+  if (end <= start) {
+    return ''
+  }
+
+  if (!encoding) encoding = 'utf8'
+
+  while (true) {
+    switch (encoding) {
+      case 'hex':
+        return hexSlice(this, start, end)
+
+      case 'utf8':
+      case 'utf-8':
+        return utf8Slice(this, start, end)
+
+      case 'ascii':
+        return asciiSlice(this, start, end)
+
+      case 'latin1':
+      case 'binary':
+        return latin1Slice(this, start, end)
+
+      case 'base64':
+        return base64Slice(this, start, end)
+
+      case 'ucs2':
+      case 'ucs-2':
+      case 'utf16le':
+      case 'utf-16le':
+        return utf16leSlice(this, start, end)
+
+      default:
+        if (loweredCase) throw new TypeError('Unknown encoding: ' + encoding)
+        encoding = (encoding + '').toLowerCase()
+        loweredCase = true
+    }
+  }
+}
+
+// The property is used by `Buffer.isBuffer` and `is-buffer` (in Safari 5-7) to detect
+// Buffer instances.
+Buffer.prototype._isBuffer = true
+
+function swap (b, n, m) {
+  var i = b[n]
+  b[n] = b[m]
+  b[m] = i
+}
+
+Buffer.prototype.swap16 = function swap16 () {
+  var len = this.length
+  if (len % 2 !== 0) {
+    throw new RangeError('Buffer size must be a multiple of 16-bits')
+  }
+  for (var i = 0; i < len; i += 2) {
+    swap(this, i, i + 1)
+  }
+  return this
+}
+
+Buffer.prototype.swap32 = function swap32 () {
+  var len = this.length
+  if (len % 4 !== 0) {
+    throw new RangeError('Buffer size must be a multiple of 32-bits')
+  }
+  for (var i = 0; i < len; i += 4) {
+    swap(this, i, i + 3)
+    swap(this, i + 1, i + 2)
+  }
+  return this
+}
+
+Buffer.prototype.swap64 = function swap64 () {
+  var len = this.length
+  if (len % 8 !== 0) {
+    throw new RangeError('Buffer size must be a multiple of 64-bits')
+  }
+  for (var i = 0; i < len; i += 8) {
+    swap(this, i, i + 7)
+    swap(this, i + 1, i + 6)
+    swap(this, i + 2, i + 5)
+    swap(this, i + 3, i + 4)
+  }
+  return this
+}
+
+Buffer.prototype.toString = function toString () {
+  var length = this.length
+  if (length === 0) return ''
+  if (arguments.length === 0) return utf8Slice(this, 0, length)
+  return slowToString.apply(this, arguments)
+}
+
+Buffer.prototype.equals = function equals (b) {
+  if (!Buffer.isBuffer(b)) throw new TypeError('Argument must be a Buffer')
+  if (this === b) return true
+  return Buffer.compare(this, b) === 0
+}
+
+Buffer.prototype.inspect = function inspect () {
+  var str = ''
+  var max = exports.INSPECT_MAX_BYTES
+  if (this.length > 0) {
+    str = this.toString('hex', 0, max).match(/.{2}/g).join(' ')
+    if (this.length > max) str += ' ... '
+  }
+  return '<Buffer ' + str + '>'
+}
+
+Buffer.prototype.compare = function compare (target, start, end, thisStart, thisEnd) {
+  if (!Buffer.isBuffer(target)) {
+    throw new TypeError('Argument must be a Buffer')
+  }
+
+  if (start === undefined) {
+    start = 0
+  }
+  if (end === undefined) {
+    end = target ? target.length : 0
+  }
+  if (thisStart === undefined) {
+    thisStart = 0
+  }
+  if (thisEnd === undefined) {
+    thisEnd = this.length
+  }
+
+  if (start < 0 || end > target.length || thisStart < 0 || thisEnd > this.length) {
+    throw new RangeError('out of range index')
+  }
+
+  if (thisStart >= thisEnd && start >= end) {
+    return 0
+  }
+  if (thisStart >= thisEnd) {
+    return -1
+  }
+  if (start >= end) {
+    return 1
+  }
+
+  start >>>= 0
+  end >>>= 0
+  thisStart >>>= 0
+  thisEnd >>>= 0
+
+  if (this === target) return 0
+
+  var x = thisEnd - thisStart
+  var y = end - start
+  var len = Math.min(x, y)
+
+  var thisCopy = this.slice(thisStart, thisEnd)
+  var targetCopy = target.slice(start, end)
+
+  for (var i = 0; i < len; ++i) {
+    if (thisCopy[i] !== targetCopy[i]) {
+      x = thisCopy[i]
+      y = targetCopy[i]
+      break
+    }
+  }
+
+  if (x < y) return -1
+  if (y < x) return 1
+  return 0
+}
+
+// Finds either the first index of `val` in `buffer` at offset >= `byteOffset`,
+// OR the last index of `val` in `buffer` at offset <= `byteOffset`.
+//
+// Arguments:
+// - buffer - a Buffer to search
+// - val - a string, Buffer, or number
+// - byteOffset - an index into `buffer`; will be clamped to an int32
+// - encoding - an optional encoding, relevant is val is a string
+// - dir - true for indexOf, false for lastIndexOf
+function bidirectionalIndexOf (buffer, val, byteOffset, encoding, dir) {
+  // Empty buffer means no match
+  if (buffer.length === 0) return -1
+
+  // Normalize byteOffset
+  if (typeof byteOffset === 'string') {
+    encoding = byteOffset
+    byteOffset = 0
+  } else if (byteOffset > 0x7fffffff) {
+    byteOffset = 0x7fffffff
+  } else if (byteOffset < -0x80000000) {
+    byteOffset = -0x80000000
+  }
+  byteOffset = +byteOffset  // Coerce to Number.
+  if (isNaN(byteOffset)) {
+    // byteOffset: it it's undefined, null, NaN, "foo", etc, search whole buffer
+    byteOffset = dir ? 0 : (buffer.length - 1)
+  }
+
+  // Normalize byteOffset: negative offsets start from the end of the buffer
+  if (byteOffset < 0) byteOffset = buffer.length + byteOffset
+  if (byteOffset >= buffer.length) {
+    if (dir) return -1
+    else byteOffset = buffer.length - 1
+  } else if (byteOffset < 0) {
+    if (dir) byteOffset = 0
+    else return -1
+  }
+
+  // Normalize val
+  if (typeof val === 'string') {
+    val = Buffer.from(val, encoding)
+  }
+
+  // Finally, search either indexOf (if dir is true) or lastIndexOf
+  if (Buffer.isBuffer(val)) {
+    // Special case: looking for empty string/buffer always fails
+    if (val.length === 0) {
+      return -1
+    }
+    return arrayIndexOf(buffer, val, byteOffset, encoding, dir)
+  } else if (typeof val === 'number') {
+    val = val & 0xFF // Search for a byte value [0-255]
+    if (typeof Uint8Array.prototype.indexOf === 'function') {
+      if (dir) {
+        return Uint8Array.prototype.indexOf.call(buffer, val, byteOffset)
+      } else {
+        return Uint8Array.prototype.lastIndexOf.call(buffer, val, byteOffset)
+      }
+    }
+    return arrayIndexOf(buffer, [ val ], byteOffset, encoding, dir)
+  }
+
+  throw new TypeError('val must be string, number or Buffer')
+}
+
+function arrayIndexOf (arr, val, byteOffset, encoding, dir) {
+  var indexSize = 1
+  var arrLength = arr.length
+  var valLength = val.length
+
+  if (encoding !== undefined) {
+    encoding = String(encoding).toLowerCase()
+    if (encoding === 'ucs2' || encoding === 'ucs-2' ||
+        encoding === 'utf16le' || encoding === 'utf-16le') {
+      if (arr.length < 2 || val.length < 2) {
+        return -1
+      }
+      indexSize = 2
+      arrLength /= 2
+      valLength /= 2
+      byteOffset /= 2
+    }
+  }
+
+  function read (buf, i) {
+    if (indexSize === 1) {
+      return buf[i]
+    } else {
+      return buf.readUInt16BE(i * indexSize)
+    }
+  }
+
+  var i
+  if (dir) {
+    var foundIndex = -1
+    for (i = byteOffset; i < arrLength; i++) {
+      if (read(arr, i) === read(val, foundIndex === -1 ? 0 : i - foundIndex)) {
+        if (foundIndex === -1) foundIndex = i
+        if (i - foundIndex + 1 === valLength) return foundIndex * indexSize
+      } else {
+        if (foundIndex !== -1) i -= i - foundIndex
+        foundIndex = -1
+      }
+    }
+  } else {
+    if (byteOffset + valLength > arrLength) byteOffset = arrLength - valLength
+    for (i = byteOffset; i >= 0; i--) {
+      var found = true
+      for (var j = 0; j < valLength; j++) {
+        if (read(arr, i + j) !== read(val, j)) {
+          found = false
+          break
+        }
+      }
+      if (found) return i
+    }
+  }
+
+  return -1
+}
+
+Buffer.prototype.includes = function includes (val, byteOffset, encoding) {
+  return this.indexOf(val, byteOffset, encoding) !== -1
+}
+
+Buffer.prototype.indexOf = function indexOf (val, byteOffset, encoding) {
+  return bidirectionalIndexOf(this, val, byteOffset, encoding, true)
+}
+
+Buffer.prototype.lastIndexOf = function lastIndexOf (val, byteOffset, encoding) {
+  return bidirectionalIndexOf(this, val, byteOffset, encoding, false)
+}
+
+function hexWrite (buf, string, offset, length) {
+  offset = Number(offset) || 0
+  var remaining = buf.length - offset
+  if (!length) {
+    length = remaining
+  } else {
+    length = Number(length)
+    if (length > remaining) {
+      length = remaining
+    }
+  }
+
+  // must be an even number of digits
+  var strLen = string.length
+  if (strLen % 2 !== 0) throw new TypeError('Invalid hex string')
+
+  if (length > strLen / 2) {
+    length = strLen / 2
+  }
+  for (var i = 0; i < length; ++i) {
+    var parsed = parseInt(string.substr(i * 2, 2), 16)
+    if (isNaN(parsed)) return i
+    buf[offset + i] = parsed
+  }
+  return i
+}
+
+function utf8Write (buf, string, offset, length) {
+  return blitBuffer(utf8ToBytes(string, buf.length - offset), buf, offset, length)
+}
+
+function asciiWrite (buf, string, offset, length) {
+  return blitBuffer(asciiToBytes(string), buf, offset, length)
+}
+
+function latin1Write (buf, string, offset, length) {
+  return asciiWrite(buf, string, offset, length)
+}
+
+function base64Write (buf, string, offset, length) {
+  return blitBuffer(base64ToBytes(string), buf, offset, length)
+}
+
+function ucs2Write (buf, string, offset, length) {
+  return blitBuffer(utf16leToBytes(string, buf.length - offset), buf, offset, length)
+}
+
+Buffer.prototype.write = function write (string, offset, length, encoding) {
+  // Buffer#write(string)
+  if (offset === undefined) {
+    encoding = 'utf8'
+    length = this.length
+    offset = 0
+  // Buffer#write(string, encoding)
+  } else if (length === undefined && typeof offset === 'string') {
+    encoding = offset
+    length = this.length
+    offset = 0
+  // Buffer#write(string, offset[, length][, encoding])
+  } else if (isFinite(offset)) {
+    offset = offset >>> 0
+    if (isFinite(length)) {
+      length = length >>> 0
+      if (encoding === undefined) encoding = 'utf8'
+    } else {
+      encoding = length
+      length = undefined
+    }
+  } else {
+    throw new Error(
+      'Buffer.write(string, encoding, offset[, length]) is no longer supported'
+    )
+  }
+
+  var remaining = this.length - offset
+  if (length === undefined || length > remaining) length = remaining
+
+  if ((string.length > 0 && (length < 0 || offset < 0)) || offset > this.length) {
+    throw new RangeError('Attempt to write outside buffer bounds')
+  }
+
+  if (!encoding) encoding = 'utf8'
+
+  var loweredCase = false
+  for (;;) {
+    switch (encoding) {
+      case 'hex':
+        return hexWrite(this, string, offset, length)
+
+      case 'utf8':
+      case 'utf-8':
+        return utf8Write(this, string, offset, length)
+
+      case 'ascii':
+        return asciiWrite(this, string, offset, length)
+
+      case 'latin1':
+      case 'binary':
+        return latin1Write(this, string, offset, length)
+
+      case 'base64':
+        // Warning: maxLength not taken into account in base64Write
+        return base64Write(this, string, offset, length)
+
+      case 'ucs2':
+      case 'ucs-2':
+      case 'utf16le':
+      case 'utf-16le':
+        return ucs2Write(this, string, offset, length)
+
+      default:
+        if (loweredCase) throw new TypeError('Unknown encoding: ' + encoding)
+        encoding = ('' + encoding).toLowerCase()
+        loweredCase = true
+    }
+  }
+}
+
+Buffer.prototype.toJSON = function toJSON () {
+  return {
+    type: 'Buffer',
+    data: Array.prototype.slice.call(this._arr || this, 0)
+  }
+}
+
+function base64Slice (buf, start, end) {
+  if (start === 0 && end === buf.length) {
+    return base64.fromByteArray(buf)
+  } else {
+    return base64.fromByteArray(buf.slice(start, end))
+  }
+}
+
+function utf8Slice (buf, start, end) {
+  end = Math.min(buf.length, end)
+  var res = []
+
+  var i = start
+  while (i < end) {
+    var firstByte = buf[i]
+    var codePoint = null
+    var bytesPerSequence = (firstByte > 0xEF) ? 4
+      : (firstByte > 0xDF) ? 3
+      : (firstByte > 0xBF) ? 2
+      : 1
+
+    if (i + bytesPerSequence <= end) {
+      var secondByte, thirdByte, fourthByte, tempCodePoint
+
+      switch (bytesPerSequence) {
+        case 1:
+          if (firstByte < 0x80) {
+            codePoint = firstByte
+          }
+          break
+        case 2:
+          secondByte = buf[i + 1]
+          if ((secondByte & 0xC0) === 0x80) {
+            tempCodePoint = (firstByte & 0x1F) << 0x6 | (secondByte & 0x3F)
+            if (tempCodePoint > 0x7F) {
+              codePoint = tempCodePoint
+            }
+          }
+          break
+        case 3:
+          secondByte = buf[i + 1]
+          thirdByte = buf[i + 2]
+          if ((secondByte & 0xC0) === 0x80 && (thirdByte & 0xC0) === 0x80) {
+            tempCodePoint = (firstByte & 0xF) << 0xC | (secondByte & 0x3F) << 0x6 | (thirdByte & 0x3F)
+            if (tempCodePoint > 0x7FF && (tempCodePoint < 0xD800 || tempCodePoint > 0xDFFF)) {
+              codePoint = tempCodePoint
+            }
+          }
+          break
+        case 4:
+          secondByte = buf[i + 1]
+          thirdByte = buf[i + 2]
+          fourthByte = buf[i + 3]
+          if ((secondByte & 0xC0) === 0x80 && (thirdByte & 0xC0) === 0x80 && (fourthByte & 0xC0) === 0x80) {
+            tempCodePoint = (firstByte & 0xF) << 0x12 | (secondByte & 0x3F) << 0xC | (thirdByte & 0x3F) << 0x6 | (fourthByte & 0x3F)
+            if (tempCodePoint > 0xFFFF && tempCodePoint < 0x110000) {
+              codePoint = tempCodePoint
+            }
+          }
+      }
+    }
+
+    if (codePoint === null) {
+      // we did not generate a valid codePoint so insert a
+      // replacement char (U+FFFD) and advance only 1 byte
+      codePoint = 0xFFFD
+      bytesPerSequence = 1
+    } else if (codePoint > 0xFFFF) {
+      // encode to utf16 (surrogate pair dance)
+      codePoint -= 0x10000
+      res.push(codePoint >>> 10 & 0x3FF | 0xD800)
+      codePoint = 0xDC00 | codePoint & 0x3FF
+    }
+
+    res.push(codePoint)
+    i += bytesPerSequence
+  }
+
+  return decodeCodePointsArray(res)
+}
+
+// Based on http://stackoverflow.com/a/22747272/680742, the browser with
+// the lowest limit is Chrome, with 0x10000 args.
+// We go 1 magnitude less, for safety
+var MAX_ARGUMENTS_LENGTH = 0x1000
+
+function decodeCodePointsArray (codePoints) {
+  var len = codePoints.length
+  if (len <= MAX_ARGUMENTS_LENGTH) {
+    return String.fromCharCode.apply(String, codePoints) // avoid extra slice()
+  }
+
+  // Decode in chunks to avoid "call stack size exceeded".
+  var res = ''
+  var i = 0
+  while (i < len) {
+    res += String.fromCharCode.apply(
+      String,
+      codePoints.slice(i, i += MAX_ARGUMENTS_LENGTH)
+    )
+  }
+  return res
+}
+
+function asciiSlice (buf, start, end) {
+  var ret = ''
+  end = Math.min(buf.length, end)
+
+  for (var i = start; i < end; ++i) {
+    ret += String.fromCharCode(buf[i] & 0x7F)
+  }
+  return ret
+}
+
+function latin1Slice (buf, start, end) {
+  var ret = ''
+  end = Math.min(buf.length, end)
+
+  for (var i = start; i < end; ++i) {
+    ret += String.fromCharCode(buf[i])
+  }
+  return ret
+}
+
+function hexSlice (buf, start, end) {
+  var len = buf.length
+
+  if (!start || start < 0) start = 0
+  if (!end || end < 0 || end > len) end = len
+
+  var out = ''
+  for (var i = start; i < end; ++i) {
+    out += toHex(buf[i])
+  }
+  return out
+}
+
+function utf16leSlice (buf, start, end) {
+  var bytes = buf.slice(start, end)
+  var res = ''
+  for (var i = 0; i < bytes.length; i += 2) {
+    res += String.fromCharCode(bytes[i] + bytes[i + 1] * 256)
+  }
+  return res
+}
+
+Buffer.prototype.slice = function slice (start, end) {
+  var len = this.length
+  start = ~~start
+  end = end === undefined ? len : ~~end
+
+  if (start < 0) {
+    start += len
+    if (start < 0) start = 0
+  } else if (start > len) {
+    start = len
+  }
+
+  if (end < 0) {
+    end += len
+    if (end < 0) end = 0
+  } else if (end > len) {
+    end = len
+  }
+
+  if (end < start) end = start
+
+  var newBuf = this.subarray(start, end)
+  // Return an augmented `Uint8Array` instance
+  newBuf.__proto__ = Buffer.prototype
+  return newBuf
+}
+
+/*
+ * Need to make sure that buffer isn't trying to write out of bounds.
+ */
+function checkOffset (offset, ext, length) {
+  if ((offset % 1) !== 0 || offset < 0) throw new RangeError('offset is not uint')
+  if (offset + ext > length) throw new RangeError('Trying to access beyond buffer length')
+}
+
+Buffer.prototype.readUIntLE = function readUIntLE (offset, byteLength, noAssert) {
+  offset = offset >>> 0
+  byteLength = byteLength >>> 0
+  if (!noAssert) checkOffset(offset, byteLength, this.length)
+
+  var val = this[offset]
+  var mul = 1
+  var i = 0
+  while (++i < byteLength && (mul *= 0x100)) {
+    val += this[offset + i] * mul
+  }
+
+  return val
+}
+
+Buffer.prototype.readUIntBE = function readUIntBE (offset, byteLength, noAssert) {
+  offset = offset >>> 0
+  byteLength = byteLength >>> 0
+  if (!noAssert) {
+    checkOffset(offset, byteLength, this.length)
+  }
+
+  var val = this[offset + --byteLength]
+  var mul = 1
+  while (byteLength > 0 && (mul *= 0x100)) {
+    val += this[offset + --byteLength] * mul
+  }
+
+  return val
+}
+
+Buffer.prototype.readUInt8 = function readUInt8 (offset, noAssert) {
+  offset = offset >>> 0
+  if (!noAssert) checkOffset(offset, 1, this.length)
+  return this[offset]
+}
+
+Buffer.prototype.readUInt16LE = function readUInt16LE (offset, noAssert) {
+  offset = offset >>> 0
+  if (!noAssert) checkOffset(offset, 2, this.length)
+  return this[offset] | (this[offset + 1] << 8)
+}
+
+Buffer.prototype.readUInt16BE = function readUInt16BE (offset, noAssert) {
+  offset = offset >>> 0
+  if (!noAssert) checkOffset(offset, 2, this.length)
+  return (this[offset] << 8) | this[offset + 1]
+}
+
+Buffer.prototype.readUInt32LE = function readUInt32LE (offset, noAssert) {
+  offset = offset >>> 0
+  if (!noAssert) checkOffset(offset, 4, this.length)
+
+  return ((this[offset]) |
+      (this[offset + 1] << 8) |
+      (this[offset + 2] << 16)) +
+      (this[offset + 3] * 0x1000000)
+}
+
+Buffer.prototype.readUInt32BE = function readUInt32BE (offset, noAssert) {
+  offset = offset >>> 0
+  if (!noAssert) checkOffset(offset, 4, this.length)
+
+  return (this[offset] * 0x1000000) +
+    ((this[offset + 1] << 16) |
+    (this[offset + 2] << 8) |
+    this[offset + 3])
+}
+
+Buffer.prototype.readIntLE = function readIntLE (offset, byteLength, noAssert) {
+  offset = offset >>> 0
+  byteLength = byteLength >>> 0
+  if (!noAssert) checkOffset(offset, byteLength, this.length)
+
+  var val = this[offset]
+  var mul = 1
+  var i = 0
+  while (++i < byteLength && (mul *= 0x100)) {
+    val += this[offset + i] * mul
+  }
+  mul *= 0x80
+
+  if (val >= mul) val -= Math.pow(2, 8 * byteLength)
+
+  return val
+}
+
+Buffer.prototype.readIntBE = function readIntBE (offset, byteLength, noAssert) {
+  offset = offset >>> 0
+  byteLength = byteLength >>> 0
+  if (!noAssert) checkOffset(offset, byteLength, this.length)
+
+  var i = byteLength
+  var mul = 1
+  var val = this[offset + --i]
+  while (i > 0 && (mul *= 0x100)) {
+    val += this[offset + --i] * mul
+  }
+  mul *= 0x80
+
+  if (val >= mul) val -= Math.pow(2, 8 * byteLength)
+
+  return val
+}
+
+Buffer.prototype.readInt8 = function readInt8 (offset, noAssert) {
+  offset = offset >>> 0
+  if (!noAssert) checkOffset(offset, 1, this.length)
+  if (!(this[offset] & 0x80)) return (this[offset])
+  return ((0xff - this[offset] + 1) * -1)
+}
+
+Buffer.prototype.readInt16LE = function readInt16LE (offset, noAssert) {
+  offset = offset >>> 0
+  if (!noAssert) checkOffset(offset, 2, this.length)
+  var val = this[offset] | (this[offset + 1] << 8)
+  return (val & 0x8000) ? val | 0xFFFF0000 : val
+}
+
+Buffer.prototype.readInt16BE = function readInt16BE (offset, noAssert) {
+  offset = offset >>> 0
+  if (!noAssert) checkOffset(offset, 2, this.length)
+  var val = this[offset + 1] | (this[offset] << 8)
+  return (val & 0x8000) ? val | 0xFFFF0000 : val
+}
+
+Buffer.prototype.readInt32LE = function readInt32LE (offset, noAssert) {
+  offset = offset >>> 0
+  if (!noAssert) checkOffset(offset, 4, this.length)
+
+  return (this[offset]) |
+    (this[offset + 1] << 8) |
+    (this[offset + 2] << 16) |
+    (this[offset + 3] << 24)
+}
+
+Buffer.prototype.readInt32BE = function readInt32BE (offset, noAssert) {
+  offset = offset >>> 0
+  if (!noAssert) checkOffset(offset, 4, this.length)
+
+  return (this[offset] << 24) |
+    (this[offset + 1] << 16) |
+    (this[offset + 2] << 8) |
+    (this[offset + 3])
+}
+
+Buffer.prototype.readFloatLE = function readFloatLE (offset, noAssert) {
+  offset = offset >>> 0
+  if (!noAssert) checkOffset(offset, 4, this.length)
+  return ieee754.read(this, offset, true, 23, 4)
+}
+
+Buffer.prototype.readFloatBE = function readFloatBE (offset, noAssert) {
+  offset = offset >>> 0
+  if (!noAssert) checkOffset(offset, 4, this.length)
+  return ieee754.read(this, offset, false, 23, 4)
+}
+
+Buffer.prototype.readDoubleLE = function readDoubleLE (offset, noAssert) {
+  offset = offset >>> 0
+  if (!noAssert) checkOffset(offset, 8, this.length)
+  return ieee754.read(this, offset, true, 52, 8)
+}
+
+Buffer.prototype.readDoubleBE = function readDoubleBE (offset, noAssert) {
+  offset = offset >>> 0
+  if (!noAssert) checkOffset(offset, 8, this.length)
+  return ieee754.read(this, offset, false, 52, 8)
+}
+
+function checkInt (buf, value, offset, ext, max, min) {
+  if (!Buffer.isBuffer(buf)) throw new TypeError('"buffer" argument must be a Buffer instance')
+  if (value > max || value < min) throw new RangeError('"value" argument is out of bounds')
+  if (offset + ext > buf.length) throw new RangeError('Index out of range')
+}
+
+Buffer.prototype.writeUIntLE = function writeUIntLE (value, offset, byteLength, noAssert) {
+  value = +value
+  offset = offset >>> 0
+  byteLength = byteLength >>> 0
+  if (!noAssert) {
+    var maxBytes = Math.pow(2, 8 * byteLength) - 1
+    checkInt(this, value, offset, byteLength, maxBytes, 0)
+  }
+
+  var mul = 1
+  var i = 0
+  this[offset] = value & 0xFF
+  while (++i < byteLength && (mul *= 0x100)) {
+    this[offset + i] = (value / mul) & 0xFF
+  }
+
+  return offset + byteLength
+}
+
+Buffer.prototype.writeUIntBE = function writeUIntBE (value, offset, byteLength, noAssert) {
+  value = +value
+  offset = offset >>> 0
+  byteLength = byteLength >>> 0
+  if (!noAssert) {
+    var maxBytes = Math.pow(2, 8 * byteLength) - 1
+    checkInt(this, value, offset, byteLength, maxBytes, 0)
+  }
+
+  var i = byteLength - 1
+  var mul = 1
+  this[offset + i] = value & 0xFF
+  while (--i >= 0 && (mul *= 0x100)) {
+    this[offset + i] = (value / mul) & 0xFF
+  }
+
+  return offset + byteLength
+}
+
+Buffer.prototype.writeUInt8 = function writeUInt8 (value, offset, noAssert) {
+  value = +value
+  offset = offset >>> 0
+  if (!noAssert) checkInt(this, value, offset, 1, 0xff, 0)
+  this[offset] = (value & 0xff)
+  return offset + 1
+}
+
+Buffer.prototype.writeUInt16LE = function writeUInt16LE (value, offset, noAssert) {
+  value = +value
+  offset = offset >>> 0
+  if (!noAssert) checkInt(this, value, offset, 2, 0xffff, 0)
+  this[offset] = (value & 0xff)
+  this[offset + 1] = (value >>> 8)
+  return offset + 2
+}
+
+Buffer.prototype.writeUInt16BE = function writeUInt16BE (value, offset, noAssert) {
+  value = +value
+  offset = offset >>> 0
+  if (!noAssert) checkInt(this, value, offset, 2, 0xffff, 0)
+  this[offset] = (value >>> 8)
+  this[offset + 1] = (value & 0xff)
+  return offset + 2
+}
+
+Buffer.prototype.writeUInt32LE = function writeUInt32LE (value, offset, noAssert) {
+  value = +value
+  offset = offset >>> 0
+  if (!noAssert) checkInt(this, value, offset, 4, 0xffffffff, 0)
+  this[offset + 3] = (value >>> 24)
+  this[offset + 2] = (value >>> 16)
+  this[offset + 1] = (value >>> 8)
+  this[offset] = (value & 0xff)
+  return offset + 4
+}
+
+Buffer.prototype.writeUInt32BE = function writeUInt32BE (value, offset, noAssert) {
+  value = +value
+  offset = offset >>> 0
+  if (!noAssert) checkInt(this, value, offset, 4, 0xffffffff, 0)
+  this[offset] = (value >>> 24)
+  this[offset + 1] = (value >>> 16)
+  this[offset + 2] = (value >>> 8)
+  this[offset + 3] = (value & 0xff)
+  return offset + 4
+}
+
+Buffer.prototype.writeIntLE = function writeIntLE (value, offset, byteLength, noAssert) {
+  value = +value
+  offset = offset >>> 0
+  if (!noAssert) {
+    var limit = Math.pow(2, 8 * byteLength - 1)
+
+    checkInt(this, value, offset, byteLength, limit - 1, -limit)
+  }
+
+  var i = 0
+  var mul = 1
+  var sub = 0
+  this[offset] = value & 0xFF
+  while (++i < byteLength && (mul *= 0x100)) {
+    if (value < 0 && sub === 0 && this[offset + i - 1] !== 0) {
+      sub = 1
+    }
+    this[offset + i] = ((value / mul) >> 0) - sub & 0xFF
+  }
+
+  return offset + byteLength
+}
+
+Buffer.prototype.writeIntBE = function writeIntBE (value, offset, byteLength, noAssert) {
+  value = +value
+  offset = offset >>> 0
+  if (!noAssert) {
+    var limit = Math.pow(2, 8 * byteLength - 1)
+
+    checkInt(this, value, offset, byteLength, limit - 1, -limit)
+  }
+
+  var i = byteLength - 1
+  var mul = 1
+  var sub = 0
+  this[offset + i] = value & 0xFF
+  while (--i >= 0 && (mul *= 0x100)) {
+    if (value < 0 && sub === 0 && this[offset + i + 1] !== 0) {
+      sub = 1
+    }
+    this[offset + i] = ((value / mul) >> 0) - sub & 0xFF
+  }
+
+  return offset + byteLength
+}
+
+Buffer.prototype.writeInt8 = function writeInt8 (value, offset, noAssert) {
+  value = +value
+  offset = offset >>> 0
+  if (!noAssert) checkInt(this, value, offset, 1, 0x7f, -0x80)
+  if (value < 0) value = 0xff + value + 1
+  this[offset] = (value & 0xff)
+  return offset + 1
+}
+
+Buffer.prototype.writeInt16LE = function writeInt16LE (value, offset, noAssert) {
+  value = +value
+  offset = offset >>> 0
+  if (!noAssert) checkInt(this, value, offset, 2, 0x7fff, -0x8000)
+  this[offset] = (value & 0xff)
+  this[offset + 1] = (value >>> 8)
+  return offset + 2
+}
+
+Buffer.prototype.writeInt16BE = function writeInt16BE (value, offset, noAssert) {
+  value = +value
+  offset = offset >>> 0
+  if (!noAssert) checkInt(this, value, offset, 2, 0x7fff, -0x8000)
+  this[offset] = (value >>> 8)
+  this[offset + 1] = (value & 0xff)
+  return offset + 2
+}
+
+Buffer.prototype.writeInt32LE = function writeInt32LE (value, offset, noAssert) {
+  value = +value
+  offset = offset >>> 0
+  if (!noAssert) checkInt(this, value, offset, 4, 0x7fffffff, -0x80000000)
+  this[offset] = (value & 0xff)
+  this[offset + 1] = (value >>> 8)
+  this[offset + 2] = (value >>> 16)
+  this[offset + 3] = (value >>> 24)
+  return offset + 4
+}
+
+Buffer.prototype.writeInt32BE = function writeInt32BE (value, offset, noAssert) {
+  value = +value
+  offset = offset >>> 0
+  if (!noAssert) checkInt(this, value, offset, 4, 0x7fffffff, -0x80000000)
+  if (value < 0) value = 0xffffffff + value + 1
+  this[offset] = (value >>> 24)
+  this[offset + 1] = (value >>> 16)
+  this[offset + 2] = (value >>> 8)
+  this[offset + 3] = (value & 0xff)
+  return offset + 4
+}
+
+function checkIEEE754 (buf, value, offset, ext, max, min) {
+  if (offset + ext > buf.length) throw new RangeError('Index out of range')
+  if (offset < 0) throw new RangeError('Index out of range')
+}
+
+function writeFloat (buf, value, offset, littleEndian, noAssert) {
+  value = +value
+  offset = offset >>> 0
+  if (!noAssert) {
+    checkIEEE754(buf, value, offset, 4, 3.4028234663852886e+38, -3.4028234663852886e+38)
+  }
+  ieee754.write(buf, value, offset, littleEndian, 23, 4)
+  return offset + 4
+}
+
+Buffer.prototype.writeFloatLE = function writeFloatLE (value, offset, noAssert) {
+  return writeFloat(this, value, offset, true, noAssert)
+}
+
+Buffer.prototype.writeFloatBE = function writeFloatBE (value, offset, noAssert) {
+  return writeFloat(this, value, offset, false, noAssert)
+}
+
+function writeDouble (buf, value, offset, littleEndian, noAssert) {
+  value = +value
+  offset = offset >>> 0
+  if (!noAssert) {
+    checkIEEE754(buf, value, offset, 8, 1.7976931348623157E+308, -1.7976931348623157E+308)
+  }
+  ieee754.write(buf, value, offset, littleEndian, 52, 8)
+  return offset + 8
+}
+
+Buffer.prototype.writeDoubleLE = function writeDoubleLE (value, offset, noAssert) {
+  return writeDouble(this, value, offset, true, noAssert)
+}
+
+Buffer.prototype.writeDoubleBE = function writeDoubleBE (value, offset, noAssert) {
+  return writeDouble(this, value, offset, false, noAssert)
+}
+
+// copy(targetBuffer, targetStart=0, sourceStart=0, sourceEnd=buffer.length)
+Buffer.prototype.copy = function copy (target, targetStart, start, end) {
+  if (!start) start = 0
+  if (!end && end !== 0) end = this.length
+  if (targetStart >= target.length) targetStart = target.length
+  if (!targetStart) targetStart = 0
+  if (end > 0 && end < start) end = start
+
+  // Copy 0 bytes; we're done
+  if (end === start) return 0
+  if (target.length === 0 || this.length === 0) return 0
+
+  // Fatal error conditions
+  if (targetStart < 0) {
+    throw new RangeError('targetStart out of bounds')
+  }
+  if (start < 0 || start >= this.length) throw new RangeError('sourceStart out of bounds')
+  if (end < 0) throw new RangeError('sourceEnd out of bounds')
+
+  // Are we oob?
+  if (end > this.length) end = this.length
+  if (target.length - targetStart < end - start) {
+    end = target.length - targetStart + start
+  }
+
+  var len = end - start
+  var i
+
+  if (this === target && start < targetStart && targetStart < end) {
+    // descending copy from end
+    for (i = len - 1; i >= 0; --i) {
+      target[i + targetStart] = this[i + start]
+    }
+  } else if (len < 1000) {
+    // ascending copy from start
+    for (i = 0; i < len; ++i) {
+      target[i + targetStart] = this[i + start]
+    }
+  } else {
+    Uint8Array.prototype.set.call(
+      target,
+      this.subarray(start, start + len),
+      targetStart
+    )
+  }
+
+  return len
+}
+
+// Usage:
+//    buffer.fill(number[, offset[, end]])
+//    buffer.fill(buffer[, offset[, end]])
+//    buffer.fill(string[, offset[, end]][, encoding])
+Buffer.prototype.fill = function fill (val, start, end, encoding) {
+  // Handle string cases:
+  if (typeof val === 'string') {
+    if (typeof start === 'string') {
+      encoding = start
+      start = 0
+      end = this.length
+    } else if (typeof end === 'string') {
+      encoding = end
+      end = this.length
+    }
+    if (val.length === 1) {
+      var code = val.charCodeAt(0)
+      if (code < 256) {
+        val = code
+      }
+    }
+    if (encoding !== undefined && typeof encoding !== 'string') {
+      throw new TypeError('encoding must be a string')
+    }
+    if (typeof encoding === 'string' && !Buffer.isEncoding(encoding)) {
+      throw new TypeError('Unknown encoding: ' + encoding)
+    }
+  } else if (typeof val === 'number') {
+    val = val & 255
+  }
+
+  // Invalid ranges are not set to a default, so can range check early.
+  if (start < 0 || this.length < start || this.length < end) {
+    throw new RangeError('Out of range index')
+  }
+
+  if (end <= start) {
+    return this
+  }
+
+  start = start >>> 0
+  end = end === undefined ? this.length : end >>> 0
+
+  if (!val) val = 0
+
+  var i
+  if (typeof val === 'number') {
+    for (i = start; i < end; ++i) {
+      this[i] = val
+    }
+  } else {
+    var bytes = Buffer.isBuffer(val)
+      ? val
+      : new Buffer(val, encoding)
+    var len = bytes.length
+    for (i = 0; i < end - start; ++i) {
+      this[i + start] = bytes[i % len]
+    }
+  }
+
+  return this
+}
+
+// HELPER FUNCTIONS
+// ================
+
+var INVALID_BASE64_RE = /[^+/0-9A-Za-z-_]/g
+
+function base64clean (str) {
+  // Node strips out invalid characters like \n and \t from the string, base64-js does not
+  str = stringtrim(str).replace(INVALID_BASE64_RE, '')
+  // Node converts strings with length < 2 to ''
+  if (str.length < 2) return ''
+  // Node allows for non-padded base64 strings (missing trailing ===), base64-js does not
+  while (str.length % 4 !== 0) {
+    str = str + '='
+  }
+  return str
+}
+
+function stringtrim (str) {
+  if (str.trim) return str.trim()
+  return str.replace(/^\s+|\s+$/g, '')
+}
+
+function toHex (n) {
+  if (n < 16) return '0' + n.toString(16)
+  return n.toString(16)
+}
+
+function utf8ToBytes (string, units) {
+  units = units || Infinity
+  var codePoint
+  var length = string.length
+  var leadSurrogate = null
+  var bytes = []
+
+  for (var i = 0; i < length; ++i) {
+    codePoint = string.charCodeAt(i)
+
+    // is surrogate component
+    if (codePoint > 0xD7FF && codePoint < 0xE000) {
+      // last char was a lead
+      if (!leadSurrogate) {
+        // no lead yet
+        if (codePoint > 0xDBFF) {
+          // unexpected trail
+          if ((units -= 3) > -1) bytes.push(0xEF, 0xBF, 0xBD)
+          continue
+        } else if (i + 1 === length) {
+          // unpaired lead
+          if ((units -= 3) > -1) bytes.push(0xEF, 0xBF, 0xBD)
+          continue
+        }
+
+        // valid lead
+        leadSurrogate = codePoint
+
+        continue
+      }
+
+      // 2 leads in a row
+      if (codePoint < 0xDC00) {
+        if ((units -= 3) > -1) bytes.push(0xEF, 0xBF, 0xBD)
+        leadSurrogate = codePoint
+        continue
+      }
+
+      // valid surrogate pair
+      codePoint = (leadSurrogate - 0xD800 << 10 | codePoint - 0xDC00) + 0x10000
+    } else if (leadSurrogate) {
+      // valid bmp char, but last char was a lead
+      if ((units -= 3) > -1) bytes.push(0xEF, 0xBF, 0xBD)
+    }
+
+    leadSurrogate = null
+
+    // encode utf8
+    if (codePoint < 0x80) {
+      if ((units -= 1) < 0) break
+      bytes.push(codePoint)
+    } else if (codePoint < 0x800) {
+      if ((units -= 2) < 0) break
+      bytes.push(
+        codePoint >> 0x6 | 0xC0,
+        codePoint & 0x3F | 0x80
+      )
+    } else if (codePoint < 0x10000) {
+      if ((units -= 3) < 0) break
+      bytes.push(
+        codePoint >> 0xC | 0xE0,
+        codePoint >> 0x6 & 0x3F | 0x80,
+        codePoint & 0x3F | 0x80
+      )
+    } else if (codePoint < 0x110000) {
+      if ((units -= 4) < 0) break
+      bytes.push(
+        codePoint >> 0x12 | 0xF0,
+        codePoint >> 0xC & 0x3F | 0x80,
+        codePoint >> 0x6 & 0x3F | 0x80,
+        codePoint & 0x3F | 0x80
+      )
+    } else {
+      throw new Error('Invalid code point')
+    }
+  }
+
+  return bytes
+}
+
+function asciiToBytes (str) {
+  var byteArray = []
+  for (var i = 0; i < str.length; ++i) {
+    // Node's code seems to be doing this and not & 0x7F..
+    byteArray.push(str.charCodeAt(i) & 0xFF)
+  }
+  return byteArray
+}
+
+function utf16leToBytes (str, units) {
+  var c, hi, lo
+  var byteArray = []
+  for (var i = 0; i < str.length; ++i) {
+    if ((units -= 2) < 0) break
+
+    c = str.charCodeAt(i)
+    hi = c >> 8
+    lo = c % 256
+    byteArray.push(lo)
+    byteArray.push(hi)
+  }
+
+  return byteArray
+}
+
+function base64ToBytes (str) {
+  return base64.toByteArray(base64clean(str))
+}
+
+function blitBuffer (src, dst, offset, length) {
+  for (var i = 0; i < length; ++i) {
+    if ((i + offset >= dst.length) || (i >= src.length)) break
+    dst[i + offset] = src[i]
+  }
+  return i
+}
+
+function isnan (val) {
+  return val !== val // eslint-disable-line no-self-compare
+}
+
+},{"base64-js":36,"ieee754":40}],38:[function(require,module,exports){
+/*!
+ * chrome-promise 2.0.2
+ * https://github.com/tfoxy/chrome-promise
+ *
+ * Copyright 2015 Tomás Fox
+ * Released under the MIT license
+ */
+
+(function(root, factory) {
+  if (typeof define === 'function' && define.amd) {
+    // AMD. Register as an anonymous module.
+    define([], factory.bind(null, typeof exports === 'object' ? this : root));
+  } else if (typeof exports === 'object') {
+    // Node. Does not work with strict CommonJS, but
+    // only CommonJS-like environments that support module.exports,
+    // like Node.
+    module.exports = factory(this);
+  } else {
+    // Browser globals (root is window)
+    root.ChromePromise = factory(root);
+  }
+}(this, function(root) {
+  'use strict';
+  var slice = Array.prototype.slice,
+      hasOwnProperty = Object.prototype.hasOwnProperty;
+
+  return ChromePromise;
+
+  ////////////////
+
+  function ChromePromise(options) {
+    options = options || {};
+    var chrome = options.chrome || root.chrome;
+    var Promise = options.Promise || root.Promise;
+    var runtime = chrome.runtime;
+
+    fillProperties(chrome, this);
+
+    ////////////////
+
+    function setPromiseFunction(fn, thisArg) {
+
+      return function() {
+        var args = slice.call(arguments);
+
+        return new Promise(function(resolve, reject) {
+          args.push(callback);
+
+          fn.apply(thisArg, args);
+
+          function callback() {
+            var err = runtime.lastError;
+            var results = slice.call(arguments);
+            if (err) {
+              reject(err);
+            } else {
+              switch (results.length) {
+                case 0:
+                  resolve();
+                  break;
+                case 1:
+                  resolve(results[0]);
+                  break;
+                default:
+                  resolve(results);
+              }
+            }
+          }
+        });
+
+      };
+
+    }
+
+    function fillProperties(source, target) {
+      for (var key in source) {
+        if (hasOwnProperty.call(source, key)) {
+          var val = source[key];
+          var type = typeof val;
+
+          if (type === 'object' && !(val instanceof ChromePromise)) {
+            target[key] = {};
+            fillProperties(val, target[key]);
+          } else if (type === 'function') {
+            target[key] = setPromiseFunction(val, source);
+          } else {
+            target[key] = val;
+          }
+        }
+      }
+    }
+  }
+}));
+
+},{}],39:[function(require,module,exports){
 var isBuffer = require('is-buffer')
 
 var flat = module.exports = flatten
@@ -7446,7 +10479,93 @@ function unflatten(target, opts) {
   return result
 }
 
-},{"is-buffer":33}],33:[function(require,module,exports){
+},{"is-buffer":41}],40:[function(require,module,exports){
+exports.read = function (buffer, offset, isLE, mLen, nBytes) {
+  var e, m
+  var eLen = nBytes * 8 - mLen - 1
+  var eMax = (1 << eLen) - 1
+  var eBias = eMax >> 1
+  var nBits = -7
+  var i = isLE ? (nBytes - 1) : 0
+  var d = isLE ? -1 : 1
+  var s = buffer[offset + i]
+
+  i += d
+
+  e = s & ((1 << (-nBits)) - 1)
+  s >>= (-nBits)
+  nBits += eLen
+  for (; nBits > 0; e = e * 256 + buffer[offset + i], i += d, nBits -= 8) {}
+
+  m = e & ((1 << (-nBits)) - 1)
+  e >>= (-nBits)
+  nBits += mLen
+  for (; nBits > 0; m = m * 256 + buffer[offset + i], i += d, nBits -= 8) {}
+
+  if (e === 0) {
+    e = 1 - eBias
+  } else if (e === eMax) {
+    return m ? NaN : ((s ? -1 : 1) * Infinity)
+  } else {
+    m = m + Math.pow(2, mLen)
+    e = e - eBias
+  }
+  return (s ? -1 : 1) * m * Math.pow(2, e - mLen)
+}
+
+exports.write = function (buffer, value, offset, isLE, mLen, nBytes) {
+  var e, m, c
+  var eLen = nBytes * 8 - mLen - 1
+  var eMax = (1 << eLen) - 1
+  var eBias = eMax >> 1
+  var rt = (mLen === 23 ? Math.pow(2, -24) - Math.pow(2, -77) : 0)
+  var i = isLE ? 0 : (nBytes - 1)
+  var d = isLE ? 1 : -1
+  var s = value < 0 || (value === 0 && 1 / value < 0) ? 1 : 0
+
+  value = Math.abs(value)
+
+  if (isNaN(value) || value === Infinity) {
+    m = isNaN(value) ? 1 : 0
+    e = eMax
+  } else {
+    e = Math.floor(Math.log(value) / Math.LN2)
+    if (value * (c = Math.pow(2, -e)) < 1) {
+      e--
+      c *= 2
+    }
+    if (e + eBias >= 1) {
+      value += rt / c
+    } else {
+      value += rt * Math.pow(2, 1 - eBias)
+    }
+    if (value * c >= 2) {
+      e++
+      c /= 2
+    }
+
+    if (e + eBias >= eMax) {
+      m = 0
+      e = eMax
+    } else if (e + eBias >= 1) {
+      m = (value * c - 1) * Math.pow(2, mLen)
+      e = e + eBias
+    } else {
+      m = value * Math.pow(2, eBias - 1) * Math.pow(2, mLen)
+      e = 0
+    }
+  }
+
+  for (; mLen >= 8; buffer[offset + i] = m & 0xff, i += d, m /= 256, mLen -= 8) {}
+
+  e = (e << mLen) | m
+  eLen += mLen
+  for (; eLen > 0; buffer[offset + i] = e & 0xff, i += d, e /= 256, eLen -= 8) {}
+
+  buffer[offset + i - d] |= s * 128
+}
+
+},{}],41:[function(require,module,exports){
 /*!
  * Determine if an object is a Buffer
  *
@@ -7469,7 +10588,7 @@ function isSlowBuffer (obj) {
   return typeof obj.readFloatLE === 'function' && typeof obj.slice === 'function' && isBuffer(obj.slice(0, 0))
 }
 
-},{}],34:[function(require,module,exports){
+},{}],42:[function(require,module,exports){
 (function (process){
 /**
  * Module dependencies.
@@ -7773,7 +10892,7 @@ function createDataRows(params) {
 }
 
 }).call(this,require('_process'))
-},{"_process":48,"flat":32,"lodash.clonedeep":35,"lodash.flatten":36,"lodash.get":37,"lodash.set":38,"lodash.uniq":39,"os":47}],35:[function(require,module,exports){
+},{"_process":59,"flat":39,"lodash.clonedeep":43,"lodash.flatten":44,"lodash.get":45,"lodash.set":46,"lodash.uniq":47,"os":58}],43:[function(require,module,exports){
 (function (global){
 /**
  * lodash (Custom Build) <https://lodash.com/>
@@ -9525,7 +12644,7 @@ function stubFalse() {
 module.exports = cloneDeep;
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],36:[function(require,module,exports){
+},{}],44:[function(require,module,exports){
 (function (global){
 /**
  * lodash (Custom Build) <https://lodash.com/>
@@ -9878,7 +12997,7 @@ function isObjectLike(value) {
 module.exports = flatten;
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],37:[function(require,module,exports){
+},{}],45:[function(require,module,exports){
 (function (global){
 /**
  * lodash (Custom Build) <https://lodash.com/>
@@ -10813,7 +13932,7 @@ function get(object, path, defaultValue) {
 module.exports = get;
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],38:[function(require,module,exports){
+},{}],46:[function(require,module,exports){
 (function (global){
 /**
  * lodash (Custom Build) <https://lodash.com/>
@@ -11807,7 +14926,7 @@ function set(object, path, value) {
 module.exports = set;
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],39:[function(require,module,exports){
+},{}],47:[function(require,module,exports){
 (function (global){
 /**
  * lodash (Custom Build) <https://lodash.com/>
@@ -12707,7 +15826,7 @@ function noop() {
 module.exports = uniq;
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],40:[function(require,module,exports){
+},{}],48:[function(require,module,exports){
 (function (global){
 /**
  * @license
@@ -29795,7 +32914,7 @@ module.exports = uniq;
 }.call(this));
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],41:[function(require,module,exports){
+},{}],49:[function(require,module,exports){
 //     Underscore.js 1.8.3
 //     http://underscorejs.org
 //     (c) 2009-2015 Jeremy Ashkenas, DocumentCloud and Investigative Reporters & Editors
@@ -31345,7 +34464,495 @@ module.exports = uniq;
   }
 }.call(this));
 
-},{}],42:[function(require,module,exports){
+},{}],50:[function(require,module,exports){
+/*!
+ * EventEmitter v5.1.0 - git.io/ee
+ * Unlicense - http://unlicense.org/
+ * Oliver Caldwell - http://oli.me.uk/
+ * @preserve
+ */
+
+;(function (exports) {
+    'use strict';
+
+    /**
+     * Class for managing events.
+     * Can be extended to provide event functionality in other classes.
+     *
+     * @class EventEmitter Manages event registering and emitting.
+     */
+    function EventEmitter() {}
+
+    // Shortcuts to improve speed and size
+    var proto = EventEmitter.prototype;
+    var originalGlobalValue = exports.EventEmitter;
+
+    /**
+     * Finds the index of the listener for the event in its storage array.
+     *
+     * @param {Function[]} listeners Array of listeners to search through.
+     * @param {Function} listener Method to look for.
+     * @return {Number} Index of the specified listener, -1 if not found
+     * @api private
+     */
+    function indexOfListener(listeners, listener) {
+        var i = listeners.length;
+        while (i--) {
+            if (listeners[i].listener === listener) {
+                return i;
+            }
+        }
+
+        return -1;
+    }
+
+    /**
+     * Alias a method while keeping the context correct, to allow for overwriting of target method.
+     *
+     * @param {String} name The name of the target method.
+     * @return {Function} The aliased method
+     * @api private
+     */
+    function alias(name) {
+        return function aliasClosure() {
+            return this[name].apply(this, arguments);
+        };
+    }
+
+    /**
+     * Returns the listener array for the specified event.
+     * Will initialise the event object and listener arrays if required.
+     * Will return an object if you use a regex search. The object contains keys for each matched event. So /ba[rz]/ might return an object containing bar and baz. But only if you have either defined them with defineEvent or added some listeners to them.
+     * Each property in the object response is an array of listener functions.
+     *
+     * @param {String|RegExp} evt Name of the event to return the listeners from.
+     * @return {Function[]|Object} All listener functions for the event.
+     */
+    proto.getListeners = function getListeners(evt) {
+        var events = this._getEvents();
+        var response;
+        var key;
+
+        // Return a concatenated array of all matching events if
+        // the selector is a regular expression.
+        if (evt instanceof RegExp) {
+            response = {};
+            for (key in events) {
+                if (events.hasOwnProperty(key) && evt.test(key)) {
+                    response[key] = events[key];
+                }
+            }
+        }
+        else {
+            response = events[evt] || (events[evt] = []);
+        }
+
+        return response;
+    };
+
+    /**
+     * Takes a list of listener objects and flattens it into a list of listener functions.
+     *
+     * @param {Object[]} listeners Raw listener objects.
+     * @return {Function[]} Just the listener functions.
+     */
+    proto.flattenListeners = function flattenListeners(listeners) {
+        var flatListeners = [];
+        var i;
+
+        for (i = 0; i < listeners.length; i += 1) {
+            flatListeners.push(listeners[i].listener);
+        }
+
+        return flatListeners;
+    };
+
+    /**
+     * Fetches the requested listeners via getListeners but will always return the results inside an object. This is mainly for internal use but others may find it useful.
+     *
+     * @param {String|RegExp} evt Name of the event to return the listeners from.
+     * @return {Object} All listener functions for an event in an object.
+     */
+    proto.getListenersAsObject = function getListenersAsObject(evt) {
+        var listeners = this.getListeners(evt);
+        var response;
+
+        if (listeners instanceof Array) {
+            response = {};
+            response[evt] = listeners;
+        }
+
+        return response || listeners;
+    };
+
+    function isValidListener (listener) {
+        if (typeof listener === 'function' || listener instanceof RegExp) {
+            return true
+        } else if (listener && typeof listener === 'object') {
+            return isValidListener(listener.listener)
+        } else {
+            return false
+        }
+    }
+
+    /**
+     * Adds a listener function to the specified event.
+     * The listener will not be added if it is a duplicate.
+     * If the listener returns true then it will be removed after it is called.
+     * If you pass a regular expression as the event name then the listener will be added to all events that match it.
+     *
+     * @param {String|RegExp} evt Name of the event to attach the listener to.
+     * @param {Function} listener Method to be called when the event is emitted. If the function returns true then it will be removed after calling.
+     * @return {Object} Current instance of EventEmitter for chaining.
+     */
+    proto.addListener = function addListener(evt, listener) {
+        if (!isValidListener(listener)) {
+            throw new TypeError('listener must be a function');
+        }
+
+        var listeners = this.getListenersAsObject(evt);
+        var listenerIsWrapped = typeof listener === 'object';
+        var key;
+
+        for (key in listeners) {
+            if (listeners.hasOwnProperty(key) && indexOfListener(listeners[key], listener) === -1) {
+                listeners[key].push(listenerIsWrapped ? listener : {
+                    listener: listener,
+                    once: false
+                });
+            }
+        }
+
+        return this;
+    };
+
+    /**
+     * Alias of addListener
+     */
+    proto.on = alias('addListener');
+
+    /**
+     * Semi-alias of addListener. It will add a listener that will be
+     * automatically removed after its first execution.
+     *
+     * @param {String|RegExp} evt Name of the event to attach the listener to.
+     * @param {Function} listener Method to be called when the event is emitted. If the function returns true then it will be removed after calling.
+     * @return {Object} Current instance of EventEmitter for chaining.
+     */
+    proto.addOnceListener = function addOnceListener(evt, listener) {
+        return this.addListener(evt, {
+            listener: listener,
+            once: true
+        });
+    };
+
+    /**
+     * Alias of addOnceListener.
+     */
+    proto.once = alias('addOnceListener');
+
+    /**
+     * Defines an event name. This is required if you want to use a regex to add a listener to multiple events at once. If you don't do this then how do you expect it to know what event to add to? Should it just add to every possible match for a regex? No. That is scary and bad.
+     * You need to tell it what event names should be matched by a regex.
+     *
+     * @param {String} evt Name of the event to create.
+     * @return {Object} Current instance of EventEmitter for chaining.
+     */
+    proto.defineEvent = function defineEvent(evt) {
+        this.getListeners(evt);
+        return this;
+    };
+
+    /**
+     * Uses defineEvent to define multiple events.
+     *
+     * @param {String[]} evts An array of event names to define.
+     * @return {Object} Current instance of EventEmitter for chaining.
+     */
+    proto.defineEvents = function defineEvents(evts) {
+        for (var i = 0; i < evts.length; i += 1) {
+            this.defineEvent(evts[i]);
+        }
+        return this;
+    };
+
+    /**
+     * Removes a listener function from the specified event.
+     * When passed a regular expression as the event name, it will remove the listener from all events that match it.
+     *
+     * @param {String|RegExp} evt Name of the event to remove the listener from.
+     * @param {Function} listener Method to remove from the event.
+     * @return {Object} Current instance of EventEmitter for chaining.
+     */
+    proto.removeListener = function removeListener(evt, listener) {
+        var listeners = this.getListenersAsObject(evt);
+        var index;
+        var key;
+
+        for (key in listeners) {
+            if (listeners.hasOwnProperty(key)) {
+                index = indexOfListener(listeners[key], listener);
+
+                if (index !== -1) {
+                    listeners[key].splice(index, 1);
+                }
+            }
+        }
+
+        return this;
+    };
+
+    /**
+     * Alias of removeListener
+     */
+    proto.off = alias('removeListener');
+
+    /**
+     * Adds listeners in bulk using the manipulateListeners method.
+     * If you pass an object as the second argument you can add to multiple events at once. The object should contain key value pairs of events and listeners or listener arrays. You can also pass it an event name and an array of listeners to be added.
+     * You can also pass it a regular expression to add the array of listeners to all events that match it.
+     * Yeah, this function does quite a bit. That's probably a bad thing.
+     *
+     * @param {String|Object|RegExp} evt An event name if you will pass an array of listeners next. An object if you wish to add to multiple events at once.
+     * @param {Function[]} [listeners] An optional array of listener functions to add.
+     * @return {Object} Current instance of EventEmitter for chaining.
+     */
+    proto.addListeners = function addListeners(evt, listeners) {
+        // Pass through to manipulateListeners
+        return this.manipulateListeners(false, evt, listeners);
+    };
+
+    /**
+     * Removes listeners in bulk using the manipulateListeners method.
+     * If you pass an object as the second argument you can remove from multiple events at once. The object should contain key value pairs of events and listeners or listener arrays.
+     * You can also pass it an event name and an array of listeners to be removed.
+     * You can also pass it a regular expression to remove the listeners from all events that match it.
+     *
+     * @param {String|Object|RegExp} evt An event name if you will pass an array of listeners next. An object if you wish to remove from multiple events at once.
+     * @param {Function[]} [listeners] An optional array of listener functions to remove.
+     * @return {Object} Current instance of EventEmitter for chaining.
+     */
+    proto.removeListeners = function removeListeners(evt, listeners) {
+        // Pass through to manipulateListeners
+        return this.manipulateListeners(true, evt, listeners);
+    };
+
+    /**
+     * Edits listeners in bulk. The addListeners and removeListeners methods both use this to do their job. You should really use those instead, this is a little lower level.
+     * The first argument will determine if the listeners are removed (true) or added (false).
+     * If you pass an object as the second argument you can add/remove from multiple events at once. The object should contain key value pairs of events and listeners or listener arrays.
+     * You can also pass it an event name and an array of listeners to be added/removed.
+     * You can also pass it a regular expression to manipulate the listeners of all events that match it.
+     *
+     * @param {Boolean} remove True if you want to remove listeners, false if you want to add.
+     * @param {String|Object|RegExp} evt An event name if you will pass an array of listeners next. An object if you wish to add/remove from multiple events at once.
+     * @param {Function[]} [listeners] An optional array of listener functions to add/remove.
+     * @return {Object} Current instance of EventEmitter for chaining.
+     */
+    proto.manipulateListeners = function manipulateListeners(remove, evt, listeners) {
+        var i;
+        var value;
+        var single = remove ? this.removeListener : this.addListener;
+        var multiple = remove ? this.removeListeners : this.addListeners;
+
+        // If evt is an object then pass each of its properties to this method
+        if (typeof evt === 'object' && !(evt instanceof RegExp)) {
+            for (i in evt) {
+                if (evt.hasOwnProperty(i) && (value = evt[i])) {
+                    // Pass the single listener straight through to the singular method
+                    if (typeof value === 'function') {
+                        single.call(this, i, value);
+                    }
+                    else {
+                        // Otherwise pass back to the multiple function
+                        multiple.call(this, i, value);
+                    }
+                }
+            }
+        }
+        else {
+            // So evt must be a string
+            // And listeners must be an array of listeners
+            // Loop over it and pass each one to the multiple method
+            i = listeners.length;
+            while (i--) {
+                single.call(this, evt, listeners[i]);
+            }
+        }
+
+        return this;
+    };
+
+    /**
+     * Removes all listeners from a specified event.
+     * If you do not specify an event then all listeners will be removed.
+     * That means every event will be emptied.
+     * You can also pass a regex to remove all events that match it.
+     *
+     * @param {String|RegExp} [evt] Optional name of the event to remove all listeners for. Will remove from every event if not passed.
+     * @return {Object} Current instance of EventEmitter for chaining.
+     */
+    proto.removeEvent = function removeEvent(evt) {
+        var type = typeof evt;
+        var events = this._getEvents();
+        var key;
+
+        // Remove different things depending on the state of evt
+        if (type === 'string') {
+            // Remove all listeners for the specified event
+            delete events[evt];
+        }
+        else if (evt instanceof RegExp) {
+            // Remove all events matching the regex.
+            for (key in events) {
+                if (events.hasOwnProperty(key) && evt.test(key)) {
+                    delete events[key];
+                }
+            }
+        }
+        else {
+            // Remove all listeners in all events
+            delete this._events;
+        }
+
+        return this;
+    };
+
+    /**
+     * Alias of removeEvent.
+     *
+     * Added to mirror the node API.
+     */
+    proto.removeAllListeners = alias('removeEvent');
+
+    /**
+     * Emits an event of your choice.
+     * When emitted, every listener attached to that event will be executed.
+     * If you pass the optional argument array then those arguments will be passed to every listener upon execution.
+     * Because it uses `apply`, your array of arguments will be passed as if you wrote them out separately.
+     * So they will not arrive within the array on the other side, they will be separate.
+     * You can also pass a regular expression to emit to all events that match it.
+     *
+     * @param {String|RegExp} evt Name of the event to emit and execute listeners for.
+     * @param {Array} [args] Optional array of arguments to be passed to each listener.
+     * @return {Object} Current instance of EventEmitter for chaining.
+     */
+    proto.emitEvent = function emitEvent(evt, args) {
+        var listenersMap = this.getListenersAsObject(evt);
+        var listeners;
+        var listener;
+        var i;
+        var key;
+        var response;
+
+        for (key in listenersMap) {
+            if (listenersMap.hasOwnProperty(key)) {
+                listeners = listenersMap[key].slice(0);
+
+                for (i = 0; i < listeners.length; i++) {
+                    // If the listener returns true then it shall be removed from the event
+                    // The function is executed either with a basic call or an apply if there is an args array
+                    listener = listeners[i];
+
+                    if (listener.once === true) {
+                        this.removeListener(evt, listener.listener);
+                    }
+
+                    response = listener.listener.apply(this, args || []);
+
+                    if (response === this._getOnceReturnValue()) {
+                        this.removeListener(evt, listener.listener);
+                    }
+                }
+            }
+        }
+
+        return this;
+    };
+
+    /**
+     * Alias of emitEvent
+     */
+    proto.trigger = alias('emitEvent');
+
+    /**
+     * Subtly different from emitEvent in that it will pass its arguments on to the listeners, as opposed to taking a single array of arguments to pass on.
+     * As with emitEvent, you can pass a regex in place of the event name to emit to all events that match it.
+     *
+     * @param {String|RegExp} evt Name of the event to emit and execute listeners for.
+     * @param {...*} Optional additional arguments to be passed to each listener.
+     * @return {Object} Current instance of EventEmitter for chaining.
+     */
+    proto.emit = function emit(evt) {
+        var args = Array.prototype.slice.call(arguments, 1);
+        return this.emitEvent(evt, args);
+    };
+
+    /**
+     * Sets the current value to check against when executing listeners. If a
+     * listeners return value matches the one set here then it will be removed
+     * after execution. This value defaults to true.
+     *
+     * @param {*} value The new value to check for when executing listeners.
+     * @return {Object} Current instance of EventEmitter for chaining.
+     */
+    proto.setOnceReturnValue = function setOnceReturnValue(value) {
+        this._onceReturnValue = value;
+        return this;
+    };
+
+    /**
+     * Fetches the current value to check against when executing listeners. If
+     * the listeners return value matches this one then it should be removed
+     * automatically. It will return true by default.
+     *
+     * @return {*|Boolean} The current value to check for or the default, true.
+     * @api private
+     */
+    proto._getOnceReturnValue = function _getOnceReturnValue() {
+        if (this.hasOwnProperty('_onceReturnValue')) {
+            return this._onceReturnValue;
+        }
+        else {
+            return true;
+        }
+    };
+
+    /**
+     * Fetches the events object and creates one if required.
+     *
+     * @return {Object} The events storage object.
+     * @api private
+     */
+    proto._getEvents = function _getEvents() {
+        return this._events || (this._events = {});
+    };
+
+    /**
+     * Reverts the global {@link EventEmitter} to its previous value and returns a reference to this version.
+     *
+     * @return {Function} Non conflicting EventEmitter class.
+     */
+    EventEmitter.noConflict = function noConflict() {
+        exports.EventEmitter = originalGlobalValue;
+        return EventEmitter;
+    };
+
+    // Expose the class either via AMD, CommonJS or the global object
+    if (typeof define === 'function' && define.amd) {
+        define(function () {
+            return EventEmitter;
+        });
+    }
+    else if (typeof module === 'object' && module.exports){
+        module.exports = EventEmitter;
+    }
+    else {
+        exports.EventEmitter = EventEmitter;
+    }
+}(this || {}));
+
+},{}],51:[function(require,module,exports){
 /* globals chrome */
 'use strict';
 
@@ -31385,7 +34992,106 @@ exports.addOnMessageListener = function(fn) {
   chrome.runtime.onMessage.addListener(fn);
 };
 
-},{}],43:[function(require,module,exports){
+},{}],52:[function(require,module,exports){
+'use strict';
+
+var util = require('./util');
+
+/**
+ * This module provides a wrapper around the chrome.storage.local API and
+ * provides an alternative based on Promises.
+ */
+
+/**
+ * @param {string|Array<string>} keyOrKeys
+ *
+ * @return {Promise.<Object, Error>} Promise that resolves with an object of
+ * key value mappings or rejects with an Error
+ */
+exports.get = function(keyOrKeys) {
+  return new Promise(function(resolve, reject) {
+    util.getStorageLocal().get(keyOrKeys, function(items) {
+      if (util.wasError()) {
+        reject(util.getError());
+      } else {
+        resolve(items);
+      }
+    });
+  });
+};
+
+/**
+ * @param {string|Array<string>} keyOrKeys
+ *
+ * @return {Promise.<Integer, Error>} Promise that resolves with an integer of
+ * the number of bytes in use for the given key or keys, or rejects with an
+ * Error
+ */
+exports.getBytesInUse = function(keyOrKeys) {
+  return new Promise(function(resolve, reject) {
+    util.getStorageLocal().getBytesInUse(keyOrKeys, function(numBytes) {
+      if (util.wasError()) {
+        reject(util.getError());
+      } else {
+        resolve(numBytes);
+      }
+    });
+  });
+};
+
+/**
+ * @param {object} items an object of key value mappings
+ *
+ * @return {Promise.<undefined, Error>} Promise that resolves when the
+ * operation completes or rejects with an Error
+ */
+exports.set = function(items) {
+  return new Promise(function(resolve, reject) {
+    util.getStorageLocal().set(items, function() {
+      if (util.wasError()) {
+        reject(util.getError());
+      } else {
+        resolve();
+      }
+    });
+  });
+};
+
+/**
+ * @param {string|Array<string>} keyOrKeys
+ *
+ * @return {Promise.<undefined, Error>} Promise that resolves when the
+ * operation completes
+ */
+exports.remove = function(keyOrKeys) {
+  return new Promise(function(resolve, reject) {
+    util.getStorageLocal().remove(keyOrKeys, function() {
+      if (util.wasError()) {
+        reject(util.getError());
+      } else {
+        resolve();
+      }
+    });
+  });
+};
+
+/**
+ * @return {Promise.<undefined, Error>} Promise that resolves when the
+ * operation completes
+ */
+exports.clear = function() {
+  return new Promise(function(resolve, reject) {
+    util.getStorageLocal().clear(function() {
+      if (util.wasError()) {
+        reject(util.getError());
+      } else {
+        resolve();
+      }
+    });
+  });
+};
+
+},{"./util":54}],53:[function(require,module,exports){
 /* global chrome */
 'use strict';
 
@@ -31450,7 +35156,107 @@ exports.sendMessage = function(tabId, message, callback) {
   chrome.tabs.sendMessage(tabId, message, callback);
 };
 
-},{}],44:[function(require,module,exports){
+},{}],54:[function(require,module,exports){
+/* globals chrome */
+'use strict';
+
+/**
+ * Very lightweight utility class relating to the chrome apis.
+ */
+
+/**
+ * @return {boolean} true if chrome.runtime.lastError is set, else false
+ */
+exports.wasError = function() {
+  if (chrome.runtime.lastError) {
+    return true;
+  } else {
+    return false;
+  }
+};
+
+/**
+ * @returns {runtime} returns chrome.runtime
+ */
+exports.getRuntime = function() {
+  return chrome.runtime;
+};
+
+/**
+ * @return {string} the value of chrome.runtime.lastError. Does not guarantee
+ * that this value is set.
+ */
+exports.getError = function() {
+  return chrome.runtime.lastError;
+};
+
+/**
+ * @returns {filesystem} returns the chrome.filesystem object.
+ */
+exports.getFileSystem = function() {
+  return chrome.fileSystem;
+};
+
+/**
+ * @returns {StorageArea} chrome.storage.local
+ */
+exports.getStorageLocal = function() {
+  return chrome.storage.local;
+};
+
+/**
+ * @returns {chrome.sockets.udp}
+ */
+exports.getUdp = function() {
+  return chrome.sockets.udp;
+};
+
+/**
+ * This is a complicated function to understand. The need for it arises from
+ * the fact that we are trying to mirror the Chrome API. Several of its
+ * functions include optional parameters, which complicates just passing in
+ * positional arguments directly. To circumvent this issue, we can use the
+ * apply() argument to make the call with the exact arguments.
+ *
+ * Complicating this is that most of the calls also accept a callback
+ * parameter. Since we want to Promise-ify the calls and account for errors,
+ * this leads to a lot of boiler plate code. This method takes care of all of
+ * this.
+ *
+ * It takes a function and an an arguments object. The function's last
+ * parameter is expected to be a function callback. The returned Promise
+ * resolves when this function is evoked and rejects if
+ * chrome.runtime.lastError indicates that there was an error.
+ *
+ * @param {function} fn function that accepts a callback as its last parameter
+ * @param {arguments} callArgs the arguments object with which fn should be
+ * invoked
+ *
+ * @return {Promise.<any, Error>} Promise that resolves with the result to the
+ * callback parameter or rejects with an Error.
+ */
+exports.applyArgsCheckLastError = function(fn, callArgs) {
+  return new Promise(function(resolve, reject) {
+    console.log('fn in apply: ', fn);
+    console.log('callArgs: ', callArgs);
+    // Some of these parameters are "optional", which it seems like the
+    // sendMessage function interprets based on type, etc. Rather than passing
+    // directly, we are going to pass the arguments variable directly, adding a
+    // callback function.
+    var args = Array.prototype.slice.call(callArgs);
+    args.push(function(response) {
+      if (exports.wasError()) {
+        reject(exports.getError());
+      } else {
+        resolve(response);
+      }
+    });
+    console.log('going to apply');
+    fn.apply(null, args);
+  });
+};
+
+},{}],55:[function(require,module,exports){
 'use strict';
 
 var util = require('../util/util');
@@ -31508,7 +35314,7 @@ exports.getFullLoadTime = function() {
   return result;
 };
 
-},{"../util/util":46}],45:[function(require,module,exports){
+},{"../util/util":57}],56:[function(require,module,exports){
 /* globals alert */
 'use strict';
 
@@ -31558,7 +35364,7 @@ btnSave.addEventListener('click', configureExperiment);
 btnStop.addEventListener('click', stopExperiment);
 btnGet.addEventListener('click', retrieveKey);
 
-},{"../../../chromeapp/app/scripts/evaluation":16,"./content-script/cs-evaluation":"cs-eval"}],46:[function(require,module,exports){
+},{"../../../chromeapp/app/scripts/evaluation":15,"./content-script/cs-evaluation":"cs-eval"}],57:[function(require,module,exports){
 /* globals fetch */
 'use strict';
 
@@ -31640,7 +35446,7 @@ exports.wait = function(ms) {
   });
 };
 
-},{"../chrome-apis/tabs":43}],47:[function(require,module,exports){
+},{"../chrome-apis/tabs":53}],58:[function(require,module,exports){
 exports.endianness = function () { return 'LE' };
 
 exports.hostname = function () {
@@ -31687,7 +35493,7 @@ exports.tmpdir = exports.tmpDir = function () {
 
 exports.EOL = '\n';
 
-},{}],48:[function(require,module,exports){
+},{}],59:[function(require,module,exports){
 // shim for using process in browser
 var process = module.exports = {};
 
@@ -31875,7 +35681,7 @@ process.umask = function() { return 0; };
 var util = require('../util/util');
 var runtime = require('../chrome-apis/runtime');
 var csApi = require('./cs-api');
-var storage = require('../../../../chromeapp/app/scripts/chrome-apis/storage');
+var storage = require('../chrome-apis/storage');
 var appEval = require('../../../../chromeapp/app/scripts/evaluation');
 
 /**
@@ -32257,4 +36063,4 @@ exports.onPageLoadComplete = function() {
   });
 };
 
-},{"../../../../chromeapp/app/scripts/chrome-apis/storage":4,"../../../../chromeapp/app/scripts/evaluation":16,"../chrome-apis/runtime":42,"../util/util":46,"./cs-api":44}]},{},[45]);
+},{"../../../../chromeapp/app/scripts/evaluation":15,"../chrome-apis/runtime":51,"../chrome-apis/storage":52,"../util/util":57,"./cs-api":55}]},{},[56]);

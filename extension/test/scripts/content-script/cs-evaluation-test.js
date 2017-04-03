@@ -35,7 +35,7 @@ function storageGetHelper(key, expected, fnName, t) {
   var getSpy = sinon.stub().resolves(getResult);
 
   proxyquireEvaluation({
-    '../../../../chromeapp/app/scripts/chrome-apis/storage': {
+    '../chrome-apis/storage': {
       get: getSpy
     }
   });
@@ -56,7 +56,7 @@ test('isPerformingTrial correct if not set', function(t) {
   var getSpy = sinon.stub().resolves({});
 
   proxyquireEvaluation({
-    '../../../../chromeapp/app/scripts/chrome-apis/storage': {
+    '../chrome-apis/storage': {
       get: getSpy
     }
   });
@@ -107,7 +107,7 @@ test('getParameters returns results', function(t) {
 
   var getSpy = sinon.stub().withArgs(expectedGetArg).resolves(getResult);
   proxyquireEvaluation({
-    '../../../../chromeapp/app/scripts/chrome-apis/storage': {
+    '../chrome-apis/storage': {
       get: getSpy
     }
   });
@@ -213,7 +213,7 @@ test('createMetadataForLog correct', function(t) {
 test('deleteStorageHelperValues deletes and resolves', function(t) {
   var removeSpy = sinon.stub().resolves();
   proxyquireEvaluation({
-    '../../../../chromeapp/app/scripts/chrome-apis/storage': {
+    '../chrome-apis/storage': {
       remove: removeSpy
     }
   });
@@ -403,7 +403,7 @@ test('onPageLoadComplete increments iteration variables', function(t) {
   var getWindowSpy = sinon.stub().returns(windowObj);
 
   proxyquireEvaluation({
-    '../../../../chromeapp/app/scripts/chrome-apis/storage': {
+    '../chrome-apis/storage': {
       set: setSpy
     },
     '../../../../chromeapp/app/scripts/evaluation': {
@@ -489,7 +489,7 @@ test('onPageLoadComplete moves to next url', function(t) {
   var getWindowSpy = sinon.stub().returns(windowObj);
 
   proxyquireEvaluation({
-    '../../../../chromeapp/app/scripts/chrome-apis/storage': {
+    '../chrome-apis/storage': {
       set: setSpy
     },
     '../../../../chromeapp/app/scripts/evaluation': {
@@ -542,7 +542,7 @@ test('startSavePageTrial sets variables and reloads', function(t) {
   setArg[evaluation.KEY_URL_LIST_INDEX] = 0;
 
   proxyquireEvaluation({
-    '../../../../chromeapp/app/scripts/chrome-apis/storage': {
+    '../chrome-apis/storage': {
       set: setSpy
     },
     '../util/util': {

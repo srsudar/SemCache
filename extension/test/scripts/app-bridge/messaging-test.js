@@ -29,6 +29,12 @@ function proxyquireMessaging(proxies) {
   );
 }
 
+function end(t) {
+  if (!t) { throw new Error('You forgot to pass t'); }
+  t.end();
+  resetMessaging();
+}
+
 /**
  * Return an object that mimics a successful write from the app. This is an
  * object like the one that is passed when the callback is invoked.
@@ -58,7 +64,72 @@ test('sendMessageToApp calls chromeRuntime', function(t) {
   t.end();
 });
 
+test('sendMessageForResponse resolves on success', function(t) {
+  var expected = { msg: 'I am from app' };
+  var message = { msg: 'I am for app' };
+
+  var sendMessageToAppSpy = sinon.stub().callsArgWith(
+    1, expected
+  );
+  messaging.sendMessageToApp = sendMessageToAppSpy;
+  messaging.setTimeout = sinon.stub();
+
+  messaging.sendMessageForResponse(message, 100)
+  .then(actual => {
+    t.deepEqual(sendMessageToAppSpy.args[0][0], message);
+    t.deepEqual(actual, expected);
+    end(t);
+  }).catch(err => {
+    t.fail(err);
+    end(t);
+  });
+});
+
+test('sendMessageForResponse rejects if timeout', function(t) {
+  var expectedErr = new Error(messaging.MSG_TIMEOUT);
+  var timeout = 2468;
+
+  var setTimeoutSpy = sinon.stub().callsArg(0);
+  messaging.setTimeout = setTimeoutSpy;
+  // In this case we never invoke the callback.
+  var sendMessageToAppSpy = sinon.stub();
+  messaging.sendMessageToApp = sendMessageToAppSpy;
+  var message = { msg: 'for app' };
+
+  messaging.sendMessageForResponse(message, timeout)
+  .then(actual => {
+    t.fail(actual);
+    end(t);
+  })
+  .catch(actualErr => {
+    t.deepEqual(actualErr, expectedErr);
+    t.equal(setTimeoutSpy.args[0][1], timeout);
+    t.equal(sendMessageToAppSpy.callCount, 1);
+    end(t);
+  });
+});
+
+test('sendMessageForResponse rejects if something goes wrong', function(t) {
+  var expected = { msg: 'went wrong' };
+
+  var sendMessageToAppSpy = sinon.stub().throws(expected);
+  messaging.sendMessageToApp = sendMessageToAppSpy;
+
+  messaging.sendMessageForResponse({ msg: 'for app' })
+  .then(actual => {
+    t.fail(actual);
+    end(t);
+  })
+  .catch(actual => {
+    t.deepEqual(actual, expected);
+    t.equal(sendMessageToAppSpy.callCount, 1);
+    t.end();
+    resetMessaging();
+  });
+});
+
 test('savePage sends correct message and resolves', function(t) {
+  var timeout = 5555;
   var captureUrl = 'someurl';
   var captureDate = 'why-not-today';
   var dataUrl = 'data:url';
@@ -76,40 +147,35 @@ test('savePage sends correct message and resolves', function(t) {
     }
   };
 
-  var messaging = require('../../../app/scripts/app-bridge/messaging');
-  var sendMessageToAppSpy = sinon.stub().callsArgWith(
-    1, expectedResponseFromApp
-  );
-  messaging.sendMessageToApp = sendMessageToAppSpy;
-  messaging.setTimeout = sinon.stub();
+  var sendMessageForResponseSpy = sinon.stub()
+    .resolves(expectedResponseFromApp);
+  messaging.sendMessageForResponse = sendMessageForResponseSpy;
 
-  messaging.savePage(captureUrl, captureDate, dataUrl, metadata)
-  .then(actualResp => {
-    t.deepEqual(sendMessageToAppSpy.args[0][0], expectedMessage);
-    t.deepEqual(actualResp, expectedResponseFromApp);
+  messaging.savePage(captureUrl, captureDate, dataUrl, metadata, timeout)
+  .then(actual => {
+    t.deepEqual(sendMessageForResponseSpy.args[0], [expectedMessage, timeout]);
+    t.deepEqual(actual, expectedResponseFromApp);
     t.end();
     resetMessaging();  
   });
 });
 
-test('savePage rejects if times out', function(t) {
-  var expectedErr = messaging.MSG_TIMEOUT;
-  var timeout = 1456;
+test('savePage rejects if sendMessageForResponse rejects', function(t) {
+  var expected = { msg: 'we are rejecting' };
 
-  var setTimeoutSpy = sinon.stub().callsArg(0);
-  messaging.setTimeout = setTimeoutSpy;
-  // In this case we never invoke the callback.
-  var sendMessageToAppSpy = sinon.stub();
-  messaging.sendMessageToApp = sendMessageToAppSpy;
+  var sendMessageForResponseSpy = sinon.stub().rejects(expected);
+  messaging.sendMessageForResponse = sendMessageForResponseSpy;
 
-  messaging.savePage('url', 'date', 'dataurl', 'so meta', timeout)
-    .catch(actualErr => {
-      t.deepEqual(actualErr, expectedErr);
-      t.equal(setTimeoutSpy.args[0][1], timeout);
-      t.equal(sendMessageToAppSpy.callCount, 1);
-      t.end();
-      resetMessaging();
-    });
+  messaging.savePage('url', 'date', 'dataurl', 'so meta')
+  .then(actual => {
+    t.fail(actual);
+    end(t);
+  })
+  .catch(actual => {
+    t.deepEqual(actual, expected);
+    t.equal(sendMessageForResponseSpy.callCount, 1);
+    end(t);
+  });
 });
 
 test('savePage rejects if write fails', function(t) {
@@ -118,21 +184,20 @@ test('savePage rejects if write fails', function(t) {
     result: 'error',
     err: 'something done gone wrong'
   };
-  var timeout = 7776;
 
-  var setTimeoutSpy = sinon.stub();
-  messaging.setTimeout = setTimeoutSpy;
-  var sendMessageToAppSpy = sinon.stub().callsArgWith(1, errFromApp);
-  messaging.sendMessageToApp = sendMessageToAppSpy;
+  var sendMessageForResponseSpy = sinon.stub().resolves(errFromApp);
+  messaging.sendMessageForResponse = sendMessageForResponseSpy;
 
-  messaging.savePage('url', 'date', 'dataurl', 'so meta', timeout)
-    .catch(actualErr => {
-      t.deepEqual(actualErr, errFromApp);
-      t.equal(setTimeoutSpy.args[0][1], timeout);
-      t.equal(sendMessageToAppSpy.callCount, 1);
-      t.end();
-      resetMessaging();
-    });
+  messaging.savePage('url', 'date', 'dataurl', 'so meta')
+  .then(actual => {
+    t.fail(actual);
+    end(t);
+  })
+  .catch(actual => {
+    t.deepEqual(actual, errFromApp);
+    t.equal(sendMessageForResponseSpy.callCount, 1);
+    end(t);
+  });
 });
 
 test('savePage resolves if callback invoked', function(t) {

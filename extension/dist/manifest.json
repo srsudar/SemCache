@@ -32,7 +32,8 @@
     "http://*/*",
     "https://*/*",
     "<all_urls>",
-    "storage"
+    "storage",
+    "webNavigation"
   ],
   "options_page": "settings.html",
   "browser_action": {

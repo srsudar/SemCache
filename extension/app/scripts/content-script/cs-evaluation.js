@@ -3,7 +3,7 @@
 var util = require('../util/util');
 var runtime = require('../chrome-apis/runtime');
 var csApi = require('./cs-api');
-var storage = require('../../../../chromeapp/app/scripts/chrome-apis/storage');
+var storage = require('../chrome-apis/storage');
 var appEval = require('../../../../chromeapp/app/scripts/evaluation');
 
 /**

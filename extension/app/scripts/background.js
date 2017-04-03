@@ -3,6 +3,7 @@
 
 var messaging = require('./app-bridge/messaging');
 var chromeRuntime = require('./chrome-apis/runtime');
+var webNavigation = require('./chrome-apis/web-navigation');
 
 chrome.runtime.onInstalled.addListener(function (details) {
   console.log('previousVersion', details.previousVersion);
@@ -17,3 +18,7 @@ chromeRuntime.addOnMessageExternalListener(
 chromeRuntime.addOnMessageListener(
   messaging.onMessageCallback
 );
+
+webNavigation.onBeforeNavigate.addListener(details => {
+  console.log('webNavigation.onBeforeNavigate: ', details);
+});

@@ -27,6 +27,68 @@ exports.sendMessageToApp = function(message, callback) {
 };
 
 /**
+ * Send a message to the extension, expecting a response. This essentially just
+ * hides the complexity around dealing with Chrome's callback-based response
+ * mechanism, promisify-ing it in a single place, allowing callers to interact
+ * with a promise.
+ *
+ * @param {any} message JSON serializable message for the app
+ * @param {number} timeout a timeout to apply to the message. If falsey, uses
+ * default.
+ *
+ * @return {Promise.<any, Error>} Promise that resolves with the response from
+ * the app or rejects with an Error if something went wrong or if the response
+ * times out. Note that the Promise resolves if communication was successful,
+ * even if the request failed gracefully.
+ */
+exports.sendMessageForResponse = function(message, timeout) {
+  timeout = timeout || exports.DEFAULT_TIMEOUT;
+  return new Promise(function(resolve, reject) {
+    // And now we begin the process of resolving/rejecting based on whether or
+    // not the app invokes our callback.
+    var settled = false;
+    // We'll update this if we've already resolved or rejected.
+    var callbackForApp = function(response) {
+      console.log('got callback from app');
+      if (settled) {
+        // do nothing
+        return;
+      }
+      settled = true;
+      resolve(response);
+    };
+    exports.sendMessageToApp(message, callbackForApp);
+
+    exports.setTimeout(
+      function() {
+        if (!settled) {
+          settled = true;
+          reject(new Error(exports.MSG_TIMEOUT));
+        }
+      },
+      timeout
+    );
+  });
+};
+
+/**
+ * Perform a query to see if this page is available via the local cache. This
+ * will communicate with the app.
+ *
+ * @param {string} url the url of the page you are querying for
+ * @param {Object} options
+ *
+ * @return {Promise.<Object|null, Error>} Promise that resolves with the
+ * result of the query. If the page is not available, the result will be null.
+ * If the page is available, the object will include information about how to
+ * access the page.
+ */
+exports.isPageAvailableLocally = function(url, options) {
+  console.log(url);
+  console.log(options);
+};
+
+/**
  * Save a page as MHTML by calling the extension.
  *
  * @param {string} captureUrl the URL of the captured page
@@ -45,7 +107,6 @@ exports.sendMessageToApp = function(message, callback) {
 exports.savePage = function(
   captureUrl, captureDate, dataUrl, metadata, timeout
 ) {
-  timeout = timeout || exports.DEFAULT_TIMEOUT;
   return new Promise(function(resolve, reject) {
     // Sensible default
     metadata = metadata || {};
@@ -59,35 +120,18 @@ exports.savePage = function(
       }
     };
 
-    // And now we begin the process of resolving/rejecting based on whether or
-    // not the app invokes our callback.
-    var settled = false;
-    // We'll update this if we've already resolved or rejected.
-    var callbackForApp = function(response) {
-      console.log('got callback from app');
-      if (settled) {
-        // do nothing
-        return;
-      }
-      settled = true;
+    exports.sendMessageForResponse(message, timeout)
+    .then(response => {
       if (response.result === 'success') {
         resolve(response);
       } else {
         reject(response);
       }
 
-    };
-    exports.sendMessageToApp(message, callbackForApp);
-
-    exports.setTimeout(
-      function() {
-        if (!settled) {
-          settled = true;
-          reject(exports.MSG_TIMEOUT);
-        }
-      },
-      timeout
-    );
+    })
+    .catch(err => {
+      reject(err);
+    });
   });
 };
 
