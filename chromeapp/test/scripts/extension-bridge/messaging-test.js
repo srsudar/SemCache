@@ -44,6 +44,15 @@ function getDummyWriteMessage() {
   };
 }
 
+function getDummyQueryMessage(url) {
+  return {
+    type: 'query',
+    params: {
+      url: url
+    }
+  };
+}
+
 /**
  * Proxyquire the messaging module with proxies set as the proxied modules.
  */
@@ -55,6 +64,12 @@ function proxyquireMessaging(proxies, runtimeProxies) {
     '../../../app/scripts/extension-bridge/messaging',
     proxies
   );
+}
+
+function end(t) {
+  if (!t) { throw new Error('You forgot to pass t'); }
+  t.end();
+  resetMessaging();
 }
 
 test('handleExternalMessage returns false if response undefined', function(t) {
@@ -135,7 +150,6 @@ test('handleExternalMessage invokes response on error', function(t) {
   returnValue = messaging.handleExternalMessage(
     message, sender, callbackFromExtension
   );
-
 });
 
 test('handleExternalMessage adds page to cache for write', function(t) {
@@ -173,6 +187,132 @@ test('handleExternalMessage adds page to cache for write', function(t) {
     ]
   );
   t.end();
+});
+
+test('handleExternalMessage returns result of query', function(t) {
+  var url = 'http://tyrion.com';
+  var queryMessage = getDummyQueryMessage(url);
+
+  var cachedPage = {
+    captureUrl: url,
+    accessPath: 'comeFetchMeBro'
+  };
+  
+  var expected = {
+    type: 'query',
+    result: 'success',
+    response: cachedPage
+  };
+
+  messaging.performQuery = sinon.stub().withArgs(url).resolves(cachedPage);
+
+  var returnValue;
+
+  var callbackFromExtension = function(actual) {
+    t.deepEqual(actual, expected);
+    t.true(returnValue);
+    end(t);
+  };
+
+  returnValue = messaging.handleExternalMessage(
+    queryMessage, getSender(), callbackFromExtension
+  );
+});
+
+test('performQuery returns null if no match', function(t) {
+  var cachedPages = [
+    { captureUrl: 'foo' },
+    { captureUrl: 'bar' }
+  ];
+
+  proxyquireMessaging({
+    '../persistence/datastore': {
+      getAllCachedPages: sinon.stub().resolves(cachedPages)
+    }
+  });
+
+  messaging.performQuery(getDummyQueryMessage('url'))
+  .then(actual => {
+    t.equal(actual, null);
+    end(t);
+  })
+  .catch(err => {
+    t.fail(err);
+    end(t);
+  });
+});
+
+test('performQuery returns CachedPage if matches', function(t) {
+  var expected = {
+    captureUrl: 'www.nytimes.com/story',
+    accessPath: 'fetchmehere'
+  };
+
+  var cachedPages = [
+    { captureUrl: 'foo' },
+    { captureUrl: 'bar' },
+    expected
+  ];
+
+  proxyquireMessaging({
+    '../persistence/datastore': {
+      getAllCachedPages: sinon.stub().resolves(cachedPages)
+    }
+  });
+
+  messaging.performQuery(getDummyQueryMessage('http://www.nytimes.com/story'))
+  .then(actual => {
+    t.equal(actual, expected);
+    end(t);
+  })
+  .catch(err => {
+    t.fail(err);
+    end(t);
+  });
+});
+
+test('performQuery rejects if something goes wrong', function(t) {
+  var expected = { msg: 'uh oh' };
+
+  proxyquireMessaging({
+    '../persistence/datastore': {
+      getAllCachedPages: sinon.stub().rejects(expected)
+    }
+  });
+
+  messaging.performQuery(getDummyQueryMessage('url'))
+  .then(actual => {
+    t.fail(actual);
+    end(t);
+  })
+  .catch(actual => {
+    t.deepEqual(actual, expected);
+    end(t);
+  });
+});
+
+test('urlsMatch returns true if same lacking scheme', function(t) {
+  var actual = messaging.urlsMatch(
+    'http://www.nytimes.com/story',
+    'www.nytimes.com/story'
+  );
+  t.true(actual);
+  end(t);
+});
+
+test('urlsMatch returns false if different resource', function(t) {
+  var actual = messaging.urlsMatch(
+    'www.nytimes.com/foo',
+    'www.nytimes.com/bar'
+  );
+  t.false(actual);
+  end(t);
+});
+
+test('urlsMatch return false for different domains', function(t) {
+  var actual = messaging.urlsMatch('foo.com', 'bar.com');
+  t.false(actual);
+  end(t);
 });
 
 test('sendMessageToExtension calls sendMessage', function(t) {

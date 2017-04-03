@@ -68,10 +68,75 @@ exports.handleExternalMessage = function(message, sender, response) {
         response(errorMsg);
       }
     });
+  } else if (message.type === 'query') {
+    // TODO: ugly duplication here of same machinery
+    if (response) {
+      result = true;
+    }
+    exports.performQuery(message.params.url)
+    .then(result => {
+      var successMsg = exports.createResponseSuccess(message);
+      successMsg.response = result;
+      if (response) {
+        response(successMsg);
+      }
+    })
+    .catch(err => {
+      var errorMsg = exports.createResponseError(message, err);
+      if (response) {
+        response(errorMsg);
+      }
+    });
   } else {
     console.log('Unrecognized message type from extension: ', message.type);
   }
   return result;
+};
+
+/**
+ * Handle a query from the extension about a saved page.
+ *
+ * @param {object} message the message from the extension
+ *
+ * @return {object} the result of the query
+ */
+exports.performQuery = function(message) {
+  return new Promise(function(resolve, reject) {
+    // Check for the url.
+    // Return the information about the entry, including the access path.
+    datastore.getAllCachedPages()
+    .then(pages => {
+      pages.forEach(page => {
+        if (exports.urlsMatch(message.params.url, page.captureUrl)) {
+          resolve(page);
+          return;
+        }
+      });
+    resolve(null);
+    })
+    .catch(err => {
+      reject(err);
+    });
+  });
+};
+
+/**
+ * Determine if two URLs refer to the same page.
+ *
+ * This method is required only because we might not be saving the URL exactly
+ * with the cached page and thus a straight string comparison does not apply.
+ * E.g. we might only associated the cached page with "www.nytimes.com", not
+ * "http://www.nytimes.com".
+ *
+ * @param {string} url the url passed from the extension. It is expected that
+ * this can contain the full schema, eg "http://www.nytimes.com".
+ * @param {string} savedUrl the url of the saved page
+ *
+ * @return {boolean} true if the URLs refer to the same page, else false
+ */
+exports.urlsMatch = function(url, savedUrl) {
+  // This isn't a perfect way to do this, but it will work in most usual cases.
+  return url.endsWith(savedUrl);
 };
 
 /**

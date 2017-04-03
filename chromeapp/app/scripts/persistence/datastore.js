@@ -108,8 +108,8 @@ exports.addPageToCache = function(
 /**
  * Get all the cached pages that are stored in the cache.
  *
- * @return {Promise.<CachedPage, Error>} Promise that resolves with an Array of
- * CachedPage objects
+ * @return {Promise.<Array.<CachedPage>, Error>} Promise that resolves with an
+ * Array of CachedPage objects
  */
 exports.getAllCachedPages = function() {
   return new Promise(function(resolve, reject) {
