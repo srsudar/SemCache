@@ -210,6 +210,7 @@ test('handleExternalMessage returns result of query', function(t) {
 
   var callbackFromExtension = function(actual) {
     t.deepEqual(actual, expected);
+    t.deepEqual(messaging.performQuery.args[0], [queryMessage]);
     t.true(returnValue);
     end(t);
   };
@@ -221,8 +222,14 @@ test('handleExternalMessage returns result of query', function(t) {
 
 test('performQuery returns null if no match', function(t) {
   var cachedPages = [
-    { captureUrl: 'foo' },
-    { captureUrl: 'bar' }
+    {
+      captureUrl: 'foo',
+      metadata: { fullUrl: 'foo' }
+    },
+    {
+      captureUrl: 'bar',
+      metadata: { fullUrl: 'bar' }
+    }
   ];
 
   proxyquireMessaging({
@@ -244,13 +251,22 @@ test('performQuery returns null if no match', function(t) {
 
 test('performQuery returns CachedPage if matches', function(t) {
   var expected = {
-    captureUrl: 'www.nytimes.com/story',
-    accessPath: 'fetchmehere'
+    captureUrl: 'www.nytimes.com',
+    accessPath: 'fetchmehere',
+    metadata: {
+      fullUrl: 'http://www.nytimes.com/story'
+    }
   };
 
   var cachedPages = [
-    { captureUrl: 'foo' },
-    { captureUrl: 'bar' },
+    {
+      captureUrl: 'foo',
+      metadata: { fullUrl: 'foo' }
+    },
+    {
+      captureUrl: 'bar',
+      metadata: { fullUrl: 'bar' }
+    },
     expected
   ];
 
@@ -300,6 +316,15 @@ test('urlsMatch returns true if same lacking scheme', function(t) {
   end(t);
 });
 
+test('urlsMatch true for http vs https', function(t) {
+  var actual = messaging.urlsMatch(
+    'http://www.nytimes.com/story',
+    'https://www.nytimes.com/story'
+  );
+  t.true(actual);
+  end(t);
+});
+
 test('urlsMatch returns false if different resource', function(t) {
   var actual = messaging.urlsMatch(
     'www.nytimes.com/foo',
@@ -312,6 +337,20 @@ test('urlsMatch returns false if different resource', function(t) {
 test('urlsMatch return false for different domains', function(t) {
   var actual = messaging.urlsMatch('foo.com', 'bar.com');
   t.false(actual);
+  end(t);
+});
+
+test('urlsMatch ignores trailing slash on a', function(t) {
+  var a = 'www.tyrion.com/';
+  var b = 'www.tyrion.com';
+  t.true(messaging.urlsMatch(a, b));
+  end(t);
+});
+
+test('urlsMatch ignores trailing slash on b', function(t) {
+  var a = 'www.tyrion.com';
+  var b = 'www.tyrion.com/';
+  t.true(messaging.urlsMatch(a, b));
   end(t);
 });
 

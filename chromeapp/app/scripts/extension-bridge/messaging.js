@@ -73,7 +73,7 @@ exports.handleExternalMessage = function(message, sender, response) {
     if (response) {
       result = true;
     }
-    exports.performQuery(message.params.url)
+    exports.performQuery(message)
     .then(result => {
       var successMsg = exports.createResponseSuccess(message);
       successMsg.response = result;
@@ -107,7 +107,7 @@ exports.performQuery = function(message) {
     datastore.getAllCachedPages()
     .then(pages => {
       pages.forEach(page => {
-        if (exports.urlsMatch(message.params.url, page.captureUrl)) {
+        if (exports.urlsMatch(message.params.url, page.metadata.fullUrl)) {
           resolve(page);
           return;
         }
@@ -135,6 +135,24 @@ exports.performQuery = function(message) {
  * @return {boolean} true if the URLs refer to the same page, else false
  */
 exports.urlsMatch = function(url, savedUrl) {
+  function cleanupForComparison(url) {
+    // First strip a trailing slash.
+    if (url.endsWith('/')) {
+      url = url.substring(0, url.length - 1);
+    }
+    // Then remove schemes
+    if (url.startsWith('http://')) {
+      url = url.substring('http://'.length);
+    }
+    if (url.startsWith('https://')) {
+      url = url.substring('https://'.length);
+    }
+    return url;
+  }
+
+  url = cleanupForComparison(url);
+  savedUrl = cleanupForComparison(savedUrl);
+
   // This isn't a perfect way to do this, but it will work in most usual cases.
   return url.endsWith(savedUrl);
 };

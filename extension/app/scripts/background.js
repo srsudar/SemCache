@@ -1,6 +1,7 @@
 /* global chrome */
 'use strict';
 
+var backgroundApi = require('./background/background-api');
 var messaging = require('./app-bridge/messaging');
 var chromeRuntime = require('./chrome-apis/runtime');
 var webNavigation = require('./chrome-apis/web-navigation');
@@ -20,5 +21,15 @@ chromeRuntime.addOnMessageListener(
 );
 
 webNavigation.onBeforeNavigate.addListener(details => {
-  console.log('webNavigation.onBeforeNavigate: ', details);
+  if (details.frameId === 0) {
+    // Top level frame
+    backgroundApi.queryForPage(details.tabId, details.url);
+  }
+});
+
+webNavigation.onCompleted.addListener(details => {
+  if (details.frameId === 0) {
+    // Top level frame
+    backgroundApi.queryForPage(details.tabId, details.url);
+  }
 });

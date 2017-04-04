@@ -29,6 +29,12 @@ function resetApi() {
   api = require('../../../app/scripts/background/background-api');
 }
 
+function end(t) {
+  if (!t) { throw new Error('You forgot to pass t'); }
+  t.end();
+  resetApi();
+}
+
 test('savePageForContentScript resolves if saveTab resolves', function(t) {
   var tab = { tabId: 1234 };
 
@@ -83,4 +89,99 @@ test('savePageForContentScript rejects if saveTab rejects', function(t) {
       t.end();
       resetApi();
     });
+});
+
+test('queryForPage resolves if not present', function(t) {
+  var tabId = 4;
+  var url = 'www.nyt.com';
+
+  proxyquireApi({
+    '../app-bridge/messaging': {
+      isPageSaved: sinon.stub().withArgs(url).resolves({})
+    }
+  });
+
+  api.queryForPage(tabId, url)
+  .then(actual => {
+    t.equal(actual, null);
+    end(t);
+  })
+  .catch(err => {
+    t.fail(err);
+    end(t);
+  });
+});
+
+test('queryForPage resolves if page present', function(t) {
+  var tabId = 4;
+  var url = 'www.foo.com';
+  var queryResponse = {
+    response: 'I am the page'
+  };
+
+  var setIconSpy = sinon.stub();
+  var sendMessageSpy = sinon.stub();
+
+  proxyquireApi({
+    '../app-bridge/messaging': {
+      isPageSaved: sinon.stub().withArgs(url).resolves(queryResponse)
+    },
+    '../chrome-apis/tabs': {
+      sendMessage: sendMessageSpy
+    },
+    '../chrome-apis/browser-action': {
+      setIcon: setIconSpy
+    }
+  });
+
+  api.queryForPage(tabId, url)
+  .then(actual => {
+    t.deepEqual(actual, queryResponse.response);
+    t.deepEqual(
+      setIconSpy.args[0],
+      [{
+        path: 'images/cloud-off-24.png',
+        tabId: tabId
+      }]
+    );
+    t.deepEqual(
+      sendMessageSpy.args[0],
+      [
+        tabId,
+        {
+          type: 'queryResult',
+          from: 'background',
+          tabId: tabId,
+          page: queryResponse.response
+        }
+      ]
+    );
+    end(t);
+  })
+  .catch(err => {
+    t.fail(err);
+    end(t);
+  });
+});
+
+test('queryForPage rejects if error', function(t) {
+  var tabId = 4;
+  var url = 'www.nyt.com';
+  var expected = { msg: 'much trouble' };
+
+  proxyquireApi({
+    '../app-bridge/messaging': {
+      isPageSaved: sinon.stub().withArgs(url).rejects(expected)
+    }
+  });
+
+  api.queryForPage(tabId, url)
+  .then(actual => {
+    t.fail(actual);
+    end(t);
+  })
+  .catch(actual => {
+    t.equal(actual, expected);
+    end(t);
+  });
 });

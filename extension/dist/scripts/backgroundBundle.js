@@ -5171,10 +5171,93 @@ exports.handleExternalMessage = function(message, sender, response) {
         response(errorMsg);
       }
     });
+  } else if (message.type === 'query') {
+    // TODO: ugly duplication here of same machinery
+    if (response) {
+      result = true;
+    }
+    exports.performQuery(message)
+    .then(result => {
+      var successMsg = exports.createResponseSuccess(message);
+      successMsg.response = result;
+      if (response) {
+        response(successMsg);
+      }
+    })
+    .catch(err => {
+      var errorMsg = exports.createResponseError(message, err);
+      if (response) {
+        response(errorMsg);
+      }
+    });
   } else {
     console.log('Unrecognized message type from extension: ', message.type);
   }
   return result;
+};
+
+/**
+ * Handle a query from the extension about a saved page.
+ *
+ * @param {object} message the message from the extension
+ *
+ * @return {object} the result of the query
+ */
+exports.performQuery = function(message) {
+  return new Promise(function(resolve, reject) {
+    // Check for the url.
+    // Return the information about the entry, including the access path.
+    datastore.getAllCachedPages()
+    .then(pages => {
+      pages.forEach(page => {
+        if (exports.urlsMatch(message.params.url, page.metadata.fullUrl)) {
+          resolve(page);
+          return;
+        }
+      });
+    resolve(null);
+    })
+    .catch(err => {
+      reject(err);
+    });
+  });
+};
+
+/**
+ * Determine if two URLs refer to the same page.
+ *
+ * This method is required only because we might not be saving the URL exactly
+ * with the cached page and thus a straight string comparison does not apply.
+ * E.g. we might only associated the cached page with "www.nytimes.com", not
+ * "http://www.nytimes.com".
+ *
+ * @param {string} url the url passed from the extension. It is expected that
+ * this can contain the full schema, eg "http://www.nytimes.com".
+ * @param {string} savedUrl the url of the saved page
+ *
+ * @return {boolean} true if the URLs refer to the same page, else false
+ */
+exports.urlsMatch = function(url, savedUrl) {
+  function cleanupForComparison(url) {
+    // First strip a trailing slash.
+    if (url.endsWith('/')) {
+      url = url.substring(0, url.length - 1);
+    }
+    // Then remove schemes
+    if (url.startsWith('http://')) {
+      url = url.substring('http://'.length);
+    }
+    if (url.startsWith('https://')) {
+      url = url.substring('https://'.length);
+    }
+    return url;
+  }
+
+  url = cleanupForComparison(url);
+  savedUrl = cleanupForComparison(savedUrl);
+
+  // This isn't a perfect way to do this, but it will work in most usual cases.
+  return url.endsWith(savedUrl);
 };
 
 /**
@@ -5569,8 +5652,8 @@ exports.addPageToCache = function(
 /**
  * Get all the cached pages that are stored in the cache.
  *
- * @return {Promise.<CachedPage, Error>} Promise that resolves with an Array of
- * CachedPage objects
+ * @return {Promise.<Array.<CachedPage>, Error>} Promise that resolves with an
+ * Array of CachedPage objects
  */
 exports.getAllCachedPages = function() {
   return new Promise(function(resolve, reject) {
@@ -10892,7 +10975,7 @@ function createDataRows(params) {
 }
 
 }).call(this,require('_process'))
-},{"_process":65,"flat":39,"lodash.clonedeep":43,"lodash.flatten":44,"lodash.get":45,"lodash.set":46,"lodash.uniq":47,"os":64}],43:[function(require,module,exports){
+},{"_process":66,"flat":39,"lodash.clonedeep":43,"lodash.flatten":44,"lodash.get":45,"lodash.set":46,"lodash.uniq":47,"os":65}],43:[function(require,module,exports){
 (function (global){
 /**
  * lodash (Custom Build) <https://lodash.com/>
@@ -35032,15 +35115,21 @@ exports.sendMessageForResponse = function(message, timeout) {
  *
  * @param {string} url the url of the page you are querying for
  * @param {Object} options
+ * @param {number} timeout number of milliseconds to wait. If falsey, uses
+ * default.
  *
- * @return {Promise.<Object|null, Error>} Promise that resolves with the
- * result of the query. If the page is not available, the result will be null.
- * If the page is available, the object will include information about how to
- * access the page.
+ * @return {Promise.<Object, Error>} Promise that resolves with the
+ * result of the query.
  */
-exports.isPageAvailableLocally = function(url, options) {
-  console.log(url);
-  console.log(options);
+exports.isPageSaved = function(url, options, timeout) {
+  var message = {
+    type: 'query',
+    params: {
+      url: url,
+      options: options
+    }
+  };
+  return exports.sendMessageForResponse(message, timeout);
 };
 
 /**
@@ -35156,10 +35245,11 @@ exports.onMessageCallback = function(message, sender, sendResponse) {
   return true;
 };
 
-},{"../background/background-api":53,"../chrome-apis/runtime":55,"../chrome-apis/tabs":57}],52:[function(require,module,exports){
+},{"../background/background-api":53,"../chrome-apis/runtime":56,"../chrome-apis/tabs":58}],52:[function(require,module,exports){
 /* global chrome */
 'use strict';
 
+var backgroundApi = require('./background/background-api');
 var messaging = require('./app-bridge/messaging');
 var chromeRuntime = require('./chrome-apis/runtime');
 var webNavigation = require('./chrome-apis/web-navigation');
@@ -35179,13 +35269,27 @@ chromeRuntime.addOnMessageListener(
 );
 
 webNavigation.onBeforeNavigate.addListener(details => {
-  console.log('webNavigation.onBeforeNavigate: ', details);
+  if (details.frameId === 0) {
+    // Top level frame
+    backgroundApi.queryForPage(details.tabId, details.url);
+  }
 });
 
-},{"./app-bridge/messaging":51,"./chrome-apis/runtime":55,"./chrome-apis/web-navigation":59}],53:[function(require,module,exports){
+webNavigation.onCompleted.addListener(details => {
+  if (details.frameId === 0) {
+    // Top level frame
+    backgroundApi.queryForPage(details.tabId, details.url);
+  }
+});
+
+},{"./app-bridge/messaging":51,"./background/background-api":53,"./chrome-apis/runtime":56,"./chrome-apis/web-navigation":60}],53:[function(require,module,exports){
 'use strict';
 
+var browserAction = require('../chrome-apis/browser-action');
+var appMessaging = require('../app-bridge/messaging');
 var popupApi = require('../popup/popup-api');
+var tabs = require('../chrome-apis/tabs');
+
 // Directly requiring a script from the Chrome App. This seems risky, but I
 // feel it's better than code duplication.
 var evaluation = require('../../../../chromeapp/app/scripts/evaluation');
@@ -35217,7 +35321,62 @@ exports.savePageForContentScript = function(tab) {
   });
 };
 
-},{"../../../../chromeapp/app/scripts/evaluation":15,"../popup/popup-api":62}],54:[function(require,module,exports){
+/**
+ * Query for a cached URL. If found, a message is passed to the content script
+ * for the page with the CachedPage object.
+ *
+ * @param {integer} tabId the tabId t
+ */
+exports.queryForPage = function(tabId, url) {
+  appMessaging.isPageSaved(url)
+  .then(result => {
+    if (!result.response || result.response === null) {
+      // No page saved.
+      console.log('did not find saved copy of page: ', url);
+    } else {
+      console.log('setting icon for tabId: ', tabId);
+      console.log('query result: ', result);
+      browserAction.setIcon({
+        path: 'images/cloud-off-24.png',
+        tabId: tabId
+      });
+      tabs.sendMessage(
+        tabId,
+        {
+          type: 'queryResult',
+          from: 'background',
+          tabId: tabId,
+          page: result.response
+        }
+      );
+    }
+  })
+  .catch(err => {
+    console.log('queryForPage received error: ', err);
+  });
+};
+
+},{"../../../../chromeapp/app/scripts/evaluation":15,"../app-bridge/messaging":51,"../chrome-apis/browser-action":54,"../chrome-apis/tabs":58,"../popup/popup-api":63}],54:[function(require,module,exports){
+/* globals chrome */
+'use strict';
+
+/**
+ * Wrapper around the chrome.browserAction family of APIs.
+ */
+
+exports.setIcon = function() {
+  chrome.browserAction.setIcon.apply(null, arguments);
+};
+
+exports.setPopup = function() {
+  chrome.browserAction.setPopup.apply(null, arguments);
+};
+
+exports.setBadgeText = function() {
+  chrome.browserAction.setBadgeText.apply(null, arguments);
+};
+
+},{}],55:[function(require,module,exports){
 /* globals chrome */
 'use strict';
 
@@ -35240,7 +35399,7 @@ exports.saveAsMHTML = function(details) {
   });
 };
 
-},{}],55:[function(require,module,exports){
+},{}],56:[function(require,module,exports){
 /* globals chrome */
 'use strict';
 
@@ -35280,7 +35439,7 @@ exports.addOnMessageListener = function(fn) {
   chrome.runtime.onMessage.addListener(fn);
 };
 
-},{}],56:[function(require,module,exports){
+},{}],57:[function(require,module,exports){
 'use strict';
 
 var util = require('./util');
@@ -35379,7 +35538,7 @@ exports.clear = function() {
   });
 };
 
-},{"./util":58}],57:[function(require,module,exports){
+},{"./util":59}],58:[function(require,module,exports){
 /* global chrome */
 'use strict';
 
@@ -35444,7 +35603,7 @@ exports.sendMessage = function(tabId, message, callback) {
   chrome.tabs.sendMessage(tabId, message, callback);
 };
 
-},{}],58:[function(require,module,exports){
+},{}],59:[function(require,module,exports){
 /* globals chrome */
 'use strict';
 
@@ -35544,13 +35703,15 @@ exports.applyArgsCheckLastError = function(fn, callArgs) {
   });
 };
 
-},{}],59:[function(require,module,exports){
+},{}],60:[function(require,module,exports){
 /* globals chrome */
 'use strict';
 
 exports.onBeforeNavigate = chrome.webNavigation.onBeforeNavigate;
 
-},{}],60:[function(require,module,exports){
+exports.onCompleted = chrome.webNavigation.onCompleted;
+
+},{}],61:[function(require,module,exports){
 'use strict';
 
 var util = require('../util/util');
@@ -35567,6 +35728,10 @@ exports.onMessageHandler = function(message, sender, callback) {
   if (message.type === 'readystateComplete') {
     exports.handleLoadMessage(message, sender, callback);
     return true;
+  } else if (message.type === 'queryResult') {
+    if (message.page) {
+      console.log('Received positive query: ', message);
+    }
   }
 };
 
@@ -35608,7 +35773,7 @@ exports.getFullLoadTime = function() {
   return result;
 };
 
-},{"../util/util":63}],61:[function(require,module,exports){
+},{"../util/util":64}],62:[function(require,module,exports){
 /* globals Promise */
 'use strict';
 
@@ -35812,7 +35977,7 @@ exports.savePage = function(tab, mhtmlBlob) {
   });
 };
 
-},{"../app-bridge/messaging":51,"../chrome-apis/tabs":57,"../util/util":63}],62:[function(require,module,exports){
+},{"../app-bridge/messaging":51,"../chrome-apis/tabs":58,"../util/util":64}],63:[function(require,module,exports){
 /* globals Promise */
 'use strict';
 
@@ -35912,7 +36077,7 @@ exports.waitForCurrentPageToLoad = function() {
   });
 };
 
-},{"../chrome-apis/page-capture":54,"../chrome-apis/tabs":57,"../persistence/datastore":61,"../util/util":63}],63:[function(require,module,exports){
+},{"../chrome-apis/page-capture":55,"../chrome-apis/tabs":58,"../persistence/datastore":62,"../util/util":64}],64:[function(require,module,exports){
 /* globals fetch */
 'use strict';
 
@@ -35994,7 +36159,7 @@ exports.wait = function(ms) {
   });
 };
 
-},{"../chrome-apis/tabs":57}],64:[function(require,module,exports){
+},{"../chrome-apis/tabs":58}],65:[function(require,module,exports){
 exports.endianness = function () { return 'LE' };
 
 exports.hostname = function () {
@@ -36041,7 +36206,7 @@ exports.tmpdir = exports.tmpDir = function () {
 
 exports.EOL = '\n';
 
-},{}],65:[function(require,module,exports){
+},{}],66:[function(require,module,exports){
 // shim for using process in browser
 var process = module.exports = {};
 
@@ -36611,4 +36776,4 @@ exports.onPageLoadComplete = function() {
   });
 };
 
-},{"../../../../chromeapp/app/scripts/evaluation":15,"../chrome-apis/runtime":55,"../chrome-apis/storage":56,"../util/util":63,"./cs-api":60}]},{},[52]);
+},{"../../../../chromeapp/app/scripts/evaluation":15,"../chrome-apis/runtime":56,"../chrome-apis/storage":57,"../util/util":64,"./cs-api":61}]},{},[52]);

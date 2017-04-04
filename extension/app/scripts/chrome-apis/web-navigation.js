@@ -2,3 +2,5 @@
 'use strict';
 
 exports.onBeforeNavigate = chrome.webNavigation.onBeforeNavigate;
+
+exports.onCompleted = chrome.webNavigation.onCompleted;

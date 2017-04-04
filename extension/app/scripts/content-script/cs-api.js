@@ -14,6 +14,10 @@ exports.onMessageHandler = function(message, sender, callback) {
   if (message.type === 'readystateComplete') {
     exports.handleLoadMessage(message, sender, callback);
     return true;
+  } else if (message.type === 'queryResult') {
+    if (message.page) {
+      console.log('Received positive query: ', message);
+    }
   }
 };
 

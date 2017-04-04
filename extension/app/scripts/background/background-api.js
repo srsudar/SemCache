@@ -1,6 +1,10 @@
 'use strict';
 
+var browserAction = require('../chrome-apis/browser-action');
+var appMessaging = require('../app-bridge/messaging');
 var popupApi = require('../popup/popup-api');
+var tabs = require('../chrome-apis/tabs');
+
 // Directly requiring a script from the Chrome App. This seems risky, but I
 // feel it's better than code duplication.
 var evaluation = require('../../../../chromeapp/app/scripts/evaluation');
@@ -29,5 +33,53 @@ exports.savePageForContentScript = function(tab) {
       .catch(err => {
         reject(err);
       });
+  });
+};
+
+/**
+ * Query for a cached URL. If found, a message is passed to the content script
+ * for the page with the CachedPage object.
+ *
+ * If successful the page is present, this updates the icon for the given tab
+ * to indicate that the page is available offline and sends a message to the
+ * tab with the saved page.
+ *
+ * @param {integer} tabId the tabId t
+ * @param {string} url the URL to query for
+ *
+ * @return {Promise.<CachedPage, Error>} Promise that resolves when complete or
+ * rejects with an error.
+ */
+exports.queryForPage = function(tabId, url) {
+  return new Promise(function(resolve, reject) {
+    appMessaging.isPageSaved(url)
+    .then(result => {
+      if (!result.response || result.response === null) {
+        // No page saved.
+        console.log('did not find saved copy of page: ', url);
+        resolve(null);
+      } else {
+        console.log('setting icon for tabId: ', tabId);
+        console.log('query result: ', result);
+        browserAction.setIcon({
+          path: 'images/cloud-off-24.png',
+          tabId: tabId
+        });
+        tabs.sendMessage(
+          tabId,
+          {
+            type: 'queryResult',
+            from: 'background',
+            tabId: tabId,
+            page: result.response
+          }
+        );
+        resolve(result.response);
+      }
+    })
+    .catch(err => {
+      console.log('queryForPage received error: ', err);
+      reject(err);
+    });
   });
 };
