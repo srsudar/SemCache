@@ -35363,6 +35363,19 @@ util.getOnCompletePromise()
 
 var util = require('../util/util');
 
+var localPageInfo = null;
+
+/**
+ * Return the local CachedPage object. This will have been retrieved from the
+ * app. It exists here solely to be cached locally.
+ *
+ * @return {CachedPage|null} null if the query has not been performed or if the
+ * page is not available
+ */
+exports.getLocalCachedPage = function() {
+  return localPageInfo;
+};
+
 /**
  * Handler for internal (to the Extension) messages. Should be added via
  * runtime.onMessage.addListener.
@@ -35376,9 +35389,27 @@ exports.onMessageHandler = function(message, sender, callback) {
     exports.handleLoadMessage(message, sender, callback);
     return true;
   } else if (message.type === 'queryResult') {
-    if (message.page) {
-      console.log('Received positive query: ', message);
-    }
+    exports.handleQueryResultMessage(message, sender, callback);
+    return false;
+  } else if (message.from === 'popup' && message.type === 'queryForPage') {
+    exports.handleQueryFromPopup(message, sender, callback);
+    return true;
+  }
+};
+
+exports.handleQueryFromPopup = function(message, sender, callback) {
+  callback(exports.getLocalCachedPage());
+};
+
+/**
+ * Handle a message from the app of type 'queryResult'.
+ *
+ * @param {any} message the message from the app
+ */
+exports.handleQueryResultMessage = function(message) {
+  if (message.page) {
+    console.log('Received positive query: ', message);
+    localPageInfo = message.page;
   }
 };
 

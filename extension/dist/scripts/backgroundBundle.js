@@ -35325,34 +35325,47 @@ exports.savePageForContentScript = function(tab) {
  * Query for a cached URL. If found, a message is passed to the content script
  * for the page with the CachedPage object.
  *
+ * If successful the page is present, this updates the icon for the given tab
+ * to indicate that the page is available offline and sends a message to the
+ * tab with the saved page.
+ *
  * @param {integer} tabId the tabId t
+ * @param {string} url the URL to query for
+ *
+ * @return {Promise.<CachedPage, Error>} Promise that resolves when complete or
+ * rejects with an error.
  */
 exports.queryForPage = function(tabId, url) {
-  appMessaging.isPageSaved(url)
-  .then(result => {
-    if (!result.response || result.response === null) {
-      // No page saved.
-      console.log('did not find saved copy of page: ', url);
-    } else {
-      console.log('setting icon for tabId: ', tabId);
-      console.log('query result: ', result);
-      browserAction.setIcon({
-        path: 'images/cloud-off-24.png',
-        tabId: tabId
-      });
-      tabs.sendMessage(
-        tabId,
-        {
-          type: 'queryResult',
-          from: 'background',
-          tabId: tabId,
-          page: result.response
-        }
-      );
-    }
-  })
-  .catch(err => {
-    console.log('queryForPage received error: ', err);
+  return new Promise(function(resolve, reject) {
+    appMessaging.isPageSaved(url)
+    .then(result => {
+      if (!result.response || result.response === null) {
+        // No page saved.
+        console.log('did not find saved copy of page: ', url);
+        resolve(null);
+      } else {
+        console.log('setting icon for tabId: ', tabId);
+        console.log('query result: ', result);
+        browserAction.setIcon({
+          path: 'images/cloud-off-24.png',
+          tabId: tabId
+        });
+        tabs.sendMessage(
+          tabId,
+          {
+            type: 'queryResult',
+            from: 'background',
+            tabId: tabId,
+            page: result.response
+          }
+        );
+        resolve(result.response);
+      }
+    })
+    .catch(err => {
+      console.log('queryForPage received error: ', err);
+      reject(err);
+    });
   });
 };
 
@@ -35716,6 +35729,19 @@ exports.onCompleted = chrome.webNavigation.onCompleted;
 
 var util = require('../util/util');
 
+var localPageInfo = null;
+
+/**
+ * Return the local CachedPage object. This will have been retrieved from the
+ * app. It exists here solely to be cached locally.
+ *
+ * @return {CachedPage|null} null if the query has not been performed or if the
+ * page is not available
+ */
+exports.getLocalCachedPage = function() {
+  return localPageInfo;
+};
+
 /**
  * Handler for internal (to the Extension) messages. Should be added via
  * runtime.onMessage.addListener.
@@ -35729,9 +35755,27 @@ exports.onMessageHandler = function(message, sender, callback) {
     exports.handleLoadMessage(message, sender, callback);
     return true;
   } else if (message.type === 'queryResult') {
-    if (message.page) {
-      console.log('Received positive query: ', message);
-    }
+    exports.handleQueryResultMessage(message, sender, callback);
+    return false;
+  } else if (message.from === 'popup' && message.type === 'queryForPage') {
+    exports.handleQueryFromPopup(message, sender, callback);
+    return true;
+  }
+};
+
+exports.handleQueryFromPopup = function(message, sender, callback) {
+  callback(exports.getLocalCachedPage());
+};
+
+/**
+ * Handle a message from the app of type 'queryResult'.
+ *
+ * @param {any} message the message from the app
+ */
+exports.handleQueryResultMessage = function(message) {
+  if (message.page) {
+    console.log('Received positive query: ', message);
+    localPageInfo = message.page;
   }
 };
 
@@ -35986,8 +36030,8 @@ exports.savePage = function(tab, mhtmlBlob) {
  */
 
 var capture = require('../chrome-apis/page-capture');
-var tabs = require('../chrome-apis/tabs');
 var datastore = require('../persistence/datastore');
+var tabs = require('../chrome-apis/tabs');
 var util = require('../util/util');
 
 /**
@@ -36074,6 +36118,34 @@ exports.waitForCurrentPageToLoad = function() {
           resolve(resp);
         });
       });
+  });
+};
+
+/**
+ * Ask the content script if the current page is saved.
+ *
+ * @return {Promise.<CachedPage, Error>}
+ */
+exports.getLocalPageInfo = function() {
+  return new Promise(function(resolve, reject) {
+    function onResponse(response) {
+      resolve(response);
+    }
+
+    util.getActiveTab()
+    .then(tab => {
+      tabs.sendMessage(
+        tab.id,
+        {
+          from: 'popup',
+          type: 'queryForPage'
+        },
+        onResponse
+      );
+    })
+    .catch(err => {
+      reject(err);
+    });
   });
 };
 

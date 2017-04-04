@@ -6,8 +6,8 @@
  */
 
 var capture = require('../chrome-apis/page-capture');
-var tabs = require('../chrome-apis/tabs');
 var datastore = require('../persistence/datastore');
+var tabs = require('../chrome-apis/tabs');
 var util = require('../util/util');
 
 /**
@@ -94,5 +94,33 @@ exports.waitForCurrentPageToLoad = function() {
           resolve(resp);
         });
       });
+  });
+};
+
+/**
+ * Ask the content script if the current page is saved.
+ *
+ * @return {Promise.<CachedPage, Error>}
+ */
+exports.getLocalPageInfo = function() {
+  return new Promise(function(resolve, reject) {
+    function onResponse(response) {
+      resolve(response);
+    }
+
+    util.getActiveTab()
+    .then(tab => {
+      tabs.sendMessage(
+        tab.id,
+        {
+          from: 'popup',
+          type: 'queryForPage'
+        },
+        onResponse
+      );
+    })
+    .catch(err => {
+      reject(err);
+    });
   });
 };

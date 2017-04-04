@@ -3,12 +3,16 @@
 var api = require('./popup-api');
 var messaging = require('../app-bridge/messaging');
 
+var btnSave = document.getElementById('btn-save');
+var btnView = document.getElementById('btn-view');
 var spinner = document.getElementById('spinner');
 var message = document.getElementById('message');
 var timing1 = document.getElementById('timing1');
 var timing2 = document.getElementById('timing2');
 var divSaveTime = document.getElementById('save-time');
 var divLoadTime = document.getElementById('load-time');
+var divButtons = document.getElementById('buttons-div');
+var divSave = document.getElementById('save-content-div');
 
 // Crazy value to make sure we notice if there are errors.
 var saveStart = -10000;
@@ -84,10 +88,35 @@ function afterLoadComplete(msgFromTab) {
     });
 }
 
+function onSaveClickHandler() {
+  // Update the visibility of the elements
+  divButtons.classList.add('hide');
+  divSave.classList.remove('hide');
 
-beforeLoadComplete();
+  beforeLoadComplete();
 
-api.waitForCurrentPageToLoad()
+  api.waitForCurrentPageToLoad()
   .then(msgFromTab => {
     afterLoadComplete(msgFromTab);
   });
+}
+
+function onViewClickHandler() {
+  console.log('clicked onview');
+}
+
+btnSave.onclick = onSaveClickHandler;
+btnView.onclick = onViewClickHandler;
+
+// Update the view button
+api.getLocalPageInfo()
+.then(page => {
+  if (!page) {
+    return;
+  }
+  btnView.disabled = false;
+  btnView.classList.add('btn-success');
+})
+.catch(err => {
+  console.log('Error getting local page info: ', err);
+});

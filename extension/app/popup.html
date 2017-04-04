@@ -7,27 +7,42 @@
     <!-- endbower -->
     <!-- endbuild -->
     <!-- build:css styles/main.css -->
+    <!-- build:css styles/bootstrap.min.css -->
     <link href="styles/main.css" rel="stylesheet">
+    <link href="styles/bootstrap.min.css" rel="stylesheet">
     <!-- endbuild -->
   </head>
   <body>
-    <h1 id="message" class="hide"></h1>
 
-    <div id="timing1" class="hide footer">
-      Load: <span id="load-time"></span> ms
+    <div id="buttons-div">
+      <button id="btn-save" class="btn btn-primary btn-block">
+        Save Page
+      </button>
+
+      <button  id="btn-view" class="btn btn-block" disabled>
+        View Local Copy
+      </button>
     </div>
 
-    <div id="timing2" class="hide footer">
-      Save: <span id="save-time"></span> ms
-    </div>
+    <div class="hide" id="save-content-div">
+      <h1 id="message" class="hide"></h1>
 
-    <!-- This materialized spinner is based on:
-      https://codepen.io/mrrocks/pen/EiplA -->
-    <div id="spinner">
-    <svg class="spinner" width="65px" height="65px" viewBox="0 0 66 66" xmlns="http://www.w3.org/2000/svg">
-       <circle class="path" fill="none" stroke-width="6" stroke-linecap="round" cx="33" cy="33" r="30">
-       </circle>
-    </svg>
+      <div id="timing1" class="hide footer">
+        Load: <span id="load-time"></span> ms
+      </div>
+
+      <div id="timing2" class="hide footer">
+        Save: <span id="save-time"></span> ms
+      </div>
+
+      <!-- This materialized spinner is based on:
+        https://codepen.io/mrrocks/pen/EiplA -->
+      <div id="spinner">
+      <svg class="spinner" width="65px" height="65px" viewBox="0 0 66 66" xmlns="http://www.w3.org/2000/svg">
+         <circle class="path" fill="none" stroke-width="6" stroke-linecap="round" cx="33" cy="33" r="30">
+         </circle>
+      </svg>
+      </div>
     </div>
 
     <!-- build:js scripts/popup-vendor.js -->

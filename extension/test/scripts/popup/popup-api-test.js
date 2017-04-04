@@ -29,6 +29,12 @@ function resetApi() {
   api = require('../../../app/scripts/popup/popup-api');
 }
 
+function end(t) {
+  if (!t) { throw new Error('You forgot to pass t'); }
+  t.end();
+  resetApi();
+}
+
 test('saveTab resolves if all resolve', function(t) {
   var fullUrl = 'https://www.foo.com#money';
   var blob = 'so blobby';
@@ -167,4 +173,69 @@ test('waitForCurrentPageToLoad calls sendMessage and resolves', function(t) {
       t.end();
       resetApi();
     });
+});
+
+test('getLocalPageInfo resolves with page', function(t) {
+  var expected = { who: 'y i am the page of course' };
+  var expectedMessage = {
+    from: 'popup',
+    type: 'queryForPage'
+  };
+  var currentTab = {
+    id: 1111
+  };
+
+  var getActiveTabSpy = sinon.stub().resolves(currentTab);
+  var sendMessageSpy = sinon.stub()
+    .withArgs(currentTab.id, expectedMessage)
+    .callsArgWith(2, expected);
+
+  proxyquireApi({
+    '../chrome-apis/tabs': {
+      sendMessage: sendMessageSpy
+    },
+    '../util/util': {
+      getActiveTab: getActiveTabSpy
+    }
+  });
+
+  api.getLocalPageInfo()
+  .then(actual => {
+    t.deepEqual(actual, expected);
+    t.equal(sendMessageSpy.args[0][0], currentTab.id);
+    t.deepEqual(
+      sendMessageSpy.args[0][1],
+      {
+        from: 'popup',
+        type: 'queryForPage'
+      }
+    );
+    end(t);
+  })
+  .catch(err => {
+    t.fail(err);
+    end(t);
+  });
+});
+
+test('getLocalPageInfo rejects if error', function(t) {
+  var expected = { msg: 'sendMessage was wrong' };
+
+  var getActiveTabSpy = sinon.stub().rejects(expected);
+
+  proxyquireApi({
+    '../util/util': {
+      getActiveTab: getActiveTabSpy
+    }
+  });
+
+  api.getLocalPageInfo()
+  .then(actual => {
+    t.fail(actual);
+    end(t);
+  })
+  .catch(actual => {
+    t.deepEqual(actual, expected);
+    end(t);
+  });
 });

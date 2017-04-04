@@ -35288,34 +35288,47 @@ exports.savePageForContentScript = function(tab) {
  * Query for a cached URL. If found, a message is passed to the content script
  * for the page with the CachedPage object.
  *
+ * If successful the page is present, this updates the icon for the given tab
+ * to indicate that the page is available offline and sends a message to the
+ * tab with the saved page.
+ *
  * @param {integer} tabId the tabId t
+ * @param {string} url the URL to query for
+ *
+ * @return {Promise.<CachedPage, Error>} Promise that resolves when complete or
+ * rejects with an error.
  */
 exports.queryForPage = function(tabId, url) {
-  appMessaging.isPageSaved(url)
-  .then(result => {
-    if (!result.response || result.response === null) {
-      // No page saved.
-      console.log('did not find saved copy of page: ', url);
-    } else {
-      console.log('setting icon for tabId: ', tabId);
-      console.log('query result: ', result);
-      browserAction.setIcon({
-        path: 'images/cloud-off-24.png',
-        tabId: tabId
-      });
-      tabs.sendMessage(
-        tabId,
-        {
-          type: 'queryResult',
-          from: 'background',
-          tabId: tabId,
-          page: result.response
-        }
-      );
-    }
-  })
-  .catch(err => {
-    console.log('queryForPage received error: ', err);
+  return new Promise(function(resolve, reject) {
+    appMessaging.isPageSaved(url)
+    .then(result => {
+      if (!result.response || result.response === null) {
+        // No page saved.
+        console.log('did not find saved copy of page: ', url);
+        resolve(null);
+      } else {
+        console.log('setting icon for tabId: ', tabId);
+        console.log('query result: ', result);
+        browserAction.setIcon({
+          path: 'images/cloud-off-24.png',
+          tabId: tabId
+        });
+        tabs.sendMessage(
+          tabId,
+          {
+            type: 'queryResult',
+            from: 'background',
+            tabId: tabId,
+            page: result.response
+          }
+        );
+        resolve(result.response);
+      }
+    })
+    .catch(err => {
+      console.log('queryForPage received error: ', err);
+      reject(err);
+    });
   });
 };
 
@@ -35671,6 +35684,19 @@ exports.applyArgsCheckLastError = function(fn, callArgs) {
 
 var util = require('../util/util');
 
+var localPageInfo = null;
+
+/**
+ * Return the local CachedPage object. This will have been retrieved from the
+ * app. It exists here solely to be cached locally.
+ *
+ * @return {CachedPage|null} null if the query has not been performed or if the
+ * page is not available
+ */
+exports.getLocalCachedPage = function() {
+  return localPageInfo;
+};
+
 /**
  * Handler for internal (to the Extension) messages. Should be added via
  * runtime.onMessage.addListener.
@@ -35684,9 +35710,27 @@ exports.onMessageHandler = function(message, sender, callback) {
     exports.handleLoadMessage(message, sender, callback);
     return true;
   } else if (message.type === 'queryResult') {
-    if (message.page) {
-      console.log('Received positive query: ', message);
-    }
+    exports.handleQueryResultMessage(message, sender, callback);
+    return false;
+  } else if (message.from === 'popup' && message.type === 'queryForPage') {
+    exports.handleQueryFromPopup(message, sender, callback);
+    return true;
+  }
+};
+
+exports.handleQueryFromPopup = function(message, sender, callback) {
+  callback(exports.getLocalCachedPage());
+};
+
+/**
+ * Handle a message from the app of type 'queryResult'.
+ *
+ * @param {any} message the message from the app
+ */
+exports.handleQueryResultMessage = function(message) {
+  if (message.page) {
+    console.log('Received positive query: ', message);
+    localPageInfo = message.page;
   }
 };
 
@@ -35941,8 +35985,8 @@ exports.savePage = function(tab, mhtmlBlob) {
  */
 
 var capture = require('../chrome-apis/page-capture');
-var tabs = require('../chrome-apis/tabs');
 var datastore = require('../persistence/datastore');
+var tabs = require('../chrome-apis/tabs');
 var util = require('../util/util');
 
 /**
@@ -36032,18 +36076,50 @@ exports.waitForCurrentPageToLoad = function() {
   });
 };
 
+/**
+ * Ask the content script if the current page is saved.
+ *
+ * @return {Promise.<CachedPage, Error>}
+ */
+exports.getLocalPageInfo = function() {
+  return new Promise(function(resolve, reject) {
+    function onResponse(response) {
+      resolve(response);
+    }
+
+    util.getActiveTab()
+    .then(tab => {
+      tabs.sendMessage(
+        tab.id,
+        {
+          from: 'popup',
+          type: 'queryForPage'
+        },
+        onResponse
+      );
+    })
+    .catch(err => {
+      reject(err);
+    });
+  });
+};
+
 },{"../chrome-apis/page-capture":54,"../chrome-apis/tabs":57,"../persistence/datastore":60,"../util/util":63}],62:[function(require,module,exports){
 'use strict';
 
 var api = require('./popup-api');
 var messaging = require('../app-bridge/messaging');
 
+var btnSave = document.getElementById('btn-save');
+var btnView = document.getElementById('btn-view');
 var spinner = document.getElementById('spinner');
 var message = document.getElementById('message');
 var timing1 = document.getElementById('timing1');
 var timing2 = document.getElementById('timing2');
 var divSaveTime = document.getElementById('save-time');
 var divLoadTime = document.getElementById('load-time');
+var divButtons = document.getElementById('buttons-div');
+var divSave = document.getElementById('save-content-div');
 
 // Crazy value to make sure we notice if there are errors.
 var saveStart = -10000;
@@ -36119,13 +36195,38 @@ function afterLoadComplete(msgFromTab) {
     });
 }
 
+function onSaveClickHandler() {
+  // Update the visibility of the elements
+  divButtons.classList.add('hide');
+  divSave.classList.remove('hide');
 
-beforeLoadComplete();
+  beforeLoadComplete();
 
-api.waitForCurrentPageToLoad()
+  api.waitForCurrentPageToLoad()
   .then(msgFromTab => {
     afterLoadComplete(msgFromTab);
   });
+}
+
+function onViewClickHandler() {
+  console.log('clicked onview');
+}
+
+btnSave.onclick = onSaveClickHandler;
+btnView.onclick = onViewClickHandler;
+
+// Update the view button
+api.getLocalPageInfo()
+.then(page => {
+  if (!page) {
+    return;
+  }
+  btnView.disabled = false;
+  btnView.classList.add('btn-success');
+})
+.catch(err => {
+  console.log('Error getting local page info: ', err);
+});
 
 },{"../app-bridge/messaging":51,"./popup-api":61}],63:[function(require,module,exports){
 /* globals fetch */

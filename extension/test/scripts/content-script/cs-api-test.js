@@ -28,6 +28,12 @@ function resetApi() {
   api = require('../../../app/scripts/content-script/cs-api');
 }
 
+function end(t) {
+  if (!t) { throw new Error('You did not pass t'); }
+  t.end();
+  resetApi();
+}
+
 test('onMessageHandler returns true and calls handleLoadMessage', function(t) {
   var message = { type: 'readystateComplete' };
   var sender = 'sender';
@@ -40,6 +46,92 @@ test('onMessageHandler returns true and calls handleLoadMessage', function(t) {
   t.true(actual);  // true to say we'll handle it asynchronously
   t.deepEqual(handleLoadMessageSpy.args[0], [message, sender, callback]);
   t.end();
+});
+
+test(
+  'onMessageHandler returns false and calls handleQueryResultMessage',
+  function(t) {
+    var message = {
+      type: 'queryResult'
+    };
+
+    var sender = 'sender';
+    var callback = 'callback';
+    api.handleQueryResultMessage = sinon.stub();
+
+    var actual = api.onMessageHandler(message, sender, callback);
+    t.false(actual);
+    t.deepEqual(
+      api.handleQueryResultMessage.args[0],
+      [message, sender, callback]
+    );
+    end(t);
+  }
+);
+
+test('onMessageHandler returns true and calls handleQueryFromPopup',
+  function(t) {
+    var message = {
+      type: 'queryForPage',
+      from: 'popup'
+    };
+
+    var sender = 'sender';
+    var callback = 'callback';
+    api.handleQueryFromPopup = sinon.stub();
+
+    var actual = api.onMessageHandler(message, sender, callback);
+    t.true(actual);
+    t.deepEqual(
+      api.handleQueryFromPopup.args[0],
+      [message, sender, callback]
+    );
+    end(t);
+  }
+);
+
+test('handleQueryResultMessage caches page from query', function(t) {
+  var savedPage = 'I am the saved page';
+  var message = {
+    type: 'queryResult',
+    page: savedPage
+  };
+
+  t.equal(api.getLocalCachedPage(), null);
+  api.handleQueryResultMessage(message, null, null);
+  // We aren't handling a callback here, so we should return false.
+  t.equal(api.getLocalCachedPage(), savedPage);
+  end(t);
+});
+
+test('handleQueryResultMessage does not cache if no page', function(t) {
+  var message = {
+    type: 'queryResult',
+  };
+
+  t.equal(api.getLocalCachedPage(), null);
+  api.handleQueryResultMessage(message, null, null);
+  // We aren't handling a callback here, so we should return false.
+  t.equal(api.getLocalCachedPage(), null);
+  end(t);
+});
+
+test('handleQueryFromPopup invokes callback with saved page', function(t) {
+  var expected = 'cashmoney page';
+
+  api.getLocalCachedPage = sinon.stub().returns(expected);
+
+  var message = {
+    from: 'popup',
+    type: 'queryForPage'
+  };
+
+  function callback(actual) {
+    t.deepEqual(actual, expected);
+    end(t);
+  }
+
+  api.handleQueryFromPopup(message, null, callback);
 });
 
 test('handleLoadMessage creates response and invokes callback', function(t) {
