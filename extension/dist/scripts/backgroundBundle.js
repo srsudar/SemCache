@@ -5105,6 +5105,7 @@ exports.downloadKeyAsCsv = function(key) {
 
 var base64 = require('base-64');
 
+var appc = require('../app-controller');
 var chromep = require('../chrome-apis/chromep');
 var datastore = require('../persistence/datastore');
 
@@ -5148,12 +5149,12 @@ exports.handleExternalMessage = function(message, sender, response) {
     console.log('ID not from SemCache extension: ', sender);
     return;
   }
+  if (response) {
+    // We'll handle the response callback asynchronously. Return true to
+    // inform Chrome to keep the channel open for us.
+    result = true;
+  }
   if (message.type === 'write') {
-    if (response) {
-      // We'll handle the response callback asynchronously. Return true to
-      // inform Chrome to keep the channel open for us.
-      result = true;
-    }
     var blob = exports.getBlobFromDataUrl(message.params.dataUrl);
     var captureUrl = message.params.captureUrl;
     var captureDate = message.params.captureDate;
@@ -5172,11 +5173,22 @@ exports.handleExternalMessage = function(message, sender, response) {
       }
     });
   } else if (message.type === 'query') {
-    // TODO: ugly duplication here of same machinery
-    if (response) {
-      result = true;
-    }
     exports.performQuery(message)
+    .then(result => {
+      var successMsg = exports.createResponseSuccess(message);
+      successMsg.response = result;
+      if (response) {
+        response(successMsg);
+      }
+    })
+    .catch(err => {
+      var errorMsg = exports.createResponseError(message, err);
+      if (response) {
+        response(errorMsg);
+      }
+    });
+  } else if (message.type === 'open') {
+    exports.handleOpenRequest(message)
     .then(result => {
       var successMsg = exports.createResponseSuccess(message);
       successMsg.response = result;
@@ -5194,6 +5206,33 @@ exports.handleExternalMessage = function(message, sender, response) {
     console.log('Unrecognized message type from extension: ', message.type);
   }
   return result;
+};
+
+/**
+ * Handle a message asking to open a particular cached page.
+ *
+ * @param {Object} message message from the client
+ *
+ * @return {Promise.<number, Error>} Promise that resolves with the result of
+ * saveMhtmlAndOpen or rejects with an Error
+ */
+exports.handleOpenRequest = function(message) {
+  return new Promise(function(resolve, reject) {
+    var cachedPage = message.params.page;
+    appc.saveMhtmlAndOpen(
+      cachedPage.captureUrl,
+      cachedPage.captureDate,
+      cachedPage.accessPath,
+      cachedPage.metadata
+    )
+    .then(result => {
+      resolve(result);
+    })
+    .catch(err => {
+      console.err('Error in handleOpenRequest: ', err);
+      reject(err);
+    });
+  });
 };
 
 /**
@@ -5336,7 +5375,7 @@ exports.sendMessageToOpenUrl = function(url) {
   exports.sendMessageToExtension(message);
 };
 
-},{"../chrome-apis/chromep":2,"../persistence/datastore":20,"base-64":35}],17:[function(require,module,exports){
+},{"../app-controller":1,"../chrome-apis/chromep":2,"../persistence/datastore":20,"base-64":35}],17:[function(require,module,exports){
 'use strict';
 
 var util = require('../util');
@@ -35132,6 +35171,16 @@ exports.isPageSaved = function(url, options, timeout) {
   return exports.sendMessageForResponse(message, timeout);
 };
 
+exports.sendMessageToOpenPage = function(cachedPage) {
+  var message = {
+    type: 'open',
+    params: {
+      page: cachedPage
+    }
+  };
+  return exports.sendMessageForResponse(message);
+};
+
 /**
  * Save a page as MHTML by calling the extension.
  *
@@ -35568,6 +35617,13 @@ exports.update = function(url) {
   chrome.tabs.update({
     url: url
   });
+};
+
+/**
+ * Raw wrapper around the update function.
+ */
+exports.updateRaw = function() {
+  chrome.tabs.update.apply(null, arguments);
 };
 
 /**
@@ -36026,11 +36082,13 @@ exports.savePage = function(tab, mhtmlBlob) {
 'use strict';
 
 /**
- * API to be used by the Extension
+ * API to be used by the popup. This assumes to only be valid in the context of
+ * a popup, eg that the active tab will be the popup tab, etc.
  */
 
 var capture = require('../chrome-apis/page-capture');
 var datastore = require('../persistence/datastore');
+var messaging = require('../app-bridge/messaging');
 var tabs = require('../chrome-apis/tabs');
 var util = require('../util/util');
 
@@ -36122,6 +36180,30 @@ exports.waitForCurrentPageToLoad = function() {
 };
 
 /**
+ * Open the CachedPage in the current tab.
+ *
+ * @param {CachedPage} page
+ *
+ * @return {Promise.<undefined, Error>}
+ */
+exports.openCachedPage = function(page) {
+  // Safety check to keep the popup from crashing.
+  if (!page) {
+    return;
+  }
+  return new Promise(function(resolve, reject) {
+    // Note that we are assuming the page is available locally.
+    messaging.sendMessageToOpenPage(page)
+    .then(response => {
+      resolve(response);
+    })
+    .catch(err => {
+      reject(err);
+    });
+  });
+};
+
+/**
  * Ask the content script if the current page is saved.
  *
  * @return {Promise.<CachedPage, Error>}
@@ -36149,7 +36231,7 @@ exports.getLocalPageInfo = function() {
   });
 };
 
-},{"../chrome-apis/page-capture":55,"../chrome-apis/tabs":58,"../persistence/datastore":62,"../util/util":64}],64:[function(require,module,exports){
+},{"../app-bridge/messaging":51,"../chrome-apis/page-capture":55,"../chrome-apis/tabs":58,"../persistence/datastore":62,"../util/util":64}],64:[function(require,module,exports){
 /* globals fetch */
 'use strict';
 

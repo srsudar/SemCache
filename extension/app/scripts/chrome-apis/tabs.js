@@ -17,6 +17,13 @@ exports.update = function(url) {
 };
 
 /**
+ * Raw wrapper around the update function.
+ */
+exports.updateRaw = function() {
+  chrome.tabs.update.apply(null, arguments);
+};
+
+/**
  * Get all the tabs that have the specified properties, or all tabs if no
  * properties are specified.
  *

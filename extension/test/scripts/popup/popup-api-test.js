@@ -239,3 +239,52 @@ test('getLocalPageInfo rejects if error', function(t) {
     end(t);
   });
 });
+
+test('openCachedPage calls open and resolves', function(t) {
+  var cachedPage = {
+    accessPath: 'getMeHere'
+  };
+  var expected = { msg: 'hello from app' };
+  var sendMessageSpy = sinon.stub().withArgs(cachedPage).resolves(expected);
+
+  proxyquireApi({
+    '../app-bridge/messaging': {
+      sendMessageToOpenPage: sendMessageSpy
+    }
+  });
+
+  api.openCachedPage(cachedPage)
+  .then(actual => {
+    t.equal(actual, expected);
+    t.deepEqual(sendMessageSpy.args[0], [cachedPage]);
+    end(t);
+  })
+  .catch(err => {
+    t.fail(err);
+    end(t);
+  });
+});
+
+test('openCachedPage rejects if send message rejects', function(t) {
+  var cachedPage = {
+    accessPath: 'getMeHere'
+  };
+  var expected = { msg: 'big trubs!' };
+  var sendMessageSpy = sinon.stub().withArgs(cachedPage).rejects(expected);
+
+  proxyquireApi({
+    '../app-bridge/messaging': {
+      sendMessageToOpenPage: sendMessageSpy
+    }
+  });
+
+  api.openCachedPage(cachedPage)
+  .then(actual => {
+    t.fail(actual);
+    end(t);
+  })
+  .catch(actual => {
+    t.deepEqual(actual, expected);
+    end(t);
+  });
+});

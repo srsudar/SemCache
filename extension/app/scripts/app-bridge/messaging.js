@@ -94,6 +94,16 @@ exports.isPageSaved = function(url, options, timeout) {
   return exports.sendMessageForResponse(message, timeout);
 };
 
+exports.sendMessageToOpenPage = function(cachedPage) {
+  var message = {
+    type: 'open',
+    params: {
+      page: cachedPage
+    }
+  };
+  return exports.sendMessageForResponse(message);
+};
+
 /**
  * Save a page as MHTML by calling the extension.
  *

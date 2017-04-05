@@ -2,11 +2,13 @@
 'use strict';
 
 /**
- * API to be used by the Extension
+ * API to be used by the popup. This assumes to only be valid in the context of
+ * a popup, eg that the active tab will be the popup tab, etc.
  */
 
 var capture = require('../chrome-apis/page-capture');
 var datastore = require('../persistence/datastore');
+var messaging = require('../app-bridge/messaging');
 var tabs = require('../chrome-apis/tabs');
 var util = require('../util/util');
 
@@ -94,6 +96,30 @@ exports.waitForCurrentPageToLoad = function() {
           resolve(resp);
         });
       });
+  });
+};
+
+/**
+ * Open the CachedPage in the current tab.
+ *
+ * @param {CachedPage} page
+ *
+ * @return {Promise.<undefined, Error>}
+ */
+exports.openCachedPage = function(page) {
+  // Safety check to keep the popup from crashing.
+  if (!page) {
+    return;
+  }
+  return new Promise(function(resolve, reject) {
+    // Note that we are assuming the page is available locally.
+    messaging.sendMessageToOpenPage(page)
+    .then(response => {
+      resolve(response);
+    })
+    .catch(err => {
+      reject(err);
+    });
   });
 };
 

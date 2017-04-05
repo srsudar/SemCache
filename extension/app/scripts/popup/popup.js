@@ -18,6 +18,9 @@ var divSave = document.getElementById('save-content-div');
 var saveStart = -10000;
 var domCompleteTime = null;
 
+// A local reference to the page.
+var cachedPage = null;
+
 function round(num) {
   // Round to two decimal places
   var factor = 100;
@@ -102,7 +105,7 @@ function onSaveClickHandler() {
 }
 
 function onViewClickHandler() {
-  console.log('clicked onview');
+  api.openCachedPage(cachedPage);
 }
 
 btnSave.onclick = onSaveClickHandler;
@@ -114,6 +117,7 @@ api.getLocalPageInfo()
   if (!page) {
     return;
   }
+  cachedPage = page;
   btnView.disabled = false;
   btnView.classList.add('btn-success');
 })
