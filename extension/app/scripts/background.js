@@ -20,16 +20,9 @@ chromeRuntime.addOnMessageListener(
   messaging.onMessageCallback
 );
 
-webNavigation.onBeforeNavigate.addListener(details => {
-  if (details.frameId === 0) {
-    // Top level frame
-    backgroundApi.queryForPage(details.tabId, details.url);
-  }
-});
-
-webNavigation.onCompleted.addListener(details => {
-  if (details.frameId === 0) {
-    // Top level frame
+webNavigation.onCommitted.addListener(details => {
+  if (backgroundApi.isNavOfInterest(details)) {
+    console.log('onCommitted event: ', details);
     backgroundApi.queryForPage(details.tabId, details.url);
   }
 });

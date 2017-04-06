@@ -35317,16 +35317,9 @@ chromeRuntime.addOnMessageListener(
   messaging.onMessageCallback
 );
 
-webNavigation.onBeforeNavigate.addListener(details => {
-  if (details.frameId === 0) {
-    // Top level frame
-    backgroundApi.queryForPage(details.tabId, details.url);
-  }
-});
-
-webNavigation.onCompleted.addListener(details => {
-  if (details.frameId === 0) {
-    // Top level frame
+webNavigation.onCommitted.addListener(details => {
+  if (backgroundApi.isNavOfInterest(details)) {
+    console.log('onCommitted event: ', details);
     backgroundApi.queryForPage(details.tabId, details.url);
   }
 });
@@ -35342,6 +35335,14 @@ var tabs = require('../chrome-apis/tabs');
 // Directly requiring a script from the Chrome App. This seems risky, but I
 // feel it's better than code duplication.
 var evaluation = require('../../../../chromeapp/app/scripts/evaluation');
+
+var forbiddenTransitionTypes = [
+  'generated',        // search results from the omnibox, eg
+  'auto_subframe',    // automatic things in a subframe
+  'auto_toplevel',    // the start page
+  'form_submit',
+  'keyword',          // non-default search via omnibox
+];
 
 /**
  * Save the current page on behalf of a content script. This should be invoked
@@ -35416,6 +35417,27 @@ exports.queryForPage = function(tabId, url) {
       reject(err);
     });
   });
+};
+
+/**
+ * Returns true if this is a navigation event that we are interested in
+ * querying and checking for cached versions.
+ *
+ * This encapsulates the logic of things like querying for the top level frame,
+ * ignoring google search events, etc.
+ *
+ * @param {Object} details the details object passed via webNavigation events
+ *
+ * @return {boolean} true if this is a web navigation we want to check for 
+ */
+exports.isNavOfInterest = function(details) {
+  if (details.frameId !== 0) {
+    return false;
+  }
+  if (forbiddenTransitionTypes.includes(details.transitionType)) {
+    return false;
+  }
+  return true;
 };
 
 },{"../../../../chromeapp/app/scripts/evaluation":15,"../app-bridge/messaging":51,"../chrome-apis/browser-action":54,"../chrome-apis/tabs":58,"../popup/popup-api":63}],54:[function(require,module,exports){
@@ -35779,6 +35801,8 @@ exports.applyArgsCheckLastError = function(fn, callArgs) {
 exports.onBeforeNavigate = chrome.webNavigation.onBeforeNavigate;
 
 exports.onCompleted = chrome.webNavigation.onCompleted;
+
+exports.onCommitted = chrome.webNavigation.onCommitted;
 
 },{}],61:[function(require,module,exports){
 'use strict';

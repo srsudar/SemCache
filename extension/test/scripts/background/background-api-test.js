@@ -35,6 +35,13 @@ function end(t) {
   resetApi();
 }
 
+function createDetailsObject(frameId, transitionType) {
+  return {
+    frameId: frameId,
+    transitionType: transitionType
+  };
+}
+
 test('savePageForContentScript resolves if saveTab resolves', function(t) {
   var tab = { tabId: 1234 };
 
@@ -184,4 +191,22 @@ test('queryForPage rejects if error', function(t) {
     t.equal(actual, expected);
     end(t);
   });
+});
+
+test('isNavOfInterest false for not main frame', function(t) {
+  var details = createDetailsObject(1, '');
+  t.false(api.isNavOfInterest(details));
+  end(t);
+});
+
+test('isNavOfInterest false for forbidden type', function(t) {
+  var details = createDetailsObject(0, 'generated');
+  t.false(api.isNavOfInterest(details));
+  end(t);
+});
+
+test('isNavOfInterest true for top level basic type', function(t) {
+  var details = createDetailsObject(0, 'typed');
+  t.true(api.isNavOfInterest(details));
+  end(t);
 });
