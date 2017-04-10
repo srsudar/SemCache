@@ -35081,6 +35081,8 @@ var chromeRuntime = require('../chrome-apis/runtime');
 var chromeTabs = require('../chrome-apis/tabs');
 var backgroundApi = require('../background/background-api');
 
+exports.DEBUG = false;
+
 /** Message indicating that a timeout occurred waiting for the app. */
 exports.MSG_TIMEOUT = 'timed out waiting for response from app';
 
@@ -35126,7 +35128,9 @@ exports.sendMessageForResponse = function(message, timeout) {
     var settled = false;
     // We'll update this if we've already resolved or rejected.
     var callbackForApp = function(response) {
-      console.log('got callback from app');
+      if (exports.DEBUG) {
+        console.log('got callback from app');
+      }
       if (settled) {
         // do nothing
         return;
@@ -35257,7 +35261,9 @@ exports.openUrl = function(url) {
  */
 exports.onMessageExternalCallback = function(message, sender, sendResponse) {
   if (sender.id && sender.id !== exports.APP_ID) {
-    console.log('Received a message not from the app: ', sender);
+    if (exports.DEBUG) {
+      console.log('Received a message not from the app: ', sender);
+    }
     return;
   }
   if (message.type === 'open') {
@@ -35303,6 +35309,16 @@ var messaging = require('./app-bridge/messaging');
 var chromeRuntime = require('./chrome-apis/runtime');
 var webNavigation = require('./chrome-apis/web-navigation');
 
+var numNavs = 0;
+var loadStart = Date.now();
+
+function logQueryPerMin() {
+  var minutesSinceStart = (Date.now() - loadStart) / 1000 / 60;
+  var qpm = numNavs / minutesSinceStart;
+  console.log('numNavs thus far: ', numNavs);
+  console.log('qpm: ', qpm);
+}
+
 chrome.runtime.onInstalled.addListener(function (details) {
   console.log('previousVersion', details.previousVersion);
 });
@@ -35321,6 +35337,8 @@ webNavigation.onCommitted.addListener(details => {
   if (backgroundApi.isNavOfInterest(details)) {
     console.log('onCommitted event: ', details);
     backgroundApi.queryForPage(details.tabId, details.url);
+    numNavs++;
+    logQueryPerMin();
   }
 });
 
