@@ -115,7 +115,7 @@ test('set calls storage.set and resolves with updated cache', function(t) {
   settings.set(key, newValue)
   .then(actualObj => {
     t.deepEqual(actualObj, expectedSettingsObj);
-    t.deepEqual(setSpy.args[0], [expectedKvPair, false]);
+    t.deepEqual(setSpy.args[0], [expectedKvPair]);
     // And finally that we've updated the cache for future callers as well.
     t.deepEqual(settings.getSettingsObj(), expectedSettingsObj);
     t.end();

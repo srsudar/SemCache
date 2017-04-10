@@ -28,6 +28,9 @@ exports.getChromep = function() {
  * @return {Object} the Promisified version of chrome.fileSystem
  */
 exports.getFileSystem = function() {
+  // retainEntry is incorrectly handled in chromep. Replace it with the stock
+  // function.
+  exports.getChromep().fileSystem.retainEntry = chrome.fileSystem.retainEntry;
   return exports.getChromep().fileSystem;
 };
 

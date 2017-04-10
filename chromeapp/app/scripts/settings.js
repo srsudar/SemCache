@@ -111,9 +111,8 @@ exports.set = function(key, value) {
     var namespacedKey = exports.createNameSpacedKey(key);
     var kvPair = {};
     kvPair[namespacedKey] = value;
-    var useSync = false;
 
-    chromep.getStorageLocal().set(kvPair, useSync)
+    chromep.getStorageLocal().set(kvPair)
     .then(() => {
       exports.SETTINGS_OBJ[key] = value;
       // Now that the set has succeeded, update the cache of settings.

@@ -43531,6 +43531,9 @@ exports.getChromep = function() {
  * @return {Object} the Promisified version of chrome.fileSystem
  */
 exports.getFileSystem = function() {
+  // retainEntry is incorrectly handled in chromep. Replace it with the stock
+  // function.
+  exports.getChromep().fileSystem.retainEntry = chrome.fileSystem.retainEntry;
   return exports.getChromep().fileSystem;
 };
 
@@ -82871,9 +82874,8 @@ exports.set = function(key, value) {
     var namespacedKey = exports.createNameSpacedKey(key);
     var kvPair = {};
     kvPair[namespacedKey] = value;
-    var useSync = false;
 
-    chromep.getStorageLocal().set(kvPair, useSync)
+    chromep.getStorageLocal().set(kvPair)
     .then(() => {
       exports.SETTINGS_OBJ[key] = value;
       // Now that the set has succeeded, update the cache of settings.
