@@ -112,3 +112,27 @@ exports.isNavOfInterest = function(details) {
   }
   return true;
 };
+
+/**
+ * A callback to be registered via chrome.runtime.onMessage.addListener.
+ *
+ * After being added, this function is responsible for responding to messages
+ * that come from within the Extension.
+ *
+ * @param {any} message
+ * @param {MessageSender} sender
+ * @param {function} sendResponse
+ */
+exports.onMessageCallback = function(message, sender, sendResponse) {
+  if (message.type === 'savePageForContentScript') {
+    exports.savePageForContentScript(sender.tab)
+      .then(response => {
+        sendResponse(response);
+      });
+  } else {
+    console.warn('Received unrecognized message from self: ', message);
+  }
+
+  // Return true to indicate we are handling this asynchronously.
+  return true;
+};

@@ -27,7 +27,7 @@ chromeRuntime.addOnMessageExternalListener(
 );
 
 chromeRuntime.addOnMessageListener(
-  messaging.onMessageCallback
+  backgroundApi.onMessageCallback
 );
 
 webNavigation.onCommitted.addListener(details => {

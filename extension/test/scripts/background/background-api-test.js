@@ -210,3 +210,37 @@ test('isNavOfInterest true for top level basic type', function(t) {
   t.true(api.isNavOfInterest(details));
   end(t);
 });
+
+test(
+  'onMessageCallback responds to type savePageForContentScript',
+  function(t)
+{
+  var expected = { totalTimeToWrite: 9987.12 };
+  var savePageForContentScriptSpy = sinon.stub().resolves(expected);
+  
+  api.savePageForContentScript = savePageForContentScriptSpy;
+
+  var message = {
+    type: 'savePageForContentScript',
+    params: {
+      url: 'url to open'
+    }
+  };
+  var sender = {
+    tab: { tabId: 54321 }
+  };
+
+  var callCount = 0;
+  var callback = function(response) {
+    callCount += 1;
+    t.deepEqual(savePageForContentScriptSpy.args[0], [sender.tab]);
+    t.equal(savePageForContentScriptSpy.callCount, 1);
+
+    t.equal(response, expected);
+    t.equal(callCount, 1);
+    t.end();
+    resetApi();
+  };
+
+  api.onMessageCallback(message, sender, callback);
+});

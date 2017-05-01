@@ -11016,7 +11016,7 @@ function createDataRows(params) {
 }
 
 }).call(this,require('_process'))
-},{"_process":65,"flat":39,"lodash.clonedeep":43,"lodash.flatten":44,"lodash.get":45,"lodash.set":46,"lodash.uniq":47,"os":64}],43:[function(require,module,exports){
+},{"_process":63,"flat":39,"lodash.clonedeep":43,"lodash.flatten":44,"lodash.get":45,"lodash.set":46,"lodash.uniq":47,"os":62}],43:[function(require,module,exports){
 (function (global){
 /**
  * lodash (Custom Build) <https://lodash.com/>
@@ -35081,7 +35081,6 @@ module.exports = uniq;
 
 var chromeRuntime = require('../chrome-apis/runtime');
 var chromeTabs = require('../chrome-apis/tabs');
-var backgroundApi = require('../background/background-api');
 
 exports.DEBUG = false;
 
@@ -35278,167 +35277,7 @@ exports.onMessageExternalCallback = function(message, sender, sendResponse) {
   }
 };
 
-/**
- * A callback to be registered via chrome.runtime.onMessage.addListener.
- *
- * After being added, this function is responsible for responding to messages
- * that come from within the Extension.
- *
- * @param {any} message
- * @param {MessageSender} sender
- * @param {function} sendResponse
- */
-exports.onMessageCallback = function(message, sender, sendResponse) {
-  if (message.type === 'savePageForContentScript') {
-    backgroundApi.savePageForContentScript(sender.tab)
-      .then(response => {
-        sendResponse(response);
-      });
-  } else {
-    console.warn('Received unrecognized message from self: ', message);
-  }
-
-  // Return true to indicate we are handling this asynchronously.
-  return true;
-};
-
-},{"../background/background-api":52,"../chrome-apis/runtime":55,"../chrome-apis/tabs":57}],52:[function(require,module,exports){
-'use strict';
-
-var browserAction = require('../chrome-apis/browser-action');
-var appMessaging = require('../app-bridge/messaging');
-var popupApi = require('../popup/popup-api');
-var tabs = require('../chrome-apis/tabs');
-
-// Directly requiring a script from the Chrome App. This seems risky, but I
-// feel it's better than code duplication.
-var evaluation = require('../../../../chromeapp/app/scripts/evaluation');
-
-var forbiddenTransitionTypes = [
-  'generated',        // search results from the omnibox, eg
-  'auto_subframe',    // automatic things in a subframe
-  'auto_toplevel',    // the start page
-  'form_submit',
-  'keyword',          // non-default search via omnibox
-];
-
-/**
- * Save the current page on behalf of a content script. This should be invoked
- * in response to an onMessage event, where the requesting tab can be recovered
- * from the MessageSender object.
- *
- * @param {Tab} tab the tab that is requesting the save
- *
- * @return {Promise -> object} Promise that resolves when the save completes.
- * The resolved object contains the time the write took, e.g.
- * { timeToWrite: 1234.5}.
- */
-exports.savePageForContentScript = function(tab) {
-  return new Promise(function(resolve, reject) {
-    var start = evaluation.getNow();
-    popupApi.saveTab(tab)
-      .then(() => {
-        var end = evaluation.getNow();
-        var totalTime = end - start;
-        var result = { timeToWrite: totalTime };
-        resolve(result);
-      })
-      .catch(err => {
-        reject(err);
-      });
-  });
-};
-
-/**
- * Query for a cached URL. If found, a message is passed to the content script
- * for the page with the CachedPage object.
- *
- * If successful the page is present, this updates the icon for the given tab
- * to indicate that the page is available offline and sends a message to the
- * tab with the saved page.
- *
- * @param {integer} tabId the tabId t
- * @param {string} url the URL to query for
- *
- * @return {Promise.<CachedPage, Error>} Promise that resolves when complete or
- * rejects with an error.
- */
-exports.queryForPage = function(tabId, url) {
-  return new Promise(function(resolve, reject) {
-    appMessaging.isPageSaved(url)
-    .then(result => {
-      if (!result.response || result.response === null) {
-        // No page saved.
-        console.log('did not find saved copy of page: ', url);
-        resolve(null);
-      } else {
-        console.log('setting icon for tabId: ', tabId);
-        console.log('query result: ', result);
-        browserAction.setIcon({
-          path: 'images/cloud-off-24.png',
-          tabId: tabId
-        });
-        tabs.sendMessage(
-          tabId,
-          {
-            type: 'queryResult',
-            from: 'background',
-            tabId: tabId,
-            page: result.response
-          }
-        );
-        resolve(result.response);
-      }
-    })
-    .catch(err => {
-      console.log('queryForPage received error: ', err);
-      reject(err);
-    });
-  });
-};
-
-/**
- * Returns true if this is a navigation event that we are interested in
- * querying and checking for cached versions.
- *
- * This encapsulates the logic of things like querying for the top level frame,
- * ignoring google search events, etc.
- *
- * @param {Object} details the details object passed via webNavigation events
- *
- * @return {boolean} true if this is a web navigation we want to check for 
- */
-exports.isNavOfInterest = function(details) {
-  if (details.frameId !== 0) {
-    return false;
-  }
-  if (forbiddenTransitionTypes.includes(details.transitionType)) {
-    return false;
-  }
-  return true;
-};
-
-},{"../../../../chromeapp/app/scripts/evaluation":15,"../app-bridge/messaging":51,"../chrome-apis/browser-action":53,"../chrome-apis/tabs":57,"../popup/popup-api":61}],53:[function(require,module,exports){
-/* globals chrome */
-'use strict';
-
-/**
- * Wrapper around the chrome.browserAction family of APIs.
- */
-
-exports.setIcon = function() {
-  chrome.browserAction.setIcon.apply(null, arguments);
-};
-
-exports.setPopup = function() {
-  chrome.browserAction.setPopup.apply(null, arguments);
-};
-
-exports.setBadgeText = function() {
-  chrome.browserAction.setBadgeText.apply(null, arguments);
-};
-
-},{}],54:[function(require,module,exports){
+},{"../chrome-apis/runtime":53,"../chrome-apis/tabs":55}],52:[function(require,module,exports){
 /* globals chrome */
 'use strict';
 
@@ -35461,7 +35300,7 @@ exports.saveAsMHTML = function(details) {
   });
 };
 
-},{}],55:[function(require,module,exports){
+},{}],53:[function(require,module,exports){
 /* globals chrome */
 'use strict';
 
@@ -35501,7 +35340,7 @@ exports.addOnMessageListener = function(fn) {
   chrome.runtime.onMessage.addListener(fn);
 };
 
-},{}],56:[function(require,module,exports){
+},{}],54:[function(require,module,exports){
 'use strict';
 
 var util = require('./util');
@@ -35600,7 +35439,7 @@ exports.clear = function() {
   });
 };
 
-},{"./util":58}],57:[function(require,module,exports){
+},{"./util":56}],55:[function(require,module,exports){
 /* global chrome */
 'use strict';
 
@@ -35672,7 +35511,7 @@ exports.sendMessage = function(tabId, message, callback) {
   chrome.tabs.sendMessage(tabId, message, callback);
 };
 
-},{}],58:[function(require,module,exports){
+},{}],56:[function(require,module,exports){
 /* globals chrome */
 'use strict';
 
@@ -35772,7 +35611,7 @@ exports.applyArgsCheckLastError = function(fn, callArgs) {
   });
 };
 
-},{}],59:[function(require,module,exports){
+},{}],57:[function(require,module,exports){
 'use strict';
 
 var util = require('../util/util');
@@ -35865,7 +35704,7 @@ exports.getFullLoadTime = function() {
   return result;
 };
 
-},{"../util/util":63}],60:[function(require,module,exports){
+},{"../util/util":61}],58:[function(require,module,exports){
 /* globals Promise */
 'use strict';
 
@@ -36069,7 +35908,7 @@ exports.savePage = function(tab, mhtmlBlob) {
   });
 };
 
-},{"../app-bridge/messaging":51,"../chrome-apis/tabs":57,"../util/util":63}],61:[function(require,module,exports){
+},{"../app-bridge/messaging":51,"../chrome-apis/tabs":55,"../util/util":61}],59:[function(require,module,exports){
 /* globals Promise */
 'use strict';
 
@@ -36223,7 +36062,7 @@ exports.getLocalPageInfo = function() {
   });
 };
 
-},{"../app-bridge/messaging":51,"../chrome-apis/page-capture":54,"../chrome-apis/tabs":57,"../persistence/datastore":60,"../util/util":63}],62:[function(require,module,exports){
+},{"../app-bridge/messaging":51,"../chrome-apis/page-capture":52,"../chrome-apis/tabs":55,"../persistence/datastore":58,"../util/util":61}],60:[function(require,module,exports){
 'use strict';
 
 var api = require('./popup-api');
@@ -36351,7 +36190,7 @@ api.getLocalPageInfo()
   console.log('Error getting local page info: ', err);
 });
 
-},{"../app-bridge/messaging":51,"./popup-api":61}],63:[function(require,module,exports){
+},{"../app-bridge/messaging":51,"./popup-api":59}],61:[function(require,module,exports){
 /* globals fetch */
 'use strict';
 
@@ -36433,7 +36272,7 @@ exports.wait = function(ms) {
   });
 };
 
-},{"../chrome-apis/tabs":57}],64:[function(require,module,exports){
+},{"../chrome-apis/tabs":55}],62:[function(require,module,exports){
 exports.endianness = function () { return 'LE' };
 
 exports.hostname = function () {
@@ -36480,7 +36319,7 @@ exports.tmpdir = exports.tmpDir = function () {
 
 exports.EOL = '\n';
 
-},{}],65:[function(require,module,exports){
+},{}],63:[function(require,module,exports){
 // shim for using process in browser
 var process = module.exports = {};
 
@@ -37050,4 +36889,4 @@ exports.onPageLoadComplete = function() {
   });
 };
 
-},{"../../../../chromeapp/app/scripts/evaluation":15,"../chrome-apis/runtime":55,"../chrome-apis/storage":56,"../util/util":63,"./cs-api":59}]},{},[62]);
+},{"../../../../chromeapp/app/scripts/evaluation":15,"../chrome-apis/runtime":53,"../chrome-apis/storage":54,"../util/util":61,"./cs-api":57}]},{},[60]);

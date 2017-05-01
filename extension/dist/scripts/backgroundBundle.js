@@ -35081,7 +35081,6 @@ module.exports = uniq;
 
 var chromeRuntime = require('../chrome-apis/runtime');
 var chromeTabs = require('../chrome-apis/tabs');
-var backgroundApi = require('../background/background-api');
 
 exports.DEBUG = false;
 
@@ -35278,31 +35277,7 @@ exports.onMessageExternalCallback = function(message, sender, sendResponse) {
   }
 };
 
-/**
- * A callback to be registered via chrome.runtime.onMessage.addListener.
- *
- * After being added, this function is responsible for responding to messages
- * that come from within the Extension.
- *
- * @param {any} message
- * @param {MessageSender} sender
- * @param {function} sendResponse
- */
-exports.onMessageCallback = function(message, sender, sendResponse) {
-  if (message.type === 'savePageForContentScript') {
-    backgroundApi.savePageForContentScript(sender.tab)
-      .then(response => {
-        sendResponse(response);
-      });
-  } else {
-    console.warn('Received unrecognized message from self: ', message);
-  }
-
-  // Return true to indicate we are handling this asynchronously.
-  return true;
-};
-
-},{"../background/background-api":53,"../chrome-apis/runtime":56,"../chrome-apis/tabs":58}],52:[function(require,module,exports){
+},{"../chrome-apis/runtime":56,"../chrome-apis/tabs":58}],52:[function(require,module,exports){
 /* global chrome */
 'use strict';
 
@@ -35332,7 +35307,7 @@ chromeRuntime.addOnMessageExternalListener(
 );
 
 chromeRuntime.addOnMessageListener(
-  messaging.onMessageCallback
+  backgroundApi.onMessageCallback
 );
 
 webNavigation.onCommitted.addListener(details => {
@@ -35457,6 +35432,30 @@ exports.isNavOfInterest = function(details) {
   if (forbiddenTransitionTypes.includes(details.transitionType)) {
     return false;
   }
+  return true;
+};
+
+/**
+ * A callback to be registered via chrome.runtime.onMessage.addListener.
+ *
+ * After being added, this function is responsible for responding to messages
+ * that come from within the Extension.
+ *
+ * @param {any} message
+ * @param {MessageSender} sender
+ * @param {function} sendResponse
+ */
+exports.onMessageCallback = function(message, sender, sendResponse) {
+  if (message.type === 'savePageForContentScript') {
+    exports.savePageForContentScript(sender.tab)
+      .then(response => {
+        sendResponse(response);
+      });
+  } else {
+    console.warn('Received unrecognized message from self: ', message);
+  }
+
+  // Return true to indicate we are handling this asynchronously.
   return true;
 };
 
