@@ -176,22 +176,31 @@ test('waitForCurrentPageToLoad calls sendMessage and resolves', function(t) {
 });
 
 test('getLocalPageInfo resolves with page', function(t) {
-  var expected = { who: 'y i am the page of course' };
-  var expectedMessage = {
-    from: 'popup',
-    type: 'queryForPage'
-  };
   var currentTab = {
+    url: 'http://foobar.com',
     id: 1111
   };
+  var expectedMessageToReceive = { 
+    status: 'success',
+    result: { who: 'I am the page' }
+  };
+  var expectedMessageToSend = {
+    from: 'popup',
+    type: 'queryForPage',
+    params: {
+      url: currentTab.url,
+      tabId: currentTab.id
+    }
+  };
+  var expectedPage = expectedMessageToReceive.result;
 
   var getActiveTabSpy = sinon.stub().resolves(currentTab);
   var sendMessageSpy = sinon.stub()
-    .withArgs(currentTab.id, expectedMessage)
-    .callsArgWith(2, expected);
+    .withArgs(currentTab.id, expectedMessageToSend)
+    .callsArgWith(1, expectedMessageToReceive);
 
   proxyquireApi({
-    '../chrome-apis/tabs': {
+    '../chrome-apis/runtime': {
       sendMessage: sendMessageSpy
     },
     '../util/util': {
@@ -201,15 +210,8 @@ test('getLocalPageInfo resolves with page', function(t) {
 
   api.getLocalPageInfo()
   .then(actual => {
-    t.deepEqual(actual, expected);
-    t.equal(sendMessageSpy.args[0][0], currentTab.id);
-    t.deepEqual(
-      sendMessageSpy.args[0][1],
-      {
-        from: 'popup',
-        type: 'queryForPage'
-      }
-    );
+    t.deepEqual(actual, expectedPage);
+    t.deepEqual(sendMessageSpy.args[0][0], expectedMessageToSend);
     end(t);
   })
   .catch(err => {
@@ -218,7 +220,7 @@ test('getLocalPageInfo resolves with page', function(t) {
   });
 });
 
-test('getLocalPageInfo rejects if error', function(t) {
+test('getLocalPageInfo rejects if error while sending', function(t) {
   var expected = { msg: 'sendMessage was wrong' };
 
   var getActiveTabSpy = sinon.stub().rejects(expected);
@@ -285,6 +287,40 @@ test('openCachedPage rejects if send message rejects', function(t) {
   })
   .catch(actual => {
     t.deepEqual(actual, expected);
+    end(t);
+  });
+});
+
+test('getLocalPageInfo rejects if error during query', function(t) {
+  var currentTab = {
+    url: 'http://tyrionrules.com',
+    id: 2222
+  };
+  var expectedMessageToReceive = { 
+    status: 'error',
+    result: { msg: 'error occurred during query, old chap' }
+  };
+  var expectedError = expectedMessageToReceive.result;
+
+  var getActiveTabSpy = sinon.stub().resolves(currentTab);
+  var sendMessageSpy = sinon.stub().callsArgWith(1, expectedMessageToReceive);
+
+  proxyquireApi({
+    '../chrome-apis/runtime': {
+      sendMessage: sendMessageSpy
+    },
+    '../util/util': {
+      getActiveTab: getActiveTabSpy
+    }
+  });
+
+  api.getLocalPageInfo()
+  .then(actual => {
+    t.fail(actual);
+    end(t);
+  })
+  .catch(actual => {
+    t.deepEqual(actual, expectedError);
     end(t);
   });
 });

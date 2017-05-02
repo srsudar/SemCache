@@ -73,6 +73,10 @@ exports.queryForPage = function(tabId, url) {
           path: 'images/cloud-off-24.png',
           tabId: tabId
         });
+        // Send the message to the saved tab. However, the contentscript for
+        // the given tab isn't guaranteed to be loaded at this point, so it's
+        // possible that this won't be persisted. The icon update always seems
+        // to work, however.
         tabs.sendMessage(
           tabId,
           {
@@ -114,6 +118,47 @@ exports.isNavOfInterest = function(details) {
 };
 
 /**
+ * Query for a page and respond with the local page info via a callback.
+ *
+ * Upon completion of the query the 
+ *
+ * @param {Object} params the parameters from the message. Should look like:
+ *   {
+ *     url: {string},
+ *     tabId: {integer}
+ *   }
+ * @param {Function} responseCallback invoked with the result of the query. The
+ * callback should expect a single argument of the form:
+ *   {
+ *     from: 'background-script',
+ *     status: {'success'|'failure'},
+ *     result: {<localPageInfo|null>|Error}
+ *   }
+ */
+exports.queryForPageWithCallback = function(params, responseCallback) {
+  exports.queryForPage(params.tabId, params.url)
+  .then(localPageInfo => {
+    var response = {
+      from: 'background-script',
+      status: 'success',
+      result: localPageInfo
+    };
+    responseCallback(response);
+  })
+  .catch(err => {
+    var response = {
+      from: 'background-script',
+      status: 'error',
+      result: err
+    };
+    responseCallback(response);
+  })
+  .catch(err => {
+    console.error('something went wrong sending message: ', err);
+  });
+};
+
+/**
  * A callback to be registered via chrome.runtime.onMessage.addListener.
  *
  * After being added, this function is responsible for responding to messages
@@ -129,10 +174,13 @@ exports.onMessageCallback = function(message, sender, sendResponse) {
       .then(response => {
         sendResponse(response);
       });
+    // Return true to indicate we are handling this asynchronously.
+    return true;
+  } else if (message.from === 'popup' && message.type === 'queryForPage') {
+    exports.queryForPageWithCallback(message.params, sendResponse);
+    return true;
   } else {
     console.warn('Received unrecognized message from self: ', message);
   }
-
-  // Return true to indicate we are handling this asynchronously.
   return true;
 };

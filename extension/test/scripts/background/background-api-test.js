@@ -238,9 +238,77 @@ test(
 
     t.equal(response, expected);
     t.equal(callCount, 1);
-    t.end();
-    resetApi();
+    end(t);
   };
 
   api.onMessageCallback(message, sender, callback);
+});
+
+test('onMessageCallback routes message for query from popup', function(t) {
+  var msg = {
+    from: 'popup',
+    type: 'queryForPage',
+    params: {
+      foo: 'bar'
+    }
+  };
+  var callback = sinon.stub();
+
+  var queryForPageWithCallbackSpy = sinon.stub();
+  api.queryForPageWithCallback = queryForPageWithCallbackSpy;
+
+  var actual = api.onMessageCallback(msg, null, callback);
+
+  // We should return true to inform that we are handling this asynchronously.
+  t.true(actual);
+  t.deepEqual(queryForPageWithCallbackSpy.args[0], [msg.params, callback]);
+  end(t);
+});
+
+test('queryForPageWithCallback handles success', function(t) {
+  var params = {
+    url: 'http://foo.com',
+    tabId: 123
+  };
+
+  var localPageInfo = { hello: 'i am the page' };
+  var expected = {
+    from: 'background-script',
+    status: 'success',
+    result: localPageInfo
+  };
+
+  api.queryForPage = sinon.stub().withArgs(params.tabId, params.url)
+    .resolves(localPageInfo);
+
+  function callback(actual) {
+    t.deepEqual(actual, expected);
+    end(t);
+  }
+
+  api.queryForPageWithCallback(params, callback);
+});
+
+test('queryForPageWithCallback handles failure', function(t) {
+  var params = {
+    url: 'http://bar.com',
+    tabId: 333
+  };
+
+  var error = { msg: 'I am an error' };
+  var expected = {
+    from: 'background-script',
+    status: 'error',
+    result: error
+  };
+
+  api.queryForPage = sinon.stub().withArgs(params.tabId, params.url)
+    .rejects(expected.result);
+
+  function callback(actual) {
+    t.deepEqual(actual, expected);
+    end(t);
+  }
+
+  api.queryForPageWithCallback(params, callback);
 });

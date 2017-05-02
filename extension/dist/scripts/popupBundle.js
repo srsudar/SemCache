@@ -35920,6 +35920,7 @@ exports.savePage = function(tab, mhtmlBlob) {
 var capture = require('../chrome-apis/page-capture');
 var datastore = require('../persistence/datastore');
 var messaging = require('../app-bridge/messaging');
+var runtime = require('../chrome-apis/runtime');
 var tabs = require('../chrome-apis/tabs');
 var util = require('../util/util');
 
@@ -36042,16 +36043,24 @@ exports.openCachedPage = function(page) {
 exports.getLocalPageInfo = function() {
   return new Promise(function(resolve, reject) {
     function onResponse(response) {
-      resolve(response);
+      if (response && response.status === 'success') {
+        resolve(response.result);
+      } else if (response.status === 'error') {
+        reject(response.result);
+      }
     }
 
     util.getActiveTab()
     .then(tab => {
-      tabs.sendMessage(
-        tab.id,
+      var params = {
+        url: tab.url,
+        tabId: tab.id
+      };
+      runtime.sendMessage(
         {
           from: 'popup',
-          type: 'queryForPage'
+          type: 'queryForPage',
+          params: params
         },
         onResponse
       );
@@ -36062,7 +36071,7 @@ exports.getLocalPageInfo = function() {
   });
 };
 
-},{"../app-bridge/messaging":51,"../chrome-apis/page-capture":52,"../chrome-apis/tabs":55,"../persistence/datastore":58,"../util/util":61}],60:[function(require,module,exports){
+},{"../app-bridge/messaging":51,"../chrome-apis/page-capture":52,"../chrome-apis/runtime":53,"../chrome-apis/tabs":55,"../persistence/datastore":58,"../util/util":61}],60:[function(require,module,exports){
 'use strict';
 
 var api = require('./popup-api');
