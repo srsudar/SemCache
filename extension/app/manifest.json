@@ -18,7 +18,8 @@
     {
       "matches": [
         "http://*/*",
-        "https://*/*"
+        "https://*/*",
+        "file://*/*"
       ],
       "js": [
         "scripts/contentscriptBundle.js"

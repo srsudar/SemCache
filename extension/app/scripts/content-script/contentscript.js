@@ -14,4 +14,5 @@ runtime.addOnMessageListener(api.onMessageHandler);
 util.getOnCompletePromise()
   .then(() => {
     evaluation.onPageLoadComplete();
+    api.annotateLocalLinks();
   });

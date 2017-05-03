@@ -78,7 +78,9 @@ module.exports = function (grunt) {
         files: ['Gruntfile.js']
       },
       styles: {
-        files: ['<%= config.app %>/styles/{,*/}*.css'],
+        files: [
+          '<%= config.app %>/styles/{,*/}*.css',
+        ],
         tasks: [],
         options: {
           livereload: true

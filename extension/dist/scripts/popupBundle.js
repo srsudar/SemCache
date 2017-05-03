@@ -35704,6 +35704,33 @@ exports.getFullLoadTime = function() {
   return result;
 };
 
+/**
+ * Annotate links that are locally available.
+ */
+exports.annotateLocalLinks = function() {
+  var anchors = document.querySelectorAll('a[href]');
+  // Now we have anchors that have hrefs. Annotate every other one.
+  for (var i = 0; i < anchors.length; i++) {
+    if (i % 2 === 0) {
+      continue;
+    }
+    // exports.annotateAnchorIsLocal(anchors[i]);
+  }
+};
+
+/**
+ * Annotate an individual anchor to indicate that it is available locally. The
+ * anchor is annotated in place.
+ *
+ * @param {DOMElement} anchor an anchor element as returned by
+ * document.querySelector
+ */
+exports.annotateAnchorIsLocal = function(anchor) {
+  // We'll style the link using a lightning bolt, known as 'zap'.
+  var zap = '\u26A1';
+  anchor.innerHTML = anchor.innerHTML + zap;
+};
+
 },{"../util/util":61}],58:[function(require,module,exports){
 /* globals Promise */
 'use strict';

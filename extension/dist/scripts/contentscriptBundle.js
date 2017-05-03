@@ -35404,6 +35404,7 @@ runtime.addOnMessageListener(api.onMessageHandler);
 util.getOnCompletePromise()
   .then(() => {
     evaluation.onPageLoadComplete();
+    api.annotateLocalLinks();
   });
 
 },{"../chrome-apis/runtime":51,"../util/util":57,"./cs-api":56,"./cs-evaluation":"cs-eval"}],56:[function(require,module,exports){
@@ -35497,6 +35498,33 @@ exports.getFullLoadTime = function() {
   var result = win.performance.timing.domComplete -
     win.performance.timing.navigationStart;
   return result;
+};
+
+/**
+ * Annotate links that are locally available.
+ */
+exports.annotateLocalLinks = function() {
+  var anchors = document.querySelectorAll('a[href]');
+  // Now we have anchors that have hrefs. Annotate every other one.
+  for (var i = 0; i < anchors.length; i++) {
+    if (i % 2 === 0) {
+      continue;
+    }
+    // exports.annotateAnchorIsLocal(anchors[i]);
+  }
+};
+
+/**
+ * Annotate an individual anchor to indicate that it is available locally. The
+ * anchor is annotated in place.
+ *
+ * @param {DOMElement} anchor an anchor element as returned by
+ * document.querySelector
+ */
+exports.annotateAnchorIsLocal = function(anchor) {
+  // We'll style the link using a lightning bolt, known as 'zap'.
+  var zap = '\u26A1';
+  anchor.innerHTML = anchor.innerHTML + zap;
 };
 
 },{"../util/util":57}],57:[function(require,module,exports){
