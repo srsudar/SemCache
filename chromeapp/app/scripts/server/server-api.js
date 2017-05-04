@@ -84,7 +84,7 @@ exports.getAccessUrlForCachedPage = function(fullPath) {
 };
 
 /**
- * Return a JSON object response for the all cached pages endpoing.
+ * Return a JSON object response for the all cached pages endpoint.
  *
  * @return {Promise.<Object, Error} Promise that resolves with an object like
  * the following:
@@ -100,6 +100,48 @@ exports.getResponseForAllCachedPages = function() {
       var result = {};
       result.metadata = exports.createMetadatObj();
       result.cachedPages = pages;
+      resolve(result);
+    })
+    .catch(err => {
+      reject(err);
+    });
+  });
+};
+
+/**
+ * Return a JSON object representing the digest of all pages available on this
+ * cache.
+ *
+ * @return {Promise.<Object, Error>} Promise that resolves with the response or
+ * rejects with an Error. The response will be like the following:
+ * {
+ *   metadata: Object,
+ *   digest:
+ *     [
+ *       {
+ *         fullUrl: full URL of the page that was captured
+ *         captureDate: the date the page was captured
+ *       },
+ *       ...
+ *     ]
+ * }
+ */
+exports.getResponseForAllPagesDigest = function() {
+  return new Promise(function(resolve, reject) {
+    datastore.getAllCachedPages()
+    .then(pages => {
+      var result = {};
+      result.metadata = exports.createMetadatObj();
+      
+      var pageInfos = [];
+      pages.forEach(page => {
+        var info = {};
+        info.fullUrl = page.metadata.fullUrl;
+        info.captureDate = page.captureDate;
+        pageInfos.push(info);
+      });
+
+      result.digest = pageInfos;
       resolve(result);
     })
     .catch(err => {
