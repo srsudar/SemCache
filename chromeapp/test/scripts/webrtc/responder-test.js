@@ -4,6 +4,7 @@ var test = require('tape');
 var sinon = require('sinon');
 var proxyquire = require('proxyquire');
 require('sinon-as-promised');
+
 var responder = require('../../../app/scripts/webrtc/responder');
 
 /**
@@ -18,6 +19,17 @@ function resetResponder() {
   responder = require('../../../app/scripts/webrtc/responder');
 }
 
+function proxyquireResponder(proxies) {
+  responder = proxyquire('../../../app/scripts/webrtc/responder', proxies);
+}
+
+function end(t) {
+  if (!t) { throw new Error('You forgot to pass t'); }
+  resetResponder();
+  t.end();
+}
+
+
 test('onList calls sendBuffer with binary contents', function(t) {
   var json = { page1: 'nyt', page2: 'wapo' };
   var channel = 'i am the channel';
@@ -30,26 +42,21 @@ test('onList calls sendBuffer with binary contents', function(t) {
   var createCcServerSpy = sinon.stub().withArgs(channel)
     .returns(ccServerSpy);
 
-  responder = proxyquire(
-    '../../../app/scripts/webrtc/responder',
-    {
-      '../server/server-api': {
-        getResponseForAllCachedPages: getResponseForAllCachedPagesSpy
-      }
+  proxyquireResponder({
+    '../server/server-api': {
+      getResponseForAllCachedPages: getResponseForAllCachedPagesSpy
     }
-  );
+  });
   responder.createCcServer = createCcServerSpy;
 
   responder.onList(channel)
   .then(() => {
     t.deepEqual(ccServerSpy.sendBuffer.args[0], [buffer]);
-    t.end();
-    resetResponder();
+    end(t);
   })
   .catch(err => {
     t.fail(err);
-    t.end();
-    resetResponder();
+    end(t);
   });
 });
 
@@ -58,25 +65,20 @@ test('onList rejects with error', function(t) {
   var expected = { error: 'went south' };
   var getResponseForAllCachedPagesSpy = sinon.stub().rejects(expected);
 
-  responder = proxyquire(
-    '../../../app/scripts/webrtc/responder',
-    {
-      '../server/server-api': {
-        getResponseForAllCachedPages: getResponseForAllCachedPagesSpy
-      }
+  proxyquireResponder({
+    '../server/server-api': {
+      getResponseForAllCachedPages: getResponseForAllCachedPagesSpy
     }
-  );
+  });
 
   responder.onList(channel)
   .then(res => {
     t.fail(res);
-    t.end();
-    resetResponder();
+    end(t);
   })
   .catch(actual => {
     t.deepEqual(actual, expected);
-    t.end();
-    resetResponder();
+    end(t);
   });
 });
 
@@ -99,30 +101,25 @@ test('onFile calls sendBuffer with file contents', function(t) {
   var getFileContentsFromNameSpy = sinon.stub().withArgs(fileName)
     .resolves(buff);
 
-  responder = proxyquire(
-    '../../../app/scripts/webrtc/responder',
-    {
-      '../persistence/file-system': {
-        getFileContentsFromName: getFileContentsFromNameSpy
-      },
-      '../server/server-api': {
-        getCachedFileNameFromPath: getCachedFileNameFromPathSpy
-      }
+  proxyquireResponder({
+    '../persistence/file-system': {
+      getFileContentsFromName: getFileContentsFromNameSpy
+    },
+    '../server/server-api': {
+      getCachedFileNameFromPath: getCachedFileNameFromPathSpy
     }
-  );
+  });
   responder.createCcServer = createCcServerSpy;
 
   responder.onFile(channel, msg)
   .then(() => {
     t.deepEqual(createCcServerSpy.args[0], [channel]);
     t.deepEqual(sendBufferSpy.args[0], [buff]);
-    t.end();
-    resetResponder();
+    end(t);
   })
   .catch(err => {
     t.fail(err);
-    t.end();
-    resetResponder();
+    end(t);
   });
 });
 
@@ -141,31 +138,26 @@ test('onFile rejects with error', function(t) {
   var getFileContentsFromNameSpy = sinon.stub().withArgs(fileName)
     .rejects(expected);
 
-  responder = proxyquire(
-    '../../../app/scripts/webrtc/responder',
-    {
-      '../persistence/file-system': {
-        getFileContentsFromName: getFileContentsFromNameSpy
-      },
-      '../server/server-api': {
-        getCachedFileNameFromPath: getCachedFileNameFromPathSpy
-      }
+  proxyquireResponder({
+    '../persistence/file-system': {
+      getFileContentsFromName: getFileContentsFromNameSpy
+    },
+    '../server/server-api': {
+      getCachedFileNameFromPath: getCachedFileNameFromPathSpy
     }
-  );
+  });
   responder.createCcServer = sinon.stub().withArgs(channel)
     .returns(serverMock);
 
   responder.onFile(channel, msg)
   .then(res => {
     t.fail(res);
-    t.end();
-    resetResponder();
+    end(t);
   })
   .catch(actual => {
     t.equal(sendErrorMock.args[0][0], expected);
     t.equal(actual, expected);
-    t.end();
-    resetResponder();
+    end(t);
   });
 });
 
@@ -182,15 +174,12 @@ test('onDataChannelMessageHandler routes correctly', function(t) {
   var onListSpy = sinon.stub();
   var onFileSpy = sinon.stub();
 
-  responder = proxyquire(
-    '../../../app/scripts/webrtc/responder',
-    {
-      './message': {
-        isList: isListSpy,
-        isFile: isFileSpy
-      }
+  proxyquireResponder({
+    './message': {
+      isList: isListSpy,
+      isFile: isFileSpy
     }
-  );
+  });
   responder.onList = onListSpy;
   responder.onFile = onFileSpy;
 
@@ -214,9 +203,7 @@ test('onDataChannelMessageHandler routes correctly', function(t) {
   t.equal(onFileSpy.callCount, 1);
   t.deepEqual(onFileSpy.args[0], [channel, msg]);
 
-  resetResponder();
-
-  t.end();
+  end(t);
 });
 
 test('onDataChannelHandler adds onmessage handler to channels', function(t) {
@@ -233,6 +220,57 @@ test('onDataChannelHandler adds onmessage handler to channels', function(t) {
   channel.onmessage(msgEvent);
 
   t.deepEqual(onDataChannelMessageHandlerSpy.args[0], [channel, msgEvent]);
-  t.end();
-  resetResponder();
+  end(t);
+});
+
+test('onDigest calls sendBuffer with binary contents', function(t) {
+  var json = { page1: 'woot', page2: 'boo' };
+  var channel = 'i am the channel';
+  var buffer = Buffer.from(JSON.stringify(json));
+  var getResponseForAllPagesDigestSpy = sinon.stub().resolves(json);
+
+  var ccServerSpy = sinon.stub();
+  ccServerSpy.sendBuffer = sinon.stub();
+
+  var createCcServerSpy = sinon.stub().withArgs(channel)
+    .returns(ccServerSpy);
+
+  proxyquireResponder({
+    '../server/server-api': {
+      getResponseForAllPagesDigest: getResponseForAllPagesDigestSpy
+    }
+  });
+  responder.createCcServer = createCcServerSpy;
+
+  responder.onDigest(channel)
+  .then(() => {
+    t.deepEqual(ccServerSpy.sendBuffer.args[0], [buffer]);
+    end(t);
+  })
+  .catch(err => {
+    t.fail(err);
+    end(t);
+  });
+});
+
+test('onDigest rejects with error', function(t) {
+  var channel = 'i am the channel';
+  var expected = { error: 'went south' };
+  var getResponseForAllPagesDigestSpy = sinon.stub().rejects(expected);
+
+  proxyquireResponder({
+    '../server/server-api': {
+      getResponseForAllPagesDigest: getResponseForAllPagesDigestSpy
+    }
+  });
+
+  responder.onDigest(channel)
+  .then(res => {
+    t.fail(res);
+    end(t);
+  })
+  .catch(actual => {
+    t.deepEqual(actual, expected);
+    end(t);
+  });
 });

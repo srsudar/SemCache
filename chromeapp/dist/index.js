@@ -45497,6 +45497,18 @@ exports.HttpPeerAccessor.prototype.getList = function(params) {
   });
 };
 
+/**
+ * Retrieve the list of cached pages available in this cache.
+ *
+ * @param {Object} params parameter object as created by peer-interface/common
+ *
+ * @return {Promise.<Object, Error>} Promise that resolves with the digest
+ * response or rejects with an Error.
+ */
+exports.HttpPeerAccessor.prototype.getCacheDigest = function(params) {
+  console.log(params);
+};
+
 },{"../util":17}],12:[function(require,module,exports){
 'use strict';
 
@@ -45558,6 +45570,18 @@ exports.WebrtcPeerAccessor.prototype.getList = function(params) {
       reject(err);
     });
   });
+};
+
+/**
+ * Retrieve the list of cached pages available in this cache.
+ *
+ * @param {Object} params parameter object as created by peer-interface/common
+ *
+ * @return {Promise.<Object, Error>} Promise that resolves with the digest
+ * response or rejects with an Error.
+ */
+exports.WebrtcPeerAccessor.prototype.getCacheDigest = function(params) {
+  console.log(params);
 };
 
 },{"../util":17,"../webrtc/connection-manager":"cmgr"}],13:[function(require,module,exports){
@@ -45950,6 +45974,34 @@ _.extend(exports.ListCachedPagesHandler.prototype,
   WSC.BaseHandler.prototype
 );
 
+/**
+ * Handler for the JSON endpoint listing a digest overview of all pages in the
+ * cache.
+ */
+exports.FullDigestHandler = function() {
+  if (!WSC) {
+    console.warn('CachedPagesHandler: WSC global object not present');
+    return;
+  }
+  WSC.BaseHandler.prototype.constructor.call(this);
+};
+
+_.extend(exports.FullDigestHandler.prototype,
+  {
+    get: function() {
+      api.getResponseForAllPagesDigest()
+      .then(response => {
+        this.setHeader('content-type', 'text/json');
+        var encoder = new TextEncoder('utf-8');
+        var buffer = encoder.encode(JSON.stringify(response)).buffer;
+        this.write(buffer);
+        this.finish();
+      });
+    }
+  },
+  WSC.BaseHandler.prototype
+);
+
 exports.CachedPageHandler = function() {
   if (!WSC) {
     console.warn('CachedPagesHandler: WSC global object not present');
@@ -46140,6 +46192,7 @@ var VERSION = 0.0;
  */
 var PATH_LIST_PAGE_CACHE = 'list_pages';
 var PATH_GET_CACHED_PAGE = 'pages';
+var PATH_GET_PAGE_DIGEST = 'page_digest';
 /** The path we use for mimicking the list_pages endpoing during evaluation. */
 var PATH_EVAL_LIST_PAGE_CACHE = 'eval_list';
 var PATH_RECEIVE_WRTC_OFFER = 'receive_wrtc';
@@ -46170,6 +46223,7 @@ exports.getApiEndpoints = function() {
   return {
     pageCache: PATH_GET_CACHED_PAGE,
     listPageCache: PATH_LIST_PAGE_CACHE,
+    pageDigest: PATH_GET_PAGE_DIGEST,
     evalListPages: PATH_EVAL_LIST_PAGE_CACHE,
     receiveWrtcOffer: PATH_RECEIVE_WRTC_OFFER
   };
@@ -46208,7 +46262,7 @@ exports.getAccessUrlForCachedPage = function(fullPath) {
 };
 
 /**
- * Return a JSON object response for the all cached pages endpoing.
+ * Return a JSON object response for the all cached pages endpoint.
  *
  * @return {Promise.<Object, Error} Promise that resolves with an object like
  * the following:
@@ -46224,6 +46278,48 @@ exports.getResponseForAllCachedPages = function() {
       var result = {};
       result.metadata = exports.createMetadatObj();
       result.cachedPages = pages;
+      resolve(result);
+    })
+    .catch(err => {
+      reject(err);
+    });
+  });
+};
+
+/**
+ * Return a JSON object representing the digest of all pages available on this
+ * cache.
+ *
+ * @return {Promise.<Object, Error>} Promise that resolves with the response or
+ * rejects with an Error. The response will be like the following:
+ * {
+ *   metadata: Object,
+ *   digest:
+ *     [
+ *       {
+ *         fullUrl: full URL of the page that was captured
+ *         captureDate: the date the page was captured
+ *       },
+ *       ...
+ *     ]
+ * }
+ */
+exports.getResponseForAllPagesDigest = function() {
+  return new Promise(function(resolve, reject) {
+    datastore.getAllCachedPages()
+    .then(pages => {
+      var result = {};
+      result.metadata = exports.createMetadatObj();
+      
+      var pageInfos = [];
+      pages.forEach(page => {
+        var info = {};
+        info.fullUrl = page.metadata.fullUrl;
+        info.captureDate = page.captureDate;
+        pageInfos.push(info);
+      });
+
+      result.digest = pageInfos;
       resolve(result);
     })
     .catch(err => {
@@ -47220,6 +47316,30 @@ exports.onDataChannelMessageHandler = function(channel, event) {
 exports.onList = function(channel) {
   return new Promise(function(resolve, reject) {
     serverApi.getResponseForAllCachedPages()
+    .then(json => {
+      var jsonBuff = Buffer.from(JSON.stringify(json));
+      var ccServer = exports.createCcServer(channel);
+      ccServer.sendBuffer(jsonBuff);
+      resolve();
+    })
+    .catch(err => {
+      reject(err);
+    });
+  });
+};
+
+/**
+ * Handler that responds to a request for a digest of available files.
+ *
+ * @param {RTCDataChannel} channel the data channel on which to send the
+ * response
+ *
+ * @return {Promise.<undefined, Error>} Promise that returns after sending has
+ * begun
+ */
+exports.onDigest = function(channel) {
+  return new Promise(function(resolve, reject) {
+    serverApi.getResponseForAllPagesDigest()
     .then(json => {
       var jsonBuff = Buffer.from(JSON.stringify(json));
       var ccServer = exports.createCcServer(channel);
@@ -82746,6 +82866,10 @@ exports.start = function(host, port) {
     [
       endpoints.pageCache,
       handlers.CachedPageHandler
+    ],
+    [
+      endpoints.pageDigest,
+      handlers.FullDigestHandler
     ],
     [
       endpoints.evalListPages,

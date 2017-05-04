@@ -42,6 +42,34 @@ _.extend(exports.ListCachedPagesHandler.prototype,
   WSC.BaseHandler.prototype
 );
 
+/**
+ * Handler for the JSON endpoint listing a digest overview of all pages in the
+ * cache.
+ */
+exports.FullDigestHandler = function() {
+  if (!WSC) {
+    console.warn('CachedPagesHandler: WSC global object not present');
+    return;
+  }
+  WSC.BaseHandler.prototype.constructor.call(this);
+};
+
+_.extend(exports.FullDigestHandler.prototype,
+  {
+    get: function() {
+      api.getResponseForAllPagesDigest()
+      .then(response => {
+        this.setHeader('content-type', 'text/json');
+        var encoder = new TextEncoder('utf-8');
+        var buffer = encoder.encode(JSON.stringify(response)).buffer;
+        this.write(buffer);
+        this.finish();
+      });
+    }
+  },
+  WSC.BaseHandler.prototype
+);
+
 exports.CachedPageHandler = function() {
   if (!WSC) {
     console.warn('CachedPagesHandler: WSC global object not present');

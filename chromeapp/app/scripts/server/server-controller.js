@@ -53,6 +53,10 @@ exports.start = function(host, port) {
       handlers.CachedPageHandler
     ],
     [
+      endpoints.pageDigest,
+      handlers.FullDigestHandler
+    ],
+    [
       endpoints.evalListPages,
       evalHandlers.EvaluationHandler
     ],

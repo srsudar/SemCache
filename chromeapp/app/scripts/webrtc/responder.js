@@ -74,6 +74,30 @@ exports.onList = function(channel) {
 };
 
 /**
+ * Handler that responds to a request for a digest of available files.
+ *
+ * @param {RTCDataChannel} channel the data channel on which to send the
+ * response
+ *
+ * @return {Promise.<undefined, Error>} Promise that returns after sending has
+ * begun
+ */
+exports.onDigest = function(channel) {
+  return new Promise(function(resolve, reject) {
+    serverApi.getResponseForAllPagesDigest()
+    .then(json => {
+      var jsonBuff = Buffer.from(JSON.stringify(json));
+      var ccServer = exports.createCcServer(channel);
+      ccServer.sendBuffer(jsonBuff);
+      resolve();
+    })
+    .catch(err => {
+      reject(err);
+    });
+  });
+};
+
+/**
  * Handler that responds to a request for a file.
  *
  * Sends the contents of the file to the peer.

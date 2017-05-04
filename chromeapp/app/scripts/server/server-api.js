@@ -16,6 +16,7 @@ var VERSION = 0.0;
  */
 var PATH_LIST_PAGE_CACHE = 'list_pages';
 var PATH_GET_CACHED_PAGE = 'pages';
+var PATH_GET_PAGE_DIGEST = 'page_digest';
 /** The path we use for mimicking the list_pages endpoing during evaluation. */
 var PATH_EVAL_LIST_PAGE_CACHE = 'eval_list';
 var PATH_RECEIVE_WRTC_OFFER = 'receive_wrtc';
@@ -46,6 +47,7 @@ exports.getApiEndpoints = function() {
   return {
     pageCache: PATH_GET_CACHED_PAGE,
     listPageCache: PATH_LIST_PAGE_CACHE,
+    pageDigest: PATH_GET_PAGE_DIGEST,
     evalListPages: PATH_EVAL_LIST_PAGE_CACHE,
     receiveWrtcOffer: PATH_RECEIVE_WRTC_OFFER
   };
