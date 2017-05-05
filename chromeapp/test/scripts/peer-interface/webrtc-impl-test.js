@@ -29,10 +29,16 @@ function resetWebrtcImpl() {
   webrtcImpl = require('../../../app/scripts/peer-interface/webrtc-impl');
 }
 
+function end(t) {
+  if (!t) { throw new Error('You forgot to pass t'); }
+  t.end();
+  resetWebrtcImpl();
+}
+
 test('can create PeerAccessor', function(t) {
   var pa = new webrtcImpl.WebrtcPeerAccessor();
   t.notEqual(null, pa);
-  t.end();
+  end(t);
 });
 
 test('getFileBlob resolves with peerConnection.getFile', function(t) {
@@ -64,13 +70,11 @@ test('getFileBlob resolves with peerConnection.getFile', function(t) {
   .then(actual => {
     t.equal(actual, expected);
     t.deepEqual(getOrCreateConnectionSpy.args[0], [ipaddr, port]);
-    t.end();
-    resetWebrtcImpl();
+    end(t);
   })
   .catch(err => {
     t.fail(err);
-    t.end();
-    resetWebrtcImpl();
+    end(t);
   });
 });
 
@@ -88,13 +92,11 @@ test('getFileBlob rejects with error', function(t) {
   peerAccessor.getFileBlob({})
   .then(res => {
     t.fail(res);
-    t.end();
-    resetWebrtcImpl();
+    end(t);
   })
   .catch(actual => {
     t.equal(actual, expected);
-    t.end();
-    resetWebrtcImpl();
+    end(t);
   });
 });
 
@@ -144,12 +146,62 @@ test('getList rejects with error', function(t) {
   peerAccessor.getList({})
   .then(res => {
     t.fail(res);
-    t.end();
-    resetWebrtcImpl();
+    end(t);
   })
   .catch(actual => {
     t.equal(actual, expected);
-    t.end();
-    resetWebrtcImpl();
+    end(t);
+  });
+});
+
+test('getCacheDigest resolves with json', function(t) {
+  var expected = { digest: 'lots of pages in this digest' };
+  var ipaddr = '4.3.2.1';
+  var port = 9876;
+  var peerConn = sinon.stub();
+  peerConn.getCacheDigest = sinon.stub().resolves(expected);
+
+  var getOrCreateConnectionSpy = sinon.stub().withArgs(ipaddr, port)
+    .resolves(peerConn);
+  
+  proxyquireWebrtcImpl({
+    '../webrtc/connection-manager': {
+      getOrCreateConnection: getOrCreateConnectionSpy
+    }
+  });
+  var params = common.createListParams(ipaddr, port, 'listurl');
+
+  var peerAccessor = new webrtcImpl.WebrtcPeerAccessor();
+  peerAccessor.getCacheDigest(params)
+  .then(actual => {
+    t.equal(actual, expected);
+    t.deepEqual(getOrCreateConnectionSpy.args[0], [ipaddr, port]);
+    end(t);
+  })
+  .catch(err => {
+    t.fail(err);
+    end(t);
+  });
+});
+
+test('getCacheDigest rejects with error', function(t) {
+  var expected = { error: 'gone so wrong' };
+  var getOrCreateConnectionSpy = sinon.stub().rejects(expected);
+  
+  proxyquireWebrtcImpl({
+    '../webrtc/connection-manager': {
+      getOrCreateConnection: getOrCreateConnectionSpy
+    }
+  });
+
+  var peerAccessor = new webrtcImpl.WebrtcPeerAccessor();
+  peerAccessor.getCacheDigest({})
+  .then(res => {
+    t.fail(res);
+    end(t);
+  })
+  .catch(actual => {
+    t.equal(actual, expected);
+    end(t);
   });
 });

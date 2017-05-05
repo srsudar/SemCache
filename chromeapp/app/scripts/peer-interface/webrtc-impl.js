@@ -59,3 +59,26 @@ exports.WebrtcPeerAccessor.prototype.getList = function(params) {
     });
   });
 };
+
+/**
+ * Retrieve the list of cached pages available in this cache.
+ *
+ * @param {Object} params parameter object as created by peer-interface/common
+ *
+ * @return {Promise.<Object, Error>} Promise that resolves with the digest
+ * response or rejects with an Error.
+ */
+exports.WebrtcPeerAccessor.prototype.getCacheDigest = function(params) {
+  return new Promise(function(resolve, reject) {
+    cmgr.getOrCreateConnection(params.ipAddress, params.port)
+    .then(peerConnection => {
+      return peerConnection.getCacheDigest();
+    })
+    .then(json => {
+      resolve(json);
+    })
+    .catch(err => {
+      reject(err);
+    });
+  });
+};

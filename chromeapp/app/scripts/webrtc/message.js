@@ -16,9 +16,10 @@
 
 exports.TYPE_LIST = 'list';
 exports.TYPE_FILE = 'file';
+exports.TYPE_DIGEST = 'digest';
 
 /** Valid types of request messages. */
-var VALID_TYPES = [exports.TYPE_LIST, exports.TYPE_FILE];
+var VALID_TYPES = [exports.TYPE_LIST, exports.TYPE_FILE, exports.TYPE_DIGEST];
 
 /**
  * An increasing suffix of numbers to ensure we create unique channel names.
@@ -49,6 +50,13 @@ exports.createChannelName = function() {
  */
 exports.createListMessage = function() {
   return exports.createMessage(exports.TYPE_LIST);
+};
+
+/**
+ * @return {Object}
+ */
+exports.createDigestMessage = function() {
+  return exports.createMessage(exports.TYPE_DIGEST);
 };
 
 /**
@@ -98,4 +106,13 @@ exports.isList = function(msg) {
  */
 exports.isFile = function(msg) {
   return msg.type && msg.type === exports.TYPE_FILE;
+};
+
+/**
+ * @param {Object} msg
+ *
+ * @return {boolean}
+ */
+exports.isDigest = function(msg) {
+  return msg.type && msg.type === exports.TYPE_DIGEST;
 };

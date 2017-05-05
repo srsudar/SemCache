@@ -4,11 +4,12 @@ require('sinon-as-promised');
 
 var common = require('../../../app/scripts/peer-interface/common');
 
-function createExpectedList(ipaddr, port, listUrl) {
+function createExpectedList(ipaddr, port, listUrl, digestUrl) {
   return {
     ipAddress: ipaddr,
     port: port,
-    listUrl: listUrl
+    listUrl: listUrl,
+    digestUrl: digestUrl
   };
 }
 
@@ -24,7 +25,8 @@ test('createListParams correct when all present', function(t) {
   var ipaddr = '1.2.3.4';
   var port = 1111;
   var listUrl = 'list';
-  var expected = createExpectedList(ipaddr, port, listUrl);
+  var digestUrl = 'http://1.2.3.4:1111/page_digest';
+  var expected = createExpectedList(ipaddr, port, listUrl, digestUrl);
 
   var actual = common.createListParams(ipaddr, port, listUrl);
   t.deepEqual(actual, expected);
@@ -33,7 +35,8 @@ test('createListParams correct when all present', function(t) {
 
 test('createListParams correct when just listUrl present', function(t) {
   var listUrl = 'http://1.2.3.4:1111';
-  var expected = createExpectedList('1.2.3.4', 1111, listUrl);
+  var digestUrl = 'http://1.2.3.4:1111/page_digest';
+  var expected = createExpectedList('1.2.3.4', 1111, listUrl, digestUrl);
   var actual = common.createListParams(null, null, listUrl);
   t.deepEqual(actual, expected);
   t.end();
@@ -42,7 +45,8 @@ test('createListParams correct when just listUrl present', function(t) {
 test('createListParams correct when no listUrl present', function(t) {
   var ipaddr = '8.7.6.5';
   var port = 55;
-  var expected = createExpectedList(ipaddr, port, null);
+  var digestUrl = 'http://8.7.6.5:55/page_digest';
+  var expected = createExpectedList(ipaddr, port, null, digestUrl);
   var actual = common.createListParams(ipaddr, port, null);
   t.deepEqual(actual, expected);
   t.end();

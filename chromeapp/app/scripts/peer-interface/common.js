@@ -7,6 +7,12 @@ var util = require('../util');
  */
 
 /**
+ * The path to the HTTP endpoint that serves the digest. Should match the value
+ * in the server/server-api module.
+ */
+var PATH_GET_PAGE_DIGEST = 'page_digest';
+
+/**
  * Returns the IP address, extracting if necessary.
  *
  * @param {string} ipaddr
@@ -39,6 +45,14 @@ function getPort(port, url) {
 }
 
 /**
+ * Return the path to the endpoint providing a page digest. Does not include an 
+ * IP or port, as well as no leading/trailing slashes.
+ */
+exports.getDigestPath = function() {
+  return PATH_GET_PAGE_DIGEST;
+};
+
+/**
  * Create parameters for a PeerAccessor getList call. If ipaddr or port is
  * missing, tries to interpolate them from listUrl.
  *
@@ -52,10 +66,16 @@ function getPort(port, url) {
 exports.createListParams = function(ipaddr, port, listUrl) {
   ipaddr = getIpAddress(ipaddr, listUrl);
   port = getPort(port, listUrl);
+
+  // Create the digest URL.
+  var digestUrl = ['http://', ipaddr, ':', port, '/', exports.getDigestPath()]
+    .join('');
+
   return {
     ipAddress: ipaddr,
     port: port,
-    listUrl: listUrl
+    listUrl: listUrl,
+    digestUrl: digestUrl
   };
 };
 

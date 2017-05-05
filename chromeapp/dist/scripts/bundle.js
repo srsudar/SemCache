@@ -1887,6 +1887,12 @@ var util = require('../util');
  */
 
 /**
+ * The path to the HTTP endpoint that serves the digest. Should match the value
+ * in the server/server-api module.
+ */
+var PATH_GET_PAGE_DIGEST = 'page_digest';
+
+/**
  * Returns the IP address, extracting if necessary.
  *
  * @param {string} ipaddr
@@ -1919,6 +1925,14 @@ function getPort(port, url) {
 }
 
 /**
+ * Return the path to the endpoint providing a page digest. Does not include an 
+ * IP or port, as well as no leading/trailing slashes.
+ */
+exports.getDigestPath = function() {
+  return PATH_GET_PAGE_DIGEST;
+};
+
+/**
  * Create parameters for a PeerAccessor getList call. If ipaddr or port is
  * missing, tries to interpolate them from listUrl.
  *
@@ -1932,10 +1946,16 @@ function getPort(port, url) {
 exports.createListParams = function(ipaddr, port, listUrl) {
   ipaddr = getIpAddress(ipaddr, listUrl);
   port = getPort(port, listUrl);
+
+  // Create the digest URL.
+  var digestUrl = ['http://', ipaddr, ':', port, '/', exports.getDigestPath()]
+    .join('');
+
   return {
     ipAddress: ipaddr,
     port: port,
-    listUrl: listUrl
+    listUrl: listUrl,
+    digestUrl: digestUrl
   };
 };
 
@@ -2028,7 +2048,18 @@ exports.HttpPeerAccessor.prototype.getList = function(params) {
  * response or rejects with an Error.
  */
 exports.HttpPeerAccessor.prototype.getCacheDigest = function(params) {
-  console.log(params);
+  return new Promise(function(resolve, reject) {
+    util.fetch(params.digestUrl)
+    .then(response => {
+      return response.json();
+    })
+    .then(json => {
+      resolve(json);
+    })
+    .catch(err => {
+      reject(err);
+    });
+  });
 };
 
 },{"../util":17}],12:[function(require,module,exports){
@@ -2103,7 +2134,18 @@ exports.WebrtcPeerAccessor.prototype.getList = function(params) {
  * response or rejects with an Error.
  */
 exports.WebrtcPeerAccessor.prototype.getCacheDigest = function(params) {
-  console.log(params);
+  return new Promise(function(resolve, reject) {
+    cmgr.getOrCreateConnection(params.ipAddress, params.port)
+    .then(peerConnection => {
+      return peerConnection.getCacheDigest();
+    })
+    .then(json => {
+      resolve(json);
+    })
+    .catch(err => {
+      reject(err);
+    });
+  });
 };
 
 },{"../util":17,"../webrtc/connection-manager":"cmgr"}],13:[function(require,module,exports){
@@ -3356,9 +3398,10 @@ exports.createContinueMessage = function() {
 
 exports.TYPE_LIST = 'list';
 exports.TYPE_FILE = 'file';
+exports.TYPE_DIGEST = 'digest';
 
 /** Valid types of request messages. */
-var VALID_TYPES = [exports.TYPE_LIST, exports.TYPE_FILE];
+var VALID_TYPES = [exports.TYPE_LIST, exports.TYPE_FILE, exports.TYPE_DIGEST];
 
 /**
  * An increasing suffix of numbers to ensure we create unique channel names.
@@ -3389,6 +3432,13 @@ exports.createChannelName = function() {
  */
 exports.createListMessage = function() {
   return exports.createMessage(exports.TYPE_LIST);
+};
+
+/**
+ * @return {Object}
+ */
+exports.createDigestMessage = function() {
+  return exports.createMessage(exports.TYPE_DIGEST);
 };
 
 /**
@@ -3438,6 +3488,15 @@ exports.isList = function(msg) {
  */
 exports.isFile = function(msg) {
   return msg.type && msg.type === exports.TYPE_FILE;
+};
+
+/**
+ * @param {Object} msg
+ *
+ * @return {boolean}
+ */
+exports.isDigest = function(msg) {
+  return msg.type && msg.type === exports.TYPE_DIGEST;
 };
 
 },{}],20:[function(require,module,exports){
@@ -3509,6 +3568,34 @@ exports.PeerConnection.prototype.getList = function() {
   var self = this;
   return new Promise(function(resolve, reject) {
     var msg = message.createListMessage();
+    var rawConnection = self.getRawConnection();
+
+    exports.sendAndGetResponse(rawConnection, msg)
+    .then(buff => {
+      var str = buff.toString();
+      var result = JSON.parse(str);
+      resolve(result);
+    })
+    .catch(err => {
+      reject(err);
+    });
+  });
+};
+
+/**
+ * Get the digest of page information from the peer.
+ *
+ * @return {Promise.<Object, Error>} Promise that resolves with the JSON object
+ * representing the digest or rejects with an Error.
+ */
+exports.PeerConnection.prototype.getCacheDigest = function() {
+  // For now we are going to assume that all messages can be held in memory.
+  // This means that a single message can be processed without worrying about
+  // piecing it together from other messages. It is a simplification, but one
+  // that seems reasonable.
+  var self = this;
+  return new Promise(function(resolve, reject) {
+    var msg = message.createDigestMessage();
     var rawConnection = self.getRawConnection();
 
     exports.sendAndGetResponse(rawConnection, msg)

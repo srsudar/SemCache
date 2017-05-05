@@ -29,6 +29,12 @@ function proxyquirePeerConn(proxies) {
   );
 }
 
+function end(t) {
+  if (!t) { throw new Error('You forgot to pass t'); }
+  t.end();
+  resetPeerConn();
+}
+
 test('getRawConnection returns constructor arg', function(t) {
   var expected = { foo: 'bar' };
   var pc = new peerConn.PeerConnection(expected);
@@ -72,13 +78,11 @@ test('getList issues call to peer', function(t) {
   pc.getList()
   .then(actual => {
     t.deepEqual(actual, expected);
-    t.end();
-    resetPeerConn();
+    end(t);
   })
   .catch(err => {
     t.fail(err);
-    t.end();
-    resetPeerConn();
+    end(t);
   });
 });
 
@@ -98,13 +102,64 @@ test('getList rejects if sendAndGetResponse rejects', function(t) {
   pc.getList()
   .then(res => {
     t.fail(res);
-    t.end();
-    resetPeerConn();
+    end(t);
   })
   .catch(actual => {
     t.equal(actual, expected);
-    t.end();
-    resetPeerConn();
+    end(t);
+  });
+});
+
+test('getCacheDigest issues call to peer', function(t) {
+  var rawConnection = sinon.stub();
+  rawConnection.on = sinon.stub();
+  var msg = 'digest message';
+
+  var expected = { response: 'from the server' };
+  var buffer = Buffer.from(JSON.stringify(expected));
+
+  proxyquirePeerConn({
+    './message': {
+      createDigestMessage: sinon.stub().returns(msg)
+    }
+  });
+  peerConn.sendAndGetResponse = sinon.stub().withArgs(rawConnection, msg)
+    .resolves(buffer);
+  
+  var pc = new peerConn.PeerConnection(rawConnection);
+
+  pc.getCacheDigest()
+  .then(actual => {
+    t.deepEqual(actual, expected);
+    end(t);
+  })
+  .catch(err => {
+    t.fail(err);
+    end(t);
+  });
+});
+
+test('getCacheDigest rejects if sendAndGetResponse rejects', function(t) {
+  var expected = { error: 'went wrong' };
+  proxyquirePeerConn({
+    './message': {
+      createDigestMessage: sinon.stub().throws(expected)
+    }
+  });
+
+  var rawConnection = sinon.stub();
+  rawConnection.on = sinon.stub();
+
+  var pc = new peerConn.PeerConnection(rawConnection);
+
+  pc.getCacheDigest()
+  .then(res => {
+    t.fail(res);
+    end(t);
+  })
+  .catch(actual => {
+    t.equal(actual, expected);
+    end(t);
   });
 });
 
@@ -128,13 +183,11 @@ test('getFile resolves with response from server', function(t) {
   pc.getFile()
   .then(actual => {
     t.deepEqual(actual, expected);
-    t.end();
-    resetPeerConn();
+    end(t);
   })
   .catch(err => {
     t.fail(err);
-    t.end();
-    resetPeerConn();
+    end(t);
   });
 });
 
@@ -155,12 +208,10 @@ test('getFile rejects if error', function(t) {
   pc.getFile()
   .then(res => {
     t.fail(res);
-    t.end();
-    resetPeerConn();
+    end(t);
   })
   .catch(actual => {
     t.deepEqual(actual, expected);
-    t.end();
-    resetPeerConn();
+    end(t);
   });
 });

@@ -29,10 +29,16 @@ function resetHttpImpl() {
   httpImpl = require('../../../app/scripts/peer-interface/http-impl');
 }
 
+function end(t) {
+  if (!t) { throw new Error('You forgot to pass t'); }
+  t.end();
+  resetHttpImpl();
+}
+
 test('can create PeerAccessor', function(t) {
   var peer = new httpImpl.HttpPeerAccessor();
   t.notEqual(null, peer);
-  t.end();
+  end(t);
 });
 
 test('getFileBlob resolves with blob', function(t) {
@@ -52,13 +58,11 @@ test('getFileBlob resolves with blob', function(t) {
   pa.getFileBlob(mhtmlUrl)
   .then(actual => {
     t.equal(actual, expected);
-    t.end();
-    resetHttpImpl();
+    end(t);
   })
   .catch(err => {
     t.fail(err);
-    t.end();
-    resetHttpImpl();
+    end(t);
   });
 });
 
@@ -77,13 +81,11 @@ test('getFileBlob rejects with error', function(t) {
   pa.getFileBlob(url)
   .then(res => {
     t.fail(res);
-    t.end();
-    resetHttpImpl();
+    end(t);
   })
   .catch(actual => {
     t.equal(actual, expected);
-    t.end();
-    resetHttpImpl();
+    end(t);
   });
 });
 
@@ -106,13 +108,11 @@ test('getList resolves with json', function(t) {
   peerAccessor.getList(params)
   .then(actual => {
     t.equal(actual, expected);
-    t.end();
-    resetHttpImpl();
+    end(t);
   })
   .catch(err => {
     t.fail(err);
-    t.end();
-    resetHttpImpl();
+    end(t);
   });
 });
 
@@ -130,12 +130,59 @@ test('getList rejects with error', function(t) {
   peerAccessor.getList({})
   .then(res => {
     t.fail(res);
-    t.end();
-    resetHttpImpl();
+    end(t);
   })
   .catch(actual => {
     t.equal(actual, expected);
-    t.end();
-    resetHttpImpl();
+    end(t);
+  });
+});
+
+test('getCacheDigest resolves with json', function(t) {
+  var digestUrl = 'http://1.2.3.4:22/page_digest';
+  var expected = { digest: 'lots of stuff' };
+  var response = sinon.stub();
+  response.json = sinon.stub().resolves(expected);
+
+  var params = { digestUrl: digestUrl };
+  var fetchSpy = sinon.stub().withArgs(digestUrl).resolves(response);
+  
+  proxyquireHttpImpl({
+    '../util': {
+      fetch: fetchSpy
+    }
+  });
+
+  var peerAccessor = new httpImpl.HttpPeerAccessor();
+  peerAccessor.getCacheDigest(params)
+  .then(actual => {
+    t.equal(actual, expected);
+    end(t);
+  })
+  .catch(err => {
+    t.fail(err);
+    end(t);
+  });
+});
+
+test('getCacheDigest rejects with error', function(t) {
+  var expected = { error: 'fetch done gone wrong' };
+  var fetchSpy = sinon.stub().rejects(expected);
+
+  proxyquireHttpImpl({
+    '../util': {
+      fetch: fetchSpy
+    }
+  });
+
+  var peerAccessor = new httpImpl.HttpPeerAccessor();
+  peerAccessor.getCacheDigest({})
+  .then(res => {
+    t.fail(res);
+    end(t);
+  })
+  .catch(actual => {
+    t.equal(actual, expected);
+    end(t);
   });
 });

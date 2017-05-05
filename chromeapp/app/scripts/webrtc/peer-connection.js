@@ -81,6 +81,34 @@ exports.PeerConnection.prototype.getList = function() {
 };
 
 /**
+ * Get the digest of page information from the peer.
+ *
+ * @return {Promise.<Object, Error>} Promise that resolves with the JSON object
+ * representing the digest or rejects with an Error.
+ */
+exports.PeerConnection.prototype.getCacheDigest = function() {
+  // For now we are going to assume that all messages can be held in memory.
+  // This means that a single message can be processed without worrying about
+  // piecing it together from other messages. It is a simplification, but one
+  // that seems reasonable.
+  var self = this;
+  return new Promise(function(resolve, reject) {
+    var msg = message.createDigestMessage();
+    var rawConnection = self.getRawConnection();
+
+    exports.sendAndGetResponse(rawConnection, msg)
+    .then(buff => {
+      var str = buff.toString();
+      var result = JSON.parse(str);
+      resolve(result);
+    })
+    .catch(err => {
+      reject(err);
+    });
+  });
+};
+
+/**
  * Get a file from the peer.
  *
  * @param {string} remotePath the identifier on the remote machine

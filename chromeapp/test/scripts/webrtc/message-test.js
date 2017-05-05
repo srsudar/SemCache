@@ -51,6 +51,12 @@ test('createListMessage returns type list', function(t) {
   t.end();
 });
 
+test('createDigestMessage returns type digest', function(t) {
+  var actual = message.createDigestMessage();
+  t.equal(actual.type, message.TYPE_DIGEST);
+  t.end();
+});
+
 test('createFileMessage returns with request information', function(t) {
   var path = 'path/to/file.mhtml';
   var actual = message.createFileMessage(path);
@@ -82,6 +88,19 @@ test('isFile correct', function(t) {
 
   obj.type = message.TYPE_FILE;
   t.true(message.isFile(obj));
+
+  t.end();
+});
+
+test('isDigest correct', function(t) {
+  var obj = {};
+
+  t.false(message.isDigest(obj));
+  obj.type = 'fake';
+  t.false(message.isDigest(obj));
+
+  obj.type = message.TYPE_DIGEST;
+  t.true(message.isDigest(obj));
 
   t.end();
 });
