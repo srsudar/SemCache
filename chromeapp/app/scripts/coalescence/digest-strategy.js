@@ -7,9 +7,6 @@ var peerIfMgr = require('../peer-interface/manager');
 
 /**
  * This module is responsible for the digest strategy of cache coalescence.
- *
- * The digest strategy is to obtain a list of all the available pages from
- * peers and check those lists.
  */
 
 /**
@@ -23,10 +20,27 @@ var IS_INITIALIZED = false;
 var IS_INITIALIZING = false;
 
 /**
+ * An implementation of the coalescence strategy API.
+ *
+ * The digest strategy is to obtain a list of all the available pages from
+ * peers and check those lists.
+ * @constructor
+ */
+exports.DigestStrategy = function DigestStrategy() {
+  if (!(this instanceof DigestStrategy)) {
+    throw new Error('DigestStrategy must be called with new');
+  }
+  // Don't like that we are basically exposing module-level state that isn't
+  // tied to this object, but going to leave it for now. This is basically
+  // giving an object-based API onto the global state, which is a bit ugly but
+  // I'm going to allow it for the near-term.
+};
+
+/**
  * Reset any state saved by this module
  */
-exports.reset = function() {
-  exports.setDigests([]);
+exports.DigestStrategy.prototype.reset = function() {
+  this.setDigests([]);
   IS_INITIALIZED = false;
   // If an initialization is in progress, this could not be a complete reset.
   IS_INITIALIZING = false;
@@ -37,7 +51,7 @@ exports.reset = function() {
  *
  * @param {Array.<Digest>} digests
  */
-exports.setDigests = function(digests) {
+exports.DigestStrategy.prototype.setDigests = function(digests) {
   DIGESTS = digests;
 };
 
@@ -46,7 +60,7 @@ exports.setDigests = function(digests) {
  *
  * @return {boolean} true if queries can be performed
  */
-exports.isInitialized = function() {
+exports.DigestStrategy.prototype.isInitialized = function() {
   return IS_INITIALIZED;
 };
 
@@ -55,7 +69,7 @@ exports.isInitialized = function() {
  *
  * @return {boolean}
  */
-exports.isInitializing = function() {
+exports.DigestStrategy.prototype.isInitializing = function() {
   return IS_INITIALIZING;
 };
 
@@ -65,12 +79,12 @@ exports.isInitializing = function() {
  * @return {Promise.<undefined, Error>} Promise that resolves when
  * initialization is complete.
  */
-exports.initialize = function() {
-  if (exports.isInitializing()) {
+exports.DigestStrategy.prototype.initialize = function() {
+  if (this.isInitializing()) {
     // no-op
     return Promise.resolve();
   }
-  if (exports.isInitialized()) {
+  if (this.isInitialized()) {
     // We're already initialized, just no-op.
     return Promise.resolve();
   }
@@ -81,15 +95,16 @@ exports.initialize = function() {
   // 4) Update our module data structures with this information
   // 5) Declare that we are initialized
   IS_INITIALIZING = true;
+  var that = this;
 
   return new Promise(function(resolve, reject) {
     dnssdSem.browseForSemCacheInstances()
     .then(peerInfos => {
       var peerAccessor = peerIfMgr.getPeerAccessor();
-      return exports.getAndProcessDigests(peerAccessor, peerInfos);
+      return that.getAndProcessDigests(peerAccessor, peerInfos);
     })
     .then(digests => {
-      exports.setDigests(digests);
+      that.setDigests(digests);
       IS_INITIALIZING = false;
       IS_INITIALIZED = true;
       resolve();
@@ -114,7 +129,9 @@ exports.initialize = function() {
  *
  * @return {Promise.<Array<Digest>>}
  */
-exports.getAndProcessDigests = function(peerInterface, peerInfos) {
+exports.DigestStrategy.prototype.getAndProcessDigests = function(
+  peerInterface, peerInfos
+) {
   // Query them, create digests for those that succeed.
   // Note that there is some trickiness here about the best strategy by which
   // to do this. If we want to avoid congestion, we might want to query them
@@ -166,8 +183,8 @@ exports.getAndProcessDigests = function(peerInterface, peerInfos) {
  *     url: [NetworkCachedPage, NetworkCachedPage],
  *   }
  */
-exports.performQuery = function(urls) {
-  if (!exports.isInitialized()) {
+exports.DigestStrategy.prototype.performQuery = function(urls) {
+  if (!this.isInitialized()) {
     console.warn('digest-strategy was queried but is not initialized');
   }
   return new Promise(function(resolve, reject) {

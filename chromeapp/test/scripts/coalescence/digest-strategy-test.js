@@ -5,7 +5,9 @@ var proxyquire = require('proxyquire');
 var sinon = require('sinon');
 require('sinon-as-promised');
 
-var digest = require('../../../app/scripts/coalescence/digest-strategy');
+var digestStrategy = require(
+  '../../../app/scripts/coalescence/digest-strategy'
+);
 var coalObjects = require('../../../app/scripts/coalescence/objects');
 var objects = require('../../../app/scripts/coalescence/objects');
 var pifCommon = require('../../../app/scripts/peer-interface/common');
@@ -19,11 +21,11 @@ function resetDigest() {
   delete require.cache[
     require.resolve('../../../app/scripts/coalescence/digest-strategy')
   ];
-  digest = require('../../../app/scripts/coalescence/digest-strategy');
+  digestStrategy = require('../../../app/scripts/coalescence/digest-strategy');
 }
 
 function proxyquireDigest(proxies) {
-  digest = proxyquire(
+  digestStrategy= proxyquire(
     '../../../app/scripts/coalescence/digest-strategy', proxies
   );
 }
@@ -82,6 +84,8 @@ test('initialize rejects if something goes wrong', function(t) {
     }
   });
 
+  var digest = new digestStrategy.DigestStrategy();
+
   t.false(digest.isInitializing());
   t.false(digest.isInitialized());
 
@@ -119,6 +123,9 @@ test('initialize resolves on success', function(t) {
       getPeerAccessor: sinon.stub().returns(peerAccessor)
     }
   });
+
+  var digest = new digestStrategy.DigestStrategy();
+
   digest.getAndProcessDigests = sinon.stub().withArgs(peerAccessor, peerInfos)
     .resolves(processedDigests);
   // Rather than use a stub to monitor whether or not the digests have been
@@ -169,6 +176,7 @@ test('getAndProcessDigests resolves all success', function(t) {
   };
 
   var expected = createProcessedDigests();
+  var digest = new digestStrategy.DigestStrategy();
 
   digest.getAndProcessDigests(peerInterface, peerInfos)
   .then(actual => {
@@ -202,6 +210,7 @@ test('getAndProcessDigests resolves last rejects', function(t) {
   };
 
   var expected = createProcessedDigests().slice(0, 1);
+  var digest = new digestStrategy.DigestStrategy();
 
   digest.getAndProcessDigests(peerInterface, peerInfos)
   .then(actual => {
@@ -234,6 +243,7 @@ test('getAndProcessDigests resolves all reject', function(t) {
   };
 
   var expected = [];
+  var digest = new digestStrategy.DigestStrategy();
 
   digest.getAndProcessDigests(peerInterface, peerInfos)
   .then(actual => {
@@ -253,6 +263,7 @@ test('performQuery returns empty array if no matches', function(t) {
   digest2.performQueryForPage = sinon.stub().returns(null);
 
   var digests = [digest1, digest2];
+  var digest = new digestStrategy.DigestStrategy();
   digest.setDigests(digests);
   digest.isInitialized = sinon.stub().returns(true);
 
@@ -359,6 +370,7 @@ test('performQuery correct with extant pages', function(t) {
   );
   
   var digests = [ digest1, digest2 ];
+  var digest = new digestStrategy.DigestStrategy();
   digest.setDigests(digests);
   digest.isInitialized = sinon.stub().returns(true);
 
@@ -380,6 +392,7 @@ test('performQuery rejects with Error', function(t) {
     performQueryForPage: sinon.stub().throws(expected)
   };
 
+  var digest = new digestStrategy.DigestStrategy();
   digest.setDigests([ digestStub ]);
 
   digest.performQuery([ 'http://woot.com' ])
@@ -402,6 +415,7 @@ test('reset restores state', function(t) {
       getPeerAccessor: sinon.stub().returns()
     }
   });
+  var digest = new digestStrategy.DigestStrategy();
   digest.getAndProcessDigests = sinon.stub().resolves(['a']);
   digest.setDigests = sinon.stub();
 

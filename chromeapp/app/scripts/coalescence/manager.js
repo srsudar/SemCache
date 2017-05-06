@@ -1,5 +1,7 @@
 'use strict';
 
+var stratDig = require('./digest-strategy');
+
 /**
  * The coalescence/manager module is the API callers should use to interact
  * with all content in a local network of collaborators. A single client might
@@ -18,6 +20,11 @@ exports.STRATEGIES = {
 };
 
 /**
+ * The current startegy for resolving coalescence requests.
+ */
+exports.CURRENT_STRATEGY = exports.STRATEGIES.digest;
+
+/**
  * Obtain access information for the given array of URLs. The result will be an
  * array of length <= urls.length. Only those that are available will be
  * present.
@@ -27,23 +34,28 @@ exports.STRATEGIES = {
  * @return {Promise.<Array.<NetworkCachedPage>, Error>} Promise that resolves
  * with an Array of information about the urls or rejects with an Error.
  */
-exports.getPageAccessInformation = function(urls) {
-  console.log(urls);
-}; 
+exports.queryForUrls = function(urls) {
+  return new Promise(function(resolve, reject) {
+    var strategy = exports.getStrategy();
+    strategy.initialize()
+    .then(() => {
+      return strategy.performQuery(urls);
+    })
+    .then(result => {
+      resolve(result);
+    })
+    .catch(err => {
+      reject(err);
+    });
+  });
+};
 
 /**
- * Query peers using the digest strategy.
+ * Get the implementation of the current coalescence strategy.
  *
- * @param {Array.<string>} urls Array of URLs for which to query
- *
- * @return {Promise.<Array.<NetworkCachedPage>, Error>} Promise that resolves
- * with an Array of information about the urls or rejects with an Error.
- */
-exports.queryForDigest = function(urls) {
-  // We basically want to say:
-  // 1) Can we perform the query right now or do we need updated peers?
-  // 2) Update the peers
-  // 3) Update the coalescer
-  // 4) Perform the query
-  console.log(urls);
+ * @return {DigestStrategy}
+ */ 
+exports.getStrategy = function() {
+  // Only one to return at the moment.
+  return new stratDig.DigestStrategy();
 };
