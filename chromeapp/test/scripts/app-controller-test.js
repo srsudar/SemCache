@@ -8,8 +8,6 @@ var testUtil = require('./test-util');
 
 var appc = require('../../app/scripts/app-controller');
 var ifCommon = require('../../app/scripts/peer-interface/common');
-var ifHttp = require('../../app/scripts/peer-interface/http-impl');
-var ifWebrtc = require('../../app/scripts/peer-interface/webrtc-impl');
 
 /**
  * Manipulating the object directly leads to polluting the require cache. Any
@@ -87,12 +85,14 @@ test('saveMhtmlAndOpen persists and opens', function(t) {
       './evaluation': {
         getNow: getNowStub,
         logTime: logTimeStub
+      },
+      './peer-interface/manager': {
+        getPeerAccessor: sinon.stub().returns(peerAccessorStub)
       }
     }
   );
   
   appc.getAbsPathToBaseDir = sinon.stub().returns(absPathToBaseDir);
-  appc.getPeerAccessor = sinon.stub().returns(peerAccessorStub);
 
   var captureUrl = 'the capture url';
   var captureDate = 'the date it was captured';
@@ -123,6 +123,8 @@ test('saveMhtmlAndOpen persists and opens', function(t) {
 
 test('saveMhtmlAndOpen rejects if error', function(t) {
   var expected = { error: 'went south' };
+  var peerAccessorStub = sinon.stub();
+  peerAccessorStub.getFileBlob = sinon.stub().resolves();
   proxyquireAppc({
     './persistence/datastore': {
       addPageToCache: sinon.stub().rejects(expected)
@@ -130,11 +132,11 @@ test('saveMhtmlAndOpen rejects if error', function(t) {
     './evaluation': {
       getNow: sinon.stub().returns(0),
       logTime: sinon.stub().returns(0)
+    },
+    './peer-interface/manager': {
+      getPeerAccessor: sinon.stub().returns(peerAccessorStub)
     }
   });
-  var peerAccessorStub = sinon.stub();
-  peerAccessorStub.getFileBlob = sinon.stub().resolves();
-  appc.getPeerAccessor = sinon.stub().returns(peerAccessorStub);
 
   appc.saveMhtmlAndOpen('url', 'capture', 'http://1.2.3.4:88')
   .then(res => {
@@ -167,8 +169,13 @@ test('getListFromService resolves with json', function(t) {
   var resolveCacheStub = sinon.stub().withArgs(serviceName)
     .resolves(cacheInfo);
 
+  proxyquireAppc({
+    './peer-interface/manager': {
+      getPeerAccessor: sinon.stub().returns(peerAccessorStub)
+    }
+  });
+
   appc.resolveCache = resolveCacheStub;
-  appc.getPeerAccessor = sinon.stub().returns(peerAccessorStub);
 
   appc.getListFromService(serviceName)
   .then(actual => {
@@ -186,9 +193,12 @@ test('getListFromService resolves with json', function(t) {
 test('getListFromService rejects with error', function(t) {
   var serviceName = 'hello.semcache.local';
   var expected = { error: 'getPeerAccessor failed' };
-  var peerAccessorStub = sinon.stub().throws(expected);
 
-  appc.getPeerAccessor = peerAccessorStub;
+  proxyquireAppc({
+    './peer-interface/manager': {
+      getPeerAccessor: sinon.stub().throws(expected)
+    }
+  });
 
   appc.getListFromService(serviceName)
   .then(res => {
@@ -799,44 +809,6 @@ test('resolveCache rejects if query fails', function(t) {
     t.end();
     resetAppController();
   });
-});
-
-test('getPeerInterface correct for http', function(t) {
-  proxyquireAppc({
-    './settings': {
-      getTransportMethod: sinon.stub().returns('http')
-    }
-  });
-
-  var actual = appc.getPeerAccessor();
-  t.true(actual instanceof ifHttp.HttpPeerAccessor);
-  t.end();
-  resetAppController();
-});
-
-test('getPeerInterface correct for webrtc', function(t) {
-  proxyquireAppc({
-    './settings': {
-      getTransportMethod: sinon.stub().returns('webrtc')
-    }
-  });
-
-  var actual = appc.getPeerAccessor();
-  t.true(actual instanceof ifWebrtc.WebrtcPeerAccessor);
-  t.end();
-  resetAppController();
-});
-
-test('getPeerInterface throws if unrecognized', function(t) {
-  proxyquireAppc({
-    './settings': {
-      getTransportMethod: sinon.stub().returns('I do not exist')
-    }
-  });
-
-  t.throws(appc.getPeerAccessor);
-  t.end();
-  resetAppController();
 });
 
 test('start rejects if error', function(t) {

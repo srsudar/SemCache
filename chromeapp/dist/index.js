@@ -43566,7 +43566,7 @@ exports.getRuntimeBare = function() {
   return chrome.runtime;
 };
 
-},{"chrome-promise":26}],3:[function(require,module,exports){
+},{"chrome-promise":27}],3:[function(require,module,exports){
 /* globals chrome */
 'use strict';
 
@@ -45458,7 +45458,7 @@ exports.createFileParams = function(ipaddr, port, fileUrl) {
   };
 };
 
-},{"../util":17}],11:[function(require,module,exports){
+},{"../util":18}],11:[function(require,module,exports){
 'use strict';
 
 var util = require('../util');
@@ -45540,7 +45540,35 @@ exports.HttpPeerAccessor.prototype.getCacheDigest = function(params) {
   });
 };
 
-},{"../util":17}],12:[function(require,module,exports){
+},{"../util":18}],12:[function(require,module,exports){
+'use strict';
+
+var settings = require('../settings');
+var ifHttp = require('./http-impl');
+var ifWebrtc = require('./webrtc-impl');
+
+/**
+ * Manages peer interfaces for the application.
+ */
+
+/**
+ * Create a PeerAccessor based on the configured settings.
+ *
+ * @return {HttpPeerAccessor|WebrtcPeerAccessor}
+ */
+exports.getPeerAccessor = function() {
+  var transportMethod = settings.getTransportMethod();
+  console.log(transportMethod);
+  if (transportMethod === 'http') {
+    return new ifHttp.HttpPeerAccessor(); 
+  } else if (transportMethod === 'webrtc') {
+    return new ifWebrtc.WebrtcPeerAccessor(); 
+  } else {
+    throw new Error('Unrecognized transport method: ' + transportMethod);
+  }
+};
+
+},{"../settings":"settings","./http-impl":11,"./webrtc-impl":13}],13:[function(require,module,exports){
 'use strict';
 
 var cmgr = require('../webrtc/connection-manager');
@@ -45626,7 +45654,7 @@ exports.WebrtcPeerAccessor.prototype.getCacheDigest = function(params) {
   });
 };
 
-},{"../util":17,"../webrtc/connection-manager":"cmgr"}],13:[function(require,module,exports){
+},{"../util":18,"../webrtc/connection-manager":"cmgr"}],14:[function(require,module,exports){
 /* globals Promise */
 'use strict';
 
@@ -45941,7 +45969,7 @@ exports.getCaptureDateFromName = function(name) {
   return result;
 };
 
-},{"../chrome-apis/chromep":2,"../server/server-api":16,"./file-system":"fileSystem","./file-system-util":"fsUtil"}],14:[function(require,module,exports){
+},{"../chrome-apis/chromep":2,"../server/server-api":17,"./file-system":"fileSystem","./file-system-util":"fsUtil"}],15:[function(require,module,exports){
 /* globals WSC, _, TextEncoder */
 'use strict';
 
@@ -45971,7 +45999,7 @@ _.extend(exports.EvaluationHandler.prototype, {
   }
 }, WSC.BaseHandler.prototype);
 
-},{"../evaluation":"eval"}],15:[function(require,module,exports){
+},{"../evaluation":"eval"}],16:[function(require,module,exports){
 /* globals WSC, RTCPeerConnection, RTCSessionDescription, RTCIceCandidate */
 'use strict';
 
@@ -46215,7 +46243,7 @@ _.extend(exports.WebRtcOfferHandler.prototype,
   WSC.BaseHandler.prototype
 );
 
-},{"../dnssd/binary-utils":"binaryUtils","../persistence/file-system":"fileSystem","../persistence/file-system-util":"fsUtil","../webrtc/connection-manager":"cmgr","../webrtc/responder":22,"./server-api":16,"underscore":39}],16:[function(require,module,exports){
+},{"../dnssd/binary-utils":"binaryUtils","../persistence/file-system":"fileSystem","../persistence/file-system-util":"fsUtil","../webrtc/connection-manager":"cmgr","../webrtc/responder":23,"./server-api":17,"underscore":40}],17:[function(require,module,exports){
 'use strict';
 
 /**
@@ -46382,7 +46410,7 @@ exports.getCachedFileNameFromPath = function(path) {
   return result;
 };
 
-},{"../app-controller":"appController","../persistence/datastore":13}],17:[function(require,module,exports){
+},{"../app-controller":"appController","../persistence/datastore":14}],18:[function(require,module,exports){
 'use strict';
 
 /**
@@ -46585,7 +46613,7 @@ exports.getBufferAsBlob = function(buff) {
   );
 };
 
-},{}],18:[function(require,module,exports){
+},{}],19:[function(require,module,exports){
 'use strict';
 
 var _ = require('underscore');
@@ -46857,7 +46885,7 @@ exports.createContinueMessage = function() {
   return { message: 'next' };
 };
 
-},{"./protocol":21,"buffer/":25,"underscore":39,"wolfy87-eventemitter":40}],19:[function(require,module,exports){
+},{"./protocol":22,"buffer/":26,"underscore":40,"wolfy87-eventemitter":41}],20:[function(require,module,exports){
 'use strict';
 
 /**
@@ -46977,7 +47005,7 @@ exports.isDigest = function(msg) {
   return msg.type && msg.type === exports.TYPE_DIGEST;
 };
 
-},{}],20:[function(require,module,exports){
+},{}],21:[function(require,module,exports){
 'use strict';
 
 var _ = require('underscore');
@@ -47146,7 +47174,7 @@ exports.sendAndGetResponse = function(pc, msg) {
   });
 };
 
-},{"./chunking-channel":18,"./message":19,"underscore":39,"wolfy87-eventemitter":40}],21:[function(require,module,exports){
+},{"./chunking-channel":19,"./message":20,"underscore":40,"wolfy87-eventemitter":41}],22:[function(require,module,exports){
 'use strict';
 
 var Buffer = require('buffer/').Buffer;
@@ -47339,7 +47367,7 @@ exports.createErrorMessage = function(reason) {
   return new exports.ProtocolMessage(header, null);
 };
 
-},{"buffer/":25}],22:[function(require,module,exports){
+},{"buffer/":26}],23:[function(require,module,exports){
 'use strict';
 
 var Buffer = require('buffer/').Buffer;
@@ -47493,7 +47521,7 @@ exports.createCcClient = function(channel) {
   return new chunkingChannel.Client(channel);
 };
 
-},{"../dnssd/binary-utils":"binaryUtils","../persistence/file-system":"fileSystem","../server/server-api":16,"./chunking-channel":18,"./message":19,"buffer/":25}],23:[function(require,module,exports){
+},{"../dnssd/binary-utils":"binaryUtils","../persistence/file-system":"fileSystem","../server/server-api":17,"./chunking-channel":19,"./message":20,"buffer/":26}],24:[function(require,module,exports){
 (function (global){
 /*! http://mths.be/base64 v0.1.0 by @mathias | MIT license */
 ;(function(root) {
@@ -47662,7 +47690,7 @@ exports.createCcClient = function(channel) {
 }(this));
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],24:[function(require,module,exports){
+},{}],25:[function(require,module,exports){
 'use strict'
 
 exports.byteLength = byteLength
@@ -47778,7 +47806,7 @@ function fromByteArray (uint8) {
   return parts.join('')
 }
 
-},{}],25:[function(require,module,exports){
+},{}],26:[function(require,module,exports){
 /*!
  * The buffer module from node.js, for the browser.
  *
@@ -49486,7 +49514,7 @@ function isnan (val) {
   return val !== val // eslint-disable-line no-self-compare
 }
 
-},{"base64-js":24,"ieee754":28}],26:[function(require,module,exports){
+},{"base64-js":25,"ieee754":29}],27:[function(require,module,exports){
 /*!
  * chrome-promise 2.0.2
  * https://github.com/tfoxy/chrome-promise
@@ -49581,7 +49609,7 @@ function isnan (val) {
   }
 }));
 
-},{}],27:[function(require,module,exports){
+},{}],28:[function(require,module,exports){
 var isBuffer = require('is-buffer')
 
 var flat = module.exports = flatten
@@ -49688,7 +49716,7 @@ function unflatten(target, opts) {
   return result
 }
 
-},{"is-buffer":29}],28:[function(require,module,exports){
+},{"is-buffer":30}],29:[function(require,module,exports){
 exports.read = function (buffer, offset, isLE, mLen, nBytes) {
   var e, m
   var eLen = nBytes * 8 - mLen - 1
@@ -49774,7 +49802,7 @@ exports.write = function (buffer, value, offset, isLE, mLen, nBytes) {
   buffer[offset + i - d] |= s * 128
 }
 
-},{}],29:[function(require,module,exports){
+},{}],30:[function(require,module,exports){
 /*!
  * Determine if an object is a Buffer
  *
@@ -49797,7 +49825,7 @@ function isSlowBuffer (obj) {
   return typeof obj.readFloatLE === 'function' && typeof obj.slice === 'function' && isBuffer(obj.slice(0, 0))
 }
 
-},{}],30:[function(require,module,exports){
+},{}],31:[function(require,module,exports){
 (function (process){
 /**
  * Module dependencies.
@@ -50101,7 +50129,7 @@ function createDataRows(params) {
 }
 
 }).call(this,require('_process'))
-},{"_process":38,"flat":27,"lodash.clonedeep":31,"lodash.flatten":32,"lodash.get":33,"lodash.set":34,"lodash.uniq":35,"os":37}],31:[function(require,module,exports){
+},{"_process":39,"flat":28,"lodash.clonedeep":32,"lodash.flatten":33,"lodash.get":34,"lodash.set":35,"lodash.uniq":36,"os":38}],32:[function(require,module,exports){
 (function (global){
 /**
  * lodash (Custom Build) <https://lodash.com/>
@@ -51853,7 +51881,7 @@ function stubFalse() {
 module.exports = cloneDeep;
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],32:[function(require,module,exports){
+},{}],33:[function(require,module,exports){
 (function (global){
 /**
  * lodash (Custom Build) <https://lodash.com/>
@@ -52206,7 +52234,7 @@ function isObjectLike(value) {
 module.exports = flatten;
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],33:[function(require,module,exports){
+},{}],34:[function(require,module,exports){
 (function (global){
 /**
  * lodash (Custom Build) <https://lodash.com/>
@@ -53141,7 +53169,7 @@ function get(object, path, defaultValue) {
 module.exports = get;
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],34:[function(require,module,exports){
+},{}],35:[function(require,module,exports){
 (function (global){
 /**
  * lodash (Custom Build) <https://lodash.com/>
@@ -54135,7 +54163,7 @@ function set(object, path, value) {
 module.exports = set;
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],35:[function(require,module,exports){
+},{}],36:[function(require,module,exports){
 (function (global){
 /**
  * lodash (Custom Build) <https://lodash.com/>
@@ -55035,7 +55063,7 @@ function noop() {
 module.exports = uniq;
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],36:[function(require,module,exports){
+},{}],37:[function(require,module,exports){
 (function (global){
 /**
  * @license
@@ -72123,7 +72151,7 @@ module.exports = uniq;
 }.call(this));
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],37:[function(require,module,exports){
+},{}],38:[function(require,module,exports){
 exports.endianness = function () { return 'LE' };
 
 exports.hostname = function () {
@@ -72170,7 +72198,7 @@ exports.tmpdir = exports.tmpDir = function () {
 
 exports.EOL = '\n';
 
-},{}],38:[function(require,module,exports){
+},{}],39:[function(require,module,exports){
 // shim for using process in browser
 var process = module.exports = {};
 
@@ -72352,7 +72380,7 @@ process.chdir = function (dir) {
 };
 process.umask = function() { return 0; };
 
-},{}],39:[function(require,module,exports){
+},{}],40:[function(require,module,exports){
 //     Underscore.js 1.8.3
 //     http://underscorejs.org
 //     (c) 2009-2015 Jeremy Ashkenas, DocumentCloud and Investigative Reporters & Editors
@@ -73902,7 +73930,7 @@ process.umask = function() { return 0; };
   }
 }.call(this));
 
-},{}],40:[function(require,module,exports){
+},{}],41:[function(require,module,exports){
 /*!
  * EventEmitter v5.1.0 - git.io/ee
  * Unlicense - http://unlicense.org/
@@ -74403,9 +74431,8 @@ var dnssdSem = require('./dnssd/dns-sd-semcache');
 var evaluation = require('./evaluation');
 var extBridge = require('./extension-bridge/messaging');
 var fileSystem = require('./persistence/file-system');
+var peerIfMgr = require('./peer-interface/manager');
 var ifCommon = require('./peer-interface/common');
-var ifHttp = require('./peer-interface/http-impl');
-var ifWebrtc = require('./peer-interface/webrtc-impl');
 var settings = require('./settings');
 var serverApi = require('./server/server-api');
 
@@ -74778,22 +74805,6 @@ exports.getAbsPathToBaseDir = function() {
 };
 
 /**
- * Create a PeerAccessor based on the configured settings.
- *
- * @return {HttpPeerAccessor|WebrtcPeerAccessor}
- */
-exports.getPeerAccessor = function() {
-  var transportMethod = settings.getTransportMethod();
-  if (transportMethod === 'http') {
-    return new ifHttp.HttpPeerAccessor(); 
-  } else if (transportMethod === 'webrtc') {
-    return new ifWebrtc.WebrtcPeerAccessor(); 
-  } else {
-    throw new Error('Unrecognized transport method: ' + transportMethod);
-  }
-};
-
-/**
  * Obtain the list of cached pages from a service, given its full name.
  *
  * @param {string} serviceName the full <instance>.<type>.<domain> name of the
@@ -74804,7 +74815,7 @@ exports.getPeerAccessor = function() {
  */
 exports.getListFromService = function(serviceName) {
   return new Promise(function(resolve, reject) {
-    var peerAccessor = exports.getPeerAccessor();
+    var peerAccessor = peerIfMgr.getPeerAccessor();
     exports.resolveCache(serviceName)
     .then(cacheInfo => {
       var listParams = ifCommon.createListParams(
@@ -74846,7 +74857,7 @@ exports.saveMhtmlAndOpen = function(
     var start = evaluation.getNow();
     var streamName = 'open_' + captureUrl;
     var params = ifCommon.createFileParams(ipaddr, port, mhtmlUrl);
-    exports.getPeerAccessor().getFileBlob(params)
+    peerIfMgr.getPeerAccessor().getFileBlob(params)
     .then(blob => {
       return datastore.addPageToCache(
         captureUrl,
@@ -74873,7 +74884,7 @@ exports.saveMhtmlAndOpen = function(
   });
 };
 
-},{"./dnssd/dns-controller":"dnsc","./dnssd/dns-sd-semcache":"dnsSem","./evaluation":"eval","./extension-bridge/messaging":"extBridge","./peer-interface/common":10,"./peer-interface/http-impl":11,"./peer-interface/webrtc-impl":12,"./persistence/datastore":13,"./persistence/file-system":"fileSystem","./server/server-api":16,"./server/server-controller":"serverController","./settings":"settings"}],"binaryUtils":[function(require,module,exports){
+},{"./dnssd/dns-controller":"dnsc","./dnssd/dns-sd-semcache":"dnsSem","./evaluation":"eval","./extension-bridge/messaging":"extBridge","./peer-interface/common":10,"./peer-interface/manager":12,"./persistence/datastore":14,"./persistence/file-system":"fileSystem","./server/server-api":17,"./server/server-controller":"serverController","./settings":"settings"}],"binaryUtils":[function(require,module,exports){
 /*jshint esnext:true*/
 /*
  * https://github.com/justindarc/dns-sd.js
@@ -75452,7 +75463,7 @@ exports.createRTCSessionDescription = function(descJson) {
   return new RTCSessionDescription(descJson);
 };
 
-},{"../../../app/scripts/webrtc/peer-connection":20,"../server/server-api":16,"../util":17,"buffer/":25}],"dnsSem":[function(require,module,exports){
+},{"../../../app/scripts/webrtc/peer-connection":21,"../server/server-api":17,"../util":18,"buffer/":26}],"dnsSem":[function(require,module,exports){
 /*jshint esnext:true*/
 'use strict';
 
@@ -75571,7 +75582,8 @@ exports.resolveCache = function(fullName) {
 };
 
 /**
- * Browse for SemCache instances on the local network. Returns a  *
+ * Browse for SemCache instances on the local network. This is a complete
+ * resolution with all operating information.
  *
  * @return {Promise.<Object, Error>} Promise that resolves with a list of
  * objects like the following, or an empty list if no instances are found.
@@ -75580,7 +75592,8 @@ exports.resolveCache = function(fullName) {
  *   serviceName: "Sam's SemCache",
  *   type: "_http._local",
  *   domain: "laptop.local",
- *   port: 8889
+ *   port: 8889,
+ *   ipAddress: '1.2.3.4'
  * }
  */
 exports.browseForSemCacheInstances = function() {
@@ -75588,7 +75601,7 @@ exports.browseForSemCacheInstances = function() {
   return result;
 };
 
-},{"../server/server-api":16,"./dns-sd":"dnssd"}],"dnsc":[function(require,module,exports){
+},{"../server/server-api":17,"./dns-sd":"dnssd"}],"dnsc":[function(require,module,exports){
 /*jshint esnext:true*/
 /* globals Promise */
 'use strict';
@@ -76262,7 +76275,7 @@ exports.addRecord = function(name, record) {
   existingRecords.push(record);
 };
 
-},{"../chrome-apis/udp":"chromeUdp","../util":17,"./byte-array":4,"./dns-codes":5,"./dns-packet":6,"./dns-util":7,"./question-section":8}],"dnssd":[function(require,module,exports){
+},{"../chrome-apis/udp":"chromeUdp","../util":18,"./byte-array":4,"./dns-codes":5,"./dns-packet":6,"./dns-util":7,"./question-section":8}],"dnssd":[function(require,module,exports){
 /*jshint esnext:true*/
 /* globals Promise */
 'use strict';
@@ -77249,7 +77262,7 @@ exports.queryForResponses = function(
   });
 };
 
-},{"../util":17,"./dns-codes":5,"./dns-controller":"dnsc","./dns-packet":6,"./dns-util":7,"./resource-record":9,"lodash":36}],"eval":[function(require,module,exports){
+},{"../util":18,"./dns-codes":5,"./dns-controller":"dnsc","./dns-packet":6,"./dns-util":7,"./resource-record":9,"lodash":37}],"eval":[function(require,module,exports){
 'use strict';
 
 /**
@@ -77926,7 +77939,7 @@ exports.downloadKeyAsCsv = function(key) {
   });
 };
 
-},{"./app-controller":"appController","./chrome-apis/chromep":2,"./persistence/datastore":13,"./server/server-api":16,"./util":17,"json2csv":30}],"extBridge":[function(require,module,exports){
+},{"./app-controller":"appController","./chrome-apis/chromep":2,"./persistence/datastore":14,"./server/server-api":17,"./util":18,"json2csv":31}],"extBridge":[function(require,module,exports){
 'use strict';
 
 var base64 = require('base-64');
@@ -78201,7 +78214,7 @@ exports.sendMessageToOpenUrl = function(url) {
   exports.sendMessageToExtension(message);
 };
 
-},{"../app-controller":"appController","../chrome-apis/chromep":2,"../persistence/datastore":13,"base-64":23}],"fileSystem":[function(require,module,exports){
+},{"../app-controller":"appController","../chrome-apis/chromep":2,"../persistence/datastore":14,"base-64":24}],"fileSystem":[function(require,module,exports){
 /*jshint esnext:true*/
 /* globals Promise */
 'use strict';
@@ -78596,7 +78609,7 @@ exports.createFileReader = function() {
   return new FileReader();
 };
 
-},{"buffer/":25}],"moment":[function(require,module,exports){
+},{"buffer/":26}],"moment":[function(require,module,exports){
 //! moment.js
 //! version : 2.17.1
 //! authors : Tim Wood, Iskren Chernev, Moment.js contributors
@@ -82971,7 +82984,7 @@ exports.start = function(host, port) {
   startServer(host, port, endpointHandlers);
 };
 
-},{"./evaluation-handler":14,"./handlers":15,"./server-api":16}],"settings":[function(require,module,exports){
+},{"./evaluation-handler":15,"./handlers":16,"./server-api":17}],"settings":[function(require,module,exports){
 /* global Promise */
 'use strict';
 

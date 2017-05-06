@@ -10,9 +10,8 @@ var dnssdSem = require('./dnssd/dns-sd-semcache');
 var evaluation = require('./evaluation');
 var extBridge = require('./extension-bridge/messaging');
 var fileSystem = require('./persistence/file-system');
+var peerIfMgr = require('./peer-interface/manager');
 var ifCommon = require('./peer-interface/common');
-var ifHttp = require('./peer-interface/http-impl');
-var ifWebrtc = require('./peer-interface/webrtc-impl');
 var settings = require('./settings');
 var serverApi = require('./server/server-api');
 
@@ -385,22 +384,6 @@ exports.getAbsPathToBaseDir = function() {
 };
 
 /**
- * Create a PeerAccessor based on the configured settings.
- *
- * @return {HttpPeerAccessor|WebrtcPeerAccessor}
- */
-exports.getPeerAccessor = function() {
-  var transportMethod = settings.getTransportMethod();
-  if (transportMethod === 'http') {
-    return new ifHttp.HttpPeerAccessor(); 
-  } else if (transportMethod === 'webrtc') {
-    return new ifWebrtc.WebrtcPeerAccessor(); 
-  } else {
-    throw new Error('Unrecognized transport method: ' + transportMethod);
-  }
-};
-
-/**
  * Obtain the list of cached pages from a service, given its full name.
  *
  * @param {string} serviceName the full <instance>.<type>.<domain> name of the
@@ -411,7 +394,7 @@ exports.getPeerAccessor = function() {
  */
 exports.getListFromService = function(serviceName) {
   return new Promise(function(resolve, reject) {
-    var peerAccessor = exports.getPeerAccessor();
+    var peerAccessor = peerIfMgr.getPeerAccessor();
     exports.resolveCache(serviceName)
     .then(cacheInfo => {
       var listParams = ifCommon.createListParams(
@@ -453,7 +436,7 @@ exports.saveMhtmlAndOpen = function(
     var start = evaluation.getNow();
     var streamName = 'open_' + captureUrl;
     var params = ifCommon.createFileParams(ipaddr, port, mhtmlUrl);
-    exports.getPeerAccessor().getFileBlob(params)
+    peerIfMgr.getPeerAccessor().getFileBlob(params)
     .then(blob => {
       return datastore.addPageToCache(
         captureUrl,

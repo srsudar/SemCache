@@ -116,7 +116,8 @@ exports.resolveCache = function(fullName) {
 };
 
 /**
- * Browse for SemCache instances on the local network. Returns a  *
+ * Browse for SemCache instances on the local network. This is a complete
+ * resolution with all operating information.
  *
  * @return {Promise.<Object, Error>} Promise that resolves with a list of
  * objects like the following, or an empty list if no instances are found.
@@ -125,7 +126,8 @@ exports.resolveCache = function(fullName) {
  *   serviceName: "Sam's SemCache",
  *   type: "_http._local",
  *   domain: "laptop.local",
- *   port: 8889
+ *   port: 8889,
+ *   ipAddress: '1.2.3.4'
  * }
  */
 exports.browseForSemCacheInstances = function() {
