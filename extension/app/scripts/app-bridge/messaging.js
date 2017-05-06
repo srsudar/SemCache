@@ -78,7 +78,7 @@ exports.sendMessageForResponse = function(message, timeout) {
  * Perform a query to see if this page is available via the local cache. This
  * will communicate with the app.
  *
- * @param {string} url the url of the page you are querying for
+ * @param {Array.<string>} urls the urls you are searching for
  * @param {Object} options
  * @param {number} timeout number of milliseconds to wait. If falsey, uses
  * default.
@@ -86,11 +86,11 @@ exports.sendMessageForResponse = function(message, timeout) {
  * @return {Promise.<Object, Error>} Promise that resolves with the
  * result of the query.
  */
-exports.isPageSaved = function(url, options, timeout) {
+exports.queryForPagesLocally = function(urls, options, timeout) {
   var message = {
-    type: 'query',
+    type: 'local-query',
     params: {
-      url: url,
+      urls: urls,
       options: options
     }
   };

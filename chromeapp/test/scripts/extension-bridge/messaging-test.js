@@ -44,11 +44,11 @@ function getDummyWriteMessage() {
   };
 }
 
-function getDummyQueryMessage(url) {
+function getDummyLocalQueryMessage(urls) {
   return {
-    type: 'query',
+    type: 'local-query',
     params: {
-      url: url
+      urls: urls
     }
   };
 }
@@ -198,28 +198,29 @@ test('handleExternalMessage adds page to cache for write', function(t) {
   t.end();
 });
 
-test('handleExternalMessage returns result of query', function(t) {
-  var url = 'http://tyrion.com';
-  var queryMessage = getDummyQueryMessage(url);
+test('handleExternalMessage returns result of local query', function(t) {
+  var urls = ['http://tyrion.com'];
+  var queryMessage = getDummyLocalQueryMessage(urls);
 
   var cachedPage = {
-    captureUrl: url,
+    captureUrl: urls,
     accessPath: 'comeFetchMeBro'
   };
   
   var expected = {
-    type: 'query',
+    type: 'local-query',
     result: 'success',
     response: cachedPage
   };
 
-  messaging.performQuery = sinon.stub().withArgs(url).resolves(cachedPage);
+  messaging.queryLocalMachineForUrls = sinon.stub().withArgs(urls)
+    .resolves(cachedPage);
 
   var returnValue;
 
   var callbackFromExtension = function(actual) {
     t.deepEqual(actual, expected);
-    t.deepEqual(messaging.performQuery.args[0], [queryMessage]);
+    t.deepEqual(messaging.queryLocalMachineForUrls.args[0], [queryMessage]);
     t.true(returnValue);
     end(t);
   };
@@ -285,7 +286,7 @@ test('handleExternalMessage responds with error if goes wrong', function(t) {
   );
 });
 
-test('performQuery returns null if no match', function(t) {
+test('queryLocalNetworkForUrls returns empty if no match', function(t) {
   var cachedPages = [
     {
       captureUrl: 'foo',
@@ -303,9 +304,9 @@ test('performQuery returns null if no match', function(t) {
     }
   });
 
-  messaging.performQuery(getDummyQueryMessage('url'))
+  messaging.queryLocalMachineForUrls(getDummyLocalQueryMessage(['url']))
   .then(actual => {
-    t.equal(actual, null);
+    t.deepEqual(actual, {});
     end(t);
   })
   .catch(err => {
@@ -314,15 +315,7 @@ test('performQuery returns null if no match', function(t) {
   });
 });
 
-test('performQuery returns CachedPage if matches', function(t) {
-  var expected = {
-    captureUrl: 'www.nytimes.com',
-    accessPath: 'fetchmehere',
-    metadata: {
-      fullUrl: 'http://www.nytimes.com/story'
-    }
-  };
-
+test('queryLocalMachineForUrls returns all matches', function(t) {
   var cachedPages = [
     {
       captureUrl: 'foo',
@@ -332,8 +325,20 @@ test('performQuery returns CachedPage if matches', function(t) {
       captureUrl: 'bar',
       metadata: { fullUrl: 'bar' }
     },
-    expected
+    {
+      captureUrl: 'www.nytimes.com',
+      accessPath: 'fetchmehere',
+      metadata: {
+        fullUrl: 'http://www.nytimes.com/story'
+      }
+    }
   ];
+
+  // We expect url: [ cachedpage, ... ] to keep the API the same with local
+  // network queries.
+  var expected = {};
+  expected[cachedPages[0].metadata.fullUrl] = [ cachedPages[0] ];
+  expected[cachedPages[2].metadata.fullUrl] = [ cachedPages[2] ];
 
   proxyquireMessaging({
     '../persistence/datastore': {
@@ -341,9 +346,14 @@ test('performQuery returns CachedPage if matches', function(t) {
     }
   });
 
-  messaging.performQuery(getDummyQueryMessage('http://www.nytimes.com/story'))
+  var message = getDummyLocalQueryMessage([
+    cachedPages[2].metadata.fullUrl,
+    cachedPages[0].metadata.fullUrl
+  ]);
+
+  messaging.queryLocalMachineForUrls(message)
   .then(actual => {
-    t.equal(actual, expected);
+    t.deepEqual(actual, expected);
     end(t);
   })
   .catch(err => {
@@ -352,7 +362,7 @@ test('performQuery returns CachedPage if matches', function(t) {
   });
 });
 
-test('performQuery rejects if something goes wrong', function(t) {
+test('queryLocalMachineForUrls rejects if something goes wrong', function(t) {
   var expected = { msg: 'uh oh' };
 
   proxyquireMessaging({
@@ -361,7 +371,7 @@ test('performQuery rejects if something goes wrong', function(t) {
     }
   });
 
-  messaging.performQuery(getDummyQueryMessage('url'))
+  messaging.queryLocalMachineForUrls(getDummyLocalQueryMessage(['url']))
   .then(actual => {
     t.fail(actual);
     end(t);

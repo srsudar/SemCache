@@ -101,16 +101,22 @@ test('savePageForContentScript rejects if saveTab rejects', function(t) {
 test('queryForPage resolves if not present', function(t) {
   var tabId = 4;
   var url = 'www.nyt.com';
+  var queryLocallySpy = sinon.stub().withArgs([url]).resolves(
+    {
+      response: {}
+    }
+  );
 
   proxyquireApi({
     '../app-bridge/messaging': {
-      isPageSaved: sinon.stub().withArgs(url).resolves({})
+      queryForPagesLocally: queryLocallySpy
     }
   });
 
   api.queryForPage(tabId, url)
   .then(actual => {
     t.equal(actual, null);
+    t.deepEqual(queryLocallySpy.args[0][0], [url]);
     end(t);
   })
   .catch(err => {
@@ -128,10 +134,11 @@ test('queryForPage resolves if page present', function(t) {
 
   var setIconSpy = sinon.stub();
   var sendMessageSpy = sinon.stub();
+  var queryLocallySpy = sinon.stub().withArgs([url]).resolves(queryResponse);
 
   proxyquireApi({
     '../app-bridge/messaging': {
-      isPageSaved: sinon.stub().withArgs(url).resolves(queryResponse)
+      queryForPagesLocally: queryLocallySpy
     },
     '../chrome-apis/tabs': {
       sendMessage: sendMessageSpy
@@ -144,6 +151,7 @@ test('queryForPage resolves if page present', function(t) {
   api.queryForPage(tabId, url)
   .then(actual => {
     t.deepEqual(actual, queryResponse.response);
+    t.deepEqual(queryLocallySpy.args[0][0], [url]);
     t.deepEqual(
       setIconSpy.args[0],
       [{
@@ -178,7 +186,7 @@ test('queryForPage rejects if error', function(t) {
 
   proxyquireApi({
     '../app-bridge/messaging': {
-      isPageSaved: sinon.stub().withArgs(url).rejects(expected)
+      queryForPagesLocally: sinon.stub().rejects(expected)
     }
   });
 

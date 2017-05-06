@@ -60,9 +60,10 @@ exports.savePageForContentScript = function(tab) {
  */
 exports.queryForPage = function(tabId, url) {
   return new Promise(function(resolve, reject) {
-    appMessaging.isPageSaved(url)
+    console.log(url);
+    appMessaging.queryForPagesLocally([url])
     .then(result => {
-      if (!result.response || result.response === null) {
+      if (!result.response || Object.keys(result.response).length === 0) {
         // No page saved.
         console.log('did not find saved copy of page: ', url);
         resolve(null);

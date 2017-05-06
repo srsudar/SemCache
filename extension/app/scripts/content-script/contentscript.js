@@ -15,4 +15,5 @@ util.getOnCompletePromise()
   .then(() => {
     evaluation.onPageLoadComplete();
     api.annotateLocalLinks();
+    api.annotateNetworkLocalLinks();
   });

@@ -34923,8 +34923,8 @@ exports.handleExternalMessage = function(message, sender, response) {
         response(errorMsg);
       }
     });
-  } else if (message.type === 'query') {
-    exports.performQuery(message)
+  } else if (message.type === 'local-query') {
+    exports.queryLocalMachineForUrls(message)
     .then(result => {
       var successMsg = exports.createResponseSuccess(message);
       successMsg.response = result;
@@ -35006,21 +35006,34 @@ exports.handleOpenRequest = function(message) {
  *
  * @param {Object} message the message from the extension
  *
- * @return {Promise.<Object, Error>} the result of the query
+ * @return {Promise.<Object, Error>} the result of the query. We expect an
+ * object like:
+ * {
+ *   url: [ pageinfo, ... ]
+ * }
+ * This should mirror the API of queryLocalNetworkForUrls.
  */
-exports.performQuery = function(message) {
+exports.queryLocalMachineForUrls = function(message) {
   return new Promise(function(resolve, reject) {
     // Check for the url.
     // Return the information about the entry, including the access path.
+    var urls = message.params.urls;
+    var result = {};
     datastore.getAllCachedPages()
     .then(pages => {
       pages.forEach(page => {
-        if (exports.urlsMatch(message.params.url, page.metadata.fullUrl)) {
-          resolve(page);
-          return;
-        }
+        urls.forEach(url => {
+          if (exports.urlsMatch(url, page.metadata.fullUrl)) {
+            var copies = result[url];
+            if (!copies) {
+              copies = [];
+              result[url] = copies;
+            }
+            copies.push(page);
+          }
+        });
       });
-    resolve(null);
+      resolve(result);
     })
     .catch(err => {
       reject(err);

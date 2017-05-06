@@ -5550,8 +5550,8 @@ exports.handleExternalMessage = function(message, sender, response) {
         response(errorMsg);
       }
     });
-  } else if (message.type === 'query') {
-    exports.performQuery(message)
+  } else if (message.type === 'local-query') {
+    exports.queryLocalMachineForUrls(message)
     .then(result => {
       var successMsg = exports.createResponseSuccess(message);
       successMsg.response = result;
@@ -5633,21 +5633,34 @@ exports.handleOpenRequest = function(message) {
  *
  * @param {Object} message the message from the extension
  *
- * @return {Promise.<Object, Error>} the result of the query
+ * @return {Promise.<Object, Error>} the result of the query. We expect an
+ * object like:
+ * {
+ *   url: [ pageinfo, ... ]
+ * }
+ * This should mirror the API of queryLocalNetworkForUrls.
  */
-exports.performQuery = function(message) {
+exports.queryLocalMachineForUrls = function(message) {
   return new Promise(function(resolve, reject) {
     // Check for the url.
     // Return the information about the entry, including the access path.
+    var urls = message.params.urls;
+    var result = {};
     datastore.getAllCachedPages()
     .then(pages => {
       pages.forEach(page => {
-        if (exports.urlsMatch(message.params.url, page.metadata.fullUrl)) {
-          resolve(page);
-          return;
-        }
+        urls.forEach(url => {
+          if (exports.urlsMatch(url, page.metadata.fullUrl)) {
+            var copies = result[url];
+            if (!copies) {
+              copies = [];
+              result[url] = copies;
+            }
+            copies.push(page);
+          }
+        });
       });
-    resolve(null);
+      resolve(result);
     })
     .catch(err => {
       reject(err);
@@ -35805,7 +35818,7 @@ exports.sendMessageForResponse = function(message, timeout) {
  * Perform a query to see if this page is available via the local cache. This
  * will communicate with the app.
  *
- * @param {string} url the url of the page you are querying for
+ * @param {Array.<string>} urls the urls you are searching for
  * @param {Object} options
  * @param {number} timeout number of milliseconds to wait. If falsey, uses
  * default.
@@ -35813,11 +35826,11 @@ exports.sendMessageForResponse = function(message, timeout) {
  * @return {Promise.<Object, Error>} Promise that resolves with the
  * result of the query.
  */
-exports.isPageSaved = function(url, options, timeout) {
+exports.queryForPagesLocally = function(urls, options, timeout) {
   var message = {
-    type: 'query',
+    type: 'local-query',
     params: {
-      url: url,
+      urls: urls,
       options: options
     }
   };
@@ -36051,9 +36064,10 @@ exports.savePageForContentScript = function(tab) {
  */
 exports.queryForPage = function(tabId, url) {
   return new Promise(function(resolve, reject) {
-    appMessaging.isPageSaved(url)
+    console.log(url);
+    appMessaging.queryForPagesLocally([url])
     .then(result => {
-      if (!result.response || result.response === null) {
+      if (!result.response || Object.keys(result.response).length === 0) {
         // No page saved.
         console.log('did not find saved copy of page: ', url);
         resolve(null);
@@ -36640,14 +36654,27 @@ exports.getFullLoadTime = function() {
  * @return {Promise.<undefined, Error>}
  */
 exports.annotateLocalLinks = function() {
-  var anchors = document.querySelectorAll('a[href]');
-  // Now we have anchors that have hrefs. Annotate every other one.
-  for (var i = 0; i < anchors.length; i++) {
-    if (i % 2 === 0) {
-      continue;
-    }
-    // exports.annotateAnchorIsLocal(anchors[i]);
-  }
+  return new Promise(function(resolve, reject) {
+    var links = exports.getLinksOnPage();
+    var urls = Object.keys(links);
+    
+    appMsg.queryForPagesLocally(urls)
+    .then(appMsg => {
+      // localUrls will be an Object mapping URLs to arrays of locally
+      // available pages.
+      var localUrls = appMsg.response;
+      Object.keys(localUrls).forEach(url => {
+        var anchors = links[url];
+        anchors.forEach(anchor => {
+          exports.annotateAnchorIsLocal(anchor);
+        });
+      });
+      resolve();
+    })
+    .catch(err => {
+      reject(err);
+    });
+  });
 };
 
 /**

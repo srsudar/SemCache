@@ -222,14 +222,14 @@ test('savePage resolves if callback invoked', function(t) {
     });
 });
 
-test('isPageSaved resolves response from app', function(t) {
+test('queryForPagesLocally resolves response from app', function(t) {
   var timeout = 7887;
-  var url = 'www.nytimes.com';
+  var urls = [ 'http://www.nytimes.com', 'http://www.foo.org' ];
   var options = { localhost: true };
   var message = {
-    type: 'query',
+    type: 'local-query',
     params: {
-      url: url,
+      urls: urls,
       options: options 
     }
   };
@@ -238,7 +238,7 @@ test('isPageSaved resolves response from app', function(t) {
   var sendMessageForResponseSpy = sinon.stub().resolves(expected);
   messaging.sendMessageForResponse = sendMessageForResponseSpy;
 
-  messaging.isPageSaved(url, options, timeout)
+  messaging.queryForPagesLocally(urls, options, timeout)
   .then(actual => {
     t.deepEqual(actual, expected);
     t.deepEqual(sendMessageForResponseSpy.args[0], [message, timeout]);
@@ -250,15 +250,14 @@ test('isPageSaved resolves response from app', function(t) {
   });
 });
 
-test('isPageSaved rejects if sendMessageForResponse rejects', function(t) {
-  var url = 'carefullycraftedtobreak.com';
+test('queryForPagesLocally rejects correctly', function(t) {
   var options = { localhost: false };
 
   var expected = { msg: 'you little devil!' };
   var sendMessageForResponseSpy = sinon.stub().rejects(expected);
   messaging.sendMessageForResponse = sendMessageForResponseSpy;
 
-  messaging.isPageSaved(url, options)
+  messaging.queryForPagesLocally([], options)
   .then(actual => {
     t.fail(actual);
     end(t);
@@ -342,7 +341,7 @@ test('queryForPagesOnNetwork rejects correctly', function(t) {
   var sendMessageForResponseSpy = sinon.stub().rejects(expected);
   messaging.sendMessageForResponse = sendMessageForResponseSpy;
 
-  messaging.isPageSaved(urls)
+  messaging.queryForPagesOnNetwork(urls)
   .then(actual => {
     t.fail(actual);
     end(t);

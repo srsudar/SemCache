@@ -203,6 +203,87 @@ test('getLinksOnPage correct', function(t) {
   end(t);
 });
 
+test('annotateLocalLinks annotates on success', function(t) {
+  // Ugly duplication with the network query test.
+  var anchors = [
+    { 
+      id: 1,
+      href: 'http://example.com'
+    },
+    {
+      id: 2,
+      href: 'http://bar.com'
+    },
+    {
+      id: 3,
+      href: 'http://example.com'
+    },
+    {
+      id: 4,
+      href: 'http://unvailableLocally.com'
+    }
+  ];
+
+  var links = {};
+  links[anchors[0].href] = [ anchors[0], anchors[2] ];
+  links[anchors[1].href] = [ anchors[1] ];
+  links[anchors[3].href] = [ anchors[3] ];
+
+  var urls = Object.keys(links);
+
+  var queryResponse = {};
+  queryResponse[anchors[0].href] = 'whatever';
+  queryResponse[anchors[1].href] = 'yawn';
+  var appMsg = {
+    result: 'success',
+    response: queryResponse
+  };
+
+  var annotateAnchorSpy = sinon.stub();
+
+  proxyquireApi({
+    '../app-bridge/messaging': {
+      queryForPagesLocally: sinon.stub().withArgs(urls).resolves(appMsg)
+    }
+  });
+  api.getLinksOnPage = sinon.stub().returns(links);
+  api.annotateAnchorIsLocal = annotateAnchorSpy;
+
+  api.annotateLocalLinks()
+  .then(actual => {
+    t.equal(actual, undefined);
+    t.true(annotateAnchorSpy.calledWith(anchors[0]));
+    t.true(annotateAnchorSpy.calledWith(anchors[1]));
+    t.true(annotateAnchorSpy.calledWith(anchors[2]));
+    end(t);
+  })
+  .catch(err => {
+    t.fail(err);
+    end(t);
+  });
+});
+
+test('annotateLocalLinks does nothing on failure', function(t) {
+  // Ugly duplication with the network questy
+  var expectedErr = { msg: 'fail.' };
+  proxyquireApi({
+    '../app-bridge/messaging': {
+      queryForPagesLocally: sinon.stub().rejects(expectedErr)
+    }
+  });
+  api.getLinksOnPage = sinon.stub().returns({});
+
+  api.annotateLocalLinks()
+  .then(actual => {
+    t.fail(actual);
+    end(t);
+  })
+  .catch(actual => {
+    t.equal(actual, expectedErr);
+    end(t);
+  });
+});
+
 test('annotateNetworkLocalLinks annotates on success', function(t) {
   // We want to handle duplicates as well as single URLs.
   var anchors = [

@@ -97,14 +97,27 @@ exports.getFullLoadTime = function() {
  * @return {Promise.<undefined, Error>}
  */
 exports.annotateLocalLinks = function() {
-  var anchors = document.querySelectorAll('a[href]');
-  // Now we have anchors that have hrefs. Annotate every other one.
-  for (var i = 0; i < anchors.length; i++) {
-    if (i % 2 === 0) {
-      continue;
-    }
-    // exports.annotateAnchorIsLocal(anchors[i]);
-  }
+  return new Promise(function(resolve, reject) {
+    var links = exports.getLinksOnPage();
+    var urls = Object.keys(links);
+    
+    appMsg.queryForPagesLocally(urls)
+    .then(appMsg => {
+      // localUrls will be an Object mapping URLs to arrays of locally
+      // available pages.
+      var localUrls = appMsg.response;
+      Object.keys(localUrls).forEach(url => {
+        var anchors = links[url];
+        anchors.forEach(anchor => {
+          exports.annotateAnchorIsLocal(anchor);
+        });
+      });
+      resolve();
+    })
+    .catch(err => {
+      reject(err);
+    });
+  });
 };
 
 /**
