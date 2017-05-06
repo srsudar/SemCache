@@ -11,9 +11,8 @@ var dnssdSem = require('./dnssd/dns-sd-semcache');
 var evaluation = require('./evaluation');
 var extBridge = require('./extension-bridge/messaging');
 var fileSystem = require('./persistence/file-system');
+var peerIfMgr = require('./peer-interface/manager');
 var ifCommon = require('./peer-interface/common');
-var ifHttp = require('./peer-interface/http-impl');
-var ifWebrtc = require('./peer-interface/webrtc-impl');
 var settings = require('./settings');
 var serverApi = require('./server/server-api');
 
@@ -386,22 +385,6 @@ exports.getAbsPathToBaseDir = function() {
 };
 
 /**
- * Create a PeerAccessor based on the configured settings.
- *
- * @return {HttpPeerAccessor|WebrtcPeerAccessor}
- */
-exports.getPeerAccessor = function() {
-  var transportMethod = settings.getTransportMethod();
-  if (transportMethod === 'http') {
-    return new ifHttp.HttpPeerAccessor(); 
-  } else if (transportMethod === 'webrtc') {
-    return new ifWebrtc.WebrtcPeerAccessor(); 
-  } else {
-    throw new Error('Unrecognized transport method: ' + transportMethod);
-  }
-};
-
-/**
  * Obtain the list of cached pages from a service, given its full name.
  *
  * @param {string} serviceName the full <instance>.<type>.<domain> name of the
@@ -412,7 +395,7 @@ exports.getPeerAccessor = function() {
  */
 exports.getListFromService = function(serviceName) {
   return new Promise(function(resolve, reject) {
-    var peerAccessor = exports.getPeerAccessor();
+    var peerAccessor = peerIfMgr.getPeerAccessor();
     exports.resolveCache(serviceName)
     .then(cacheInfo => {
       var listParams = ifCommon.createListParams(
@@ -454,7 +437,7 @@ exports.saveMhtmlAndOpen = function(
     var start = evaluation.getNow();
     var streamName = 'open_' + captureUrl;
     var params = ifCommon.createFileParams(ipaddr, port, mhtmlUrl);
-    exports.getPeerAccessor().getFileBlob(params)
+    peerIfMgr.getPeerAccessor().getFileBlob(params)
     .then(blob => {
       return datastore.addPageToCache(
         captureUrl,
@@ -481,7 +464,7 @@ exports.saveMhtmlAndOpen = function(
   });
 };
 
-},{"./dnssd/dns-controller":8,"./dnssd/dns-sd-semcache":10,"./evaluation":15,"./extension-bridge/messaging":16,"./peer-interface/common":17,"./peer-interface/http-impl":18,"./peer-interface/webrtc-impl":19,"./persistence/datastore":20,"./persistence/file-system":22,"./server/server-api":25,"./server/server-controller":26,"./settings":27}],2:[function(require,module,exports){
+},{"./dnssd/dns-controller":11,"./dnssd/dns-sd-semcache":13,"./evaluation":18,"./extension-bridge/messaging":19,"./peer-interface/common":20,"./peer-interface/manager":22,"./persistence/datastore":24,"./persistence/file-system":26,"./server/server-api":29,"./server/server-controller":30,"./settings":31}],2:[function(require,module,exports){
 /* globals chrome */
 'use strict';
 
@@ -547,7 +530,7 @@ exports.getRuntimeBare = function() {
   return chrome.runtime;
 };
 
-},{"chrome-promise":38}],3:[function(require,module,exports){
+},{"chrome-promise":42}],3:[function(require,module,exports){
 /* globals chrome */
 'use strict';
 
@@ -865,6 +848,395 @@ exports.applyArgsCheckLastError = function(fn, callArgs) {
 };
 
 },{}],5:[function(require,module,exports){
+'use strict';
+
+var dnssdSem = require('../dnssd/dns-sd-semcache');
+var objects = require('./objects');
+var peerIf = require('../peer-interface/common');
+var peerIfMgr = require('../peer-interface/manager');
+
+/**
+ * This module is responsible for the digest strategy of cache coalescence.
+ */
+
+/**
+ * This is the data structure in which we're storing the digests from peers.
+ *
+ * Contains objects 
+ */
+var DIGESTS = [];
+
+var IS_INITIALIZED = false;
+var IS_INITIALIZING = false;
+
+/**
+ * An implementation of the coalescence strategy API.
+ *
+ * The digest strategy is to obtain a list of all the available pages from
+ * peers and check those lists.
+ * @constructor
+ */
+exports.DigestStrategy = function DigestStrategy() {
+  if (!(this instanceof DigestStrategy)) {
+    throw new Error('DigestStrategy must be called with new');
+  }
+  // Don't like that we are basically exposing module-level state that isn't
+  // tied to this object, but going to leave it for now. This is basically
+  // giving an object-based API onto the global state, which is a bit ugly but
+  // I'm going to allow it for the near-term.
+};
+
+/**
+ * Reset any state saved by this module
+ */
+exports.DigestStrategy.prototype.reset = function() {
+  this.setDigests([]);
+  IS_INITIALIZED = false;
+  // If an initialization is in progress, this could not be a complete reset.
+  IS_INITIALIZING = false;
+};
+
+/**
+ * Replace the saved Digest state with this new information.
+ *
+ * @param {Array.<Digest>} digests
+ */
+exports.DigestStrategy.prototype.setDigests = function(digests) {
+  DIGESTS = digests;
+};
+
+/**
+ * Indicates if the module is ready to perform queries.
+ *
+ * @return {boolean} true if queries can be performed
+ */
+exports.DigestStrategy.prototype.isInitialized = function() {
+  return IS_INITIALIZED;
+};
+
+/**
+ * Indicates if we are currently initializing.
+ *
+ * @return {boolean}
+ */
+exports.DigestStrategy.prototype.isInitializing = function() {
+  return IS_INITIALIZING;
+};
+
+/**
+ * Initialize the strategy.
+ *
+ * @return {Promise.<undefined, Error>} Promise that resolves when
+ * initialization is complete.
+ */
+exports.DigestStrategy.prototype.initialize = function() {
+  if (this.isInitializing()) {
+    // no-op
+    return Promise.resolve();
+  }
+  if (this.isInitialized()) {
+    // We're already initialized, just no-op.
+    return Promise.resolve();
+  }
+  // Initialization consists of the following steps:
+  // 1) Query the network for peers
+  // 2) For each peer, get their digest
+  // 3) Process the digests
+  // 4) Update our module data structures with this information
+  // 5) Declare that we are initialized
+  IS_INITIALIZING = true;
+  var that = this;
+
+  return new Promise(function(resolve, reject) {
+    dnssdSem.browseForSemCacheInstances()
+    .then(peerInfos => {
+      var peerAccessor = peerIfMgr.getPeerAccessor();
+      return that.getAndProcessDigests(peerAccessor, peerInfos);
+    })
+    .then(digests => {
+      that.setDigests(digests);
+      IS_INITIALIZING = false;
+      IS_INITIALIZED = true;
+      resolve();
+    })
+    .catch(err => {
+      IS_INITIALIZING = false;
+      reject(err);
+    });
+  });
+
+};
+
+/**
+ * Obtain digests from the peers indicated in peerInfos and process them. If
+ * any peers could not be connected to, an error is logged but the process is
+ * not terminated. Does not update any of the module's data structures.
+ *
+ * @param {WebrtcPeerAccessor|HttpPeerAccessor} peerInterface a peer interface
+ * for the given transport protocol
+ * @param {Array.<Object>} peerInfos the objects containing information to
+ * connect to peers as returned from the browse service functions
+ *
+ * @return {Promise.<Array<Digest>>}
+ */
+exports.DigestStrategy.prototype.getAndProcessDigests = function(
+  peerInterface, peerInfos
+) {
+  // Query them, create digests for those that succeed.
+  // Note that there is some trickiness here about the best strategy by which
+  // to do this. If we want to avoid congestion, we might want to query them
+  // serially, not worrying if something has rejected. We need to tolerate
+  // rejection in case a peer leaves while we are issuing the query. That is
+  // ok and should be tolerated. The fulfillPromises in the evaluation module
+  // could work for this.
+  //
+  // For now we are just going to countdown waiting for the promises to settle.
+  return new Promise(function(resolve) {
+    var pendingResponses = peerInfos.length;
+    var result = [];
+    peerInfos.forEach(peerInfo => {
+      var params = peerIf.createListParams(
+        peerInfo.ipAddress, peerInfo.port, null
+      );
+      peerInterface.getCacheDigest(params)
+      .then(rawDigest => {
+        pendingResponses--;
+        var digest = new objects.Digest(peerInfo, rawDigest);
+        result.push(digest);
+        if (pendingResponses === 0) {
+          resolve(result);
+        }
+      })
+      .catch(err => {
+        // Swallow this one, as we expect some errors
+        console.log('Ignoreable error fetching digest: ', err);
+        pendingResponses--;
+        if (pendingResponses === 0) {
+          resolve(result);
+        }
+      });
+    });
+  });
+};
+
+/**
+ * Obtain access information for the given array of URLs. The result will be an
+ * array of length <= urls.length. Only those that are available will be
+ * present.
+ *
+ * @param {Array.<string>} urls Array of URLs for which to query
+ *
+ * @return {Promise.<Object, Error>} Promise that resolves with an Object of
+ * information about the urls or rejects with an Error. The Object is like the
+ * following:
+ *   {
+ *     url: [NetworkCachedPage, NetworkCachedPage],
+ *   }
+ */
+exports.DigestStrategy.prototype.performQuery = function(urls) {
+  if (!this.isInitialized()) {
+    console.warn('digest-strategy was queried but is not initialized');
+  }
+  return new Promise(function(resolve, reject) {
+    Promise.resolve()
+    .then(() => {
+      var result = {};
+      urls.forEach(url => {
+        var copiesForUrl = [];
+        DIGESTS.forEach(digest => {
+          var captureDate = digest.performQueryForPage(url);
+          if (captureDate) {
+            var NetworkCachedPage = new objects.NetworkCachedPage(
+              'probable',
+              {
+                url: url,
+                captureDate: captureDate
+              },
+              digest.peerInfo
+            );
+            copiesForUrl.push(NetworkCachedPage);
+          }
+        });
+        if (copiesForUrl.length > 0) {
+          result[url] = copiesForUrl;
+        }
+      });
+      resolve(result);
+    })
+    .catch(err => {
+      reject(err);
+    });
+  });
+};
+
+},{"../dnssd/dns-sd-semcache":13,"../peer-interface/common":20,"../peer-interface/manager":22,"./objects":7}],6:[function(require,module,exports){
+'use strict';
+
+var stratDig = require('./digest-strategy');
+
+/**
+ * The coalescence/manager module is the API callers should use to interact
+ * with all content in a local network of collaborators. A single client might
+ * want to know if 'http://www.example.com' is available locally, for example.
+ * The client should use coalescer/manager to determine this information.
+ */
+
+/**
+ * Enum representing strategies for performing cache coalescence.
+ */
+exports.STRATEGIES = {
+  /**
+   * Maintain a list of all available cached pages from each peer.
+   */
+  digest: 'digest',
+};
+
+/**
+ * The current startegy for resolving coalescence requests.
+ */
+exports.CURRENT_STRATEGY = exports.STRATEGIES.digest;
+
+/**
+ * Obtain access information for the given array of URLs. The result will be an
+ * array of length <= urls.length. Only those that are available will be
+ * present.
+ *
+ * @param {Array.<string>} urls Array of URLs for which to query
+ *
+ * @return {Promise.<Array.<NetworkCachedPage>, Error>} Promise that resolves
+ * with an Array of information about the urls or rejects with an Error.
+ */
+exports.queryForUrls = function(urls) {
+  return new Promise(function(resolve, reject) {
+    var strategy = exports.getStrategy();
+    strategy.initialize()
+    .then(() => {
+      return strategy.performQuery(urls);
+    })
+    .then(result => {
+      resolve(result);
+    })
+    .catch(err => {
+      reject(err);
+    });
+  });
+};
+
+/**
+ * Get the implementation of the current coalescence strategy.
+ *
+ * @return {DigestStrategy}
+ */ 
+exports.getStrategy = function() {
+  // Only one to return at the moment.
+  return new stratDig.DigestStrategy();
+};
+
+},{"./digest-strategy":5}],7:[function(require,module,exports){
+'use strict';
+
+/**
+ * Objects relevant to coalescence between instances on the local network.
+ */
+
+/**
+ * This object represents a cached page that is available on the local network.
+ * It is related but not identical to the CachedPage object in the persistence
+ * module, incorporating a notion of probabilistic availability.
+ *
+ * There are several considerations when interacting with a coalesced page. The
+ * first is that the page can exist in several states. In SemCache this is
+ * referred to as availability.
+ *
+ * If the page is available on the local machine, we are certain that the page
+ * exists and that a request to open that page will succeed (assuming the page
+ * isn't deleted after a query is made, that there are no errors, etc). 
+ *
+ * If another peer responds that they have the page, we are certain that the
+ * page exists at the time of the query, but we are not sure that an eventual
+ * fetch will succeed. Perhaps when an attempt to open the page is made the
+ * client will have left the network, or an error will occur because the
+ * network goes down.
+ *
+ * It is also possible that set inclusion (and thus local availability) is a
+ * probabilistic operation, eg if Bloom filters are used to lower network
+ * traffic.
+ *
+ * We refer to the first state as "available". Both the second states we will
+ * lump together to refer to as "probable". The third state is simply
+ * "unavailable".
+ *
+ * These states might not be important to the caller, but we want to provide
+ * the information all the same.
+ *
+ * @param {String} availability A string enum representing various types of
+ * availability on the local network. This is expected to be on of "available",
+ * meaning access is highly available (eg on the local machine) and access will
+ * succeed. "probable" means that the page was likely available at the time of
+ * the query. This uncertainty might stem from the potential the machine will
+ * leave the network by the time the page is requested or because inclusion was
+ * determined to do a probabilistic operation like a Bloom filter. The last
+ * option is "unavailable", indicating that a cached copy of the page is not
+ * available.
+ * @param {Object} queryInfo information about the query of the page. This
+ * might include the URL, etc
+ * @param {Object} accessInfo information about how to access the page. If this
+ * is a locally available page, this might be a CachedPage object from the
+ * persistence module, eg. Otherwise it will depend on the type of
+ * availability.
+ *
+ * @constructor
+ */
+exports.NetworkCachedPage = function NetworkCachedPage(
+  availability,
+  queryInfo,
+  accessInfo
+) {
+  if (!(this instanceof NetworkCachedPage)) {
+    throw new Error('NetworkCachedPage must be called with new');
+  }
+  this.availability = availability;
+  this.queryInfo = queryInfo;
+  this.accessInfo = accessInfo;
+};
+
+/**
+ * Create a Digest object from a list of pages saved on a peer. This
+ * associates information about the peer as well as access information.
+ *
+ * @constructor
+ */
+exports.Digest = function Digest(peerInfo, pageInfos) {
+  if (!(this instanceof Digest)) {
+    throw new Error('Digest must be called with new');
+  }
+  this.peerInfo = peerInfo;
+
+  // Now process the pageInfos.
+  this.digestInfo = {};
+  pageInfos.forEach(pageInfo => {
+    this.digestInfo[pageInfo.url] = pageInfo.captureDate;
+  });
+};
+
+/**
+ * Query the digest to see if the page contains the given URL.
+ *
+ * @param {string} url
+ *
+ * @return {string|null} null if the digest does not contain the page,
+ * otherwise the timestamp of the page
+ */
+exports.Digest.prototype.performQueryForPage = function(url) {
+  var captureDate = this.digestInfo[url];
+  if (captureDate) {
+    return captureDate;
+  } else {
+    return null;
+  }
+};
+
+},{}],8:[function(require,module,exports){
 /*jshint esnext:true*/
 /*
  * https://github.com/justindarc/dns-sd.js
@@ -940,7 +1312,7 @@ return BinaryUtils;
 
 })();
 
-},{}],6:[function(require,module,exports){
+},{}],9:[function(require,module,exports){
 /*jshint esnext:true, bitwise: false */
 'use strict';
 
@@ -1157,7 +1529,7 @@ exports.getByteArrayAsUint8Array = function(byteArr) {
   return new Uint8Array(byteArr._buffer, 0, byteArr._cursor);
 };
 
-},{"./binary-utils":5}],7:[function(require,module,exports){
+},{"./binary-utils":8}],10:[function(require,module,exports){
 /*jshint esnext:true*/
 /*
  * https://github.com/justindarc/dns-sd.js
@@ -1346,7 +1718,7 @@ function defineType(values) {
   return T;
 }
 
-},{}],8:[function(require,module,exports){
+},{}],11:[function(require,module,exports){
 /*jshint esnext:true*/
 /* globals Promise */
 'use strict';
@@ -2020,7 +2392,7 @@ exports.addRecord = function(name, record) {
   existingRecords.push(record);
 };
 
-},{"../chrome-apis/udp":3,"../util":28,"./byte-array":6,"./dns-codes":7,"./dns-packet":9,"./dns-util":12,"./question-section":13}],9:[function(require,module,exports){
+},{"../chrome-apis/udp":3,"../util":32,"./byte-array":9,"./dns-codes":10,"./dns-packet":12,"./dns-util":15,"./question-section":16}],12:[function(require,module,exports){
 /*jshint esnext:true, bitwise:false */
 
 /**
@@ -2449,7 +2821,7 @@ exports.getFlagsAsValue = function(qr, opcode, aa, tc, rd, ra, rcode) {
   return value;
 };
 
-},{"./byte-array":6,"./dns-codes":7,"./question-section":13,"./resource-record":14}],10:[function(require,module,exports){
+},{"./byte-array":9,"./dns-codes":10,"./question-section":16,"./resource-record":17}],13:[function(require,module,exports){
 /*jshint esnext:true*/
 'use strict';
 
@@ -2568,7 +2940,8 @@ exports.resolveCache = function(fullName) {
 };
 
 /**
- * Browse for SemCache instances on the local network. Returns a  *
+ * Browse for SemCache instances on the local network. This is a complete
+ * resolution with all operating information.
  *
  * @return {Promise.<Object, Error>} Promise that resolves with a list of
  * objects like the following, or an empty list if no instances are found.
@@ -2577,7 +2950,8 @@ exports.resolveCache = function(fullName) {
  *   serviceName: "Sam's SemCache",
  *   type: "_http._local",
  *   domain: "laptop.local",
- *   port: 8889
+ *   port: 8889,
+ *   ipAddress: '1.2.3.4'
  * }
  */
 exports.browseForSemCacheInstances = function() {
@@ -2585,7 +2959,7 @@ exports.browseForSemCacheInstances = function() {
   return result;
 };
 
-},{"../server/server-api":25,"./dns-sd":11}],11:[function(require,module,exports){
+},{"../server/server-api":29,"./dns-sd":14}],14:[function(require,module,exports){
 /*jshint esnext:true*/
 /* globals Promise */
 'use strict';
@@ -3572,7 +3946,7 @@ exports.queryForResponses = function(
   });
 };
 
-},{"../util":28,"./dns-codes":7,"./dns-controller":8,"./dns-packet":9,"./dns-util":12,"./resource-record":14,"lodash":48}],12:[function(require,module,exports){
+},{"../util":32,"./dns-codes":10,"./dns-controller":11,"./dns-packet":12,"./dns-util":15,"./resource-record":17,"lodash":52}],15:[function(require,module,exports){
 'use strict';
 
 var byteArray = require('./byte-array');
@@ -3782,7 +4156,7 @@ exports.getIpStringFromByteArrayReader = function(reader) {
   return result;
 };
 
-},{"./byte-array":6}],13:[function(require,module,exports){
+},{"./byte-array":9}],16:[function(require,module,exports){
 /* global exports, require */
 'use strict';
 
@@ -3894,7 +4268,7 @@ exports.createQuestionFromReader = function(reader) {
   return result;
 };
 
-},{"./byte-array":6,"./dns-util":12}],14:[function(require,module,exports){
+},{"./byte-array":9,"./dns-util":15}],17:[function(require,module,exports){
 /* global exports, require */
 'use strict';
 
@@ -4426,7 +4800,7 @@ exports.peekTypeInReader = function(reader) {
   return result;
 };
 
-},{"./byte-array":6,"./dns-codes":7,"./dns-util":12}],15:[function(require,module,exports){
+},{"./byte-array":9,"./dns-codes":10,"./dns-util":15}],18:[function(require,module,exports){
 'use strict';
 
 /**
@@ -5103,13 +5477,14 @@ exports.downloadKeyAsCsv = function(key) {
   });
 };
 
-},{"./app-controller":1,"./chrome-apis/chromep":2,"./persistence/datastore":20,"./server/server-api":25,"./util":28,"json2csv":42}],16:[function(require,module,exports){
+},{"./app-controller":1,"./chrome-apis/chromep":2,"./persistence/datastore":24,"./server/server-api":29,"./util":32,"json2csv":46}],19:[function(require,module,exports){
 'use strict';
 
 var base64 = require('base-64');
 
 var appc = require('../app-controller');
 var chromep = require('../chrome-apis/chromep');
+var coalMgr = require('../coalescence/manager');
 var datastore = require('../persistence/datastore');
 
 /**
@@ -5205,6 +5580,21 @@ exports.handleExternalMessage = function(message, sender, response) {
         response(errorMsg);
       }
     });
+  } else if (message.type === 'network-query') {
+    exports.queryLocalNetworkForUrls(message)
+    .then(result => {
+      var successMsg = exports.createResponseSuccess(message);
+      successMsg.response = result;
+      if (response) {
+        response(successMsg);
+      }
+    })
+    .catch(err => {
+      var errorMsg = exports.createResponseError(message, err);
+      if (response) {
+        response(errorMsg);
+      }
+    });
   } else {
     console.log('Unrecognized message type from extension: ', message.type);
   }
@@ -5241,9 +5631,9 @@ exports.handleOpenRequest = function(message) {
 /**
  * Handle a query from the extension about a saved page.
  *
- * @param {object} message the message from the extension
+ * @param {Object} message the message from the extension
  *
- * @return {object} the result of the query
+ * @return {Promise.<Object, Error>} the result of the query
  */
 exports.performQuery = function(message) {
   return new Promise(function(resolve, reject) {
@@ -5258,6 +5648,25 @@ exports.performQuery = function(message) {
         }
       });
     resolve(null);
+    })
+    .catch(err => {
+      reject(err);
+    });
+  });
+};
+
+/**
+ * Query the local network, rather than the local machine, for available URLs.
+ *
+ * @param {Object} message the message from the extension
+ *
+ * @return {Promise.<Object, Error>} the result of the query
+ */
+exports.queryLocalNetworkForUrls = function(message) {
+  return new Promise(function(resolve, reject) {
+    coalMgr.queryForUrls(message.params.urls)
+    .then(result => {
+      resolve(result);
     })
     .catch(err => {
       reject(err);
@@ -5378,7 +5787,7 @@ exports.sendMessageToOpenUrl = function(url) {
   exports.sendMessageToExtension(message);
 };
 
-},{"../app-controller":1,"../chrome-apis/chromep":2,"../persistence/datastore":20,"base-64":35}],17:[function(require,module,exports){
+},{"../app-controller":1,"../chrome-apis/chromep":2,"../coalescence/manager":6,"../persistence/datastore":24,"base-64":39}],20:[function(require,module,exports){
 'use strict';
 
 var util = require('../util');
@@ -5386,6 +5795,12 @@ var util = require('../util');
 /**
  * Code shared across the peer-interface implementations.
  */
+
+/**
+ * The path to the HTTP endpoint that serves the digest. Should match the value
+ * in the server/server-api module.
+ */
+var PATH_GET_PAGE_DIGEST = 'page_digest';
 
 /**
  * Returns the IP address, extracting if necessary.
@@ -5420,6 +5835,14 @@ function getPort(port, url) {
 }
 
 /**
+ * Return the path to the endpoint providing a page digest. Does not include an 
+ * IP or port, as well as no leading/trailing slashes.
+ */
+exports.getDigestPath = function() {
+  return PATH_GET_PAGE_DIGEST;
+};
+
+/**
  * Create parameters for a PeerAccessor getList call. If ipaddr or port is
  * missing, tries to interpolate them from listUrl.
  *
@@ -5433,10 +5856,16 @@ function getPort(port, url) {
 exports.createListParams = function(ipaddr, port, listUrl) {
   ipaddr = getIpAddress(ipaddr, listUrl);
   port = getPort(port, listUrl);
+
+  // Create the digest URL.
+  var digestUrl = ['http://', ipaddr, ':', port, '/', exports.getDigestPath()]
+    .join('');
+
   return {
     ipAddress: ipaddr,
     port: port,
-    listUrl: listUrl
+    listUrl: listUrl,
+    digestUrl: digestUrl
   };
 };
 
@@ -5461,7 +5890,7 @@ exports.createFileParams = function(ipaddr, port, fileUrl) {
   };
 };
 
-},{"../util":28}],18:[function(require,module,exports){
+},{"../util":32}],21:[function(require,module,exports){
 'use strict';
 
 var util = require('../util');
@@ -5520,7 +5949,58 @@ exports.HttpPeerAccessor.prototype.getList = function(params) {
   });
 };
 
-},{"../util":28}],19:[function(require,module,exports){
+/**
+ * Retrieve the list of cached pages available in this cache.
+ *
+ * @param {Object} params parameter object as created by peer-interface/common
+ *
+ * @return {Promise.<Object, Error>} Promise that resolves with the digest
+ * response or rejects with an Error.
+ */
+exports.HttpPeerAccessor.prototype.getCacheDigest = function(params) {
+  return new Promise(function(resolve, reject) {
+    util.fetch(params.digestUrl)
+    .then(response => {
+      return response.json();
+    })
+    .then(json => {
+      resolve(json);
+    })
+    .catch(err => {
+      reject(err);
+    });
+  });
+};
+
+},{"../util":32}],22:[function(require,module,exports){
+'use strict';
+
+var settings = require('../settings');
+var ifHttp = require('./http-impl');
+var ifWebrtc = require('./webrtc-impl');
+
+/**
+ * Manages peer interfaces for the application.
+ */
+
+/**
+ * Create a PeerAccessor based on the configured settings.
+ *
+ * @return {HttpPeerAccessor|WebrtcPeerAccessor}
+ */
+exports.getPeerAccessor = function() {
+  var transportMethod = settings.getTransportMethod();
+  console.log(transportMethod);
+  if (transportMethod === 'http') {
+    return new ifHttp.HttpPeerAccessor(); 
+  } else if (transportMethod === 'webrtc') {
+    return new ifWebrtc.WebrtcPeerAccessor(); 
+  } else {
+    throw new Error('Unrecognized transport method: ' + transportMethod);
+  }
+};
+
+},{"../settings":31,"./http-impl":21,"./webrtc-impl":23}],23:[function(require,module,exports){
 'use strict';
 
 var cmgr = require('../webrtc/connection-manager');
@@ -5583,7 +6063,30 @@ exports.WebrtcPeerAccessor.prototype.getList = function(params) {
   });
 };
 
-},{"../util":28,"../webrtc/connection-manager":30}],20:[function(require,module,exports){
+/**
+ * Retrieve the list of cached pages available in this cache.
+ *
+ * @param {Object} params parameter object as created by peer-interface/common
+ *
+ * @return {Promise.<Object, Error>} Promise that resolves with the digest
+ * response or rejects with an Error.
+ */
+exports.WebrtcPeerAccessor.prototype.getCacheDigest = function(params) {
+  return new Promise(function(resolve, reject) {
+    cmgr.getOrCreateConnection(params.ipAddress, params.port)
+    .then(peerConnection => {
+      return peerConnection.getCacheDigest();
+    })
+    .then(json => {
+      resolve(json);
+    })
+    .catch(err => {
+      reject(err);
+    });
+  });
+};
+
+},{"../util":32,"../webrtc/connection-manager":34}],24:[function(require,module,exports){
 /* globals Promise */
 'use strict';
 
@@ -5898,7 +6401,7 @@ exports.getCaptureDateFromName = function(name) {
   return result;
 };
 
-},{"../chrome-apis/chromep":2,"../server/server-api":25,"./file-system":22,"./file-system-util":21}],21:[function(require,module,exports){
+},{"../chrome-apis/chromep":2,"../server/server-api":29,"./file-system":26,"./file-system-util":25}],25:[function(require,module,exports){
 /* globals Promise */
 'use strict';
 
@@ -6107,7 +6610,7 @@ exports.createFileReader = function() {
   return new FileReader();
 };
 
-},{"buffer/":37}],22:[function(require,module,exports){
+},{"buffer/":41}],26:[function(require,module,exports){
 /*jshint esnext:true*/
 /* globals Promise */
 'use strict';
@@ -6293,7 +6796,7 @@ exports.getFileContentsFromName = function(fileName) {
   });
 };
 
-},{"../chrome-apis/chromep":2,"./file-system-util":21}],23:[function(require,module,exports){
+},{"../chrome-apis/chromep":2,"./file-system-util":25}],27:[function(require,module,exports){
 /* globals WSC, _, TextEncoder */
 'use strict';
 
@@ -6323,7 +6826,7 @@ _.extend(exports.EvaluationHandler.prototype, {
   }
 }, WSC.BaseHandler.prototype);
 
-},{"../evaluation":15}],24:[function(require,module,exports){
+},{"../evaluation":18}],28:[function(require,module,exports){
 /* globals WSC, RTCPeerConnection, RTCSessionDescription, RTCIceCandidate */
 'use strict';
 
@@ -6356,6 +6859,34 @@ _.extend(exports.ListCachedPagesHandler.prototype,
   {
     get: function() {
       api.getResponseForAllCachedPages()
+      .then(response => {
+        this.setHeader('content-type', 'text/json');
+        var encoder = new TextEncoder('utf-8');
+        var buffer = encoder.encode(JSON.stringify(response)).buffer;
+        this.write(buffer);
+        this.finish();
+      });
+    }
+  },
+  WSC.BaseHandler.prototype
+);
+
+/**
+ * Handler for the JSON endpoint listing a digest overview of all pages in the
+ * cache.
+ */
+exports.FullDigestHandler = function() {
+  if (!WSC) {
+    console.warn('CachedPagesHandler: WSC global object not present');
+    return;
+  }
+  WSC.BaseHandler.prototype.constructor.call(this);
+};
+
+_.extend(exports.FullDigestHandler.prototype,
+  {
+    get: function() {
+      api.getResponseForAllPagesDigest()
       .then(response => {
         this.setHeader('content-type', 'text/json');
         var encoder = new TextEncoder('utf-8');
@@ -6539,7 +7070,7 @@ _.extend(exports.WebRtcOfferHandler.prototype,
   WSC.BaseHandler.prototype
 );
 
-},{"../dnssd/binary-utils":5,"../persistence/file-system":22,"../persistence/file-system-util":21,"../webrtc/connection-manager":30,"../webrtc/responder":34,"./server-api":25,"underscore":49}],25:[function(require,module,exports){
+},{"../dnssd/binary-utils":8,"../persistence/file-system":26,"../persistence/file-system-util":25,"../webrtc/connection-manager":34,"../webrtc/responder":38,"./server-api":29,"underscore":53}],29:[function(require,module,exports){
 'use strict';
 
 /**
@@ -6558,6 +7089,7 @@ var VERSION = 0.0;
  */
 var PATH_LIST_PAGE_CACHE = 'list_pages';
 var PATH_GET_CACHED_PAGE = 'pages';
+var PATH_GET_PAGE_DIGEST = 'page_digest';
 /** The path we use for mimicking the list_pages endpoing during evaluation. */
 var PATH_EVAL_LIST_PAGE_CACHE = 'eval_list';
 var PATH_RECEIVE_WRTC_OFFER = 'receive_wrtc';
@@ -6588,6 +7120,7 @@ exports.getApiEndpoints = function() {
   return {
     pageCache: PATH_GET_CACHED_PAGE,
     listPageCache: PATH_LIST_PAGE_CACHE,
+    pageDigest: PATH_GET_PAGE_DIGEST,
     evalListPages: PATH_EVAL_LIST_PAGE_CACHE,
     receiveWrtcOffer: PATH_RECEIVE_WRTC_OFFER
   };
@@ -6626,7 +7159,7 @@ exports.getAccessUrlForCachedPage = function(fullPath) {
 };
 
 /**
- * Return a JSON object response for the all cached pages endpoing.
+ * Return a JSON object response for the all cached pages endpoint.
  *
  * @return {Promise.<Object, Error} Promise that resolves with an object like
  * the following:
@@ -6651,6 +7184,48 @@ exports.getResponseForAllCachedPages = function() {
 };
 
 /**
+ * Return a JSON object representing the digest of all pages available on this
+ * cache.
+ *
+ * @return {Promise.<Object, Error>} Promise that resolves with the response or
+ * rejects with an Error. The response will be like the following:
+ * {
+ *   metadata: Object,
+ *   digest:
+ *     [
+ *       {
+ *         fullUrl: full URL of the page that was captured
+ *         captureDate: the date the page was captured
+ *       },
+ *       ...
+ *     ]
+ * }
+ */
+exports.getResponseForAllPagesDigest = function() {
+  return new Promise(function(resolve, reject) {
+    datastore.getAllCachedPages()
+    .then(pages => {
+      var result = {};
+      result.metadata = exports.createMetadatObj();
+      
+      var pageInfos = [];
+      pages.forEach(page => {
+        var info = {};
+        info.fullUrl = page.metadata.fullUrl;
+        info.captureDate = page.captureDate;
+        pageInfos.push(info);
+      });
+
+      result.digest = pageInfos;
+      resolve(result);
+    })
+    .catch(err => {
+      reject(err);
+    });
+  });
+};
+
+/**
  * Get the file name of the file that is being requested.
  *
  * @param {string} path the path of the request
@@ -6662,7 +7237,7 @@ exports.getCachedFileNameFromPath = function(path) {
   return result;
 };
 
-},{"../app-controller":1,"../persistence/datastore":20}],26:[function(require,module,exports){
+},{"../app-controller":1,"../persistence/datastore":24}],30:[function(require,module,exports){
 /* global WSC, DummyHandler */
 'use strict';
 
@@ -6718,6 +7293,10 @@ exports.start = function(host, port) {
       handlers.CachedPageHandler
     ],
     [
+      endpoints.pageDigest,
+      handlers.FullDigestHandler
+    ],
+    [
       endpoints.evalListPages,
       evalHandlers.EvaluationHandler
     ],
@@ -6730,7 +7309,7 @@ exports.start = function(host, port) {
   startServer(host, port, endpointHandlers);
 };
 
-},{"./evaluation-handler":23,"./handlers":24,"./server-api":25}],27:[function(require,module,exports){
+},{"./evaluation-handler":27,"./handlers":28,"./server-api":29}],31:[function(require,module,exports){
 /* global Promise */
 'use strict';
 
@@ -7080,7 +7659,7 @@ exports.promptAndSetNewBaseDir = function() {
   });
 };
 
-},{"./chrome-apis/chromep":2,"./persistence/file-system":22}],28:[function(require,module,exports){
+},{"./chrome-apis/chromep":2,"./persistence/file-system":26}],32:[function(require,module,exports){
 'use strict';
 
 /**
@@ -7283,7 +7862,7 @@ exports.getBufferAsBlob = function(buff) {
   );
 };
 
-},{}],29:[function(require,module,exports){
+},{}],33:[function(require,module,exports){
 'use strict';
 
 var _ = require('underscore');
@@ -7555,7 +8134,7 @@ exports.createContinueMessage = function() {
   return { message: 'next' };
 };
 
-},{"./protocol":33,"buffer/":37,"underscore":49,"wolfy87-eventemitter":50}],30:[function(require,module,exports){
+},{"./protocol":37,"buffer/":41,"underscore":53,"wolfy87-eventemitter":54}],34:[function(require,module,exports){
 /* globals RTCPeerConnection, RTCSessionDescription, RTCIceCandidate */
 'use strict';
 
@@ -7841,7 +8420,7 @@ exports.createRTCSessionDescription = function(descJson) {
   return new RTCSessionDescription(descJson);
 };
 
-},{"../../../app/scripts/webrtc/peer-connection":32,"../server/server-api":25,"../util":28,"buffer/":37}],31:[function(require,module,exports){
+},{"../../../app/scripts/webrtc/peer-connection":36,"../server/server-api":29,"../util":32,"buffer/":41}],35:[function(require,module,exports){
 'use strict';
 
 /**
@@ -7860,9 +8439,10 @@ exports.createRTCSessionDescription = function(descJson) {
 
 exports.TYPE_LIST = 'list';
 exports.TYPE_FILE = 'file';
+exports.TYPE_DIGEST = 'digest';
 
 /** Valid types of request messages. */
-var VALID_TYPES = [exports.TYPE_LIST, exports.TYPE_FILE];
+var VALID_TYPES = [exports.TYPE_LIST, exports.TYPE_FILE, exports.TYPE_DIGEST];
 
 /**
  * An increasing suffix of numbers to ensure we create unique channel names.
@@ -7893,6 +8473,13 @@ exports.createChannelName = function() {
  */
 exports.createListMessage = function() {
   return exports.createMessage(exports.TYPE_LIST);
+};
+
+/**
+ * @return {Object}
+ */
+exports.createDigestMessage = function() {
+  return exports.createMessage(exports.TYPE_DIGEST);
 };
 
 /**
@@ -7944,7 +8531,16 @@ exports.isFile = function(msg) {
   return msg.type && msg.type === exports.TYPE_FILE;
 };
 
-},{}],32:[function(require,module,exports){
+/**
+ * @param {Object} msg
+ *
+ * @return {boolean}
+ */
+exports.isDigest = function(msg) {
+  return msg.type && msg.type === exports.TYPE_DIGEST;
+};
+
+},{}],36:[function(require,module,exports){
 'use strict';
 
 var _ = require('underscore');
@@ -8028,6 +8624,34 @@ exports.PeerConnection.prototype.getList = function() {
 };
 
 /**
+ * Get the digest of page information from the peer.
+ *
+ * @return {Promise.<Object, Error>} Promise that resolves with the JSON object
+ * representing the digest or rejects with an Error.
+ */
+exports.PeerConnection.prototype.getCacheDigest = function() {
+  // For now we are going to assume that all messages can be held in memory.
+  // This means that a single message can be processed without worrying about
+  // piecing it together from other messages. It is a simplification, but one
+  // that seems reasonable.
+  var self = this;
+  return new Promise(function(resolve, reject) {
+    var msg = message.createDigestMessage();
+    var rawConnection = self.getRawConnection();
+
+    exports.sendAndGetResponse(rawConnection, msg)
+    .then(buff => {
+      var str = buff.toString();
+      var result = JSON.parse(str);
+      resolve(result);
+    })
+    .catch(err => {
+      reject(err);
+    });
+  });
+};
+
+/**
  * Get a file from the peer.
  *
  * @param {string} remotePath the identifier on the remote machine
@@ -8085,7 +8709,7 @@ exports.sendAndGetResponse = function(pc, msg) {
   });
 };
 
-},{"./chunking-channel":29,"./message":31,"underscore":49,"wolfy87-eventemitter":50}],33:[function(require,module,exports){
+},{"./chunking-channel":33,"./message":35,"underscore":53,"wolfy87-eventemitter":54}],37:[function(require,module,exports){
 'use strict';
 
 var Buffer = require('buffer/').Buffer;
@@ -8278,7 +8902,7 @@ exports.createErrorMessage = function(reason) {
   return new exports.ProtocolMessage(header, null);
 };
 
-},{"buffer/":37}],34:[function(require,module,exports){
+},{"buffer/":41}],38:[function(require,module,exports){
 'use strict';
 
 var Buffer = require('buffer/').Buffer;
@@ -8355,6 +8979,30 @@ exports.onList = function(channel) {
 };
 
 /**
+ * Handler that responds to a request for a digest of available files.
+ *
+ * @param {RTCDataChannel} channel the data channel on which to send the
+ * response
+ *
+ * @return {Promise.<undefined, Error>} Promise that returns after sending has
+ * begun
+ */
+exports.onDigest = function(channel) {
+  return new Promise(function(resolve, reject) {
+    serverApi.getResponseForAllPagesDigest()
+    .then(json => {
+      var jsonBuff = Buffer.from(JSON.stringify(json));
+      var ccServer = exports.createCcServer(channel);
+      ccServer.sendBuffer(jsonBuff);
+      resolve();
+    })
+    .catch(err => {
+      reject(err);
+    });
+  });
+};
+
+/**
  * Handler that responds to a request for a file.
  *
  * Sends the contents of the file to the peer.
@@ -8408,7 +9056,7 @@ exports.createCcClient = function(channel) {
   return new chunkingChannel.Client(channel);
 };
 
-},{"../dnssd/binary-utils":5,"../persistence/file-system":22,"../server/server-api":25,"./chunking-channel":29,"./message":31,"buffer/":37}],35:[function(require,module,exports){
+},{"../dnssd/binary-utils":8,"../persistence/file-system":26,"../server/server-api":29,"./chunking-channel":33,"./message":35,"buffer/":41}],39:[function(require,module,exports){
 (function (global){
 /*! http://mths.be/base64 v0.1.0 by @mathias | MIT license */
 ;(function(root) {
@@ -8577,7 +9225,7 @@ exports.createCcClient = function(channel) {
 }(this));
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],36:[function(require,module,exports){
+},{}],40:[function(require,module,exports){
 'use strict'
 
 exports.byteLength = byteLength
@@ -8693,7 +9341,7 @@ function fromByteArray (uint8) {
   return parts.join('')
 }
 
-},{}],37:[function(require,module,exports){
+},{}],41:[function(require,module,exports){
 /*!
  * The buffer module from node.js, for the browser.
  *
@@ -10401,7 +11049,7 @@ function isnan (val) {
   return val !== val // eslint-disable-line no-self-compare
 }
 
-},{"base64-js":36,"ieee754":40}],38:[function(require,module,exports){
+},{"base64-js":40,"ieee754":44}],42:[function(require,module,exports){
 /*!
  * chrome-promise 2.0.2
  * https://github.com/tfoxy/chrome-promise
@@ -10496,7 +11144,7 @@ function isnan (val) {
   }
 }));
 
-},{}],39:[function(require,module,exports){
+},{}],43:[function(require,module,exports){
 var isBuffer = require('is-buffer')
 
 var flat = module.exports = flatten
@@ -10603,7 +11251,7 @@ function unflatten(target, opts) {
   return result
 }
 
-},{"is-buffer":41}],40:[function(require,module,exports){
+},{"is-buffer":45}],44:[function(require,module,exports){
 exports.read = function (buffer, offset, isLE, mLen, nBytes) {
   var e, m
   var eLen = nBytes * 8 - mLen - 1
@@ -10689,7 +11337,7 @@ exports.write = function (buffer, value, offset, isLE, mLen, nBytes) {
   buffer[offset + i - d] |= s * 128
 }
 
-},{}],41:[function(require,module,exports){
+},{}],45:[function(require,module,exports){
 /*!
  * Determine if an object is a Buffer
  *
@@ -10712,7 +11360,7 @@ function isSlowBuffer (obj) {
   return typeof obj.readFloatLE === 'function' && typeof obj.slice === 'function' && isBuffer(obj.slice(0, 0))
 }
 
-},{}],42:[function(require,module,exports){
+},{}],46:[function(require,module,exports){
 (function (process){
 /**
  * Module dependencies.
@@ -11016,7 +11664,7 @@ function createDataRows(params) {
 }
 
 }).call(this,require('_process'))
-},{"_process":59,"flat":39,"lodash.clonedeep":43,"lodash.flatten":44,"lodash.get":45,"lodash.set":46,"lodash.uniq":47,"os":58}],43:[function(require,module,exports){
+},{"_process":64,"flat":43,"lodash.clonedeep":47,"lodash.flatten":48,"lodash.get":49,"lodash.set":50,"lodash.uniq":51,"os":63}],47:[function(require,module,exports){
 (function (global){
 /**
  * lodash (Custom Build) <https://lodash.com/>
@@ -12768,7 +13416,7 @@ function stubFalse() {
 module.exports = cloneDeep;
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],44:[function(require,module,exports){
+},{}],48:[function(require,module,exports){
 (function (global){
 /**
  * lodash (Custom Build) <https://lodash.com/>
@@ -13121,7 +13769,7 @@ function isObjectLike(value) {
 module.exports = flatten;
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],45:[function(require,module,exports){
+},{}],49:[function(require,module,exports){
 (function (global){
 /**
  * lodash (Custom Build) <https://lodash.com/>
@@ -14056,7 +14704,7 @@ function get(object, path, defaultValue) {
 module.exports = get;
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],46:[function(require,module,exports){
+},{}],50:[function(require,module,exports){
 (function (global){
 /**
  * lodash (Custom Build) <https://lodash.com/>
@@ -15050,7 +15698,7 @@ function set(object, path, value) {
 module.exports = set;
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],47:[function(require,module,exports){
+},{}],51:[function(require,module,exports){
 (function (global){
 /**
  * lodash (Custom Build) <https://lodash.com/>
@@ -15950,7 +16598,7 @@ function noop() {
 module.exports = uniq;
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],48:[function(require,module,exports){
+},{}],52:[function(require,module,exports){
 (function (global){
 /**
  * @license
@@ -33038,7 +33686,7 @@ module.exports = uniq;
 }.call(this));
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],49:[function(require,module,exports){
+},{}],53:[function(require,module,exports){
 //     Underscore.js 1.8.3
 //     http://underscorejs.org
 //     (c) 2009-2015 Jeremy Ashkenas, DocumentCloud and Investigative Reporters & Editors
@@ -34588,7 +35236,7 @@ module.exports = uniq;
   }
 }.call(this));
 
-},{}],50:[function(require,module,exports){
+},{}],54:[function(require,module,exports){
 /*!
  * EventEmitter v5.1.0 - git.io/ee
  * Unlicense - http://unlicense.org/
@@ -35076,7 +35724,229 @@ module.exports = uniq;
     }
 }(this || {}));
 
-},{}],51:[function(require,module,exports){
+},{}],55:[function(require,module,exports){
+'use strict';
+
+var chromeRuntime = require('../chrome-apis/runtime');
+var chromeTabs = require('../chrome-apis/tabs');
+
+exports.DEBUG = false;
+
+/** Message indicating that a timeout occurred waiting for the app. */
+exports.MSG_TIMEOUT = 'timed out waiting for response from app';
+
+/** Default timeout value. Can be tuned. */
+exports.DEFAULT_TIMEOUT = 10000;
+
+/**
+ * ID of the Semcache Chrome App.
+ */
+exports.APP_ID = 'dfafijifolbgimhdeahdmkkpapjpabka';
+
+/**
+ * Send a message to the SemCache app.
+ *
+ * @param {any} message JSON serializable message for the app
+ * @param {function} callback option callback to be invoked by the receiving
+ * app or extension
+ */
+exports.sendMessageToApp = function(message, callback) {
+  chromeRuntime.sendMessage(exports.APP_ID, message, callback);
+};
+
+/**
+ * Send a message to the extension, expecting a response. This essentially just
+ * hides the complexity around dealing with Chrome's callback-based response
+ * mechanism, promisify-ing it in a single place, allowing callers to interact
+ * with a promise.
+ *
+ * @param {any} message JSON serializable message for the app
+ * @param {number} timeout a timeout to apply to the message. If falsey, uses
+ * default.
+ *
+ * @return {Promise.<any, Error>} Promise that resolves with the response from
+ * the app or rejects with an Error if something went wrong or if the response
+ * times out. Note that the Promise resolves if communication was successful,
+ * even if the request failed gracefully.
+ */
+exports.sendMessageForResponse = function(message, timeout) {
+  timeout = timeout || exports.DEFAULT_TIMEOUT;
+  return new Promise(function(resolve, reject) {
+    // And now we begin the process of resolving/rejecting based on whether or
+    // not the app invokes our callback.
+    var settled = false;
+    // We'll update this if we've already resolved or rejected.
+    var callbackForApp = function(response) {
+      if (exports.DEBUG) {
+        console.log('got callback from app');
+      }
+      if (settled) {
+        // do nothing
+        return;
+      }
+      settled = true;
+      resolve(response);
+    };
+    exports.sendMessageToApp(message, callbackForApp);
+
+    exports.setTimeout(
+      function() {
+        if (!settled) {
+          settled = true;
+          reject(new Error(exports.MSG_TIMEOUT));
+        }
+      },
+      timeout
+    );
+  });
+};
+
+/**
+ * Perform a query to see if this page is available via the local cache. This
+ * will communicate with the app.
+ *
+ * @param {string} url the url of the page you are querying for
+ * @param {Object} options
+ * @param {number} timeout number of milliseconds to wait. If falsey, uses
+ * default.
+ *
+ * @return {Promise.<Object, Error>} Promise that resolves with the
+ * result of the query.
+ */
+exports.isPageSaved = function(url, options, timeout) {
+  var message = {
+    type: 'query',
+    params: {
+      url: url,
+      options: options
+    }
+  };
+  return exports.sendMessageForResponse(message, timeout);
+};
+
+/**
+ * @param {Array.<string>} urls an array of URLs
+ * @param {number} timeout number of milliseconds to wait. If falsey, uses the
+ * default
+ *
+ * @return {Promise.<Object, Error> Promise that resolves with the result of
+ * the query
+ */
+exports.queryForPagesOnNetwork = function(urls, timeout) {
+  if (!timeout) {
+    timeout = exports.DEFAULT_TIMEOUT;
+  }
+  var message = {
+    type: 'network-query',
+    params: {
+      urls: urls
+    }
+  };
+  return exports.sendMessageForResponse(message, timeout);
+};
+
+exports.sendMessageToOpenPage = function(cachedPage) {
+  var message = {
+    type: 'open',
+    params: {
+      page: cachedPage
+    }
+  };
+  return exports.sendMessageForResponse(message);
+};
+
+/**
+ * Save a page as MHTML by calling the extension.
+ *
+ * @param {string} captureUrl the URL of the captured page
+ * @param {string} captureDate the toISOString() of the date the page was
+ * captured
+ * @param {string} dataUrl the blob of MHTMl data as a data URL
+ * @param {object} metadata metadata to store about the page
+ * @param {integer} timeout number of ms to wait before timing out and
+ * rejecting if a response is not received from the app. Default is
+ * DEFAULT_TIMEOUT.
+ *
+ * @return {Promise -> any} Promise that resolves with the response from the
+ * receiving app if the write was successful. Rejects if the write itself
+ * failed or if the request times out.
+ */
+exports.savePage = function(
+  captureUrl, captureDate, dataUrl, metadata, timeout
+) {
+  return new Promise(function(resolve, reject) {
+    // Sensible default
+    metadata = metadata || {};
+    var message = {
+      type: 'write',
+      params: {
+        captureUrl: captureUrl,
+        captureDate: captureDate,
+        dataUrl: dataUrl,
+        metadata: metadata
+      }
+    };
+
+    exports.sendMessageForResponse(message, timeout)
+    .then(response => {
+      if (response.result === 'success') {
+        resolve(response);
+      } else {
+        reject(response);
+      }
+
+    })
+    .catch(err => {
+      reject(err);
+    });
+  });
+};
+
+/**
+ * Wrapper around setTimeout to permit testing.
+ */
+exports.setTimeout = function(fn, timeout) {
+  setTimeout(fn, timeout);
+};
+
+/**
+ * Open the given URL.
+ *
+ * @param {string} url
+ */
+exports.openUrl = function(url) {
+  chromeTabs.update(url);
+};
+
+/**
+ * A callback to be registered via
+ * chrome.runtime.onMessageExternal.addListener.
+ *
+ * After being added, this function is responsible for responding to messages
+ * that come from the App component.
+ *
+ * @param {any} message
+ * @param {MessageSender} sender
+ * @param {function} sendResponse
+ */
+exports.onMessageExternalCallback = function(message, sender, sendResponse) {
+  if (sender.id && sender.id !== exports.APP_ID) {
+    if (exports.DEBUG) {
+      console.log('Received a message not from the app: ', sender);
+    }
+    return;
+  }
+  if (message.type === 'open') {
+    // An open request for a URL.
+    var url = message.params.url;
+    exports.openUrl(url);
+    if (sendResponse) {
+      sendResponse();
+    }
+  }
+};
+
+},{"../chrome-apis/runtime":56,"../chrome-apis/tabs":58}],56:[function(require,module,exports){
 /* globals chrome */
 'use strict';
 
@@ -35116,7 +35986,7 @@ exports.addOnMessageListener = function(fn) {
   chrome.runtime.onMessage.addListener(fn);
 };
 
-},{}],52:[function(require,module,exports){
+},{}],57:[function(require,module,exports){
 'use strict';
 
 var util = require('./util');
@@ -35215,7 +36085,7 @@ exports.clear = function() {
   });
 };
 
-},{"./util":54}],53:[function(require,module,exports){
+},{"./util":59}],58:[function(require,module,exports){
 /* global chrome */
 'use strict';
 
@@ -35287,7 +36157,7 @@ exports.sendMessage = function(tabId, message, callback) {
   chrome.tabs.sendMessage(tabId, message, callback);
 };
 
-},{}],54:[function(require,module,exports){
+},{}],59:[function(require,module,exports){
 /* globals chrome */
 'use strict';
 
@@ -35387,7 +36257,7 @@ exports.applyArgsCheckLastError = function(fn, callArgs) {
   });
 };
 
-},{}],55:[function(require,module,exports){
+},{}],60:[function(require,module,exports){
 'use strict';
 
 console.log('in SemCache contentscriptBundle.js');
@@ -35407,9 +36277,10 @@ util.getOnCompletePromise()
     api.annotateLocalLinks();
   });
 
-},{"../chrome-apis/runtime":51,"../util/util":57,"./cs-api":56,"./cs-evaluation":"cs-eval"}],56:[function(require,module,exports){
+},{"../chrome-apis/runtime":56,"../util/util":62,"./cs-api":61,"./cs-evaluation":"cs-eval"}],61:[function(require,module,exports){
 'use strict';
 
+var appMsg = require('../app-bridge/messaging');
 var util = require('../util/util');
 
 var localPageInfo = null;
@@ -35502,6 +36373,8 @@ exports.getFullLoadTime = function() {
 
 /**
  * Annotate links that are locally available.
+ *
+ * @return {Promise.<undefined, Error>}
  */
 exports.annotateLocalLinks = function() {
   var anchors = document.querySelectorAll('a[href]');
@@ -35512,6 +36385,94 @@ exports.annotateLocalLinks = function() {
     }
     // exports.annotateAnchorIsLocal(anchors[i]);
   }
+};
+
+/**
+ * Annotate links that are available on the network but not in this machine.
+ *
+ * @return {Promise.<undefined, Error>}
+ */
+exports.annotateNetworkLocalLinks = function() {
+  return new Promise(function(resolve, reject) {
+    var links = exports.getLinksOnPage();
+    var urls = Object.keys(links);
+    
+    appMsg.queryForPagesOnNetwork(urls)
+    .then(appMsg => {
+      // localUrls will be an Object mapping URLs to arrays of locally
+      // available pages.
+      var localUrls = appMsg.response;
+      Object.keys(localUrls).forEach(url => {
+        var anchors = links[url];
+        anchors.forEach(anchor => {
+          exports.annotateAnchorIsOnNetwork(anchor);
+        });
+      });
+      resolve();
+    })
+    .catch(err => {
+      reject(err);
+    });
+  });
+};
+
+/**
+ * Get the anchor elements that might be annotated.
+ *
+ * @return {Object} returns an object like the following:
+ * {
+ *   url: [ DOMElement, ... ]
+ * }
+ * This object will contain fully absolute URLs mapped to the DOMElement
+ * anchors with that URL as its href attribute.
+ */
+exports.getLinksOnPage = function() {
+  var allAnchors = exports.selectAllLinksWithHrefs();
+  var result = {};
+
+  allAnchors.forEach(anchor => {
+    // Get the absolute URL.
+    var url = exports.getAbsoluteUrl(anchor.href);
+    var existingDoms = result[url];
+    if (!existingDoms) {
+      existingDoms = [];
+      result[url] = existingDoms;
+    }
+    existingDoms.push(anchor);
+  });
+
+  return result;
+};
+
+/**
+ * Get an absolute URL from the raw href from an anchor tag. There are several
+ * things to consider here--the href might be relative or absolute, it could
+ * lack or contain the scheme, etc. We are going to use the document itself to
+ * get around this. Taken from this page:
+ *
+ * https://stackoverflow.com/questions/14780350/convert-relative-path-to-absolute-using-javascript
+ *
+ * @param {string} href the href from an anchor tag
+ *
+ * @return {string} the absolute, canonicalized URL. Ignores the search and
+ * hash
+ */
+exports.getAbsoluteUrl = function(href) {
+  var a = document.createElement('a');
+  a.href = href;
+  var result = a.protocol + '//' + a.host + a.pathname;
+  return result;
+};
+
+/**
+ * Perform a query selection for all links with href attributes.
+ *
+ * This is a thing wrapper around the document API to facilitate testing.
+ *
+ * @return {Array<DOMElement}
+ */
+exports.selectAllLinksWithHrefs = function() {
+  return document.querySelectorAll('a[href]');
 };
 
 /**
@@ -35527,7 +36488,13 @@ exports.annotateAnchorIsLocal = function(anchor) {
   anchor.innerHTML = anchor.innerHTML + zap;
 };
 
-},{"../util/util":57}],57:[function(require,module,exports){
+exports.annotateAnchorIsOnNetwork = function(anchor) {
+  // We'll style the link using a cloud.
+  var cloud = '\u2601';
+  anchor.innerHTML = anchor.innerHTML + cloud;
+};
+
+},{"../app-bridge/messaging":55,"../util/util":62}],62:[function(require,module,exports){
 /* globals fetch */
 'use strict';
 
@@ -35609,7 +36576,7 @@ exports.wait = function(ms) {
   });
 };
 
-},{"../chrome-apis/tabs":53}],58:[function(require,module,exports){
+},{"../chrome-apis/tabs":58}],63:[function(require,module,exports){
 exports.endianness = function () { return 'LE' };
 
 exports.hostname = function () {
@@ -35656,7 +36623,7 @@ exports.tmpdir = exports.tmpDir = function () {
 
 exports.EOL = '\n';
 
-},{}],59:[function(require,module,exports){
+},{}],64:[function(require,module,exports){
 // shim for using process in browser
 var process = module.exports = {};
 
@@ -36226,4 +37193,4 @@ exports.onPageLoadComplete = function() {
   });
 };
 
-},{"../../../../chromeapp/app/scripts/evaluation":15,"../chrome-apis/runtime":51,"../chrome-apis/storage":52,"../util/util":57,"./cs-api":56}]},{},[55]);
+},{"../../../../chromeapp/app/scripts/evaluation":18,"../chrome-apis/runtime":56,"../chrome-apis/storage":57,"../util/util":62,"./cs-api":61}]},{},[60]);

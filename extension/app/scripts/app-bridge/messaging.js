@@ -97,6 +97,27 @@ exports.isPageSaved = function(url, options, timeout) {
   return exports.sendMessageForResponse(message, timeout);
 };
 
+/**
+ * @param {Array.<string>} urls an array of URLs
+ * @param {number} timeout number of milliseconds to wait. If falsey, uses the
+ * default
+ *
+ * @return {Promise.<Object, Error> Promise that resolves with the result of
+ * the query
+ */
+exports.queryForPagesOnNetwork = function(urls, timeout) {
+  if (!timeout) {
+    timeout = exports.DEFAULT_TIMEOUT;
+  }
+  var message = {
+    type: 'network-query',
+    params: {
+      urls: urls
+    }
+  };
+  return exports.sendMessageForResponse(message, timeout);
+};
+
 exports.sendMessageToOpenPage = function(cachedPage) {
   var message = {
     type: 'open',

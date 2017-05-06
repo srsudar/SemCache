@@ -308,3 +308,47 @@ test('onMessageExternalCallback responds to type open', function(t) {
   t.end();
   resetMessaging();
 });
+
+test('queryForPagesOnNetwork resolves response from app', function(t) {
+  var timeout = 4444;
+  var urls = ['a', 'b'];
+  var message = {
+    type: 'network-query',
+    params: {
+      urls: urls
+    }
+  };
+
+  var expected = { msg: 'all are ready' };
+  var sendMessageForResponseSpy = sinon.stub().resolves(expected);
+  messaging.sendMessageForResponse = sendMessageForResponseSpy;
+
+  messaging.queryForPagesOnNetwork(urls, timeout)
+  .then(actual => {
+    t.deepEqual(actual, expected);
+    t.deepEqual(sendMessageForResponseSpy.args[0], [message, timeout]);
+    end(t);
+  })
+  .catch(err => {
+    t.fail(err);
+    end(t);
+  });
+});
+
+test('queryForPagesOnNetwork rejects correctly', function(t) {
+  var urls = ['oh', 'no'];
+
+  var expected = { msg: 'dun gawn rong' };
+  var sendMessageForResponseSpy = sinon.stub().rejects(expected);
+  messaging.sendMessageForResponse = sendMessageForResponseSpy;
+
+  messaging.isPageSaved(urls)
+  .then(actual => {
+    t.fail(actual);
+    end(t);
+  })
+  .catch(actual => {
+    t.deepEqual(actual, expected);
+    end(t);
+  });
+});

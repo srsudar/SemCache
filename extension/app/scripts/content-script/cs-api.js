@@ -1,5 +1,6 @@
 'use strict';
 
+var appMsg = require('../app-bridge/messaging');
 var util = require('../util/util');
 
 var localPageInfo = null;
@@ -92,6 +93,8 @@ exports.getFullLoadTime = function() {
 
 /**
  * Annotate links that are locally available.
+ *
+ * @return {Promise.<undefined, Error>}
  */
 exports.annotateLocalLinks = function() {
   var anchors = document.querySelectorAll('a[href]');
@@ -105,6 +108,94 @@ exports.annotateLocalLinks = function() {
 };
 
 /**
+ * Annotate links that are available on the network but not in this machine.
+ *
+ * @return {Promise.<undefined, Error>}
+ */
+exports.annotateNetworkLocalLinks = function() {
+  return new Promise(function(resolve, reject) {
+    var links = exports.getLinksOnPage();
+    var urls = Object.keys(links);
+    
+    appMsg.queryForPagesOnNetwork(urls)
+    .then(appMsg => {
+      // localUrls will be an Object mapping URLs to arrays of locally
+      // available pages.
+      var localUrls = appMsg.response;
+      Object.keys(localUrls).forEach(url => {
+        var anchors = links[url];
+        anchors.forEach(anchor => {
+          exports.annotateAnchorIsOnNetwork(anchor);
+        });
+      });
+      resolve();
+    })
+    .catch(err => {
+      reject(err);
+    });
+  });
+};
+
+/**
+ * Get the anchor elements that might be annotated.
+ *
+ * @return {Object} returns an object like the following:
+ * {
+ *   url: [ DOMElement, ... ]
+ * }
+ * This object will contain fully absolute URLs mapped to the DOMElement
+ * anchors with that URL as its href attribute.
+ */
+exports.getLinksOnPage = function() {
+  var allAnchors = exports.selectAllLinksWithHrefs();
+  var result = {};
+
+  allAnchors.forEach(anchor => {
+    // Get the absolute URL.
+    var url = exports.getAbsoluteUrl(anchor.href);
+    var existingDoms = result[url];
+    if (!existingDoms) {
+      existingDoms = [];
+      result[url] = existingDoms;
+    }
+    existingDoms.push(anchor);
+  });
+
+  return result;
+};
+
+/**
+ * Get an absolute URL from the raw href from an anchor tag. There are several
+ * things to consider here--the href might be relative or absolute, it could
+ * lack or contain the scheme, etc. We are going to use the document itself to
+ * get around this. Taken from this page:
+ *
+ * https://stackoverflow.com/questions/14780350/convert-relative-path-to-absolute-using-javascript
+ *
+ * @param {string} href the href from an anchor tag
+ *
+ * @return {string} the absolute, canonicalized URL. Ignores the search and
+ * hash
+ */
+exports.getAbsoluteUrl = function(href) {
+  var a = document.createElement('a');
+  a.href = href;
+  var result = a.protocol + '//' + a.host + a.pathname;
+  return result;
+};
+
+/**
+ * Perform a query selection for all links with href attributes.
+ *
+ * This is a thing wrapper around the document API to facilitate testing.
+ *
+ * @return {Array<DOMElement}
+ */
+exports.selectAllLinksWithHrefs = function() {
+  return document.querySelectorAll('a[href]');
+};
+
+/**
  * Annotate an individual anchor to indicate that it is available locally. The
  * anchor is annotated in place.
  *
@@ -115,4 +206,10 @@ exports.annotateAnchorIsLocal = function(anchor) {
   // We'll style the link using a lightning bolt, known as 'zap'.
   var zap = '\u26A1';
   anchor.innerHTML = anchor.innerHTML + zap;
+};
+
+exports.annotateAnchorIsOnNetwork = function(anchor) {
+  // We'll style the link using a cloud.
+  var cloud = '\u2601';
+  anchor.innerHTML = anchor.innerHTML + cloud;
 };
