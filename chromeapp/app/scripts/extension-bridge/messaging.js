@@ -4,6 +4,7 @@ var base64 = require('base-64');
 
 var appc = require('../app-controller');
 var chromep = require('../chrome-apis/chromep');
+var coalMgr = require('../coalescence/manager');
 var datastore = require('../persistence/datastore');
 
 /**
@@ -99,6 +100,21 @@ exports.handleExternalMessage = function(message, sender, response) {
         response(errorMsg);
       }
     });
+  } else if (message.type === 'network-query') {
+    exports.queryLocalNetworkForUrls(message)
+    .then(result => {
+      var successMsg = exports.createResponseSuccess(message);
+      successMsg.response = result;
+      if (response) {
+        response(successMsg);
+      }
+    })
+    .catch(err => {
+      var errorMsg = exports.createResponseError(message, err);
+      if (response) {
+        response(errorMsg);
+      }
+    });
   } else {
     console.log('Unrecognized message type from extension: ', message.type);
   }
@@ -135,9 +151,9 @@ exports.handleOpenRequest = function(message) {
 /**
  * Handle a query from the extension about a saved page.
  *
- * @param {object} message the message from the extension
+ * @param {Object} message the message from the extension
  *
- * @return {object} the result of the query
+ * @return {Promise.<Object, Error>} the result of the query
  */
 exports.performQuery = function(message) {
   return new Promise(function(resolve, reject) {
@@ -152,6 +168,25 @@ exports.performQuery = function(message) {
         }
       });
     resolve(null);
+    })
+    .catch(err => {
+      reject(err);
+    });
+  });
+};
+
+/**
+ * Query the local network, rather than the local machine, for available URLs.
+ *
+ * @param {Object} message the message from the extension
+ *
+ * @return {Promise.<Object, Error>} the result of the query
+ */
+exports.queryLocalNetworkForUrls = function(message) {
+  return new Promise(function(resolve, reject) {
+    coalMgr.queryForUrls(message.params.urls)
+    .then(result => {
+      resolve(result);
     })
     .catch(err => {
       reject(err);

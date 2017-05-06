@@ -53,6 +53,15 @@ function getDummyQueryMessage(url) {
   };
 }
 
+function getDummyNetworkQueryMessage(urls) {
+  return {
+    type: 'network-query',
+    params: {
+      urls: urls
+    }
+  };
+}
+
 /**
  * Proxyquire the messaging module with proxies set as the proxied modules.
  */
@@ -217,6 +226,62 @@ test('handleExternalMessage returns result of query', function(t) {
 
   returnValue = messaging.handleExternalMessage(
     queryMessage, getSender(), callbackFromExtension
+  );
+});
+
+test('handleExternalMessage returns result of network query', function(t) {
+  var urls = [ 'a.com', 'b.org' ];
+  var message = getDummyNetworkQueryMessage(urls);
+
+  var queryResult = 'heyo';
+
+  var expected = {
+    type: 'network-query',
+    result: 'success',
+    response: queryResult
+  };
+
+  messaging.queryLocalNetworkForUrls = sinon.stub().withArgs(message)
+    .resolves(queryResult);
+
+  var returnValue = null;
+  var callbackFromExtension = function(actual) {
+    t.deepEqual(actual, expected);
+    t.deepEqual(messaging.queryLocalNetworkForUrls.args[0], [message]);
+    t.true(returnValue);
+    end(t);
+  };
+
+  returnValue = messaging.handleExternalMessage(
+    message, getSender(), callbackFromExtension
+  );
+});
+
+test('handleExternalMessage responds with error if goes wrong', function(t) {
+  var urls = [ 'a.com', 'b.org' ];
+  var message = getDummyNetworkQueryMessage(urls);
+
+  var expectedErr = { msg: 'local query went wrong' };
+
+  var expected = {
+    type: 'network-query',
+    result: 'error',
+    err: expectedErr
+  };
+
+  messaging.queryLocalNetworkForUrls = sinon.stub().withArgs(message)
+    .rejects(expectedErr);
+
+  var returnValue = null;
+  var callbackFromExtension = function(actual) {
+    t.deepEqual(actual, expected);
+    t.deepEqual(messaging.queryLocalNetworkForUrls.args[0], [message]);
+    t.true(returnValue);
+    end(t);
+  };
+
+  returnValue = messaging.handleExternalMessage(
+    message, getSender(), callbackFromExtension
   );
 });
 
@@ -413,4 +478,47 @@ test('createResponseError correct', function(t) {
   var actual = messaging.createResponseError(message, err);
   t.deepEqual(actual, expected);
   t.end();
+});
+
+test('queryLocalNetworkForUrls rejects on error', function(t) {
+  var expectedErr = { msg: 'query failed' };
+  var urls = ['a', 'b'];
+  var message = getDummyNetworkQueryMessage(urls);
+  proxyquireMessaging({
+    '../coalescence/manager': {
+      queryForUrls: sinon.stub().withArgs(urls).rejects(expectedErr)
+    }
+  });
+
+  messaging.queryLocalNetworkForUrls(message)
+  .then(actual => {
+    t.fail(actual);
+    end(t);
+  })
+  .catch(actual => {
+    t.equal(actual, expectedErr);
+    end(t);
+  });
+});
+
+test('queryLocalNetworkForUrls resolves with result', function(t) {
+  var urls = [ 'bar.com', 'foo.com' ];
+
+  var message = getDummyNetworkQueryMessage(urls);
+  var expected = [ 'hooray', 'woohoo' ];
+  proxyquireMessaging({
+    '../coalescence/manager': {
+      queryForUrls: sinon.stub().withArgs(urls).resolves(expected)
+    }
+  });
+
+  messaging.queryLocalNetworkForUrls(message)
+  .then(actual => {
+    t.deepEqual(actual, expected);
+    end(t);
+  })
+  .catch(actual => {
+    t.fail(actual);
+    end(t);
+  });
 });

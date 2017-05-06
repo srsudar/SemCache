@@ -64,7 +64,7 @@ exports.getRuntimeBare = function() {
   return chrome.runtime;
 };
 
-},{"chrome-promise":27}],2:[function(require,module,exports){
+},{"chrome-promise":30}],2:[function(require,module,exports){
 /* globals chrome */
 'use strict';
 
@@ -165,6 +165,395 @@ exports.applyArgsCheckLastError = function(fn, callArgs) {
 };
 
 },{}],3:[function(require,module,exports){
+'use strict';
+
+var dnssdSem = require('../dnssd/dns-sd-semcache');
+var objects = require('./objects');
+var peerIf = require('../peer-interface/common');
+var peerIfMgr = require('../peer-interface/manager');
+
+/**
+ * This module is responsible for the digest strategy of cache coalescence.
+ */
+
+/**
+ * This is the data structure in which we're storing the digests from peers.
+ *
+ * Contains objects 
+ */
+var DIGESTS = [];
+
+var IS_INITIALIZED = false;
+var IS_INITIALIZING = false;
+
+/**
+ * An implementation of the coalescence strategy API.
+ *
+ * The digest strategy is to obtain a list of all the available pages from
+ * peers and check those lists.
+ * @constructor
+ */
+exports.DigestStrategy = function DigestStrategy() {
+  if (!(this instanceof DigestStrategy)) {
+    throw new Error('DigestStrategy must be called with new');
+  }
+  // Don't like that we are basically exposing module-level state that isn't
+  // tied to this object, but going to leave it for now. This is basically
+  // giving an object-based API onto the global state, which is a bit ugly but
+  // I'm going to allow it for the near-term.
+};
+
+/**
+ * Reset any state saved by this module
+ */
+exports.DigestStrategy.prototype.reset = function() {
+  this.setDigests([]);
+  IS_INITIALIZED = false;
+  // If an initialization is in progress, this could not be a complete reset.
+  IS_INITIALIZING = false;
+};
+
+/**
+ * Replace the saved Digest state with this new information.
+ *
+ * @param {Array.<Digest>} digests
+ */
+exports.DigestStrategy.prototype.setDigests = function(digests) {
+  DIGESTS = digests;
+};
+
+/**
+ * Indicates if the module is ready to perform queries.
+ *
+ * @return {boolean} true if queries can be performed
+ */
+exports.DigestStrategy.prototype.isInitialized = function() {
+  return IS_INITIALIZED;
+};
+
+/**
+ * Indicates if we are currently initializing.
+ *
+ * @return {boolean}
+ */
+exports.DigestStrategy.prototype.isInitializing = function() {
+  return IS_INITIALIZING;
+};
+
+/**
+ * Initialize the strategy.
+ *
+ * @return {Promise.<undefined, Error>} Promise that resolves when
+ * initialization is complete.
+ */
+exports.DigestStrategy.prototype.initialize = function() {
+  if (this.isInitializing()) {
+    // no-op
+    return Promise.resolve();
+  }
+  if (this.isInitialized()) {
+    // We're already initialized, just no-op.
+    return Promise.resolve();
+  }
+  // Initialization consists of the following steps:
+  // 1) Query the network for peers
+  // 2) For each peer, get their digest
+  // 3) Process the digests
+  // 4) Update our module data structures with this information
+  // 5) Declare that we are initialized
+  IS_INITIALIZING = true;
+  var that = this;
+
+  return new Promise(function(resolve, reject) {
+    dnssdSem.browseForSemCacheInstances()
+    .then(peerInfos => {
+      var peerAccessor = peerIfMgr.getPeerAccessor();
+      return that.getAndProcessDigests(peerAccessor, peerInfos);
+    })
+    .then(digests => {
+      that.setDigests(digests);
+      IS_INITIALIZING = false;
+      IS_INITIALIZED = true;
+      resolve();
+    })
+    .catch(err => {
+      IS_INITIALIZING = false;
+      reject(err);
+    });
+  });
+
+};
+
+/**
+ * Obtain digests from the peers indicated in peerInfos and process them. If
+ * any peers could not be connected to, an error is logged but the process is
+ * not terminated. Does not update any of the module's data structures.
+ *
+ * @param {WebrtcPeerAccessor|HttpPeerAccessor} peerInterface a peer interface
+ * for the given transport protocol
+ * @param {Array.<Object>} peerInfos the objects containing information to
+ * connect to peers as returned from the browse service functions
+ *
+ * @return {Promise.<Array<Digest>>}
+ */
+exports.DigestStrategy.prototype.getAndProcessDigests = function(
+  peerInterface, peerInfos
+) {
+  // Query them, create digests for those that succeed.
+  // Note that there is some trickiness here about the best strategy by which
+  // to do this. If we want to avoid congestion, we might want to query them
+  // serially, not worrying if something has rejected. We need to tolerate
+  // rejection in case a peer leaves while we are issuing the query. That is
+  // ok and should be tolerated. The fulfillPromises in the evaluation module
+  // could work for this.
+  //
+  // For now we are just going to countdown waiting for the promises to settle.
+  return new Promise(function(resolve) {
+    var pendingResponses = peerInfos.length;
+    var result = [];
+    peerInfos.forEach(peerInfo => {
+      var params = peerIf.createListParams(
+        peerInfo.ipAddress, peerInfo.port, null
+      );
+      peerInterface.getCacheDigest(params)
+      .then(rawDigest => {
+        pendingResponses--;
+        var digest = new objects.Digest(peerInfo, rawDigest);
+        result.push(digest);
+        if (pendingResponses === 0) {
+          resolve(result);
+        }
+      })
+      .catch(err => {
+        // Swallow this one, as we expect some errors
+        console.log('Ignoreable error fetching digest: ', err);
+        pendingResponses--;
+        if (pendingResponses === 0) {
+          resolve(result);
+        }
+      });
+    });
+  });
+};
+
+/**
+ * Obtain access information for the given array of URLs. The result will be an
+ * array of length <= urls.length. Only those that are available will be
+ * present.
+ *
+ * @param {Array.<string>} urls Array of URLs for which to query
+ *
+ * @return {Promise.<Object, Error>} Promise that resolves with an Object of
+ * information about the urls or rejects with an Error. The Object is like the
+ * following:
+ *   {
+ *     url: [NetworkCachedPage, NetworkCachedPage],
+ *   }
+ */
+exports.DigestStrategy.prototype.performQuery = function(urls) {
+  if (!this.isInitialized()) {
+    console.warn('digest-strategy was queried but is not initialized');
+  }
+  return new Promise(function(resolve, reject) {
+    Promise.resolve()
+    .then(() => {
+      var result = {};
+      urls.forEach(url => {
+        var copiesForUrl = [];
+        DIGESTS.forEach(digest => {
+          var captureDate = digest.performQueryForPage(url);
+          if (captureDate) {
+            var NetworkCachedPage = new objects.NetworkCachedPage(
+              'probable',
+              {
+                url: url,
+                captureDate: captureDate
+              },
+              digest.peerInfo
+            );
+            copiesForUrl.push(NetworkCachedPage);
+          }
+        });
+        if (copiesForUrl.length > 0) {
+          result[url] = copiesForUrl;
+        }
+      });
+      resolve(result);
+    })
+    .catch(err => {
+      reject(err);
+    });
+  });
+};
+
+},{"../dnssd/dns-sd-semcache":"dnsSem","../peer-interface/common":13,"../peer-interface/manager":15,"./objects":5}],4:[function(require,module,exports){
+'use strict';
+
+var stratDig = require('./digest-strategy');
+
+/**
+ * The coalescence/manager module is the API callers should use to interact
+ * with all content in a local network of collaborators. A single client might
+ * want to know if 'http://www.example.com' is available locally, for example.
+ * The client should use coalescer/manager to determine this information.
+ */
+
+/**
+ * Enum representing strategies for performing cache coalescence.
+ */
+exports.STRATEGIES = {
+  /**
+   * Maintain a list of all available cached pages from each peer.
+   */
+  digest: 'digest',
+};
+
+/**
+ * The current startegy for resolving coalescence requests.
+ */
+exports.CURRENT_STRATEGY = exports.STRATEGIES.digest;
+
+/**
+ * Obtain access information for the given array of URLs. The result will be an
+ * array of length <= urls.length. Only those that are available will be
+ * present.
+ *
+ * @param {Array.<string>} urls Array of URLs for which to query
+ *
+ * @return {Promise.<Array.<NetworkCachedPage>, Error>} Promise that resolves
+ * with an Array of information about the urls or rejects with an Error.
+ */
+exports.queryForUrls = function(urls) {
+  return new Promise(function(resolve, reject) {
+    var strategy = exports.getStrategy();
+    strategy.initialize()
+    .then(() => {
+      return strategy.performQuery(urls);
+    })
+    .then(result => {
+      resolve(result);
+    })
+    .catch(err => {
+      reject(err);
+    });
+  });
+};
+
+/**
+ * Get the implementation of the current coalescence strategy.
+ *
+ * @return {DigestStrategy}
+ */ 
+exports.getStrategy = function() {
+  // Only one to return at the moment.
+  return new stratDig.DigestStrategy();
+};
+
+},{"./digest-strategy":3}],5:[function(require,module,exports){
+'use strict';
+
+/**
+ * Objects relevant to coalescence between instances on the local network.
+ */
+
+/**
+ * This object represents a cached page that is available on the local network.
+ * It is related but not identical to the CachedPage object in the persistence
+ * module, incorporating a notion of probabilistic availability.
+ *
+ * There are several considerations when interacting with a coalesced page. The
+ * first is that the page can exist in several states. In SemCache this is
+ * referred to as availability.
+ *
+ * If the page is available on the local machine, we are certain that the page
+ * exists and that a request to open that page will succeed (assuming the page
+ * isn't deleted after a query is made, that there are no errors, etc). 
+ *
+ * If another peer responds that they have the page, we are certain that the
+ * page exists at the time of the query, but we are not sure that an eventual
+ * fetch will succeed. Perhaps when an attempt to open the page is made the
+ * client will have left the network, or an error will occur because the
+ * network goes down.
+ *
+ * It is also possible that set inclusion (and thus local availability) is a
+ * probabilistic operation, eg if Bloom filters are used to lower network
+ * traffic.
+ *
+ * We refer to the first state as "available". Both the second states we will
+ * lump together to refer to as "probable". The third state is simply
+ * "unavailable".
+ *
+ * These states might not be important to the caller, but we want to provide
+ * the information all the same.
+ *
+ * @param {String} availability A string enum representing various types of
+ * availability on the local network. This is expected to be on of "available",
+ * meaning access is highly available (eg on the local machine) and access will
+ * succeed. "probable" means that the page was likely available at the time of
+ * the query. This uncertainty might stem from the potential the machine will
+ * leave the network by the time the page is requested or because inclusion was
+ * determined to do a probabilistic operation like a Bloom filter. The last
+ * option is "unavailable", indicating that a cached copy of the page is not
+ * available.
+ * @param {Object} queryInfo information about the query of the page. This
+ * might include the URL, etc
+ * @param {Object} accessInfo information about how to access the page. If this
+ * is a locally available page, this might be a CachedPage object from the
+ * persistence module, eg. Otherwise it will depend on the type of
+ * availability.
+ *
+ * @constructor
+ */
+exports.NetworkCachedPage = function NetworkCachedPage(
+  availability,
+  queryInfo,
+  accessInfo
+) {
+  if (!(this instanceof NetworkCachedPage)) {
+    throw new Error('NetworkCachedPage must be called with new');
+  }
+  this.availability = availability;
+  this.queryInfo = queryInfo;
+  this.accessInfo = accessInfo;
+};
+
+/**
+ * Create a Digest object from a list of pages saved on a peer. This
+ * associates information about the peer as well as access information.
+ *
+ * @constructor
+ */
+exports.Digest = function Digest(peerInfo, pageInfos) {
+  if (!(this instanceof Digest)) {
+    throw new Error('Digest must be called with new');
+  }
+  this.peerInfo = peerInfo;
+
+  // Now process the pageInfos.
+  this.digestInfo = {};
+  pageInfos.forEach(pageInfo => {
+    this.digestInfo[pageInfo.url] = pageInfo.captureDate;
+  });
+};
+
+/**
+ * Query the digest to see if the page contains the given URL.
+ *
+ * @param {string} url
+ *
+ * @return {string|null} null if the digest does not contain the page,
+ * otherwise the timestamp of the page
+ */
+exports.Digest.prototype.performQueryForPage = function(url) {
+  var captureDate = this.digestInfo[url];
+  if (captureDate) {
+    return captureDate;
+  } else {
+    return null;
+  }
+};
+
+},{}],6:[function(require,module,exports){
 /*jshint esnext:true, bitwise: false */
 'use strict';
 
@@ -381,7 +770,7 @@ exports.getByteArrayAsUint8Array = function(byteArr) {
   return new Uint8Array(byteArr._buffer, 0, byteArr._cursor);
 };
 
-},{"./binary-utils":"binaryUtils"}],4:[function(require,module,exports){
+},{"./binary-utils":"binaryUtils"}],7:[function(require,module,exports){
 /*jshint esnext:true*/
 /*
  * https://github.com/justindarc/dns-sd.js
@@ -570,7 +959,7 @@ function defineType(values) {
   return T;
 }
 
-},{}],5:[function(require,module,exports){
+},{}],8:[function(require,module,exports){
 /*jshint esnext:true, bitwise:false */
 
 /**
@@ -999,7 +1388,7 @@ exports.getFlagsAsValue = function(qr, opcode, aa, tc, rd, ra, rcode) {
   return value;
 };
 
-},{"./byte-array":3,"./dns-codes":4,"./question-section":7,"./resource-record":8}],6:[function(require,module,exports){
+},{"./byte-array":6,"./dns-codes":7,"./question-section":10,"./resource-record":11}],9:[function(require,module,exports){
 'use strict';
 
 var byteArray = require('./byte-array');
@@ -1209,7 +1598,7 @@ exports.getIpStringFromByteArrayReader = function(reader) {
   return result;
 };
 
-},{"./byte-array":3}],7:[function(require,module,exports){
+},{"./byte-array":6}],10:[function(require,module,exports){
 /* global exports, require */
 'use strict';
 
@@ -1321,7 +1710,7 @@ exports.createQuestionFromReader = function(reader) {
   return result;
 };
 
-},{"./byte-array":3,"./dns-util":6}],8:[function(require,module,exports){
+},{"./byte-array":6,"./dns-util":9}],11:[function(require,module,exports){
 /* global exports, require */
 'use strict';
 
@@ -1853,7 +2242,7 @@ exports.peekTypeInReader = function(reader) {
   return result;
 };
 
-},{"./byte-array":3,"./dns-codes":4,"./dns-util":6}],9:[function(require,module,exports){
+},{"./byte-array":6,"./dns-codes":7,"./dns-util":9}],12:[function(require,module,exports){
 /* globals chrome */
 'use strict';
 
@@ -1877,7 +2266,7 @@ window.dnssd = require('dnssd');
 window.dnsc = require('dnsc');
 window.dnsSem = require('dnsSem');
 
-},{"dnsSem":"dnsSem","dnsc":"dnsc","dnssd":"dnssd"}],10:[function(require,module,exports){
+},{"dnsSem":"dnsSem","dnsc":"dnsc","dnssd":"dnssd"}],13:[function(require,module,exports){
 'use strict';
 
 var util = require('../util');
@@ -1980,7 +2369,7 @@ exports.createFileParams = function(ipaddr, port, fileUrl) {
   };
 };
 
-},{"../util":18}],11:[function(require,module,exports){
+},{"../util":21}],14:[function(require,module,exports){
 'use strict';
 
 var util = require('../util');
@@ -2062,7 +2451,7 @@ exports.HttpPeerAccessor.prototype.getCacheDigest = function(params) {
   });
 };
 
-},{"../util":18}],12:[function(require,module,exports){
+},{"../util":21}],15:[function(require,module,exports){
 'use strict';
 
 var settings = require('../settings');
@@ -2090,7 +2479,7 @@ exports.getPeerAccessor = function() {
   }
 };
 
-},{"../settings":"settings","./http-impl":11,"./webrtc-impl":13}],13:[function(require,module,exports){
+},{"../settings":"settings","./http-impl":14,"./webrtc-impl":16}],16:[function(require,module,exports){
 'use strict';
 
 var cmgr = require('../webrtc/connection-manager');
@@ -2176,7 +2565,7 @@ exports.WebrtcPeerAccessor.prototype.getCacheDigest = function(params) {
   });
 };
 
-},{"../util":18,"../webrtc/connection-manager":"cmgr"}],14:[function(require,module,exports){
+},{"../util":21,"../webrtc/connection-manager":"cmgr"}],17:[function(require,module,exports){
 /* globals Promise */
 'use strict';
 
@@ -2491,7 +2880,7 @@ exports.getCaptureDateFromName = function(name) {
   return result;
 };
 
-},{"../chrome-apis/chromep":1,"../server/server-api":17,"./file-system":"fileSystem","./file-system-util":"fsUtil"}],15:[function(require,module,exports){
+},{"../chrome-apis/chromep":1,"../server/server-api":20,"./file-system":"fileSystem","./file-system-util":"fsUtil"}],18:[function(require,module,exports){
 /* globals WSC, _, TextEncoder */
 'use strict';
 
@@ -2521,7 +2910,7 @@ _.extend(exports.EvaluationHandler.prototype, {
   }
 }, WSC.BaseHandler.prototype);
 
-},{"../evaluation":"eval"}],16:[function(require,module,exports){
+},{"../evaluation":"eval"}],19:[function(require,module,exports){
 /* globals WSC, RTCPeerConnection, RTCSessionDescription, RTCIceCandidate */
 'use strict';
 
@@ -2765,7 +3154,7 @@ _.extend(exports.WebRtcOfferHandler.prototype,
   WSC.BaseHandler.prototype
 );
 
-},{"../dnssd/binary-utils":"binaryUtils","../persistence/file-system":"fileSystem","../persistence/file-system-util":"fsUtil","../webrtc/connection-manager":"cmgr","../webrtc/responder":23,"./server-api":17,"underscore":40}],17:[function(require,module,exports){
+},{"../dnssd/binary-utils":"binaryUtils","../persistence/file-system":"fileSystem","../persistence/file-system-util":"fsUtil","../webrtc/connection-manager":"cmgr","../webrtc/responder":26,"./server-api":20,"underscore":43}],20:[function(require,module,exports){
 'use strict';
 
 /**
@@ -2932,7 +3321,7 @@ exports.getCachedFileNameFromPath = function(path) {
   return result;
 };
 
-},{"../app-controller":"appController","../persistence/datastore":14}],18:[function(require,module,exports){
+},{"../app-controller":"appController","../persistence/datastore":17}],21:[function(require,module,exports){
 'use strict';
 
 /**
@@ -3135,7 +3524,7 @@ exports.getBufferAsBlob = function(buff) {
   );
 };
 
-},{}],19:[function(require,module,exports){
+},{}],22:[function(require,module,exports){
 'use strict';
 
 var _ = require('underscore');
@@ -3407,7 +3796,7 @@ exports.createContinueMessage = function() {
   return { message: 'next' };
 };
 
-},{"./protocol":22,"buffer/":26,"underscore":40,"wolfy87-eventemitter":41}],20:[function(require,module,exports){
+},{"./protocol":25,"buffer/":29,"underscore":43,"wolfy87-eventemitter":44}],23:[function(require,module,exports){
 'use strict';
 
 /**
@@ -3527,7 +3916,7 @@ exports.isDigest = function(msg) {
   return msg.type && msg.type === exports.TYPE_DIGEST;
 };
 
-},{}],21:[function(require,module,exports){
+},{}],24:[function(require,module,exports){
 'use strict';
 
 var _ = require('underscore');
@@ -3696,7 +4085,7 @@ exports.sendAndGetResponse = function(pc, msg) {
   });
 };
 
-},{"./chunking-channel":19,"./message":20,"underscore":40,"wolfy87-eventemitter":41}],22:[function(require,module,exports){
+},{"./chunking-channel":22,"./message":23,"underscore":43,"wolfy87-eventemitter":44}],25:[function(require,module,exports){
 'use strict';
 
 var Buffer = require('buffer/').Buffer;
@@ -3889,7 +4278,7 @@ exports.createErrorMessage = function(reason) {
   return new exports.ProtocolMessage(header, null);
 };
 
-},{"buffer/":26}],23:[function(require,module,exports){
+},{"buffer/":29}],26:[function(require,module,exports){
 'use strict';
 
 var Buffer = require('buffer/').Buffer;
@@ -4043,7 +4432,7 @@ exports.createCcClient = function(channel) {
   return new chunkingChannel.Client(channel);
 };
 
-},{"../dnssd/binary-utils":"binaryUtils","../persistence/file-system":"fileSystem","../server/server-api":17,"./chunking-channel":19,"./message":20,"buffer/":26}],24:[function(require,module,exports){
+},{"../dnssd/binary-utils":"binaryUtils","../persistence/file-system":"fileSystem","../server/server-api":20,"./chunking-channel":22,"./message":23,"buffer/":29}],27:[function(require,module,exports){
 (function (global){
 /*! http://mths.be/base64 v0.1.0 by @mathias | MIT license */
 ;(function(root) {
@@ -4212,7 +4601,7 @@ exports.createCcClient = function(channel) {
 }(this));
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],25:[function(require,module,exports){
+},{}],28:[function(require,module,exports){
 'use strict'
 
 exports.byteLength = byteLength
@@ -4328,7 +4717,7 @@ function fromByteArray (uint8) {
   return parts.join('')
 }
 
-},{}],26:[function(require,module,exports){
+},{}],29:[function(require,module,exports){
 /*!
  * The buffer module from node.js, for the browser.
  *
@@ -6036,7 +6425,7 @@ function isnan (val) {
   return val !== val // eslint-disable-line no-self-compare
 }
 
-},{"base64-js":25,"ieee754":29}],27:[function(require,module,exports){
+},{"base64-js":28,"ieee754":32}],30:[function(require,module,exports){
 /*!
  * chrome-promise 2.0.2
  * https://github.com/tfoxy/chrome-promise
@@ -6131,7 +6520,7 @@ function isnan (val) {
   }
 }));
 
-},{}],28:[function(require,module,exports){
+},{}],31:[function(require,module,exports){
 var isBuffer = require('is-buffer')
 
 var flat = module.exports = flatten
@@ -6238,7 +6627,7 @@ function unflatten(target, opts) {
   return result
 }
 
-},{"is-buffer":30}],29:[function(require,module,exports){
+},{"is-buffer":33}],32:[function(require,module,exports){
 exports.read = function (buffer, offset, isLE, mLen, nBytes) {
   var e, m
   var eLen = nBytes * 8 - mLen - 1
@@ -6324,7 +6713,7 @@ exports.write = function (buffer, value, offset, isLE, mLen, nBytes) {
   buffer[offset + i - d] |= s * 128
 }
 
-},{}],30:[function(require,module,exports){
+},{}],33:[function(require,module,exports){
 /*!
  * Determine if an object is a Buffer
  *
@@ -6347,7 +6736,7 @@ function isSlowBuffer (obj) {
   return typeof obj.readFloatLE === 'function' && typeof obj.slice === 'function' && isBuffer(obj.slice(0, 0))
 }
 
-},{}],31:[function(require,module,exports){
+},{}],34:[function(require,module,exports){
 (function (process){
 /**
  * Module dependencies.
@@ -6651,7 +7040,7 @@ function createDataRows(params) {
 }
 
 }).call(this,require('_process'))
-},{"_process":39,"flat":28,"lodash.clonedeep":32,"lodash.flatten":33,"lodash.get":34,"lodash.set":35,"lodash.uniq":36,"os":38}],32:[function(require,module,exports){
+},{"_process":42,"flat":31,"lodash.clonedeep":35,"lodash.flatten":36,"lodash.get":37,"lodash.set":38,"lodash.uniq":39,"os":41}],35:[function(require,module,exports){
 (function (global){
 /**
  * lodash (Custom Build) <https://lodash.com/>
@@ -8403,7 +8792,7 @@ function stubFalse() {
 module.exports = cloneDeep;
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],33:[function(require,module,exports){
+},{}],36:[function(require,module,exports){
 (function (global){
 /**
  * lodash (Custom Build) <https://lodash.com/>
@@ -8756,7 +9145,7 @@ function isObjectLike(value) {
 module.exports = flatten;
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],34:[function(require,module,exports){
+},{}],37:[function(require,module,exports){
 (function (global){
 /**
  * lodash (Custom Build) <https://lodash.com/>
@@ -9691,7 +10080,7 @@ function get(object, path, defaultValue) {
 module.exports = get;
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],35:[function(require,module,exports){
+},{}],38:[function(require,module,exports){
 (function (global){
 /**
  * lodash (Custom Build) <https://lodash.com/>
@@ -10685,7 +11074,7 @@ function set(object, path, value) {
 module.exports = set;
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],36:[function(require,module,exports){
+},{}],39:[function(require,module,exports){
 (function (global){
 /**
  * lodash (Custom Build) <https://lodash.com/>
@@ -11585,7 +11974,7 @@ function noop() {
 module.exports = uniq;
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],37:[function(require,module,exports){
+},{}],40:[function(require,module,exports){
 (function (global){
 /**
  * @license
@@ -28673,7 +29062,7 @@ module.exports = uniq;
 }.call(this));
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],38:[function(require,module,exports){
+},{}],41:[function(require,module,exports){
 exports.endianness = function () { return 'LE' };
 
 exports.hostname = function () {
@@ -28720,7 +29109,7 @@ exports.tmpdir = exports.tmpDir = function () {
 
 exports.EOL = '\n';
 
-},{}],39:[function(require,module,exports){
+},{}],42:[function(require,module,exports){
 // shim for using process in browser
 var process = module.exports = {};
 
@@ -28902,7 +29291,7 @@ process.chdir = function (dir) {
 };
 process.umask = function() { return 0; };
 
-},{}],40:[function(require,module,exports){
+},{}],43:[function(require,module,exports){
 //     Underscore.js 1.8.3
 //     http://underscorejs.org
 //     (c) 2009-2015 Jeremy Ashkenas, DocumentCloud and Investigative Reporters & Editors
@@ -30452,7 +30841,7 @@ process.umask = function() { return 0; };
   }
 }.call(this));
 
-},{}],41:[function(require,module,exports){
+},{}],44:[function(require,module,exports){
 /*!
  * EventEmitter v5.1.0 - git.io/ee
  * Unlicense - http://unlicense.org/
@@ -31406,7 +31795,7 @@ exports.saveMhtmlAndOpen = function(
   });
 };
 
-},{"./dnssd/dns-controller":"dnsc","./dnssd/dns-sd-semcache":"dnsSem","./evaluation":"eval","./extension-bridge/messaging":"extBridge","./peer-interface/common":10,"./peer-interface/manager":12,"./persistence/datastore":14,"./persistence/file-system":"fileSystem","./server/server-api":17,"./server/server-controller":"serverController","./settings":"settings"}],"binaryUtils":[function(require,module,exports){
+},{"./dnssd/dns-controller":"dnsc","./dnssd/dns-sd-semcache":"dnsSem","./evaluation":"eval","./extension-bridge/messaging":"extBridge","./peer-interface/common":13,"./peer-interface/manager":15,"./persistence/datastore":17,"./persistence/file-system":"fileSystem","./server/server-api":20,"./server/server-controller":"serverController","./settings":"settings"}],"binaryUtils":[function(require,module,exports){
 /*jshint esnext:true*/
 /*
  * https://github.com/justindarc/dns-sd.js
@@ -31985,7 +32374,7 @@ exports.createRTCSessionDescription = function(descJson) {
   return new RTCSessionDescription(descJson);
 };
 
-},{"../../../app/scripts/webrtc/peer-connection":21,"../server/server-api":17,"../util":18,"buffer/":26}],"dnsSem":[function(require,module,exports){
+},{"../../../app/scripts/webrtc/peer-connection":24,"../server/server-api":20,"../util":21,"buffer/":29}],"dnsSem":[function(require,module,exports){
 /*jshint esnext:true*/
 'use strict';
 
@@ -32123,7 +32512,7 @@ exports.browseForSemCacheInstances = function() {
   return result;
 };
 
-},{"../server/server-api":17,"./dns-sd":"dnssd"}],"dnsc":[function(require,module,exports){
+},{"../server/server-api":20,"./dns-sd":"dnssd"}],"dnsc":[function(require,module,exports){
 /*jshint esnext:true*/
 /* globals Promise */
 'use strict';
@@ -32797,7 +33186,7 @@ exports.addRecord = function(name, record) {
   existingRecords.push(record);
 };
 
-},{"../chrome-apis/udp":"chromeUdp","../util":18,"./byte-array":3,"./dns-codes":4,"./dns-packet":5,"./dns-util":6,"./question-section":7}],"dnssd":[function(require,module,exports){
+},{"../chrome-apis/udp":"chromeUdp","../util":21,"./byte-array":6,"./dns-codes":7,"./dns-packet":8,"./dns-util":9,"./question-section":10}],"dnssd":[function(require,module,exports){
 /*jshint esnext:true*/
 /* globals Promise */
 'use strict';
@@ -33784,7 +34173,7 @@ exports.queryForResponses = function(
   });
 };
 
-},{"../util":18,"./dns-codes":4,"./dns-controller":"dnsc","./dns-packet":5,"./dns-util":6,"./resource-record":8,"lodash":37}],"eval":[function(require,module,exports){
+},{"../util":21,"./dns-codes":7,"./dns-controller":"dnsc","./dns-packet":8,"./dns-util":9,"./resource-record":11,"lodash":40}],"eval":[function(require,module,exports){
 'use strict';
 
 /**
@@ -34461,13 +34850,14 @@ exports.downloadKeyAsCsv = function(key) {
   });
 };
 
-},{"./app-controller":"appController","./chrome-apis/chromep":1,"./persistence/datastore":14,"./server/server-api":17,"./util":18,"json2csv":31}],"extBridge":[function(require,module,exports){
+},{"./app-controller":"appController","./chrome-apis/chromep":1,"./persistence/datastore":17,"./server/server-api":20,"./util":21,"json2csv":34}],"extBridge":[function(require,module,exports){
 'use strict';
 
 var base64 = require('base-64');
 
 var appc = require('../app-controller');
 var chromep = require('../chrome-apis/chromep');
+var coalMgr = require('../coalescence/manager');
 var datastore = require('../persistence/datastore');
 
 /**
@@ -34563,6 +34953,21 @@ exports.handleExternalMessage = function(message, sender, response) {
         response(errorMsg);
       }
     });
+  } else if (message.type === 'network-query') {
+    exports.queryLocalNetworkForUrls(message)
+    .then(result => {
+      var successMsg = exports.createResponseSuccess(message);
+      successMsg.response = result;
+      if (response) {
+        response(successMsg);
+      }
+    })
+    .catch(err => {
+      var errorMsg = exports.createResponseError(message, err);
+      if (response) {
+        response(errorMsg);
+      }
+    });
   } else {
     console.log('Unrecognized message type from extension: ', message.type);
   }
@@ -34599,9 +35004,9 @@ exports.handleOpenRequest = function(message) {
 /**
  * Handle a query from the extension about a saved page.
  *
- * @param {object} message the message from the extension
+ * @param {Object} message the message from the extension
  *
- * @return {object} the result of the query
+ * @return {Promise.<Object, Error>} the result of the query
  */
 exports.performQuery = function(message) {
   return new Promise(function(resolve, reject) {
@@ -34616,6 +35021,25 @@ exports.performQuery = function(message) {
         }
       });
     resolve(null);
+    })
+    .catch(err => {
+      reject(err);
+    });
+  });
+};
+
+/**
+ * Query the local network, rather than the local machine, for available URLs.
+ *
+ * @param {Object} message the message from the extension
+ *
+ * @return {Promise.<Object, Error>} the result of the query
+ */
+exports.queryLocalNetworkForUrls = function(message) {
+  return new Promise(function(resolve, reject) {
+    coalMgr.queryForUrls(message.params.urls)
+    .then(result => {
+      resolve(result);
     })
     .catch(err => {
       reject(err);
@@ -34736,7 +35160,7 @@ exports.sendMessageToOpenUrl = function(url) {
   exports.sendMessageToExtension(message);
 };
 
-},{"../app-controller":"appController","../chrome-apis/chromep":1,"../persistence/datastore":14,"base-64":24}],"fileSystem":[function(require,module,exports){
+},{"../app-controller":"appController","../chrome-apis/chromep":1,"../coalescence/manager":4,"../persistence/datastore":17,"base-64":27}],"fileSystem":[function(require,module,exports){
 /*jshint esnext:true*/
 /* globals Promise */
 'use strict';
@@ -35131,7 +35555,7 @@ exports.createFileReader = function() {
   return new FileReader();
 };
 
-},{"buffer/":26}],"moment":[function(require,module,exports){
+},{"buffer/":29}],"moment":[function(require,module,exports){
 //! moment.js
 //! version : 2.17.1
 //! authors : Tim Wood, Iskren Chernev, Moment.js contributors
@@ -39506,7 +39930,7 @@ exports.start = function(host, port) {
   startServer(host, port, endpointHandlers);
 };
 
-},{"./evaluation-handler":15,"./handlers":16,"./server-api":17}],"settings":[function(require,module,exports){
+},{"./evaluation-handler":18,"./handlers":19,"./server-api":20}],"settings":[function(require,module,exports){
 /* global Promise */
 'use strict';
 
@@ -39856,4 +40280,4 @@ exports.promptAndSetNewBaseDir = function() {
   });
 };
 
-},{"./chrome-apis/chromep":1,"./persistence/file-system":"fileSystem"}]},{},[9]);
+},{"./chrome-apis/chromep":1,"./persistence/file-system":"fileSystem"}]},{},[12]);
