@@ -133,7 +133,9 @@ exports.getLocalPageInfo = function() {
   return new Promise(function(resolve, reject) {
     function onResponse(response) {
       if (response && response.status === 'success') {
-        resolve(response.result);
+        // We expect this to be a mapping of url: [cachedpage, ... ].
+        var url = Object.keys(response.result)[0];
+        resolve(response.result[url][0]);
       } else if (response.status === 'error') {
         reject(response.result);
       }

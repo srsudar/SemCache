@@ -176,13 +176,20 @@ test('waitForCurrentPageToLoad calls sendMessage and resolves', function(t) {
 });
 
 test('getLocalPageInfo resolves with page', function(t) {
+  var expectedPage = {
+    who: 'I am the page'
+  };
   var currentTab = {
     url: 'http://foobar.com',
     id: 1111
   };
+
+  var queryResult = {};
+  queryResult[currentTab.url] = [ expectedPage ];
+
   var expectedMessageToReceive = { 
     status: 'success',
-    result: { who: 'I am the page' }
+    result: queryResult
   };
   var expectedMessageToSend = {
     from: 'popup',
@@ -192,7 +199,6 @@ test('getLocalPageInfo resolves with page', function(t) {
       tabId: currentTab.id
     }
   };
-  var expectedPage = expectedMessageToReceive.result;
 
   var getActiveTabSpy = sinon.stub().resolves(currentTab);
   var sendMessageSpy = sinon.stub()
