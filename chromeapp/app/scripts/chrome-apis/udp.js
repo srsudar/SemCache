@@ -77,11 +77,15 @@ exports.bind = function(socketId, address, port) {
   return new Promise(function(resolve, reject) {
     util.getUdp().bind(socketId, address, port, function(result) {
       if (result < 0) {
-        console.log('chromeUdp.bind: result < 0, rejecting');
-        console.log('    socketId: ', socketId);
-        console.log('    address: ', address);
-        console.log('    port: ', port);
-        reject(result);
+        var lastError = chrome.runtime.lastError;
+        var logInfo = {
+          socketId: socketId,
+          address: address,
+          port: port,
+          lastError: lastError
+        };
+        console.error('chromeUdp.bind: result < 0, rejecting ', logInfo);
+        reject(new Error('Error during bind: ' + lastError.message));
       } else {
         resolve(result);
       }
@@ -142,8 +146,9 @@ exports.joinGroup = function(socketId, address) {
         console.log('address: ', address);
       }
       if (result < 0) {
-        console.log('chromeUdp.joinGroup: result < 0, reject');
-        reject(result);
+        var lastError = chrome.runtime.lastError || {};
+        console.log('chromeUdp.joinGroup: result < 0: ', result);
+        reject(new Error('Error joining group: ' + lastError.message));
       } else {
         resolve(result);
       }

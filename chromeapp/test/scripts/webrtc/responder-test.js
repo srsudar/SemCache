@@ -170,38 +170,58 @@ test('onDataChannelMessageHandler routes correctly', function(t) {
 
   var isListSpy = sinon.stub();
   var isFileSpy = sinon.stub();
+  var isDigestSpy = sinon.stub();
  
   var onListSpy = sinon.stub();
   var onFileSpy = sinon.stub();
+  var onDigestSpy = sinon.stub();
 
   proxyquireResponder({
     './message': {
       isList: isListSpy,
-      isFile: isFileSpy
+      isFile: isFileSpy,
+      isDigest: isDigestSpy
     }
   });
   responder.onList = onListSpy;
   responder.onFile = onFileSpy;
+  responder.onDigest = onDigestSpy;
 
   // First a list message
   isListSpy.returns(true);
   isFileSpy.returns(false);
+  isDigestSpy.returns(false);
 
   responder.onDataChannelMessageHandler(channel, event);
 
   t.equal(onListSpy.callCount, 1);
   t.equal(onFileSpy.callCount, 0);
+  t.equal(onDigestSpy.callCount, 0);
   t.deepEqual(onListSpy.args[0], [channel, msg]);
 
   // Now a file message
   isListSpy.returns(false);
   isFileSpy.returns(true);
+  isDigestSpy.returns(false);
 
   responder.onDataChannelMessageHandler(channel, event);
 
   t.equal(onListSpy.callCount, 1);
   t.equal(onFileSpy.callCount, 1);
+  t.equal(onDigestSpy.callCount, 0);
   t.deepEqual(onFileSpy.args[0], [channel, msg]);
+
+  // Now a digest message
+  isListSpy.returns(false);
+  isFileSpy.returns(false);
+  isDigestSpy.returns(true);
+
+  responder.onDataChannelMessageHandler(channel, event);
+
+  t.equal(onListSpy.callCount, 1);
+  t.equal(onFileSpy.callCount, 1);
+  t.equal(onDigestSpy.callCount, 1);
+  t.deepEqual(onDigestSpy.args[0], [channel, msg]);
 
   end(t);
 });

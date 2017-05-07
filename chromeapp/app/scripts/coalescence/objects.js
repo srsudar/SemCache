@@ -80,7 +80,7 @@ exports.Digest = function Digest(peerInfo, pageInfos) {
   // Now process the pageInfos.
   this.digestInfo = {};
   pageInfos.forEach(pageInfo => {
-    this.digestInfo[pageInfo.url] = pageInfo.captureDate;
+    this.digestInfo[pageInfo.fullUrl] = pageInfo.captureDate;
   });
 };
 

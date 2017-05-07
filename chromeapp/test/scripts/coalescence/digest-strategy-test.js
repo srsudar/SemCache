@@ -159,17 +159,26 @@ test('getAndProcessDigests resolves all success', function(t) {
   var peerInfos = createPeerInfos();
   var rawDigests = createRawDigests();
 
+  var digestResponse1 = {
+    metadata: 'whatever',
+    digest: rawDigests[0]
+  };
+  var digestResponse2 = {
+    metadata: 'whatever',
+    digest: rawDigests[1]
+  };
+
   var getCacheDigestStub = sinon.stub();
   getCacheDigestStub.withArgs(
     pifCommon.createListParams(
       peerInfos[0].ipAddress, peerInfos[0].port, null
     )
-  ).resolves(rawDigests[0]);
+  ).resolves(digestResponse1);
   getCacheDigestStub.withArgs(
     pifCommon.createListParams(
       peerInfos[1].ipAddress, peerInfos[1].port, null
     )
-  ).resolves(rawDigests[1]);
+  ).resolves(digestResponse2);
   
   var peerInterface = {
     getCacheDigest: getCacheDigestStub
@@ -193,12 +202,17 @@ test('getAndProcessDigests resolves last rejects', function(t) {
   var peerInfos = createPeerInfos();
   var rawDigests = createRawDigests();
 
+  var digestResponse1 = {
+    metadata: 'yawn',
+    digest: rawDigests[0]
+  };
+
   var getCacheDigestStub = sinon.stub();
   getCacheDigestStub.withArgs(
     pifCommon.createListParams(
       peerInfos[0].ipAddress, peerInfos[0].port, null
     )
-  ).resolves(rawDigests[0]);
+  ).resolves(digestResponse1);
   getCacheDigestStub.withArgs(
     pifCommon.createListParams(
       peerInfos[1].ipAddress, peerInfos[1].port, null
@@ -345,11 +359,11 @@ test('performQuery correct with extant pages', function(t) {
     peerInfos[0],
     [
       {
-        url: urlOnly1,
+        fullUrl: urlOnly1,
         captureDate: urlOnly1CaptureDate
       },
       {
-        url: urlBoth,
+        fullUrl: urlBoth,
         captureDate: urlBothCaptureDatePeer1
       }
     ]
@@ -359,11 +373,11 @@ test('performQuery correct with extant pages', function(t) {
     peerInfos[1],
     [
       {
-        url: urlOnly2,
+        fullUrl: urlOnly2,
         captureDate: urlOnly2CaptureDate
       },
       {
-        url: urlBoth,
+        fullUrl: urlBoth,
         captureDate: urlBothCaptureDatePeer2
       }
     ]

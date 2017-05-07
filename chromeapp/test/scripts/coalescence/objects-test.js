@@ -19,11 +19,11 @@ function createPeerInfo() {
 
 function createPageInfos() {
   var pageInfo1 = {
-    url: 'http://foo.com',
+    fullUrl: 'http://foo.com',
     captureDate: '2017-05-03'
   };
   var pageInfo2 = {
-    url: 'http://bar.com',
+    fullUrl: 'http://bar.com',
     captureDate: '2013-04-02'
   };
   return [pageInfo1, pageInfo2];
@@ -71,11 +71,11 @@ test('Digest performQueryForPage returns captureDate', function(t) {
   var digest = new objects.Digest(peerInfo, pageInfos);
   
   t.equal(
-    digest.performQueryForPage(pageInfos[0].url),
+    digest.performQueryForPage(pageInfos[0].fullUrl),
     pageInfos[0].captureDate
   );
   t.equal(
-    digest.performQueryForPage(pageInfos[1].url),
+    digest.performQueryForPage(pageInfos[1].fullUrl),
     pageInfos[1].captureDate
   );
   end(t);

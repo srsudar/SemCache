@@ -101,6 +101,7 @@ exports.handleExternalMessage = function(message, sender, response) {
       }
     });
   } else if (message.type === 'network-query') {
+    console.log('received network-query: ', message);
     exports.queryLocalNetworkForUrls(message)
     .then(result => {
       var successMsg = exports.createResponseSuccess(message);

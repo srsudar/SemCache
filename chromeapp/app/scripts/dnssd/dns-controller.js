@@ -443,23 +443,21 @@ exports.getSocket = function() {
     .then(info => {
       return chromeUdp.bind(info.socketId, '0.0.0.0', MDNS_PORT);
     })
-    .then(function success() {
+    .then(function bound() {
       // We've bound to the DNSSD port successfully.
       return chromeUdp.joinGroup(
         exports.socketInfo.socketId,
         DNSSD_MULTICAST_GROUP
       );
-    }, function err(error) {
-      chromeUdp.closeAllSockets();
-      reject(new Error('Error when binding DNSSD port:', error));
     })
     .then(function joinedGroup() {
       exports.socket = new chromeUdp.ChromeUdpSocket(exports.socketInfo);
       started = true;
       resolve(exports.socket);
-    }, function failedToJoinGroup(result) {
+    })
+    .catch(err => {
       chromeUdp.closeAllSockets();
-      reject(new Error('Error when joining DNSSD group: ', result));
+      reject(err);
     });
   });
 };

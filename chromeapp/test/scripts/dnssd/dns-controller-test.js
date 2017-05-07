@@ -175,10 +175,12 @@ test('getSocket fails if bind fails', function(t) {
 
   var closeAllSocketsSpy = sinon.spy();
 
+  var expected = { msg: 'went wrong during bind' };
+
   chromeUdpStub.addOnReceiveListener = sinon.stub();
   chromeUdpStub.closeAllSockets = closeAllSocketsSpy;
   chromeUdpStub.create = sinon.stub().resolves(fakeInfo);
-  chromeUdpStub.bind = sinon.stub().rejects('auto reject');
+  chromeUdpStub.bind = sinon.stub().rejects(expected);
 
   proxyquireDnsController({
     '../chrome-apis/udp': chromeUdpStub
@@ -190,11 +192,9 @@ test('getSocket fails if bind fails', function(t) {
     t.end();
     resetDnsController();
   })
-  .catch(errorObj => {
-    var startsWithMessage = errorObj.message.startsWith(
-      'Error when binding DNSSD port'
-    );
-    t.true(startsWithMessage);
+  .catch(actual => {
+    t.deepEqual(actual, expected);
+    t.equal(dnsController.socket, null);
     t.equal(closeAllSocketsSpy.callCount, 1);
     t.end();
     resetDnsController();
@@ -208,13 +208,15 @@ test('getSocket fails if join group fails', function(t) {
   };
   var closeAllSocketsSpy = sinon.spy();
 
+  var expected = { msg: 'error doing joinGroup' };
+
   proxyquireDnsController({
     '../chrome-apis/udp': {
       addOnReceiveListener: sinon.stub(),
       closeAllSockets: closeAllSocketsSpy,
       create: sinon.stub().resolves(fakeInfo),
       bind: sinon.stub().resolves(),
-      joinGroup: sinon.stub().rejects('auto reject')
+      joinGroup: sinon.stub().rejects(expected)
     }
   });
 
@@ -224,11 +226,9 @@ test('getSocket fails if join group fails', function(t) {
     t.end();
     resetDnsController();
   })
-  .catch(errorObj => {
-    var startsWithMessage = errorObj.message.startsWith(
-      'Error when joining DNSSD group'
-    );
-    t.true(startsWithMessage);
+  .catch(actual => {
+    t.deepEqual(actual, expected);
+    t.equal(dnsController.socket, null);
     t.equal(closeAllSocketsSpy.callCount, 1);
     t.end();
     resetDnsController();

@@ -610,11 +610,15 @@ exports.bind = function(socketId, address, port) {
   return new Promise(function(resolve, reject) {
     util.getUdp().bind(socketId, address, port, function(result) {
       if (result < 0) {
-        console.log('chromeUdp.bind: result < 0, rejecting');
-        console.log('    socketId: ', socketId);
-        console.log('    address: ', address);
-        console.log('    port: ', port);
-        reject(result);
+        var lastError = chrome.runtime.lastError;
+        var logInfo = {
+          socketId: socketId,
+          address: address,
+          port: port,
+          lastError: lastError
+        };
+        console.error('chromeUdp.bind: result < 0, rejecting ', logInfo);
+        reject(new Error('Error during bind: ' + lastError.message));
       } else {
         resolve(result);
       }
@@ -675,8 +679,9 @@ exports.joinGroup = function(socketId, address) {
         console.log('address: ', address);
       }
       if (result < 0) {
-        console.log('chromeUdp.joinGroup: result < 0, reject');
-        reject(result);
+        var lastError = chrome.runtime.lastError || {};
+        console.log('chromeUdp.joinGroup: result < 0: ', result);
+        reject(new Error('Error joining group: ' + lastError.message));
       } else {
         resolve(result);
       }
@@ -999,7 +1004,8 @@ exports.DigestStrategy.prototype.getAndProcessDigests = function(
         peerInfo.ipAddress, peerInfo.port, null
       );
       peerInterface.getCacheDigest(params)
-      .then(rawDigest => {
+      .then(digestResponse => {
+        var rawDigest = digestResponse.digest;
         pendingResponses--;
         var digest = new objects.Digest(peerInfo, rawDigest);
         result.push(digest);
@@ -1215,7 +1221,7 @@ exports.Digest = function Digest(peerInfo, pageInfos) {
   // Now process the pageInfos.
   this.digestInfo = {};
   pageInfos.forEach(pageInfo => {
-    this.digestInfo[pageInfo.url] = pageInfo.captureDate;
+    this.digestInfo[pageInfo.fullUrl] = pageInfo.captureDate;
   });
 };
 
@@ -2164,23 +2170,21 @@ exports.getSocket = function() {
     .then(info => {
       return chromeUdp.bind(info.socketId, '0.0.0.0', MDNS_PORT);
     })
-    .then(function success() {
+    .then(function bound() {
       // We've bound to the DNSSD port successfully.
       return chromeUdp.joinGroup(
         exports.socketInfo.socketId,
         DNSSD_MULTICAST_GROUP
       );
-    }, function err(error) {
-      chromeUdp.closeAllSockets();
-      reject(new Error('Error when binding DNSSD port:', error));
     })
     .then(function joinedGroup() {
       exports.socket = new chromeUdp.ChromeUdpSocket(exports.socketInfo);
       started = true;
       resolve(exports.socket);
-    }, function failedToJoinGroup(result) {
+    })
+    .catch(err => {
       chromeUdp.closeAllSockets();
-      reject(new Error('Error when joining DNSSD group: ', result));
+      reject(err);
     });
   });
 };
@@ -5581,6 +5585,7 @@ exports.handleExternalMessage = function(message, sender, response) {
       }
     });
   } else if (message.type === 'network-query') {
+    console.log('received network-query: ', message);
     exports.queryLocalNetworkForUrls(message)
     .then(result => {
       var successMsg = exports.createResponseSuccess(message);
@@ -8960,6 +8965,8 @@ exports.onDataChannelMessageHandler = function(channel, event) {
     exports.onList(channel, msg);
   } else if (message.isFile(msg)) {
     exports.onFile(channel, msg);
+  } else if (message.isDigest(msg)) {
+    exports.onDigest(channel, msg);
   } else {
     console.log('Unrecognized message type: ', msg.type, msg);
   }

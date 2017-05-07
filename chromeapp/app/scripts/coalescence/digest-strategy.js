@@ -149,7 +149,8 @@ exports.DigestStrategy.prototype.getAndProcessDigests = function(
         peerInfo.ipAddress, peerInfo.port, null
       );
       peerInterface.getCacheDigest(params)
-      .then(rawDigest => {
+      .then(digestResponse => {
+        var rawDigest = digestResponse.digest;
         pendingResponses--;
         var digest = new objects.Digest(peerInfo, rawDigest);
         result.push(digest);

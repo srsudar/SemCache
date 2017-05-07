@@ -42,6 +42,8 @@ exports.onDataChannelMessageHandler = function(channel, event) {
     exports.onList(channel, msg);
   } else if (message.isFile(msg)) {
     exports.onFile(channel, msg);
+  } else if (message.isDigest(msg)) {
+    exports.onDigest(channel, msg);
   } else {
     console.log('Unrecognized message type: ', msg.type, msg);
   }
