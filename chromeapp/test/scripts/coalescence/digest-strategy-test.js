@@ -114,6 +114,7 @@ test('initialize resolves on success', function(t) {
     { digest: 'starving' }
   ];
   var peerAccessor = 'I am a fake peer accessor';
+  var removeOwnInfoStub = sinon.stub().resolves(peerInfos);
 
   proxyquireDigest({
     '../dnssd/dns-sd-semcache': {
@@ -121,6 +122,9 @@ test('initialize resolves on success', function(t) {
     },
     '../peer-interface/manager': {
       getPeerAccessor: sinon.stub().returns(peerAccessor)
+    },
+    './util': {
+      removeOwnInfo: removeOwnInfoStub
     }
   });
 
@@ -147,6 +151,8 @@ test('initialize resolves on success', function(t) {
     t.true(digest.isInitialized());
     // And the digests should have been set
     t.equal(moduleDigests, processedDigests);
+    t.deepEqual(removeOwnInfoStub.args[0], [ peerInfos ]);
+    t.true(removeOwnInfoStub.calledOnce);
     end(t);
   })
   .catch(err => {
@@ -427,6 +433,9 @@ test('reset restores state', function(t) {
     },
     '../peer-interface/manager': {
       getPeerAccessor: sinon.stub().returns()
+    },
+    './util': {
+      removeOwnInfo: sinon.stub().resolves()
     }
   });
   var digest = new digestStrategy.DigestStrategy();

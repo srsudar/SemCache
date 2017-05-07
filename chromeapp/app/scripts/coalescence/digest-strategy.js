@@ -4,6 +4,7 @@ var dnssdSem = require('../dnssd/dns-sd-semcache');
 var objects = require('./objects');
 var peerIf = require('../peer-interface/common');
 var peerIfMgr = require('../peer-interface/manager');
+var util = require('./util');
 
 /**
  * This module is responsible for the digest strategy of cache coalescence.
@@ -100,6 +101,8 @@ exports.DigestStrategy.prototype.initialize = function() {
   return new Promise(function(resolve, reject) {
     dnssdSem.browseForSemCacheInstances()
     .then(peerInfos => {
+      return util.removeOwnInfo(peerInfos);
+    }).then(peerInfos => {
       var peerAccessor = peerIfMgr.getPeerAccessor();
       return that.getAndProcessDigests(peerAccessor, peerInfos);
     })
@@ -114,7 +117,6 @@ exports.DigestStrategy.prototype.initialize = function() {
       reject(err);
     });
   });
-
 };
 
 /**

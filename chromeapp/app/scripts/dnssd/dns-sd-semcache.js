@@ -125,7 +125,7 @@ exports.resolveCache = function(fullName) {
  * {
  *   serviceName: "Sam's SemCache",
  *   type: "_http._local",
- *   domain: "laptop.local",
+ *   domainName: "laptop.local",
  *   port: 8889,
  *   ipAddress: '1.2.3.4'
  * }

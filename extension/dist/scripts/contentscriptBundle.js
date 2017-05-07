@@ -464,7 +464,7 @@ exports.saveMhtmlAndOpen = function(
   });
 };
 
-},{"./dnssd/dns-controller":11,"./dnssd/dns-sd-semcache":13,"./evaluation":18,"./extension-bridge/messaging":19,"./peer-interface/common":20,"./peer-interface/manager":22,"./persistence/datastore":24,"./persistence/file-system":26,"./server/server-api":29,"./server/server-controller":30,"./settings":31}],2:[function(require,module,exports){
+},{"./dnssd/dns-controller":12,"./dnssd/dns-sd-semcache":14,"./evaluation":19,"./extension-bridge/messaging":20,"./peer-interface/common":21,"./peer-interface/manager":23,"./persistence/datastore":25,"./persistence/file-system":27,"./server/server-api":30,"./server/server-controller":31,"./settings":32}],2:[function(require,module,exports){
 /* globals chrome */
 'use strict';
 
@@ -530,7 +530,7 @@ exports.getRuntimeBare = function() {
   return chrome.runtime;
 };
 
-},{"chrome-promise":42}],3:[function(require,module,exports){
+},{"chrome-promise":43}],3:[function(require,module,exports){
 /* globals chrome */
 'use strict';
 
@@ -859,6 +859,7 @@ var dnssdSem = require('../dnssd/dns-sd-semcache');
 var objects = require('./objects');
 var peerIf = require('../peer-interface/common');
 var peerIfMgr = require('../peer-interface/manager');
+var util = require('./util');
 
 /**
  * This module is responsible for the digest strategy of cache coalescence.
@@ -955,6 +956,8 @@ exports.DigestStrategy.prototype.initialize = function() {
   return new Promise(function(resolve, reject) {
     dnssdSem.browseForSemCacheInstances()
     .then(peerInfos => {
+      return util.removeOwnInfo(peerInfos);
+    }).then(peerInfos => {
       var peerAccessor = peerIfMgr.getPeerAccessor();
       return that.getAndProcessDigests(peerAccessor, peerInfos);
     })
@@ -969,7 +972,6 @@ exports.DigestStrategy.prototype.initialize = function() {
       reject(err);
     });
   });
-
 };
 
 /**
@@ -1075,7 +1077,7 @@ exports.DigestStrategy.prototype.performQuery = function(urls) {
   });
 };
 
-},{"../dnssd/dns-sd-semcache":13,"../peer-interface/common":20,"../peer-interface/manager":22,"./objects":7}],6:[function(require,module,exports){
+},{"../dnssd/dns-sd-semcache":14,"../peer-interface/common":21,"../peer-interface/manager":23,"./objects":7,"./util":8}],6:[function(require,module,exports){
 'use strict';
 
 var stratDig = require('./digest-strategy');
@@ -1243,6 +1245,39 @@ exports.Digest.prototype.performQueryForPage = function(url) {
 };
 
 },{}],8:[function(require,module,exports){
+'use strict';
+
+var settings = require('../settings');
+
+/**
+ * Remove the peerInfo object that represents our own machine.
+ *
+ * @param {Array.<Object>} peerInfos the peerInfo objects as returned from 
+ * browseForSemCacheInstances
+ *
+ * @return {Promise.<Array.<Object>, Error>}
+ */
+exports.removeOwnInfo = function(peerInfos) {
+  return new Promise(function(resolve, reject) {
+    settings.init()
+    .then(() => {
+      var result = [];
+      var ourDomain = settings.getHostName();
+      peerInfos.forEach(peerInfo => {
+        if (peerInfo.domain !== ourDomain) {
+          result.push(peerInfo);
+        }
+      });
+      resolve(result);
+    })
+    .catch(err => {
+      reject(err);
+    });
+  });
+};
+
+
+},{"../settings":32}],9:[function(require,module,exports){
 /*jshint esnext:true*/
 /*
  * https://github.com/justindarc/dns-sd.js
@@ -1318,7 +1353,7 @@ return BinaryUtils;
 
 })();
 
-},{}],9:[function(require,module,exports){
+},{}],10:[function(require,module,exports){
 /*jshint esnext:true, bitwise: false */
 'use strict';
 
@@ -1535,7 +1570,7 @@ exports.getByteArrayAsUint8Array = function(byteArr) {
   return new Uint8Array(byteArr._buffer, 0, byteArr._cursor);
 };
 
-},{"./binary-utils":8}],10:[function(require,module,exports){
+},{"./binary-utils":9}],11:[function(require,module,exports){
 /*jshint esnext:true*/
 /*
  * https://github.com/justindarc/dns-sd.js
@@ -1724,7 +1759,7 @@ function defineType(values) {
   return T;
 }
 
-},{}],11:[function(require,module,exports){
+},{}],12:[function(require,module,exports){
 /*jshint esnext:true*/
 /* globals Promise */
 'use strict';
@@ -2396,7 +2431,7 @@ exports.addRecord = function(name, record) {
   existingRecords.push(record);
 };
 
-},{"../chrome-apis/udp":3,"../util":32,"./byte-array":9,"./dns-codes":10,"./dns-packet":12,"./dns-util":15,"./question-section":16}],12:[function(require,module,exports){
+},{"../chrome-apis/udp":3,"../util":33,"./byte-array":10,"./dns-codes":11,"./dns-packet":13,"./dns-util":16,"./question-section":17}],13:[function(require,module,exports){
 /*jshint esnext:true, bitwise:false */
 
 /**
@@ -2825,7 +2860,7 @@ exports.getFlagsAsValue = function(qr, opcode, aa, tc, rd, ra, rcode) {
   return value;
 };
 
-},{"./byte-array":9,"./dns-codes":10,"./question-section":16,"./resource-record":17}],13:[function(require,module,exports){
+},{"./byte-array":10,"./dns-codes":11,"./question-section":17,"./resource-record":18}],14:[function(require,module,exports){
 /*jshint esnext:true*/
 'use strict';
 
@@ -2963,7 +2998,7 @@ exports.browseForSemCacheInstances = function() {
   return result;
 };
 
-},{"../server/server-api":29,"./dns-sd":14}],14:[function(require,module,exports){
+},{"../server/server-api":30,"./dns-sd":15}],15:[function(require,module,exports){
 /*jshint esnext:true*/
 /* globals Promise */
 'use strict';
@@ -3950,7 +3985,7 @@ exports.queryForResponses = function(
   });
 };
 
-},{"../util":32,"./dns-codes":10,"./dns-controller":11,"./dns-packet":12,"./dns-util":15,"./resource-record":17,"lodash":52}],15:[function(require,module,exports){
+},{"../util":33,"./dns-codes":11,"./dns-controller":12,"./dns-packet":13,"./dns-util":16,"./resource-record":18,"lodash":53}],16:[function(require,module,exports){
 'use strict';
 
 var byteArray = require('./byte-array');
@@ -4160,7 +4195,7 @@ exports.getIpStringFromByteArrayReader = function(reader) {
   return result;
 };
 
-},{"./byte-array":9}],16:[function(require,module,exports){
+},{"./byte-array":10}],17:[function(require,module,exports){
 /* global exports, require */
 'use strict';
 
@@ -4272,7 +4307,7 @@ exports.createQuestionFromReader = function(reader) {
   return result;
 };
 
-},{"./byte-array":9,"./dns-util":15}],17:[function(require,module,exports){
+},{"./byte-array":10,"./dns-util":16}],18:[function(require,module,exports){
 /* global exports, require */
 'use strict';
 
@@ -4804,7 +4839,7 @@ exports.peekTypeInReader = function(reader) {
   return result;
 };
 
-},{"./byte-array":9,"./dns-codes":10,"./dns-util":15}],18:[function(require,module,exports){
+},{"./byte-array":10,"./dns-codes":11,"./dns-util":16}],19:[function(require,module,exports){
 'use strict';
 
 /**
@@ -5481,7 +5516,7 @@ exports.downloadKeyAsCsv = function(key) {
   });
 };
 
-},{"./app-controller":1,"./chrome-apis/chromep":2,"./persistence/datastore":24,"./server/server-api":29,"./util":32,"json2csv":46}],19:[function(require,module,exports){
+},{"./app-controller":1,"./chrome-apis/chromep":2,"./persistence/datastore":25,"./server/server-api":30,"./util":33,"json2csv":47}],20:[function(require,module,exports){
 'use strict';
 
 var base64 = require('base-64');
@@ -5805,7 +5840,7 @@ exports.sendMessageToOpenUrl = function(url) {
   exports.sendMessageToExtension(message);
 };
 
-},{"../app-controller":1,"../chrome-apis/chromep":2,"../coalescence/manager":6,"../persistence/datastore":24,"base-64":39}],20:[function(require,module,exports){
+},{"../app-controller":1,"../chrome-apis/chromep":2,"../coalescence/manager":6,"../persistence/datastore":25,"base-64":40}],21:[function(require,module,exports){
 'use strict';
 
 var util = require('../util');
@@ -5908,7 +5943,7 @@ exports.createFileParams = function(ipaddr, port, fileUrl) {
   };
 };
 
-},{"../util":32}],21:[function(require,module,exports){
+},{"../util":33}],22:[function(require,module,exports){
 'use strict';
 
 var util = require('../util');
@@ -5990,7 +6025,7 @@ exports.HttpPeerAccessor.prototype.getCacheDigest = function(params) {
   });
 };
 
-},{"../util":32}],22:[function(require,module,exports){
+},{"../util":33}],23:[function(require,module,exports){
 'use strict';
 
 var settings = require('../settings');
@@ -6018,7 +6053,7 @@ exports.getPeerAccessor = function() {
   }
 };
 
-},{"../settings":31,"./http-impl":21,"./webrtc-impl":23}],23:[function(require,module,exports){
+},{"../settings":32,"./http-impl":22,"./webrtc-impl":24}],24:[function(require,module,exports){
 'use strict';
 
 var cmgr = require('../webrtc/connection-manager');
@@ -6104,7 +6139,7 @@ exports.WebrtcPeerAccessor.prototype.getCacheDigest = function(params) {
   });
 };
 
-},{"../util":32,"../webrtc/connection-manager":34}],24:[function(require,module,exports){
+},{"../util":33,"../webrtc/connection-manager":35}],25:[function(require,module,exports){
 /* globals Promise */
 'use strict';
 
@@ -6419,7 +6454,7 @@ exports.getCaptureDateFromName = function(name) {
   return result;
 };
 
-},{"../chrome-apis/chromep":2,"../server/server-api":29,"./file-system":26,"./file-system-util":25}],25:[function(require,module,exports){
+},{"../chrome-apis/chromep":2,"../server/server-api":30,"./file-system":27,"./file-system-util":26}],26:[function(require,module,exports){
 /* globals Promise */
 'use strict';
 
@@ -6628,7 +6663,7 @@ exports.createFileReader = function() {
   return new FileReader();
 };
 
-},{"buffer/":41}],26:[function(require,module,exports){
+},{"buffer/":42}],27:[function(require,module,exports){
 /*jshint esnext:true*/
 /* globals Promise */
 'use strict';
@@ -6814,7 +6849,7 @@ exports.getFileContentsFromName = function(fileName) {
   });
 };
 
-},{"../chrome-apis/chromep":2,"./file-system-util":25}],27:[function(require,module,exports){
+},{"../chrome-apis/chromep":2,"./file-system-util":26}],28:[function(require,module,exports){
 /* globals WSC, _, TextEncoder */
 'use strict';
 
@@ -6844,7 +6879,7 @@ _.extend(exports.EvaluationHandler.prototype, {
   }
 }, WSC.BaseHandler.prototype);
 
-},{"../evaluation":18}],28:[function(require,module,exports){
+},{"../evaluation":19}],29:[function(require,module,exports){
 /* globals WSC, RTCPeerConnection, RTCSessionDescription, RTCIceCandidate */
 'use strict';
 
@@ -7088,7 +7123,7 @@ _.extend(exports.WebRtcOfferHandler.prototype,
   WSC.BaseHandler.prototype
 );
 
-},{"../dnssd/binary-utils":8,"../persistence/file-system":26,"../persistence/file-system-util":25,"../webrtc/connection-manager":34,"../webrtc/responder":38,"./server-api":29,"underscore":53}],29:[function(require,module,exports){
+},{"../dnssd/binary-utils":9,"../persistence/file-system":27,"../persistence/file-system-util":26,"../webrtc/connection-manager":35,"../webrtc/responder":39,"./server-api":30,"underscore":54}],30:[function(require,module,exports){
 'use strict';
 
 /**
@@ -7255,7 +7290,7 @@ exports.getCachedFileNameFromPath = function(path) {
   return result;
 };
 
-},{"../app-controller":1,"../persistence/datastore":24}],30:[function(require,module,exports){
+},{"../app-controller":1,"../persistence/datastore":25}],31:[function(require,module,exports){
 /* global WSC, DummyHandler */
 'use strict';
 
@@ -7327,7 +7362,7 @@ exports.start = function(host, port) {
   startServer(host, port, endpointHandlers);
 };
 
-},{"./evaluation-handler":27,"./handlers":28,"./server-api":29}],31:[function(require,module,exports){
+},{"./evaluation-handler":28,"./handlers":29,"./server-api":30}],32:[function(require,module,exports){
 /* global Promise */
 'use strict';
 
@@ -7677,7 +7712,7 @@ exports.promptAndSetNewBaseDir = function() {
   });
 };
 
-},{"./chrome-apis/chromep":2,"./persistence/file-system":26}],32:[function(require,module,exports){
+},{"./chrome-apis/chromep":2,"./persistence/file-system":27}],33:[function(require,module,exports){
 'use strict';
 
 /**
@@ -7880,7 +7915,7 @@ exports.getBufferAsBlob = function(buff) {
   );
 };
 
-},{}],33:[function(require,module,exports){
+},{}],34:[function(require,module,exports){
 'use strict';
 
 var _ = require('underscore');
@@ -8152,7 +8187,7 @@ exports.createContinueMessage = function() {
   return { message: 'next' };
 };
 
-},{"./protocol":37,"buffer/":41,"underscore":53,"wolfy87-eventemitter":54}],34:[function(require,module,exports){
+},{"./protocol":38,"buffer/":42,"underscore":54,"wolfy87-eventemitter":55}],35:[function(require,module,exports){
 /* globals RTCPeerConnection, RTCSessionDescription, RTCIceCandidate */
 'use strict';
 
@@ -8438,7 +8473,7 @@ exports.createRTCSessionDescription = function(descJson) {
   return new RTCSessionDescription(descJson);
 };
 
-},{"../../../app/scripts/webrtc/peer-connection":36,"../server/server-api":29,"../util":32,"buffer/":41}],35:[function(require,module,exports){
+},{"../../../app/scripts/webrtc/peer-connection":37,"../server/server-api":30,"../util":33,"buffer/":42}],36:[function(require,module,exports){
 'use strict';
 
 /**
@@ -8558,7 +8593,7 @@ exports.isDigest = function(msg) {
   return msg.type && msg.type === exports.TYPE_DIGEST;
 };
 
-},{}],36:[function(require,module,exports){
+},{}],37:[function(require,module,exports){
 'use strict';
 
 var _ = require('underscore');
@@ -8727,7 +8762,7 @@ exports.sendAndGetResponse = function(pc, msg) {
   });
 };
 
-},{"./chunking-channel":33,"./message":35,"underscore":53,"wolfy87-eventemitter":54}],37:[function(require,module,exports){
+},{"./chunking-channel":34,"./message":36,"underscore":54,"wolfy87-eventemitter":55}],38:[function(require,module,exports){
 'use strict';
 
 var Buffer = require('buffer/').Buffer;
@@ -8920,7 +8955,7 @@ exports.createErrorMessage = function(reason) {
   return new exports.ProtocolMessage(header, null);
 };
 
-},{"buffer/":41}],38:[function(require,module,exports){
+},{"buffer/":42}],39:[function(require,module,exports){
 'use strict';
 
 var Buffer = require('buffer/').Buffer;
@@ -9076,7 +9111,7 @@ exports.createCcClient = function(channel) {
   return new chunkingChannel.Client(channel);
 };
 
-},{"../dnssd/binary-utils":8,"../persistence/file-system":26,"../server/server-api":29,"./chunking-channel":33,"./message":35,"buffer/":41}],39:[function(require,module,exports){
+},{"../dnssd/binary-utils":9,"../persistence/file-system":27,"../server/server-api":30,"./chunking-channel":34,"./message":36,"buffer/":42}],40:[function(require,module,exports){
 (function (global){
 /*! http://mths.be/base64 v0.1.0 by @mathias | MIT license */
 ;(function(root) {
@@ -9245,7 +9280,7 @@ exports.createCcClient = function(channel) {
 }(this));
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],40:[function(require,module,exports){
+},{}],41:[function(require,module,exports){
 'use strict'
 
 exports.byteLength = byteLength
@@ -9361,7 +9396,7 @@ function fromByteArray (uint8) {
   return parts.join('')
 }
 
-},{}],41:[function(require,module,exports){
+},{}],42:[function(require,module,exports){
 /*!
  * The buffer module from node.js, for the browser.
  *
@@ -11069,7 +11104,7 @@ function isnan (val) {
   return val !== val // eslint-disable-line no-self-compare
 }
 
-},{"base64-js":40,"ieee754":44}],42:[function(require,module,exports){
+},{"base64-js":41,"ieee754":45}],43:[function(require,module,exports){
 /*!
  * chrome-promise 2.0.2
  * https://github.com/tfoxy/chrome-promise
@@ -11164,7 +11199,7 @@ function isnan (val) {
   }
 }));
 
-},{}],43:[function(require,module,exports){
+},{}],44:[function(require,module,exports){
 var isBuffer = require('is-buffer')
 
 var flat = module.exports = flatten
@@ -11271,7 +11306,7 @@ function unflatten(target, opts) {
   return result
 }
 
-},{"is-buffer":45}],44:[function(require,module,exports){
+},{"is-buffer":46}],45:[function(require,module,exports){
 exports.read = function (buffer, offset, isLE, mLen, nBytes) {
   var e, m
   var eLen = nBytes * 8 - mLen - 1
@@ -11357,7 +11392,7 @@ exports.write = function (buffer, value, offset, isLE, mLen, nBytes) {
   buffer[offset + i - d] |= s * 128
 }
 
-},{}],45:[function(require,module,exports){
+},{}],46:[function(require,module,exports){
 /*!
  * Determine if an object is a Buffer
  *
@@ -11380,7 +11415,7 @@ function isSlowBuffer (obj) {
   return typeof obj.readFloatLE === 'function' && typeof obj.slice === 'function' && isBuffer(obj.slice(0, 0))
 }
 
-},{}],46:[function(require,module,exports){
+},{}],47:[function(require,module,exports){
 (function (process){
 /**
  * Module dependencies.
@@ -11684,7 +11719,7 @@ function createDataRows(params) {
 }
 
 }).call(this,require('_process'))
-},{"_process":64,"flat":43,"lodash.clonedeep":47,"lodash.flatten":48,"lodash.get":49,"lodash.set":50,"lodash.uniq":51,"os":63}],47:[function(require,module,exports){
+},{"_process":65,"flat":44,"lodash.clonedeep":48,"lodash.flatten":49,"lodash.get":50,"lodash.set":51,"lodash.uniq":52,"os":64}],48:[function(require,module,exports){
 (function (global){
 /**
  * lodash (Custom Build) <https://lodash.com/>
@@ -13436,7 +13471,7 @@ function stubFalse() {
 module.exports = cloneDeep;
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],48:[function(require,module,exports){
+},{}],49:[function(require,module,exports){
 (function (global){
 /**
  * lodash (Custom Build) <https://lodash.com/>
@@ -13789,7 +13824,7 @@ function isObjectLike(value) {
 module.exports = flatten;
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],49:[function(require,module,exports){
+},{}],50:[function(require,module,exports){
 (function (global){
 /**
  * lodash (Custom Build) <https://lodash.com/>
@@ -14724,7 +14759,7 @@ function get(object, path, defaultValue) {
 module.exports = get;
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],50:[function(require,module,exports){
+},{}],51:[function(require,module,exports){
 (function (global){
 /**
  * lodash (Custom Build) <https://lodash.com/>
@@ -15718,7 +15753,7 @@ function set(object, path, value) {
 module.exports = set;
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],51:[function(require,module,exports){
+},{}],52:[function(require,module,exports){
 (function (global){
 /**
  * lodash (Custom Build) <https://lodash.com/>
@@ -16618,7 +16653,7 @@ function noop() {
 module.exports = uniq;
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],52:[function(require,module,exports){
+},{}],53:[function(require,module,exports){
 (function (global){
 /**
  * @license
@@ -33706,7 +33741,7 @@ module.exports = uniq;
 }.call(this));
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],53:[function(require,module,exports){
+},{}],54:[function(require,module,exports){
 //     Underscore.js 1.8.3
 //     http://underscorejs.org
 //     (c) 2009-2015 Jeremy Ashkenas, DocumentCloud and Investigative Reporters & Editors
@@ -35256,7 +35291,7 @@ module.exports = uniq;
   }
 }.call(this));
 
-},{}],54:[function(require,module,exports){
+},{}],55:[function(require,module,exports){
 /*!
  * EventEmitter v5.1.0 - git.io/ee
  * Unlicense - http://unlicense.org/
@@ -35744,7 +35779,7 @@ module.exports = uniq;
     }
 }(this || {}));
 
-},{}],55:[function(require,module,exports){
+},{}],56:[function(require,module,exports){
 'use strict';
 
 var chromeRuntime = require('../chrome-apis/runtime');
@@ -35966,7 +36001,7 @@ exports.onMessageExternalCallback = function(message, sender, sendResponse) {
   }
 };
 
-},{"../chrome-apis/runtime":56,"../chrome-apis/tabs":58}],56:[function(require,module,exports){
+},{"../chrome-apis/runtime":57,"../chrome-apis/tabs":59}],57:[function(require,module,exports){
 /* globals chrome */
 'use strict';
 
@@ -36006,7 +36041,7 @@ exports.addOnMessageListener = function(fn) {
   chrome.runtime.onMessage.addListener(fn);
 };
 
-},{}],57:[function(require,module,exports){
+},{}],58:[function(require,module,exports){
 'use strict';
 
 var util = require('./util');
@@ -36105,7 +36140,7 @@ exports.clear = function() {
   });
 };
 
-},{"./util":59}],58:[function(require,module,exports){
+},{"./util":60}],59:[function(require,module,exports){
 /* global chrome */
 'use strict';
 
@@ -36177,7 +36212,7 @@ exports.sendMessage = function(tabId, message, callback) {
   chrome.tabs.sendMessage(tabId, message, callback);
 };
 
-},{}],59:[function(require,module,exports){
+},{}],60:[function(require,module,exports){
 /* globals chrome */
 'use strict';
 
@@ -36277,7 +36312,7 @@ exports.applyArgsCheckLastError = function(fn, callArgs) {
   });
 };
 
-},{}],60:[function(require,module,exports){
+},{}],61:[function(require,module,exports){
 'use strict';
 
 console.log('in SemCache contentscriptBundle.js');
@@ -36298,7 +36333,7 @@ util.getOnCompletePromise()
     api.annotateNetworkLocalLinks();
   });
 
-},{"../chrome-apis/runtime":56,"../util/util":62,"./cs-api":61,"./cs-evaluation":"cs-eval"}],61:[function(require,module,exports){
+},{"../chrome-apis/runtime":57,"../util/util":63,"./cs-api":62,"./cs-evaluation":"cs-eval"}],62:[function(require,module,exports){
 'use strict';
 
 var appMsg = require('../app-bridge/messaging');
@@ -36528,7 +36563,7 @@ exports.annotateAnchorIsOnNetwork = function(anchor) {
   anchor.innerHTML = anchor.innerHTML + cloud;
 };
 
-},{"../app-bridge/messaging":55,"../util/util":62}],62:[function(require,module,exports){
+},{"../app-bridge/messaging":56,"../util/util":63}],63:[function(require,module,exports){
 /* globals fetch */
 'use strict';
 
@@ -36610,7 +36645,7 @@ exports.wait = function(ms) {
   });
 };
 
-},{"../chrome-apis/tabs":58}],63:[function(require,module,exports){
+},{"../chrome-apis/tabs":59}],64:[function(require,module,exports){
 exports.endianness = function () { return 'LE' };
 
 exports.hostname = function () {
@@ -36657,7 +36692,7 @@ exports.tmpdir = exports.tmpDir = function () {
 
 exports.EOL = '\n';
 
-},{}],64:[function(require,module,exports){
+},{}],65:[function(require,module,exports){
 // shim for using process in browser
 var process = module.exports = {};
 
@@ -37227,4 +37262,4 @@ exports.onPageLoadComplete = function() {
   });
 };
 
-},{"../../../../chromeapp/app/scripts/evaluation":18,"../chrome-apis/runtime":56,"../chrome-apis/storage":57,"../util/util":62,"./cs-api":61}]},{},[60]);
+},{"../../../../chromeapp/app/scripts/evaluation":19,"../chrome-apis/runtime":57,"../chrome-apis/storage":58,"../util/util":63,"./cs-api":62}]},{},[61]);
