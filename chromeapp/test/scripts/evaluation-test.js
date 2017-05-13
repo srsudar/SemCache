@@ -19,6 +19,12 @@ function resetEvaluation() {
   ];
 }
 
+function end(t) {
+  if (!t) { throw new Error('you forgot to pass t'); }
+  t.end();
+  resetEvaluation();
+}
+
 /**
  * Proxyquire the evaluation object with proxies passed as the proxied modules.
  */
@@ -97,6 +103,22 @@ function discoverPeerPagesHelper(doLazy, t) {
     t.end();
     resetEvaluation(); 
   });
+}
+
+/**
+ * Mock the getNow function on the evaluation module.
+ *
+ * @param {Array.<integer>} times values to return. The ith index will be
+ * returned at the ith call to getNow()
+ */
+function mockGetNow(times) {
+  var getNowSpy = sinon.stub();
+
+  times.forEach((val, i) => {
+    getNowSpy.onCall(i).returns(times[i]);
+  });
+
+  evaluation.getNow = getNowSpy;
 }
 
 test('getTimeValues returns result of get', function(t) {
@@ -822,5 +844,119 @@ test('resolvePeers correct', function(t) {
     t.fail(err);
     t.end();
     resetEvaluation(); 
+  });
+});
+
+test('runFetchFileIteration correct on success', function(t) {
+  var times = [10, 50];
+  var totalTime = times[1] - times[0];
+  var blob = { size: 7777 };
+
+  var expected = {
+    timeToFetch: totalTime,
+    fileSize: blob.size
+  };
+
+  var ipAddr = '1.2.3.4';
+  var port = 8876;
+  var mhtmlUrl = 'whyme.mhtml';
+
+  var params = { iam: 'aparam' };
+  var createFileParamsSpy = sinon.stub().withArgs(ipAddr, port, mhtmlUrl)
+    .returns(params);
+  var peerAccessor = {
+    getFileBlob: sinon.stub().withArgs(params).resolves(blob)
+  };
+  var getPeerAccessorSpy = sinon.stub().returns(peerAccessor);
+
+  proxyquireEvaluation({
+    './peer-interface/common': {
+      createFileParams: createFileParamsSpy
+    },
+    './peer-interface/manager': {
+      getPeerAccessor: getPeerAccessorSpy
+    }
+  });
+  mockGetNow(times);
+
+  evaluation.runFetchFileIteration(mhtmlUrl, ipAddr, port)
+  .then(actual => {
+    t.deepEqual(actual, expected);
+    end(t);
+  })
+  .catch(err => {
+    t.fail(err);
+    end(t);
+  });
+});
+
+test('runFetchFileTrial correct on success', function(t) {
+  var numIterations = 4;
+  var key = 'testKey';
+  var mhtmlUrl = 'sigh.com';
+  var ipAddr = '8.7.6.0';
+  var port = 12345;
+  var waitMillis = 4433;
+
+  var iterationResults = [
+    { timeToFetch: 1111, fileSize: 100 },
+    { timeToFetch: 2222, fileSize: 100 },
+    { timeToFetch: 3333, fileSize: 100 },
+    { timeToFetch: 4444, fileSize: 100 }
+  ];
+
+  var expected = [
+    { resolved: iterationResults[0] },
+    { resolved: iterationResults[1] },
+    { resolved: iterationResults[2] },
+    { resolved: iterationResults[3] }
+  ];
+
+  proxyquireEvaluation({
+    './util': {
+      wait: sinon.stub().resolves()
+    }
+  });
+  
+  var logTimeSpy = sinon.stub();
+  var runIterationSpy = sinon.stub();
+  for (var i = 0; i < expected.length; i++) {
+    logTimeSpy.onCall(i).resolves();
+    runIterationSpy.onCall(i).resolves(expected[i].resolved);
+  }
+  evaluation.logTime = logTimeSpy;
+
+  evaluation.runFetchFileIteration = runIterationSpy;
+
+  evaluation.runFetchFileTrial(
+    numIterations, key, mhtmlUrl, ipAddr, port, waitMillis
+  )
+  .then(actual => {
+    t.deepEqual(actual, expected);
+
+    for (var j = 0; j < expected.length; j++) {
+      t.deepEqual(
+        logTimeSpy.args[j],
+        [
+          key,
+          {
+            timeToFetch: iterationResults[j].timeToFetch,
+            fileSize: iterationResults[j].fileSize,
+            type: 'fetchFile',
+            key: key,
+            iteration: j,
+            mhtmlUrl: mhtmlUrl,
+            numIterations: numIterations,
+            waitMillis: waitMillis
+          }
+        ]
+      );
+    }
+    
+    end(t);
+  })
+  .catch(err => {
+    t.fail(err);
+    end(t);
   });
 });

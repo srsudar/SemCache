@@ -6,10 +6,12 @@
 
 var json2csv = require('json2csv');
 
-var datastore = require('./persistence/datastore');
 var api = require('./server/server-api');
-var chromep = require('./chrome-apis/chromep');
 var appc = require('./app-controller');
+var chromep = require('./chrome-apis/chromep');
+var datastore = require('./persistence/datastore');
+var ifCommon = require('./peer-interface/common');
+var peerIfMgr = require('./peer-interface/manager');
 var util = require('./util');
 
 /** The prefix value for timing keys we will use for local storage. */
@@ -671,5 +673,95 @@ exports.downloadKeyAsCsv = function(key) {
       var csv = json2csv({data: values, flatten: true});
       util.downloadText(csv, key + '.csv');
     }
+  });
+};
+
+exports.runFetchFileTrial = function(
+  numIterations, key, mhtmlUrl, ipAddr, port, waitMillis
+) {
+  key = key || 'lastFetch';
+  waitMillis = waitMillis || 8000;
+  
+  return new Promise(function(resolve, reject) {
+    var iteration = 0;
+    
+    // We want to run these trials serially. We're basically using this
+    // function as a generator that we'll pass to fulfillPromises.
+    var nextIter = function() {
+      var toLog = {
+        key: key,
+        waitMillis: waitMillis,
+        mhtmlUrl: mhtmlUrl,
+        type: 'fetchFile',
+        iteration: iteration,
+        numIterations: numIterations
+      };
+
+      iteration += 1;
+
+      return util.wait(waitMillis)
+      .then(() => {
+        return exports.runFetchFileIteration(mhtmlUrl, ipAddr, port);
+      })
+      .then(iterationResult => {
+        toLog.timeToFetch = iterationResult.timeToFetch;
+        toLog.fileSize = iterationResult.fileSize;
+        exports.logTime(key, toLog);
+        return Promise.resolve(iterationResult);
+      })
+      .catch(err => {
+        toLog.error = err;
+        exports.logTime(key, toLog);
+        return Promise.reject(err);
+      });
+    };
+
+    var promises = [];
+    for (var i = 0; i < numIterations; i++) {
+      promises.push(nextIter);
+    }
+
+    // Now we have an array with all our promises.
+    exports.fulfillPromises(promises)
+    .then(results => {
+      resolve(results);
+    })
+    .catch(err => {
+      reject(err);
+    });
+  });
+};
+
+/**
+ * Fetch a file and report on the information that went into fetching it.
+ *
+ * @param {string} mhtmlUrl
+ * @param {string} ipAddr
+ * @param {integer} port
+ *
+ * @return {Object} Return an object like:
+ * {
+ *   timeToFetch: {number},
+ *   fileSize: {number}
+ * }
+ */
+exports.runFetchFileIteration = function(mhtmlUrl, ipAddr, port) {
+  return new Promise(function(resolve, reject) {
+    var start = exports.getNow();
+    var params = ifCommon.createFileParams(ipAddr, port, mhtmlUrl);
+    peerIfMgr.getPeerAccessor().getFileBlob(params)
+    .then(blob => {
+      // We are fetching, not writing to disk.
+      var end = exports.getNow();
+      var totalTime = end - start;
+      var result = {
+        timeToFetch: totalTime,
+        fileSize: blob.size
+      };
+      resolve(result);
+    })
+    .catch(err => {
+      reject(err);
+    });
   });
 };

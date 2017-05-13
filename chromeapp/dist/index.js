@@ -77701,10 +77701,12 @@ exports.queryForResponses = function(
 
 var json2csv = require('json2csv');
 
-var datastore = require('./persistence/datastore');
 var api = require('./server/server-api');
-var chromep = require('./chrome-apis/chromep');
 var appc = require('./app-controller');
+var chromep = require('./chrome-apis/chromep');
+var datastore = require('./persistence/datastore');
+var ifCommon = require('./peer-interface/common');
+var peerIfMgr = require('./peer-interface/manager');
 var util = require('./util');
 
 /** The prefix value for timing keys we will use for local storage. */
@@ -78369,7 +78371,82 @@ exports.downloadKeyAsCsv = function(key) {
   });
 };
 
-},{"./app-controller":"appController","./chrome-apis/chromep":2,"./persistence/datastore":17,"./server/server-api":20,"./util":21,"json2csv":34}],"extBridge":[function(require,module,exports){
+exports.runFetchFileTrial = function(
+  numIterations, key, mhtmlUrl, ipAddr, port, waitMillis
+) {
+  key = key || 'lastFetch';
+  waitMillis = waitMillis || 8000;
+  
+  return new Promise(function(resolve, reject) {
+    var iteration = 0;
+    
+    // We want to run these trials serially. We're basically using this
+    // function as a generator that we'll pass to fulfillPromises.
+    var nextIter = function() {
+      var toLog = {
+        key: key,
+        waitMillis: waitMillis,
+        mhtmlUrl: mhtmlUrl,
+        type: 'fetchFile',
+        iteration: iteration,
+        numIterations: numIterations
+      };
+
+      iteration += 1;
+
+      return util.wait(waitMillis)
+      .then(() => {
+        return exports.runFetchFileIteration(mhtmlUrl, ipAddr, port);
+      })
+      .then(timeToFetch => {
+        toLog.timeToFetch = timeToFetch;
+        exports.logTime(key, toLog);
+        return Promise.resolve(timeToFetch);
+      })
+      .catch(err => {
+        toLog.error = err;
+        exports.logTime(key, toLog);
+        return Promise.reject(err);
+      });
+    };
+
+    var promises = [];
+    for (var i = 0; i < numIterations; i++) {
+      promises.push(nextIter);
+    }
+
+    // Now we have an array with all our promises.
+    exports.fulfillPromises(promises)
+    .then(results => {
+      resolve(results);
+    })
+    .catch(err => {
+      reject(err);
+    });
+  });
+};
+
+exports.runFetchFileIteration = function(mhtmlUrl, ipAddr, port) {
+  return new Promise(function(resolve, reject) {
+    var start = exports.getNow();
+    var params = ifCommon.createFileParams(ipAddr, port, mhtmlUrl);
+    peerIfMgr.getPeerAccessor().getFileBlob(params)
+    .then(blob => {
+      // We are fetching, not writing to disk.
+      if (!blob) {
+        console.err('Fetched a file blob that is empty');
+      }
+      var end = exports.getNow();
+      var totalTime = end - start;
+      resolve(totalTime);
+    })
+    .catch(err => {
+      reject(err);
+    });
+  });
+};
+
+},{"./app-controller":"appController","./chrome-apis/chromep":2,"./peer-interface/common":13,"./peer-interface/manager":15,"./persistence/datastore":17,"./server/server-api":20,"./util":21,"json2csv":34}],"extBridge":[function(require,module,exports){
 'use strict';
 
 var base64 = require('base-64');
