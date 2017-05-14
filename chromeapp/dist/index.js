@@ -45924,7 +45924,7 @@ exports.getPeerAccessor = function() {
   if (transportMethod === 'http') {
     return new ifHttp.HttpPeerAccessor(); 
   } else if (transportMethod === 'webrtc') {
-    return new ifWebrtc.WebrtcPeerAccessor(); 
+    return new ifWebrtc.WebrtcPeerAccessor();
   } else {
     throw new Error('Unrecognized transport method: ' + transportMethod);
   }
@@ -75775,18 +75775,20 @@ exports.getOrCreateConnection = function(ipaddr, port) {
   var key = createKey(ipaddr, port);
   return new Promise(function(resolve, reject) {
     if (CONNECTIONS[key]) {
+      console.log('Found existing connection');
       resolve(exports.getConnection(ipaddr, port));
+    } else {
+      // Otherwise, we need to create the connection.
+      console.log('existing cxn not found, creating new');
+      exports.createConnection(ipaddr, port)
+      .then(cxn => {
+        CONNECTIONS[key] = cxn;
+        resolve(cxn);
+      })
+      .catch(err => {
+        reject(err);
+      });
     }
-    
-    // Otherwise, we need to create the connection.
-    exports.createConnection(ipaddr, port)
-    .then(cxn => {
-      CONNECTIONS[key] = cxn;
-      resolve(cxn);
-    })
-    .catch(err => {
-      reject(err);
-    });
   });
 };
 
@@ -78398,10 +78400,11 @@ exports.runFetchFileTrial = function(
       .then(() => {
         return exports.runFetchFileIteration(mhtmlUrl, ipAddr, port);
       })
-      .then(timeToFetch => {
-        toLog.timeToFetch = timeToFetch;
+      .then(iterationResult => {
+        toLog.timeToFetch = iterationResult.timeToFetch;
+        toLog.fileSize = iterationResult.fileSize;
         exports.logTime(key, toLog);
-        return Promise.resolve(timeToFetch);
+        return Promise.resolve(iterationResult);
       })
       .catch(err => {
         toLog.error = err;
@@ -78426,6 +78429,19 @@ exports.runFetchFileTrial = function(
   });
 };
 
+/**
+ * Fetch a file and report on the information that went into fetching it.
+ *
+ * @param {string} mhtmlUrl
+ * @param {string} ipAddr
+ * @param {integer} port
+ *
+ * @return {Object} Return an object like:
+ * {
+ *   timeToFetch: {number},
+ *   fileSize: {number}
+ * }
+ */
 exports.runFetchFileIteration = function(mhtmlUrl, ipAddr, port) {
   return new Promise(function(resolve, reject) {
     var start = exports.getNow();
@@ -78433,12 +78449,13 @@ exports.runFetchFileIteration = function(mhtmlUrl, ipAddr, port) {
     peerIfMgr.getPeerAccessor().getFileBlob(params)
     .then(blob => {
       // We are fetching, not writing to disk.
-      if (!blob) {
-        console.err('Fetched a file blob that is empty');
-      }
       var end = exports.getNow();
       var totalTime = end - start;
-      resolve(totalTime);
+      var result = {
+        timeToFetch: totalTime,
+        fileSize: blob.size
+      };
+      resolve(result);
     })
     .catch(err => {
       reject(err);

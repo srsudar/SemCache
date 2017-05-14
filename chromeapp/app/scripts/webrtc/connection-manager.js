@@ -226,18 +226,20 @@ exports.getOrCreateConnection = function(ipaddr, port) {
   var key = createKey(ipaddr, port);
   return new Promise(function(resolve, reject) {
     if (CONNECTIONS[key]) {
+      console.log('Found existing connection');
       resolve(exports.getConnection(ipaddr, port));
+    } else {
+      // Otherwise, we need to create the connection.
+      console.log('existing cxn not found, creating new');
+      exports.createConnection(ipaddr, port)
+      .then(cxn => {
+        CONNECTIONS[key] = cxn;
+        resolve(cxn);
+      })
+      .catch(err => {
+        reject(err);
+      });
     }
-    
-    // Otherwise, we need to create the connection.
-    exports.createConnection(ipaddr, port)
-    .then(cxn => {
-      CONNECTIONS[key] = cxn;
-      resolve(cxn);
-    })
-    .catch(err => {
-      reject(err);
-    });
   });
 };
 

@@ -19,7 +19,7 @@ exports.getPeerAccessor = function() {
   if (transportMethod === 'http') {
     return new ifHttp.HttpPeerAccessor(); 
   } else if (transportMethod === 'webrtc') {
-    return new ifWebrtc.WebrtcPeerAccessor(); 
+    return new ifWebrtc.WebrtcPeerAccessor();
   } else {
     throw new Error('Unrecognized transport method: ' + transportMethod);
   }
