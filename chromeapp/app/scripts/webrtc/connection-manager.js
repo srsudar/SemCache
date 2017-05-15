@@ -76,7 +76,6 @@ exports.getConnection = function(ipaddr, port) {
  * this connection is connected
  */
 exports.removeConnection = function(ipaddr, port) {
-  console.log('removing connection from manager');
   var key = createKey(ipaddr, port);
   delete CONNECTIONS[key];
 };
