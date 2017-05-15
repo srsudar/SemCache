@@ -126,6 +126,9 @@ exports.PeerConnection.prototype.getFile = function(remotePath) {
     var rawConnection = self.getRawConnection();
     exports.sendAndGetResponse(rawConnection, msg)
     .then(buffer => {
+      // Close so that we don't re-use during this tests.
+      console.log('received buffer, emitting close');
+      self.emitClose();
       resolve(buffer);
     })
     .catch(err => {

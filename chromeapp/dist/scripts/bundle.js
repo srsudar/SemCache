@@ -4018,6 +4018,9 @@ exports.PeerConnection.prototype.getFile = function(remotePath) {
     var rawConnection = self.getRawConnection();
     exports.sendAndGetResponse(rawConnection, msg)
     .then(buffer => {
+      // Close so that we don't re-use during this tests.
+      console.log('received buffer, emitting close');
+      self.emitClose();
       resolve(buffer);
     })
     .catch(err => {
@@ -32147,6 +32150,7 @@ exports.getConnection = function(ipaddr, port) {
  * this connection is connected
  */
 exports.removeConnection = function(ipaddr, port) {
+  console.log('removing connection from manager');
   var key = createKey(ipaddr, port);
   delete CONNECTIONS[key];
 };
