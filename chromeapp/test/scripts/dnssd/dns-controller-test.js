@@ -489,12 +489,28 @@ test('getIPv4Interfaces throws if not started', function(t) {
 test('initializeNetworkInterfaceCache initializes cache', function(t) {
   // We should initialize the interfaces and call getSocket() the first time to
   // make sure all is well.
-  var iface = {
+
+  // We want the br0 interface to be returned first, because we expect it to be
+  // moved to the back of the list.
+  var brIface = {
+    name: 'br0',
+    address: '9.8.7.6',
+    prefixLength: 0
+  };
+
+  var wantedIface = {
     name: 'eth0',
     address: '123.456.789.91',
     prefixLength: 0
   };
-  var ifaces = [iface];
+
+  var ipv6iface = {
+    name: 'ignoreMe',
+    address: 'a:b:c:d:e:f',
+    prefixLength: 0
+  };
+
+  var ifaces = [brIface, wantedIface, ipv6iface];
 
   var getInterfacesStub = sinon.stub().resolves(ifaces);
 
@@ -509,7 +525,7 @@ test('initializeNetworkInterfaceCache initializes cache', function(t) {
 
   dnsController.initializeNetworkInterfaceCache()
   .then(function addedInterfaces() {
-    var expectedInterfaces = [iface];
+    var expectedInterfaces = [wantedIface];
     t.deepEqual(dnsController.getIPv4Interfaces(), expectedInterfaces);
     t.end();
     resetDnsController();

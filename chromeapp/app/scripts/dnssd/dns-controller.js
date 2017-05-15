@@ -499,10 +499,15 @@ exports.initializeNetworkInterfaceCache = function() {
       interfaces.forEach(iface => {
         if (iface.address.indexOf(':') !== -1) {
           console.log('Not yet supporting IPv6: ', iface);
+        } else if (iface.name.startsWith('br')) {
+          // In the wild we've seen some strange behavior with ifaces named
+          // things like br0. Ignore it.
+          console.log('Ignoring br* interface:', iface.name);
         } else {
           ipv4Interfaces.push(iface);
         }
       });
+
       resolve();
     })
     .catch(err => {
