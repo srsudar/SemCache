@@ -860,6 +860,10 @@ var objects = require('./objects');
 var peerIf = require('../peer-interface/common');
 var peerIfMgr = require('../peer-interface/manager');
 var util = require('./util');
+var evaluation = require('../evaluation');
+
+var EVAL_NUM_DIGESTS = 10;
+var EVAL_NUM_PAGES_IN_DIGEST = 1000;
 
 /**
  * This module is responsible for the digest strategy of cache coalescence.
@@ -954,12 +958,22 @@ exports.DigestStrategy.prototype.initialize = function() {
   var that = this;
 
   return new Promise(function(resolve, reject) {
-    dnssdSem.browseForSemCacheInstances()
-    .then(peerInfos => {
-      return util.removeOwnInfo(peerInfos);
-    }).then(peerInfos => {
-      var peerAccessor = peerIfMgr.getPeerAccessor();
-      return that.getAndProcessDigests(peerAccessor, peerInfos);
+    // Changing this for evaluation.
+    console.warn('COALESCENCE IS IN EVALUATION MODE');
+    // This code is for the real mode.
+    // dnssdSem.browseForSemCacheInstances()
+    // .then(peerInfos => {
+    //   return util.removeOwnInfo(peerInfos);
+    // }).then(peerInfos => {
+    //   var peerAccessor = peerIfMgr.getPeerAccessor();
+    //   return that.getAndProcessDigests(peerAccessor, peerInfos);
+    // })
+    // This code is for evaluation mode.
+    Promise.resolve()
+    .then(() => {
+      return evaluation.generateDummyDigests(
+        EVAL_NUM_DIGESTS, EVAL_NUM_PAGES_IN_DIGEST
+      );
     })
     .then(digests => {
       that.setDigests(digests);
@@ -1077,7 +1091,7 @@ exports.DigestStrategy.prototype.performQuery = function(urls) {
   });
 };
 
-},{"../dnssd/dns-sd-semcache":14,"../peer-interface/common":21,"../peer-interface/manager":23,"./objects":7,"./util":8}],6:[function(require,module,exports){
+},{"../dnssd/dns-sd-semcache":14,"../evaluation":19,"../peer-interface/common":21,"../peer-interface/manager":23,"./objects":7,"./util":8}],6:[function(require,module,exports){
 'use strict';
 
 var stratDig = require('./digest-strategy');
@@ -2261,10 +2275,15 @@ exports.initializeNetworkInterfaceCache = function() {
       interfaces.forEach(iface => {
         if (iface.address.indexOf(':') !== -1) {
           console.log('Not yet supporting IPv6: ', iface);
+        } else if (iface.name.startsWith('br')) {
+          // In the wild we've seen some strange behavior with ifaces named
+          // things like br0. Ignore it.
+          console.log('Ignoring br* interface:', iface.name);
         } else {
           ipv4Interfaces.push(iface);
         }
       });
+
       resolve();
     })
     .catch(err => {
@@ -4848,14 +4867,29 @@ exports.peekTypeInReader = function(reader) {
 
 var json2csv = require('json2csv');
 
-var datastore = require('./persistence/datastore');
 var api = require('./server/server-api');
-var chromep = require('./chrome-apis/chromep');
 var appc = require('./app-controller');
+var chromep = require('./chrome-apis/chromep');
+var coalObjects = require('./coalescence/objects');
+var datastore = require('./persistence/datastore');
+var ifCommon = require('./peer-interface/common');
+var peerIfMgr = require('./peer-interface/manager');
 var util = require('./util');
 
 /** The prefix value for timing keys we will use for local storage. */
 var TIMING_KEY_PREFIX = 'timing_';
+
+/**
+ * These URLs will be shared across all dummy Digests created for Digest query
+ * evaluations.
+ */
+exports.SHARED_DUMMY_URLS = [
+  // The trailing slashes here are important, since chrome's a.href adds a
+  // trailing slash.
+  'http://all-caches0.com/',
+  'http://all-caches1.com/',
+  'http://all-caches2.com/'
+];
 
 /**
  * Create a scoped version of key for to safely put in local storage
@@ -5516,7 +5550,177 @@ exports.downloadKeyAsCsv = function(key) {
   });
 };
 
-},{"./app-controller":1,"./chrome-apis/chromep":2,"./persistence/datastore":25,"./server/server-api":30,"./util":33,"json2csv":47}],20:[function(require,module,exports){
+exports.runFetchFileTrial = function(
+  numIterations, key, mhtmlUrl, ipAddr, port, waitMillis
+) {
+  key = key || 'lastFetch';
+  waitMillis = waitMillis || 8000;
+  
+  return new Promise(function(resolve, reject) {
+    var iteration = 0;
+    
+    // We want to run these trials serially. We're basically using this
+    // function as a generator that we'll pass to fulfillPromises.
+    var nextIter = function() {
+      var toLog = {
+        key: key,
+        waitMillis: waitMillis,
+        mhtmlUrl: mhtmlUrl,
+        type: 'fetchFile',
+        iteration: iteration,
+        numIterations: numIterations
+      };
+
+      iteration += 1;
+
+      return util.wait(waitMillis)
+      .then(() => {
+        return exports.runFetchFileIteration(mhtmlUrl, ipAddr, port);
+      })
+      .then(iterationResult => {
+        toLog.timeToFetch = iterationResult.timeToFetch;
+        toLog.fileSize = iterationResult.fileSize;
+        exports.logTime(key, toLog);
+        return Promise.resolve(iterationResult);
+      })
+      .catch(err => {
+        toLog.error = err;
+        exports.logTime(key, toLog);
+        return Promise.reject(err);
+      });
+    };
+
+    var promises = [];
+    for (var i = 0; i < numIterations; i++) {
+      promises.push(nextIter);
+    }
+
+    // Now we have an array with all our promises.
+    exports.fulfillPromises(promises)
+    .then(results => {
+      resolve(results);
+    })
+    .catch(err => {
+      reject(err);
+    });
+  });
+};
+
+/**
+ * Fetch a file and report on the information that went into fetching it.
+ *
+ * @param {string} mhtmlUrl
+ * @param {string} ipAddr
+ * @param {integer} port
+ *
+ * @return {Object} Return an object like:
+ * {
+ *   timeToFetch: {number},
+ *   fileSize: {number}
+ * }
+ */
+exports.runFetchFileIteration = function(mhtmlUrl, ipAddr, port) {
+  return new Promise(function(resolve, reject) {
+    var start = exports.getNow();
+    var params = ifCommon.createFileParams(ipAddr, port, mhtmlUrl);
+    peerIfMgr.getPeerAccessor().getFileBlob(params)
+    .then(blob => {
+      // We are fetching, not writing to disk.
+      var end = exports.getNow();
+      var totalTime = end - start;
+      var result = {
+        timeToFetch: totalTime,
+        fileSize: blob.size
+      };
+      resolve(result);
+    })
+    .catch(err => {
+      reject(err);
+    });
+  });
+};
+
+/**
+ * Generate an array of dummy Digest objects for use in evaluation.
+ *
+ * @param {integer} numPeers the number of Digests to create
+ * @param {integer} numPages the number of pages per Digest. This must be
+ * greater than 10, just to make sure we can include our shared page.
+ *
+ * @return {Array.<Digest>}
+ */
+exports.generateDummyDigests = function(numDigests, numPages) {
+  if (numPages < 10) {
+    throw new Error('numPages must be > 10');
+  }
+  var result = [];
+
+  for (var i = 0; i < numDigests; i++) {
+    var ipAddr = i + '.' + i + '.' + i + '.' + i;
+    var peerInfo = {
+      ipAddress: ipAddr,
+      port: i
+    };
+
+    var pageInfos = exports.generateDummyPageInfos(numPages, i);
+
+    var digest = new coalObjects.Digest(peerInfo, pageInfos);
+    result.push(digest);
+  }
+
+  return result;
+};
+
+/**
+ * Generate a list of dummy pageInfos for use with Digest mocking.
+ *
+ * The url 'http://all-caches.com' will be in all caches. Otherwise the URLs
+ * will be 'http://peer2.com/page25/foo-bar-baz-upsidedowncake'. In this way
+ * not all the URLs are shared or realistic, necessarily, but they are
+ * reproducible.
+ *
+ * @param {integer} numPages
+ * @param {interger} peerNumber this is an integer value of a peer. This is
+ * used to generat a name of a URL domain in order to create unique URLs.
+ *
+ * @return {Array.<Object>} an arry of Objects like:
+ * {
+ *   fullUrl: 'http://foo.com',
+ *   captureDate: 'someDate'
+ * }
+ */
+exports.generateDummyPageInfos = function(numPages, peerNumber) {
+  var result = [];
+  var pagesRemaining = numPages;
+
+  // Add our shared URLs.
+  exports.SHARED_DUMMY_URLS.forEach(commonUrl => {
+    pagesRemaining--;
+    result.push({
+      fullUrl: commonUrl,
+      captureDate: new Date().toISOString()
+    });
+  });
+
+  var pathSuffix = '/foo-bar-baz-upsidedowncake/';
+  var urlPrefix = 'http://peer' + peerNumber + '.com/';
+  while (pagesRemaining > 0) {
+    var pagePath = 'page' + pagesRemaining;
+    var fullUrl = urlPrefix + pagePath + pathSuffix;
+    var captureDate = new Date().toISOString();
+
+    var pageInfo = {
+      fullUrl: fullUrl,
+      captureDate: captureDate
+    };
+    result.push(pageInfo);
+    pagesRemaining--;
+  }
+  
+  return result;
+};
+
+},{"./app-controller":1,"./chrome-apis/chromep":2,"./coalescence/objects":7,"./peer-interface/common":21,"./peer-interface/manager":23,"./persistence/datastore":25,"./server/server-api":30,"./util":33,"json2csv":47}],20:[function(require,module,exports){
 'use strict';
 
 var base64 = require('base-64');
@@ -6047,7 +6251,7 @@ exports.getPeerAccessor = function() {
   if (transportMethod === 'http') {
     return new ifHttp.HttpPeerAccessor(); 
   } else if (transportMethod === 'webrtc') {
-    return new ifWebrtc.WebrtcPeerAccessor(); 
+    return new ifWebrtc.WebrtcPeerAccessor();
   } else {
     throw new Error('Unrecognized transport method: ' + transportMethod);
   }
@@ -8416,18 +8620,20 @@ exports.getOrCreateConnection = function(ipaddr, port) {
   var key = createKey(ipaddr, port);
   return new Promise(function(resolve, reject) {
     if (CONNECTIONS[key]) {
+      console.log('Found existing connection');
       resolve(exports.getConnection(ipaddr, port));
+    } else {
+      // Otherwise, we need to create the connection.
+      console.log('existing cxn not found, creating new');
+      exports.createConnection(ipaddr, port)
+      .then(cxn => {
+        CONNECTIONS[key] = cxn;
+        resolve(cxn);
+      })
+      .catch(err => {
+        reject(err);
+      });
     }
-    
-    // Otherwise, we need to create the connection.
-    exports.createConnection(ipaddr, port)
-    .then(cxn => {
-      CONNECTIONS[key] = cxn;
-      resolve(cxn);
-    })
-    .catch(err => {
-      reject(err);
-    });
   });
 };
 
@@ -36949,6 +37155,92 @@ exports.KEY_URL_LIST_INDEX = 'evalCS_urlListIndex';
 
 exports.KEY_LOG_KEY = 'evalCS_logKey';
 
+exports.LINK_ANNOTATION_KEYS = {
+  totalIterations: 'evalCS_LinkAnnotation_totalIterations',
+  currentIteration: 'evalCS_LinkAnnotation_currentIteration',
+  key: 'evalCS_LinkAnnotation_key'
+};
+
+/**
+ * Should be called after an annotation iteration. Handles updating state for
+ * the next trial and reloads the page as necessary.
+ */
+exports.annotationIterationCompleted = function() {
+  var downloadKey = null;
+  exports.getLinkAnnotationKeys()
+  .then(obj => {
+    var totalIterations = obj.totalIterations;
+    var currentIter = obj.currentIteration;
+    var key = obj.key;
+    downloadKey = key;
+
+    console.log(
+      'Completed trial', currentIter, 'of', totalIterations, 'for key', key
+    );
+
+    var nextIter = currentIter + 1;
+
+    var setArg = {};
+    setArg[exports.LINK_ANNOTATION_KEYS.currentIteration] = nextIter;
+
+    return storage.set(setArg);
+  })
+  .then(() => {
+    return exports.getLinkAnnotationKeys();
+  })
+  .then(obj => {
+    if (obj.isPerformingTrial) {
+      return util.wait(3000);
+    } else {
+      console.log('Completed trial');
+      appEval.downloadKeyAsCsv(downloadKey);
+    }
+  })
+  .then(() => {
+    util.getWindow().location.reload(true);
+  })
+  .catch(err => {
+    console.log('Error during annotation trial');
+    console.log(err);
+  });
+};
+    
+/*
+ * Get the keys for the annotation trial. This does some cleanup of keys, not
+ * the scoped keys. E.g. { key: val }, not { csEval_scope_key: val }.
+ *
+ * @return {Promise.<Object, Error>}
+ * {
+ *   totalIterations: {integer}
+ *   currentIteration: {integer}
+ *   key: {string}
+ *   isPerformingTrial {boolean}
+ * }
+ */
+exports.getLinkAnnotationKeys = function() {
+  return new Promise(function(resolve, reject) {
+    storage.get(Object.values(exports.LINK_ANNOTATION_KEYS))
+    .then(obj => {
+      var totalIterations = obj[exports.LINK_ANNOTATION_KEYS.totalIterations];
+      var currentIter = obj[exports.LINK_ANNOTATION_KEYS.currentIteration];
+      var isPerformingTrial = false;
+      if (currentIter < totalIterations) {
+        isPerformingTrial = true;
+      }
+
+      resolve({
+        totalIterations: totalIterations,
+        currentIteration: currentIter,
+        isPerformingTrial: isPerformingTrial,
+        key: obj[exports.LINK_ANNOTATION_KEYS.key]
+      });
+    })
+    .catch(err => {
+      reject(err);
+    });
+  });
+};
+
 /**
  * Resolves true to indicat that we are currently performing a trial and have
  * more iterations to perform.
@@ -36992,26 +37284,26 @@ exports.getParameters = function() {
       exports.KEY_URL_LIST_INDEX
     ];
     storage.get(keys)
-      .then(getResult => {
-        var urlList = getResult[exports.KEY_URL_LIST];
-        var urlListIndex = getResult[exports.KEY_URL_LIST_INDEX];
-        // Start out null to indicate the end of the trial. We'll update the
-        // value below if we haven't moved past the end of the array.
-        var activeUrl = null;
-        if (urlListIndex < urlList.length) {
-          // Then we haven't yet finished the trial.
-          activeUrl = urlList[urlListIndex];
-        }
-        var result = {
-          key: getResult[exports.KEY_LOG_KEY],
-          numIterations: getResult[exports.KEY_NUM_ITERATIONS],
-          currentIter: getResult[exports.KEY_CURRENT_ITERATION],
-          urlList: getResult[exports.KEY_URL_LIST],
-          urlListIndex: urlListIndex,
-          activeUrl: activeUrl
-        };
-        resolve(result);
-      });
+    .then(getResult => {
+      var urlList = getResult[exports.KEY_URL_LIST];
+      var urlListIndex = getResult[exports.KEY_URL_LIST_INDEX];
+      // Start out null to indicate the end of the trial. We'll update the
+      // value below if we haven't moved past the end of the array.
+      var activeUrl = null;
+      if (urlListIndex < urlList.length) {
+        // Then we haven't yet finished the trial.
+        activeUrl = urlList[urlListIndex];
+      }
+      var result = {
+        key: getResult[exports.KEY_LOG_KEY],
+        numIterations: getResult[exports.KEY_NUM_ITERATIONS],
+        currentIter: getResult[exports.KEY_CURRENT_ITERATION],
+        urlList: getResult[exports.KEY_URL_LIST],
+        urlListIndex: urlListIndex,
+        activeUrl: activeUrl
+      };
+      resolve(result);
+    });
   });
   
 };
@@ -37064,6 +37356,26 @@ exports.startSavePageTrial = function(urls, numIterations, key) {
       .then(() => {
         resolve();
       });
+  });
+};
+
+/**
+ * Start a trial for timing the time required to annotate links.
+ */
+exports.startAnnotateLinksTrial = function(key, numIterations) {
+  var setArg = {};
+  setArg[exports.LINK_ANNOTATION_KEYS.totalIterations] = numIterations;
+  setArg[exports.LINK_ANNOTATION_KEYS.currentIteration] = 0;
+  setArg[exports.LINK_ANNOTATION_KEYS.key] = key;
+
+  console.log('Beginning trial');
+
+  storage.set(setArg)
+  .then(() => {
+    return util.wait(2000);
+  })
+  .then(() => {
+    util.getWindow().location.reload(true);
   });
 };
 

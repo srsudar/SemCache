@@ -960,3 +960,33 @@ test('runFetchFileTrial correct on success', function(t) {
     end(t);
   });
 });
+
+test('generateDummyPageInfos broadly correct', function(t) {
+  // Going to only kind of test this...there's a lot to change.
+  var numPages = 12;
+  var peerNumber = 2;
+
+  var actual = evaluation.generateDummyPageInfos(numPages, peerNumber);
+
+  t.equal(actual.length, numPages);
+  actual.forEach(pageInfo => {
+    t.true(pageInfo.hasOwnProperty('fullUrl'));
+    t.true(pageInfo.hasOwnProperty('captureDate'));
+  });
+  end(t);
+});
+
+test('generateDummyDigests broadly correct', function(t) {
+  var numDigests = 10;
+  var numPages = 450;
+
+  var actual = evaluation.generateDummyDigests(numDigests, numPages);
+
+  t.equal(actual.length, numDigests);
+  actual.forEach(digest => {
+    // I don't trust instanceof after some weirdness a few days ago, so just
+    // use this as a kind of hack.
+    digest.hasOwnProperty('peerInfo');
+  });
+  end(t);
+});

@@ -43,6 +43,92 @@ exports.KEY_URL_LIST_INDEX = 'evalCS_urlListIndex';
 
 exports.KEY_LOG_KEY = 'evalCS_logKey';
 
+exports.LINK_ANNOTATION_KEYS = {
+  totalIterations: 'evalCS_LinkAnnotation_totalIterations',
+  currentIteration: 'evalCS_LinkAnnotation_currentIteration',
+  key: 'evalCS_LinkAnnotation_key'
+};
+
+/**
+ * Should be called after an annotation iteration. Handles updating state for
+ * the next trial and reloads the page as necessary.
+ */
+exports.annotationIterationCompleted = function() {
+  var downloadKey = null;
+  exports.getLinkAnnotationKeys()
+  .then(obj => {
+    var totalIterations = obj.totalIterations;
+    var currentIter = obj.currentIteration;
+    var key = obj.key;
+    downloadKey = key;
+
+    console.log(
+      'Completed trial', currentIter, 'of', totalIterations, 'for key', key
+    );
+
+    var nextIter = currentIter + 1;
+
+    var setArg = {};
+    setArg[exports.LINK_ANNOTATION_KEYS.currentIteration] = nextIter;
+
+    return storage.set(setArg);
+  })
+  .then(() => {
+    return exports.getLinkAnnotationKeys();
+  })
+  .then(obj => {
+    if (obj.isPerformingTrial) {
+      return util.wait(3000);
+    } else {
+      console.log('Completed trial');
+      appEval.downloadKeyAsCsv(downloadKey);
+    }
+  })
+  .then(() => {
+    util.getWindow().location.reload(true);
+  })
+  .catch(err => {
+    console.log('Error during annotation trial');
+    console.log(err);
+  });
+};
+    
+/*
+ * Get the keys for the annotation trial. This does some cleanup of keys, not
+ * the scoped keys. E.g. { key: val }, not { csEval_scope_key: val }.
+ *
+ * @return {Promise.<Object, Error>}
+ * {
+ *   totalIterations: {integer}
+ *   currentIteration: {integer}
+ *   key: {string}
+ *   isPerformingTrial {boolean}
+ * }
+ */
+exports.getLinkAnnotationKeys = function() {
+  return new Promise(function(resolve, reject) {
+    storage.get(Object.values(exports.LINK_ANNOTATION_KEYS))
+    .then(obj => {
+      var totalIterations = obj[exports.LINK_ANNOTATION_KEYS.totalIterations];
+      var currentIter = obj[exports.LINK_ANNOTATION_KEYS.currentIteration];
+      var isPerformingTrial = false;
+      if (currentIter < totalIterations) {
+        isPerformingTrial = true;
+      }
+
+      resolve({
+        totalIterations: totalIterations,
+        currentIteration: currentIter,
+        isPerformingTrial: isPerformingTrial,
+        key: obj[exports.LINK_ANNOTATION_KEYS.key]
+      });
+    })
+    .catch(err => {
+      reject(err);
+    });
+  });
+};
+
 /**
  * Resolves true to indicat that we are currently performing a trial and have
  * more iterations to perform.
@@ -86,26 +172,26 @@ exports.getParameters = function() {
       exports.KEY_URL_LIST_INDEX
     ];
     storage.get(keys)
-      .then(getResult => {
-        var urlList = getResult[exports.KEY_URL_LIST];
-        var urlListIndex = getResult[exports.KEY_URL_LIST_INDEX];
-        // Start out null to indicate the end of the trial. We'll update the
-        // value below if we haven't moved past the end of the array.
-        var activeUrl = null;
-        if (urlListIndex < urlList.length) {
-          // Then we haven't yet finished the trial.
-          activeUrl = urlList[urlListIndex];
-        }
-        var result = {
-          key: getResult[exports.KEY_LOG_KEY],
-          numIterations: getResult[exports.KEY_NUM_ITERATIONS],
-          currentIter: getResult[exports.KEY_CURRENT_ITERATION],
-          urlList: getResult[exports.KEY_URL_LIST],
-          urlListIndex: urlListIndex,
-          activeUrl: activeUrl
-        };
-        resolve(result);
-      });
+    .then(getResult => {
+      var urlList = getResult[exports.KEY_URL_LIST];
+      var urlListIndex = getResult[exports.KEY_URL_LIST_INDEX];
+      // Start out null to indicate the end of the trial. We'll update the
+      // value below if we haven't moved past the end of the array.
+      var activeUrl = null;
+      if (urlListIndex < urlList.length) {
+        // Then we haven't yet finished the trial.
+        activeUrl = urlList[urlListIndex];
+      }
+      var result = {
+        key: getResult[exports.KEY_LOG_KEY],
+        numIterations: getResult[exports.KEY_NUM_ITERATIONS],
+        currentIter: getResult[exports.KEY_CURRENT_ITERATION],
+        urlList: getResult[exports.KEY_URL_LIST],
+        urlListIndex: urlListIndex,
+        activeUrl: activeUrl
+      };
+      resolve(result);
+    });
   });
   
 };
@@ -158,6 +244,26 @@ exports.startSavePageTrial = function(urls, numIterations, key) {
       .then(() => {
         resolve();
       });
+  });
+};
+
+/**
+ * Start a trial for timing the time required to annotate links.
+ */
+exports.startAnnotateLinksTrial = function(key, numIterations) {
+  var setArg = {};
+  setArg[exports.LINK_ANNOTATION_KEYS.totalIterations] = numIterations;
+  setArg[exports.LINK_ANNOTATION_KEYS.currentIteration] = 0;
+  setArg[exports.LINK_ANNOTATION_KEYS.key] = key;
+
+  console.log('Beginning trial');
+
+  storage.set(setArg)
+  .then(() => {
+    return util.wait(2000);
+  })
+  .then(() => {
+    util.getWindow().location.reload(true);
   });
 };
 

@@ -9,6 +9,7 @@ var json2csv = require('json2csv');
 var api = require('./server/server-api');
 var appc = require('./app-controller');
 var chromep = require('./chrome-apis/chromep');
+var coalObjects = require('./coalescence/objects');
 var datastore = require('./persistence/datastore');
 var ifCommon = require('./peer-interface/common');
 var peerIfMgr = require('./peer-interface/manager');
@@ -16,6 +17,18 @@ var util = require('./util');
 
 /** The prefix value for timing keys we will use for local storage. */
 var TIMING_KEY_PREFIX = 'timing_';
+
+/**
+ * These URLs will be shared across all dummy Digests created for Digest query
+ * evaluations.
+ */
+exports.SHARED_DUMMY_URLS = [
+  // The trailing slashes here are important, since chrome's a.href adds a
+  // trailing slash.
+  'http://all-caches0.com/',
+  'http://all-caches1.com/',
+  'http://all-caches2.com/'
+];
 
 /**
  * Create a scoped version of key for to safely put in local storage
@@ -764,4 +777,84 @@ exports.runFetchFileIteration = function(mhtmlUrl, ipAddr, port) {
       reject(err);
     });
   });
+};
+
+/**
+ * Generate an array of dummy Digest objects for use in evaluation.
+ *
+ * @param {integer} numPeers the number of Digests to create
+ * @param {integer} numPages the number of pages per Digest. This must be
+ * greater than 10, just to make sure we can include our shared page.
+ *
+ * @return {Array.<Digest>}
+ */
+exports.generateDummyDigests = function(numDigests, numPages) {
+  if (numPages < 10) {
+    throw new Error('numPages must be > 10');
+  }
+  var result = [];
+
+  for (var i = 0; i < numDigests; i++) {
+    var ipAddr = i + '.' + i + '.' + i + '.' + i;
+    var peerInfo = {
+      ipAddress: ipAddr,
+      port: i
+    };
+
+    var pageInfos = exports.generateDummyPageInfos(numPages, i);
+
+    var digest = new coalObjects.Digest(peerInfo, pageInfos);
+    result.push(digest);
+  }
+
+  return result;
+};
+
+/**
+ * Generate a list of dummy pageInfos for use with Digest mocking.
+ *
+ * The url 'http://all-caches.com' will be in all caches. Otherwise the URLs
+ * will be 'http://peer2.com/page25/foo-bar-baz-upsidedowncake'. In this way
+ * not all the URLs are shared or realistic, necessarily, but they are
+ * reproducible.
+ *
+ * @param {integer} numPages
+ * @param {interger} peerNumber this is an integer value of a peer. This is
+ * used to generat a name of a URL domain in order to create unique URLs.
+ *
+ * @return {Array.<Object>} an arry of Objects like:
+ * {
+ *   fullUrl: 'http://foo.com',
+ *   captureDate: 'someDate'
+ * }
+ */
+exports.generateDummyPageInfos = function(numPages, peerNumber) {
+  var result = [];
+  var pagesRemaining = numPages;
+
+  // Add our shared URLs.
+  exports.SHARED_DUMMY_URLS.forEach(commonUrl => {
+    pagesRemaining--;
+    result.push({
+      fullUrl: commonUrl,
+      captureDate: new Date().toISOString()
+    });
+  });
+
+  var pathSuffix = '/foo-bar-baz-upsidedowncake/';
+  var urlPrefix = 'http://peer' + peerNumber + '.com/';
+  while (pagesRemaining > 0) {
+    var pagePath = 'page' + pagesRemaining;
+    var fullUrl = urlPrefix + pagePath + pathSuffix;
+    var captureDate = new Date().toISOString();
+
+    var pageInfo = {
+      fullUrl: fullUrl,
+      captureDate: captureDate
+    };
+    result.push(pageInfo);
+    pagesRemaining--;
+  }
+  
+  return result;
 };

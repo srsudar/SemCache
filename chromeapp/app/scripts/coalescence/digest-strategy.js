@@ -5,6 +5,10 @@ var objects = require('./objects');
 var peerIf = require('../peer-interface/common');
 var peerIfMgr = require('../peer-interface/manager');
 var util = require('./util');
+var evaluation = require('../evaluation');
+
+var EVAL_NUM_DIGESTS = 10;
+var EVAL_NUM_PAGES_IN_DIGEST = 1000;
 
 /**
  * This module is responsible for the digest strategy of cache coalescence.
@@ -99,12 +103,22 @@ exports.DigestStrategy.prototype.initialize = function() {
   var that = this;
 
   return new Promise(function(resolve, reject) {
-    dnssdSem.browseForSemCacheInstances()
-    .then(peerInfos => {
-      return util.removeOwnInfo(peerInfos);
-    }).then(peerInfos => {
-      var peerAccessor = peerIfMgr.getPeerAccessor();
-      return that.getAndProcessDigests(peerAccessor, peerInfos);
+    // Changing this for evaluation.
+    console.warn('COALESCENCE IS IN EVALUATION MODE');
+    // This code is for the real mode.
+    // dnssdSem.browseForSemCacheInstances()
+    // .then(peerInfos => {
+    //   return util.removeOwnInfo(peerInfos);
+    // }).then(peerInfos => {
+    //   var peerAccessor = peerIfMgr.getPeerAccessor();
+    //   return that.getAndProcessDigests(peerAccessor, peerInfos);
+    // })
+    // This code is for evaluation mode.
+    Promise.resolve()
+    .then(() => {
+      return evaluation.generateDummyDigests(
+        EVAL_NUM_DIGESTS, EVAL_NUM_PAGES_IN_DIGEST
+      );
     })
     .then(digests => {
       that.setDigests(digests);

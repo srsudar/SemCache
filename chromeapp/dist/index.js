@@ -43674,6 +43674,10 @@ var objects = require('./objects');
 var peerIf = require('../peer-interface/common');
 var peerIfMgr = require('../peer-interface/manager');
 var util = require('./util');
+var evaluation = require('../evaluation');
+
+var EVAL_NUM_DIGESTS = 10;
+var EVAL_NUM_PAGES_IN_DIGEST = 1000;
 
 /**
  * This module is responsible for the digest strategy of cache coalescence.
@@ -43768,12 +43772,22 @@ exports.DigestStrategy.prototype.initialize = function() {
   var that = this;
 
   return new Promise(function(resolve, reject) {
-    dnssdSem.browseForSemCacheInstances()
-    .then(peerInfos => {
-      return util.removeOwnInfo(peerInfos);
-    }).then(peerInfos => {
-      var peerAccessor = peerIfMgr.getPeerAccessor();
-      return that.getAndProcessDigests(peerAccessor, peerInfos);
+    // Changing this for evaluation.
+    console.warn('COALESCENCE IS IN EVALUATION MODE');
+    // This code is for the real mode.
+    // dnssdSem.browseForSemCacheInstances()
+    // .then(peerInfos => {
+    //   return util.removeOwnInfo(peerInfos);
+    // }).then(peerInfos => {
+    //   var peerAccessor = peerIfMgr.getPeerAccessor();
+    //   return that.getAndProcessDigests(peerAccessor, peerInfos);
+    // })
+    // This code is for evaluation mode.
+    Promise.resolve()
+    .then(() => {
+      return evaluation.generateDummyDigests(
+        EVAL_NUM_DIGESTS, EVAL_NUM_PAGES_IN_DIGEST
+      );
     })
     .then(digests => {
       that.setDigests(digests);
@@ -43891,7 +43905,7 @@ exports.DigestStrategy.prototype.performQuery = function(urls) {
   });
 };
 
-},{"../dnssd/dns-sd-semcache":"dnsSem","../peer-interface/common":13,"../peer-interface/manager":15,"./objects":5,"./util":6}],5:[function(require,module,exports){
+},{"../dnssd/dns-sd-semcache":"dnsSem","../evaluation":"eval","../peer-interface/common":13,"../peer-interface/manager":15,"./objects":5,"./util":6}],5:[function(require,module,exports){
 'use strict';
 
 /**
@@ -47496,9 +47510,6 @@ exports.PeerConnection.prototype.getFile = function(remotePath) {
     var rawConnection = self.getRawConnection();
     exports.sendAndGetResponse(rawConnection, msg)
     .then(buffer => {
-      // Close so that we don't re-use during this tests.
-      console.log('received buffer, emitting close');
-      self.emitClose();
       resolve(buffer);
     })
     .catch(err => {
@@ -75628,7 +75639,6 @@ exports.getConnection = function(ipaddr, port) {
  * this connection is connected
  */
 exports.removeConnection = function(ipaddr, port) {
-  console.log('removing connection from manager');
   var key = createKey(ipaddr, port);
   delete CONNECTIONS[key];
 };
@@ -77715,6 +77725,7 @@ var json2csv = require('json2csv');
 var api = require('./server/server-api');
 var appc = require('./app-controller');
 var chromep = require('./chrome-apis/chromep');
+var coalObjects = require('./coalescence/objects');
 var datastore = require('./persistence/datastore');
 var ifCommon = require('./peer-interface/common');
 var peerIfMgr = require('./peer-interface/manager');
@@ -77722,6 +77733,18 @@ var util = require('./util');
 
 /** The prefix value for timing keys we will use for local storage. */
 var TIMING_KEY_PREFIX = 'timing_';
+
+/**
+ * These URLs will be shared across all dummy Digests created for Digest query
+ * evaluations.
+ */
+exports.SHARED_DUMMY_URLS = [
+  // The trailing slashes here are important, since chrome's a.href adds a
+  // trailing slash.
+  'http://all-caches0.com/',
+  'http://all-caches1.com/',
+  'http://all-caches2.com/'
+];
 
 /**
  * Create a scoped version of key for to safely put in local storage
@@ -78472,7 +78495,87 @@ exports.runFetchFileIteration = function(mhtmlUrl, ipAddr, port) {
   });
 };
 
-},{"./app-controller":"appController","./chrome-apis/chromep":2,"./peer-interface/common":13,"./peer-interface/manager":15,"./persistence/datastore":17,"./server/server-api":20,"./util":21,"json2csv":34}],"extBridge":[function(require,module,exports){
+/**
+ * Generate an array of dummy Digest objects for use in evaluation.
+ *
+ * @param {integer} numPeers the number of Digests to create
+ * @param {integer} numPages the number of pages per Digest. This must be
+ * greater than 10, just to make sure we can include our shared page.
+ *
+ * @return {Array.<Digest>}
+ */
+exports.generateDummyDigests = function(numDigests, numPages) {
+  if (numPages < 10) {
+    throw new Error('numPages must be > 10');
+  }
+  var result = [];
+
+  for (var i = 0; i < numDigests; i++) {
+    var ipAddr = i + '.' + i + '.' + i + '.' + i;
+    var peerInfo = {
+      ipAddress: ipAddr,
+      port: i
+    };
+
+    var pageInfos = exports.generateDummyPageInfos(numPages, i);
+
+    var digest = new coalObjects.Digest(peerInfo, pageInfos);
+    result.push(digest);
+  }
+
+  return result;
+};
+
+/**
+ * Generate a list of dummy pageInfos for use with Digest mocking.
+ *
+ * The url 'http://all-caches.com' will be in all caches. Otherwise the URLs
+ * will be 'http://peer2.com/page25/foo-bar-baz-upsidedowncake'. In this way
+ * not all the URLs are shared or realistic, necessarily, but they are
+ * reproducible.
+ *
+ * @param {integer} numPages
+ * @param {interger} peerNumber this is an integer value of a peer. This is
+ * used to generat a name of a URL domain in order to create unique URLs.
+ *
+ * @return {Array.<Object>} an arry of Objects like:
+ * {
+ *   fullUrl: 'http://foo.com',
+ *   captureDate: 'someDate'
+ * }
+ */
+exports.generateDummyPageInfos = function(numPages, peerNumber) {
+  var result = [];
+  var pagesRemaining = numPages;
+
+  // Add our shared URLs.
+  exports.SHARED_DUMMY_URLS.forEach(commonUrl => {
+    pagesRemaining--;
+    result.push({
+      fullUrl: commonUrl,
+      captureDate: new Date().toISOString()
+    });
+  });
+
+  var pathSuffix = '/foo-bar-baz-upsidedowncake/';
+  var urlPrefix = 'http://peer' + peerNumber + '.com/';
+  while (pagesRemaining > 0) {
+    var pagePath = 'page' + pagesRemaining;
+    var fullUrl = urlPrefix + pagePath + pathSuffix;
+    var captureDate = new Date().toISOString();
+
+    var pageInfo = {
+      fullUrl: fullUrl,
+      captureDate: captureDate
+    };
+    result.push(pageInfo);
+    pagesRemaining--;
+  }
+  
+  return result;
+};
+
+},{"./app-controller":"appController","./chrome-apis/chromep":2,"./coalescence/objects":5,"./peer-interface/common":13,"./peer-interface/manager":15,"./persistence/datastore":17,"./server/server-api":20,"./util":21,"json2csv":34}],"extBridge":[function(require,module,exports){
 'use strict';
 
 var base64 = require('base-64');
