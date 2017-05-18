@@ -7,7 +7,7 @@ var peerIfMgr = require('../peer-interface/manager');
 var util = require('./util');
 var evaluation = require('../evaluation');
 
-var EVAL_NUM_DIGESTS = 10;
+var EVAL_NUM_DIGESTS = 30;
 var EVAL_NUM_PAGES_IN_DIGEST = 1000;
 
 /**
