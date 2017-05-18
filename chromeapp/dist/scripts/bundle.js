@@ -175,7 +175,7 @@ var util = require('./util');
 var evaluation = require('../evaluation');
 
 var EVAL_NUM_DIGESTS = 30;
-var EVAL_NUM_PAGES_IN_DIGEST = 1000;
+var EVAL_NUM_PAGES_IN_DIGEST = 60000;
 
 /**
  * This module is responsible for the digest strategy of cache coalescence.
