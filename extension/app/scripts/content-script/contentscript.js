@@ -31,6 +31,7 @@ util.getOnCompletePromise()
       obj.totalIterations
     );
 
+    util.getPerf().mark('start_trial');
     var start = appEval.getNow();
     var thisMoment = new Date();
     var key = obj.key;
@@ -46,6 +47,7 @@ util.getOnCompletePromise()
       var end = appEval.getNow();
       var totalTime = end - start;
       toLog.totalTime = totalTime;
+      util.getPerf().mark('end_trial');
       return appEval.logTime(key, toLog);
     })
     .then(() => {

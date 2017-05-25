@@ -127,20 +127,26 @@ exports.annotateLocalLinks = function() {
  */
 exports.annotateNetworkLocalLinks = function() {
   return new Promise(function(resolve, reject) {
+    util.getPerf().mark('before_GetLinksOnPage');
     var links = exports.getLinksOnPage();
+    util.getPerf().mark('after_GetLinksOnPage');
     var urls = Object.keys(links);
     
+    util.getPerf().mark('issueQueryToApp');
     appMsg.queryForPagesOnNetwork(urls)
     .then(appMsg => {
+      util.getPerf().mark('receivedResponseFromApp');
       // localUrls will be an Object mapping URLs to arrays of locally
       // available pages.
       var localUrls = appMsg.response;
+      util.getPerf().mark('before_annotateLinks');
       Object.keys(localUrls).forEach(url => {
         var anchors = links[url];
         anchors.forEach(anchor => {
           exports.annotateAnchorIsOnNetwork(anchor);
         });
       });
+      util.getPerf().mark('after_annotateLinks');
       resolve();
     })
     .catch(err => {

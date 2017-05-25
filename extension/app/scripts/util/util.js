@@ -29,6 +29,13 @@ exports.getWindow = function() {
 };
 
 /**
+ * @return {window.performance}
+ */
+exports.getPerf = function() {
+  return exports.getWindow().performance;
+};
+
+/**
  * @return {Promise} Promise that resolves when document.readyState is
  * complete, indicating that all resources have been loaded (and thus the page
  * is presumably safe to save

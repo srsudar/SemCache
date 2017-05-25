@@ -34349,6 +34349,57 @@ exports.getNow = function() {
 };
 
 /**
+ * Wrapper around window.performance.
+ *
+ * @return {window.performance}
+ */
+exports.getPerf = function() {
+  return window.performance;
+};
+
+/**
+ * Wrapper around window.performance.mark(name).
+ */
+exports.mark = function(name) {
+  exports.getPerf().mark(name);
+};
+
+/**
+ * Generate keys from the marks that have been set during a test. These objects
+ * will be keyed to times. If you issue two marks, 'alpha', 'beta', the
+ * resulting object will be like the following:
+ * {
+ *   MARK_alpha: {number},
+ *   MARK_beta: {number},
+ *   MARK_alpha_TO_mark_beta: {number}
+ * }
+ *
+ * @return {Object}
+ */
+exports.getKeysFromMarks = function() {
+  var marks = exports.getPerf().getEntriesByType('mark');
+  var prefix = 'MARK_';
+  var infix = '_TO_';
+
+  var result = {};
+  
+  marks.forEach(mark => {
+    var key = prefix + mark.name;
+    result[key] = mark.startTime;
+  });
+
+  for (var i = 1; i < marks.length; i++) {
+    var a = marks[i - 1];
+    var b = marks[i];
+    var key = (prefix + a.name) + infix + (prefix + b.name);
+    var duration = b.startTime - a.startTime;
+    result[key] = duration;
+  }
+
+  return result;
+};
+
+/**
  * Log an event time to local storage. The key will be scoped for timing and
  * time will be added to a list of times to that value. E.g. logTim('foo', 3)
  * would result in a value like { timing_foo: [ 3 ] } being added to local
@@ -34365,12 +34416,18 @@ exports.logTime = function(key, time) {
     exports.getTimeValues(key)
     .then(existingValues => {
       var setObj = {};
+      var objToLog = time;
+      var keysFromMarks = exports.getKeysFromMarks();
+      if (time !== null && typeof time !== 'object') {
+        objToLog = { time: time };
+      }
+      objToLog.keysFromMarks = keysFromMarks;
       if (existingValues) {
-        existingValues.push(time);
+        existingValues.push(objToLog);
         setObj[scopedKey] = existingValues;
       } else {
         // New value.
-        setObj[scopedKey] = [ time ];
+        setObj[scopedKey] = [ objToLog ];
       }
       return chromep.getStorageLocal().set(setObj);
     })

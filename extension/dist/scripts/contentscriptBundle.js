@@ -862,8 +862,8 @@ var peerIfMgr = require('../peer-interface/manager');
 var util = require('./util');
 var evaluation = require('../evaluation');
 
-var EVAL_NUM_DIGESTS = 10;
-var EVAL_NUM_PAGES_IN_DIGEST = 1000;
+var EVAL_NUM_DIGESTS = 30;
+var EVAL_NUM_PAGES_IN_DIGEST = 60000;
 
 /**
  * This module is responsible for the digest strategy of cache coalescence.
@@ -4972,6 +4972,57 @@ exports.getNow = function() {
 };
 
 /**
+ * Wrapper around window.performance.
+ *
+ * @return {window.performance}
+ */
+exports.getPerf = function() {
+  return window.performance;
+};
+
+/**
+ * Wrapper around window.performance.mark(name).
+ */
+exports.mark = function(name) {
+  exports.getPerf().mark(name);
+};
+
+/**
+ * Generate keys from the marks that have been set during a test. These objects
+ * will be keyed to times. If you issue two marks, 'alpha', 'beta', the
+ * resulting object will be like the following:
+ * {
+ *   MARK_alpha: {number},
+ *   MARK_beta: {number},
+ *   MARK_alpha_TO_mark_beta: {number}
+ * }
+ *
+ * @return {Object}
+ */
+exports.getKeysFromMarks = function() {
+  var marks = exports.getPerf().getEntriesByType('mark');
+  var prefix = 'MARK_';
+  var infix = '_TO_';
+
+  var result = {};
+  
+  marks.forEach(mark => {
+    var key = prefix + mark.name;
+    result[key] = mark.startTime;
+  });
+
+  for (var i = 1; i < marks.length; i++) {
+    var a = marks[i - 1];
+    var b = marks[i];
+    var key = (prefix + a.name) + infix + (prefix + b.name);
+    var duration = b.startTime - a.startTime;
+    result[key] = duration;
+  }
+
+  return result;
+};
+
+/**
  * Log an event time to local storage. The key will be scoped for timing and
  * time will be added to a list of times to that value. E.g. logTim('foo', 3)
  * would result in a value like { timing_foo: [ 3 ] } being added to local
@@ -4988,12 +5039,18 @@ exports.logTime = function(key, time) {
     exports.getTimeValues(key)
     .then(existingValues => {
       var setObj = {};
+      var objToLog = time;
+      var keysFromMarks = exports.getKeysFromMarks();
+      if (time !== null && typeof time !== 'object') {
+        objToLog = { time: time };
+      }
+      objToLog.keysFromMarks = keysFromMarks;
       if (existingValues) {
-        existingValues.push(time);
+        existingValues.push(objToLog);
         setObj[scopedKey] = existingValues;
       } else {
         // New value.
-        setObj[scopedKey] = [ time ];
+        setObj[scopedKey] = [ objToLog ];
       }
       return chromep.getStorageLocal().set(setObj);
     })
@@ -36552,6 +36609,7 @@ util.getOnCompletePromise()
       obj.totalIterations
     );
 
+    util.getPerf().mark('start_trial');
     var start = appEval.getNow();
     var thisMoment = new Date();
     var key = obj.key;
@@ -36567,6 +36625,7 @@ util.getOnCompletePromise()
       var end = appEval.getNow();
       var totalTime = end - start;
       toLog.totalTime = totalTime;
+      util.getPerf().mark('end_trial');
       return appEval.logTime(key, toLog);
     })
     .then(() => {
@@ -36714,20 +36773,26 @@ exports.annotateLocalLinks = function() {
  */
 exports.annotateNetworkLocalLinks = function() {
   return new Promise(function(resolve, reject) {
+    util.getPerf().mark('before_GetLinksOnPage');
     var links = exports.getLinksOnPage();
+    util.getPerf().mark('after_GetLinksOnPage');
     var urls = Object.keys(links);
     
+    util.getPerf().mark('issueQueryToApp');
     appMsg.queryForPagesOnNetwork(urls)
     .then(appMsg => {
+      util.getPerf().mark('receivedResponseFromApp');
       // localUrls will be an Object mapping URLs to arrays of locally
       // available pages.
       var localUrls = appMsg.response;
+      util.getPerf().mark('before_annotateLinks');
       Object.keys(localUrls).forEach(url => {
         var anchors = links[url];
         anchors.forEach(anchor => {
           exports.annotateAnchorIsOnNetwork(anchor);
         });
       });
+      util.getPerf().mark('after_annotateLinks');
       resolve();
     })
     .catch(err => {
@@ -36843,6 +36908,13 @@ exports.getDocument = function() {
  */
 exports.getWindow = function() {
   return window;
+};
+
+/**
+ * @return {window.performance}
+ */
+exports.getPerf = function() {
+  return exports.getWindow().performance;
 };
 
 /**
