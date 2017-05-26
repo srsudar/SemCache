@@ -18,8 +18,12 @@ exports.EXTENSION_ID = 'malgfdapbefeeidjfndgioclhfpfglhe';
  * @param {any} message
  */
 exports.sendMessageToExtension = function(message) {
+  message.timeSent = Date.now();
   chromep.getRuntime().sendMessage(exports.EXTENSION_ID, message);
 };
+
+window.fromExtensionNum = 0;
+window.fromExtensionTotal = 0;
 
 /**
  * Function to handle messages coming from the SemCache extension.
@@ -101,11 +105,20 @@ exports.handleExternalMessage = function(message, sender, response) {
       }
     });
   } else if (message.type === 'network-query') {
+    var now = Date.now();
+    var totalTime = now - message.timeSent;
     console.log('received network-query: ', message);
+    console.log('timeReceived - timeSent:', totalTime);
+    window.fromExtensionNum++;
+    window.fromExtensionTotal += totalTime;
+    console.log('Average time of messages received', window.fromExtensionTotal / window.fromExtensionNum);
+    console.time('total time of queryLocalNetworkForUrls');
     exports.queryLocalNetworkForUrls(message)
     .then(result => {
+      console.timeEnd('total time of queryLocalNetworkForUrls');
       var successMsg = exports.createResponseSuccess(message);
       successMsg.response = result;
+      successMsg.timeSent = Date.now();
       if (response) {
         response(successMsg);
       }

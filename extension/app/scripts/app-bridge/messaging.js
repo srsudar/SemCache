@@ -24,6 +24,7 @@ exports.APP_ID = 'dfafijifolbgimhdeahdmkkpapjpabka';
  * app or extension
  */
 exports.sendMessageToApp = function(message, callback) {
+  message.timeSent = Date.now();
   chromeRuntime.sendMessage(exports.APP_ID, message, callback);
 };
 
@@ -50,6 +51,9 @@ exports.sendMessageForResponse = function(message, timeout) {
     var settled = false;
     // We'll update this if we've already resolved or rejected.
     var callbackForApp = function(response) {
+      var now = Date.now();
+      var totalTime = now - response.timeSent;
+      console.log('time to cross app:', totalTime);
       if (exports.DEBUG) {
         console.log('got callback from app');
       }

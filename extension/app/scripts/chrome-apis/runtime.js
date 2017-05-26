@@ -13,7 +13,7 @@
  * @param {function} responseCallback
  */
 exports.sendMessage = function(appId, message, responseCallback) {
-  console.log('calling send message: ', appId, message, responseCallback);
+  // console.log('calling send message: ', appId, message, responseCallback);
   // The sendMessage handles optional arguments in a way that I am struggling
   // to replicate. To remain consistent, just apply the arguments.
   chrome.runtime.sendMessage.apply(this, arguments);

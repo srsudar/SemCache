@@ -353,6 +353,15 @@ exports.DigestStrategy.prototype.getAndProcessDigests = function(
   });
 };
 
+window.performQueryNum = 0;
+window.performQueryTotal = 0;
+window.digestNum = 0;
+window.digestTotal = 0;
+
+function getNow() {
+  return window.performance.now();
+}
+
 /**
  * Obtain access information for the given array of URLs. The result will be an
  * array of length <= urls.length. Only those that are available will be
@@ -371,6 +380,8 @@ exports.DigestStrategy.prototype.performQuery = function(urls) {
   if (!this.isInitialized()) {
     console.warn('digest-strategy was queried but is not initialized');
   }
+  window.performQueryNum++;
+  var a = getNow();
   return new Promise(function(resolve, reject) {
     Promise.resolve()
     .then(() => {
@@ -378,6 +389,8 @@ exports.DigestStrategy.prototype.performQuery = function(urls) {
       urls.forEach(url => {
         var copiesForUrl = [];
         DIGESTS.forEach(digest => {
+          window.digestNum++;
+          var x = getNow();
           var captureDate = digest.performQueryForPage(url);
           if (captureDate) {
             var NetworkCachedPage = new objects.NetworkCachedPage(
@@ -390,11 +403,17 @@ exports.DigestStrategy.prototype.performQuery = function(urls) {
             );
             copiesForUrl.push(NetworkCachedPage);
           }
+          var y = getNow();
+          window.digestTotal += y - x;
         });
         if (copiesForUrl.length > 0) {
           result[url] = copiesForUrl;
         }
       });
+      var b = getNow();
+      window.performQueryTotal += b - a;
+      console.log('performQuery: ', window.performQueryNum, window.performQueryTotal, 'mean:', window.performQueryTotal / window.performQueryNum);
+      console.log('digests: ', window.digestNum, window.digestTotal, 'mean:', window.digestTotal / window.digestNum);
       resolve(result);
     })
     .catch(err => {
@@ -35175,8 +35194,12 @@ exports.EXTENSION_ID = 'malgfdapbefeeidjfndgioclhfpfglhe';
  * @param {any} message
  */
 exports.sendMessageToExtension = function(message) {
+  message.timeSent = Date.now();
   chromep.getRuntime().sendMessage(exports.EXTENSION_ID, message);
 };
+
+window.fromExtensionNum = 0;
+window.fromExtensionTotal = 0;
 
 /**
  * Function to handle messages coming from the SemCache extension.
@@ -35258,11 +35281,20 @@ exports.handleExternalMessage = function(message, sender, response) {
       }
     });
   } else if (message.type === 'network-query') {
+    var now = Date.now();
+    var totalTime = now - message.timeSent;
     console.log('received network-query: ', message);
+    console.log('timeReceived - timeSent:', totalTime);
+    window.fromExtensionNum++;
+    window.fromExtensionTotal += totalTime;
+    console.log('Average time of messages received', window.fromExtensionTotal / window.fromExtensionNum);
+    console.time('total time of queryLocalNetworkForUrls');
     exports.queryLocalNetworkForUrls(message)
     .then(result => {
+      console.timeEnd('total time of queryLocalNetworkForUrls');
       var successMsg = exports.createResponseSuccess(message);
       successMsg.response = result;
+      successMsg.timeSent = Date.now();
       if (response) {
         response(successMsg);
       }
