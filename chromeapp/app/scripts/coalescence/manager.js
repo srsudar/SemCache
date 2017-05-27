@@ -1,5 +1,6 @@
 'use strict';
 
+var stratBloom = require('./bloom-strategy');
 var stratDig = require('./digest-strategy');
 
 /**
@@ -17,12 +18,13 @@ exports.STRATEGIES = {
    * Maintain a list of all available cached pages from each peer.
    */
   digest: 'digest',
+  bloom: 'bloom'
 };
 
 /**
  * The current startegy for resolving coalescence requests.
  */
-exports.CURRENT_STRATEGY = exports.STRATEGIES.digest;
+exports.CURRENT_STRATEGY = exports.STRATEGIES.bloom;
 
 /**
  * Obtain access information for the given array of URLs. The result will be an
@@ -53,9 +55,14 @@ exports.queryForUrls = function(urls) {
 /**
  * Get the implementation of the current coalescence strategy.
  *
- * @return {DigestStrategy}
+ * @return {DigestStrategy|BloomStrategy}
  */ 
 exports.getStrategy = function() {
-  // Only one to return at the moment.
-  return new stratDig.DigestStrategy();
+  if (exports.CURRENT_STRATEGY === exports.STRATEGIES.digest) {
+    return new stratDig.DigestStrategy();
+  } else if (exports.CURRENT_STRATEGY === exports.STRATEGIES.bloom) {
+    return new stratBloom.BloomStrategy();
+  } else {
+    throw new Error('Unrecognized strategy: ' + exports.CURRENT_STRATEGY);
+  }
 };

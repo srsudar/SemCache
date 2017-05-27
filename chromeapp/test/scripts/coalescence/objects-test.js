@@ -2,6 +2,7 @@
 
 var test = require('tape');
 
+var bloomFilter = require('../../../app/scripts/coalescence/bloom-filter');
 var objects = require('../../../app/scripts/coalescence/objects');
 
 function end(t) {
@@ -78,5 +79,40 @@ test('Digest performQueryForPage returns captureDate', function(t) {
     digest.performQueryForPage(pageInfos[1].fullUrl),
     pageInfos[1].captureDate
   );
+  end(t);
+});
+
+test('PeerBloomFilter constructor succeeds', function(t) {
+  var peerInfo = createPeerInfo();
+  var bloom = new bloomFilter.BloomFilter();
+  var buff = bloom.serialize();
+
+  var actual = new objects.PeerBloomFilter(peerInfo, buff);
+
+  t.deepEqual(actual.peerInfo, peerInfo);
+  t.deepEqual(actual.bloomFilter, bloom);
+  end(t);
+});
+
+test('PeerBloomFilter performQueryForPage false if not present', function(t) {
+  var peerInfo = createPeerInfo();
+  var bloom = new bloomFilter.BloomFilter();
+  var buff = bloom.serialize();
+
+  var actual = new objects.PeerBloomFilter(peerInfo, buff);
+  t.false(actual.performQueryForPage('http://foo.com'));
+  end(t);
+});
+
+test('PeerBloomFilter performQueryForPage true if present', function(t) {
+  var peerInfo = createPeerInfo();
+  var rawBloom = new bloomFilter.BloomFilter();
+  var url = 'foo';
+  rawBloom.add(url);
+  var buff = rawBloom.serialize();
+
+  var peerBloom = new objects.PeerBloomFilter(peerInfo, buff);
+  t.deepEqual(peerBloom.bloomFilter.backingObj.buckets, rawBloom.backingObj.buckets);
+  t.true(peerBloom.performQueryForPage(url));
   end(t);
 });

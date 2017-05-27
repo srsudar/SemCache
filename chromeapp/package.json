@@ -3,11 +3,13 @@
   "version": "0.0.0",
   "dependencies": {
     "base-64": "^0.1.0",
+    "bloomfilter": "0.0.16",
     "buffer": "^5.0.3",
     "chrome-promise": "^2.0.2",
     "json2csv": "^3.6.3",
     "lodash": "^4.15.0",
     "npm": "^4.1.2",
+    "to-arraybuffer": "^1.0.1",
     "underscore": "^1.8.3",
     "webrtc-adapter": "^3.1.0",
     "wolfy87-eventemitter": "^5.1.0"

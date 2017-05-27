@@ -8,6 +8,7 @@ var json2csv = require('json2csv');
 
 var api = require('./server/server-api');
 var appc = require('./app-controller');
+var bloomFilter = require('./coalescence/bloom-filter');
 var chromep = require('./chrome-apis/chromep');
 var coalObjects = require('./coalescence/objects');
 var datastore = require('./persistence/datastore');
@@ -861,6 +862,42 @@ exports.generateDummyDigests = function(numDigests, numPages) {
     var pageInfos = exports.generateDummyPageInfos(numPages, i);
 
     var digest = new coalObjects.Digest(peerInfo, pageInfos);
+    result.push(digest);
+  }
+
+  return result;
+};
+
+/**
+ * Generate an array of dummy Digest objects for use in evaluation.
+ *
+ * @param {integer} numPeers the number of Digests to create
+ * @param {integer} numPages the number of pages per Digest. This must be
+ * greater than 10, just to make sure we can include our shared page.
+ *
+ * @return {Array.<Digest>}
+ */
+exports.generateDummyPeerBloomFilters = function(numPeers, numPages) {
+  if (numPages < 10) {
+    throw new Error('numPages must be > 10');
+  }
+  var result = [];
+
+  for (var i = 0; i < numPeers; i++) {
+    var ipAddr = i + '.' + i + '.' + i + '.' + i;
+    var peerInfo = {
+      ipAddress: ipAddr,
+      port: i
+    };
+
+    var pageInfos = exports.generateDummyPageInfos(numPages, i);
+
+    var filter = new bloomFilter.BloomFilter();
+    pageInfos.forEach(info => {
+      filter.add(info.fullUrl);
+    });
+
+    var digest = new coalObjects.PeerBloomFilter(peerInfo, filter.serialize());
     result.push(digest);
   }
 
