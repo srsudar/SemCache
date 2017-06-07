@@ -86,26 +86,26 @@ exports.getParameters = function() {
       exports.KEY_URL_LIST_INDEX
     ];
     storage.get(keys)
-      .then(getResult => {
-        var urlList = getResult[exports.KEY_URL_LIST];
-        var urlListIndex = getResult[exports.KEY_URL_LIST_INDEX];
-        // Start out null to indicate the end of the trial. We'll update the
-        // value below if we haven't moved past the end of the array.
-        var activeUrl = null;
-        if (urlListIndex < urlList.length) {
-          // Then we haven't yet finished the trial.
-          activeUrl = urlList[urlListIndex];
-        }
-        var result = {
-          key: getResult[exports.KEY_LOG_KEY],
-          numIterations: getResult[exports.KEY_NUM_ITERATIONS],
-          currentIter: getResult[exports.KEY_CURRENT_ITERATION],
-          urlList: getResult[exports.KEY_URL_LIST],
-          urlListIndex: urlListIndex,
-          activeUrl: activeUrl
-        };
-        resolve(result);
-      });
+    .then(getResult => {
+      var urlList = getResult[exports.KEY_URL_LIST];
+      var urlListIndex = getResult[exports.KEY_URL_LIST_INDEX];
+      // Start out null to indicate the end of the trial. We'll update the
+      // value below if we haven't moved past the end of the array.
+      var activeUrl = null;
+      if (urlListIndex < urlList.length) {
+        // Then we haven't yet finished the trial.
+        activeUrl = urlList[urlListIndex];
+      }
+      var result = {
+        key: getResult[exports.KEY_LOG_KEY],
+        numIterations: getResult[exports.KEY_NUM_ITERATIONS],
+        currentIter: getResult[exports.KEY_CURRENT_ITERATION],
+        urlList: getResult[exports.KEY_URL_LIST],
+        urlListIndex: urlListIndex,
+        activeUrl: activeUrl
+      };
+      resolve(result);
+    });
   });
   
 };
@@ -158,6 +158,26 @@ exports.startSavePageTrial = function(urls, numIterations, key) {
       .then(() => {
         resolve();
       });
+  });
+};
+
+/**
+ * Start a trial for timing the time required to annotate links.
+ */
+exports.startAnnotateLinksTrial = function(key, numIterations) {
+  var setArg = {};
+  setArg[exports.LINK_ANNOTATION_KEYS.totalIterations] = numIterations;
+  setArg[exports.LINK_ANNOTATION_KEYS.currentIteration] = 0;
+  setArg[exports.LINK_ANNOTATION_KEYS.key] = key;
+
+  console.log('Beginning trial');
+
+  storage.set(setArg)
+  .then(() => {
+    return util.wait(2000);
+  })
+  .then(() => {
+    util.getWindow().location.reload(true);
   });
 };
 

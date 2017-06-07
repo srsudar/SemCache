@@ -16,7 +16,12 @@ var EV_ERR = 'error';
  * supposedly a reasonable value for Chrome, according to various documents
  * online.
  */
-exports.CHUNK_SIZE = 16000;
+// Let's try bumping to 16mibibytes
+exports.CHUNK_SIZE = 16384;
+// Based on
+// https://github.com/webrtc/samples/blob/gh-pages/src/content/datachannel/datatransfer/js/main.js
+// exports.BUFFER_FULL_THRESHOLD = exports.CHUNK_SIZE / 2;
+exports.BUFFER_FULL_THRESHOLD = exports.CHUNK_SIZE * 5;
 
 /**
  * This object provides a way to communicate with a peer to chunk binary data
@@ -57,7 +62,7 @@ _.extend(exports.Client.prototype, new EventEmitter());
  */
 exports.Client.prototype.sendStartMessage = function() {
   var msgBin = Buffer.from(JSON.stringify(this.msg));
-  this.channel.send(msgBin);
+  this.channel.send(msgBin.buffer);
 };
 
 /**
@@ -69,20 +74,36 @@ exports.Client.prototype.handleErrorMessage = function(msg) {
   this.emitError(msg);
 };
 
+window.onmessageNum = 0;
+window.onmessageTotal = 0;
+
+window.askAnswerNum = 0;
+window.askAnswerTotal = 0;
+
 /**
  * Request the information from the server and start receiving data.
  */
 exports.Client.prototype.start = function() {
   var self = this;
+  var perf = util.getPerf();
+  perf.mark('createDataChannel-start');
   var channel = this.rawConnection.createDataChannel(this.msg.channelName);
   this.channel = channel;
   channel.binaryType = 'arraybuffer';
 
   channel.onopen = function() {
+    perf.mark('createDataChannel-end');
+    window.askStart = perf.now();
     self.sendStartMessage();
   };
 
   channel.onmessage = function(event) {
+    // window.askAnswerNum++;
+    // var timeForAnswer = perf.now() - window.askStart;
+    // window.askAnswerTotal += timeForAnswer;
+    // console.log('num askAnswer:', window.askAnswerNum, 'time askAnswer:', timeForAnswer, 'mean time:',
+    //   window.askAnswerTotal / window.askAnswerNum);
+    // var start = perf.now();
     var eventBuff = Buffer.from(event.data);
 
     var msg = protocol.from(eventBuff);
@@ -105,7 +126,9 @@ exports.Client.prototype.start = function() {
 
     // Otherwise, we've received a chunk of our data.
     if (self.cacheChunks) {
+      // console.time('chunks.push');
       self.chunks.push(dataBuff);
+      // console.timeEnd('chunks.push');
     }
     self.numChunksReceived++;
     self.emitChunk(dataBuff);
@@ -115,7 +138,15 @@ exports.Client.prototype.start = function() {
       self.emitComplete();
       self.channel.close();
     } else {
-      self.requestNext();
+      // var end = perf.now();
+      // var totalTime = end - start;
+      // console.log('This is how long it takes to process a message and request another');
+      // window.onmessageNum++;
+      // window.onmessageTotal += totalTime;
+      // console.log('num onmessage:', window.onmessageNum, 'total time:', window.onmessageTotal, 'mean:',
+      //   window.onmessageTotal / window.onmessageNum);
+      // window.askStart = perf.now();
+      // self.requestNext();
     }
   };
 };
@@ -127,7 +158,7 @@ exports.Client.prototype.requestNext = function() {
   var continueMsg = exports.createContinueMessage();
   var continueMsgBin = Buffer.from(JSON.stringify(continueMsg));
   try {
-    this.channel.send(continueMsgBin);
+    this.channel.send(continueMsgBin.buffer);
   } catch (err) {
     this.emitError(err);
   }
@@ -158,7 +189,9 @@ exports.Client.prototype.emitError = function(msg) {
  */
 exports.Client.prototype.emitComplete = function() {
   if (this.cacheChunks) {
+    // console.time('Buffer.concat');
     var reclaimed = Buffer.concat(this.chunks);
+    // console.timeEnd('Buffer.concat');
     this.emit(EV_COMPLETE, reclaimed);
   } else {
     this.emit(EV_COMPLETE);
@@ -182,6 +215,74 @@ exports.Server = function Server(channel) {
   this.numChunks = null;
   this.streamInfo = null;
   this.chunksSent = null;
+
+  this.channel.bufferedAmountLowThreshold = exports.BUFFER_FULL_THRESHOLD;
+};
+
+exports.Server.prototype.chunkGenerator = function*() {
+  // this.buffToSend = buff;
+  // this.numChunks = Math.ceil(buff.length / exports.CHUNK_SIZE);
+  // this.streamInfo = exports.createStreamInfo(this.numChunks);
+  // this.chunksSent = 0;
+
+  var buff = this.buffToSend;
+  var endOfLastSent = -1;
+  while (endOfLastSent < buff.length) {
+    var chunkStart = this.chunksSent * exports.CHUNK_SIZE;
+    var chunkEnd = chunkStart + exports.CHUNK_SIZE;
+    chunkEnd = Math.min(chunkEnd, buff.length);
+    endOfLastSent = chunkEnd;
+    // console.time('slice');
+    var chunk = buff.slice(chunkStart, chunkEnd);
+    // console.timeEnd('slice');
+    yield chunk;
+  }
+};
+
+exports.Server.prototype.bufferedAmountLowListener = function() {
+  // Looks like the this object is the channel itself?
+  this.channel.removeEventListener(
+    'bufferedamountlow', this._lowBufferListener
+  );
+  this.sendAsMuchAsPossible();
+};
+
+exports.Server.prototype.sendAsMuchAsPossible = function() {
+  this._lowBufferListener = this.bufferedAmountLowListener.bind(this);
+  var gen = this._activeGenerator;
+  // pick up where we left off.
+  var item = this._pendingItem;
+  this._pendingItem = null;
+  if (!item) {
+    item = gen.next();
+  }
+
+  while (!item.done) {
+    if (this.channel.bufferedAmount > exports.BUFFER_FULL_THRESHOLD) {
+      // Save our pending item, which we can't send yet.
+      this._pendingItem = item;
+      this.channel.addEventListener(
+        'bufferedamountlow', this._lowBufferListener
+      );
+      return;
+    }
+    
+    // Otherwise, send data.
+    try {
+      // The number of chunks must be incremented before the send, otherwise if
+      // an ack comes back very quickly (impossibly quickly except in test
+      // conditions?) you can send the same chunk twice.
+      this.chunksSent++;
+      var chunk = item.value;
+      var chunkMsg = protocol.createSuccessMessage(chunk);
+      this.channel.send(chunkMsg.asBuffer().buffer);
+      item = gen.next();
+    } catch (err) {
+      this.chunksSent--;
+      console.log('Error sending chunk: ', err);
+    }
+  }
+  this._activeGenerator = null;
 };
 
 /**
@@ -202,29 +303,36 @@ exports.Server.prototype.sendBuffer = function(buff) {
 
   var self = this;
   this.channel.onmessage = function(event) {
+    // console.time('parse-onmessage');
     var dataBuff = Buffer.from(event.data);
     var msg = JSON.parse(dataBuff);
+    // console.timeEnd('parse-onmessage');
 
     if (msg.message !== 'next') {
       console.log('Unrecognized control signal: ', msg);
       return;
     }
 
-    var chunkStart = self.chunksSent * exports.CHUNK_SIZE;
-    var chunkEnd = chunkStart + exports.CHUNK_SIZE;
-    chunkEnd = Math.min(chunkEnd, buff.length);
-    var chunk = buff.slice(chunkStart, chunkEnd);
+    // var chunkStart = self.chunksSent * exports.CHUNK_SIZE;
+    // var chunkEnd = chunkStart + exports.CHUNK_SIZE;
+    // chunkEnd = Math.min(chunkEnd, buff.length);
+    // console.time('slice');
+    // var chunk = buff.slice(chunkStart, chunkEnd);
+    // console.timeEnd('slice');
 
-    try {
-      // The number of chunks must be incremented before the send, otherwise if
-      // an ack comes back very quickly (impossibly quickly except in test
-      // conditions?) you can send the same chunk twice.
-      self.chunksSent++;
-      var chunkMsg = protocol.createSuccessMessage(chunk);
-      self.channel.send(chunkMsg.asBuffer());
-    } catch (err) {
-      console.log('Error sending chunk: ', err);
-    }
+    self._activeGenerator = self.chunkGenerator();
+    self.sendAsMuchAsPossible();
+
+    // try {
+    //   // The number of chunks must be incremented before the send, otherwise if
+    //   // an ack comes back very quickly (impossibly quickly except in test
+    //   // conditions?) you can send the same chunk twice.
+    //   self.chunksSent++;
+    //   var chunkMsg = protocol.createSuccessMessage(chunk);
+    //   self.channel.send(chunkMsg.asBuffer().buffer);
+    // } catch (err) {
+    //   console.log('Error sending chunk: ', err);
+    // }
   };
   
   // Start the process by sending the streamInfo to the client.
@@ -232,7 +340,7 @@ exports.Server.prototype.sendBuffer = function(buff) {
     var streamInfoMsg = protocol.createSuccessMessage(
       Buffer.from(JSON.stringify(this.streamInfo))
     );
-    this.channel.send(streamInfoMsg.asBuffer());
+    this.channel.send(streamInfoMsg.asBuffer().buffer);
   } catch (err) {
     console.log('Error sending streamInfo: ', this.streamInfo);
   }
@@ -246,7 +354,7 @@ exports.Server.prototype.sendBuffer = function(buff) {
  */
 exports.Server.prototype.sendError = function(err) {
   var msg = protocol.createErrorMessage(err);
-  this.channel.send(msg.asBuffer());
+  this.channel.send(msg.asBuffer().buffer);
 };
 
 /**

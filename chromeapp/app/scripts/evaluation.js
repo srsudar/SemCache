@@ -8,7 +8,9 @@ var json2csv = require('json2csv');
 
 var api = require('./server/server-api');
 var appc = require('./app-controller');
+var bloomFilter = require('./coalescence/bloom-filter');
 var chromep = require('./chrome-apis/chromep');
+var coalObjects = require('./coalescence/objects');
 var datastore = require('./persistence/datastore');
 var ifCommon = require('./peer-interface/common');
 var peerIfMgr = require('./peer-interface/manager');
@@ -16,6 +18,18 @@ var util = require('./util');
 
 /** The prefix value for timing keys we will use for local storage. */
 var TIMING_KEY_PREFIX = 'timing_';
+
+/**
+ * These URLs will be shared across all dummy Digests created for Digest query
+ * evaluations.
+ */
+exports.SHARED_DUMMY_URLS = [
+  // The trailing slashes here are important, since chrome's a.href adds a
+  // trailing slash.
+  'http://all-caches0.com/',
+  'http://all-caches1.com/',
+  'http://all-caches2.com/'
+];
 
 /**
  * Create a scoped version of key for to safely put in local storage
@@ -98,6 +112,57 @@ exports.getNow = function() {
 };
 
 /**
+ * Wrapper around window.performance.
+ *
+ * @return {window.performance}
+ */
+exports.getPerf = function() {
+  return window.performance;
+};
+
+/**
+ * Wrapper around window.performance.mark(name).
+ */
+exports.mark = function(name) {
+  exports.getPerf().mark(name);
+};
+
+/**
+ * Generate keys from the marks that have been set during a test. These objects
+ * will be keyed to times. If you issue two marks, 'alpha', 'beta', the
+ * resulting object will be like the following:
+ * {
+ *   MARK_alpha: {number},
+ *   MARK_beta: {number},
+ *   MARK_alpha_TO_mark_beta: {number}
+ * }
+ *
+ * @return {Object}
+ */
+exports.getKeysFromMarks = function() {
+  var marks = exports.getPerf().getEntriesByType('mark');
+  var prefix = 'MARK_';
+  var infix = '_TO_';
+
+  var result = {};
+  
+  marks.forEach(mark => {
+    var key = prefix + mark.name;
+    result[key] = mark.startTime;
+  });
+
+  for (var i = 1; i < marks.length; i++) {
+    var a = marks[i - 1];
+    var b = marks[i];
+    var key = (prefix + a.name) + infix + (prefix + b.name);
+    var duration = b.startTime - a.startTime;
+    result[key] = duration;
+  }
+
+  return result;
+};
+
+/**
  * Log an event time to local storage. The key will be scoped for timing and
  * time will be added to a list of times to that value. E.g. logTim('foo', 3)
  * would result in a value like { timing_foo: [ 3 ] } being added to local
@@ -114,12 +179,19 @@ exports.logTime = function(key, time) {
     exports.getTimeValues(key)
     .then(existingValues => {
       var setObj = {};
+      var objToLog = time;
+      var keysFromMarks = exports.getKeysFromMarks();
+      if (time !== null && typeof time !== 'object') {
+        objToLog = { time: time };
+      }
+      objToLog.keysFromMarks = keysFromMarks;
+      util.getPerf().clearMarks();
       if (existingValues) {
-        existingValues.push(time);
+        existingValues.push(objToLog);
         setObj[scopedKey] = existingValues;
       } else {
         // New value.
-        setObj[scopedKey] = [ time ];
+        setObj[scopedKey] = [ objToLog ];
       }
       return chromep.getStorageLocal().set(setObj);
     })
@@ -764,4 +836,120 @@ exports.runFetchFileIteration = function(mhtmlUrl, ipAddr, port) {
       reject(err);
     });
   });
+};
+
+/**
+ * Generate an array of dummy Digest objects for use in evaluation.
+ *
+ * @param {integer} numPeers the number of Digests to create
+ * @param {integer} numPages the number of pages per Digest. This must be
+ * greater than 10, just to make sure we can include our shared page.
+ *
+ * @return {Array.<Digest>}
+ */
+exports.generateDummyDigests = function(numDigests, numPages) {
+  if (numPages < 10) {
+    throw new Error('numPages must be > 10');
+  }
+  var result = [];
+
+  for (var i = 0; i < numDigests; i++) {
+    var ipAddr = i + '.' + i + '.' + i + '.' + i;
+    var peerInfo = {
+      ipAddress: ipAddr,
+      port: i
+    };
+
+    var pageInfos = exports.generateDummyPageInfos(numPages, i);
+
+    var digest = new coalObjects.Digest(peerInfo, pageInfos);
+    result.push(digest);
+  }
+
+  return result;
+};
+
+/**
+ * Generate an array of dummy Digest objects for use in evaluation.
+ *
+ * @param {integer} numPeers the number of Digests to create
+ * @param {integer} numPages the number of pages per Digest. This must be
+ * greater than 10, just to make sure we can include our shared page.
+ *
+ * @return {Array.<Digest>}
+ */
+exports.generateDummyPeerBloomFilters = function(numPeers, numPages) {
+  if (numPages < 10) {
+    throw new Error('numPages must be > 10');
+  }
+  var result = [];
+
+  for (var i = 0; i < numPeers; i++) {
+    var ipAddr = i + '.' + i + '.' + i + '.' + i;
+    var peerInfo = {
+      ipAddress: ipAddr,
+      port: i
+    };
+
+    var pageInfos = exports.generateDummyPageInfos(numPages, i);
+
+    var filter = new bloomFilter.BloomFilter();
+    pageInfos.forEach(info => {
+      filter.add(info.fullUrl);
+    });
+
+    var digest = new coalObjects.PeerBloomFilter(peerInfo, filter.serialize());
+    result.push(digest);
+  }
+
+  return result;
+};
+
+/**
+ * Generate a list of dummy pageInfos for use with Digest mocking.
+ *
+ * The url 'http://all-caches.com' will be in all caches. Otherwise the URLs
+ * will be 'http://peer2.com/page25/foo-bar-baz-upsidedowncake'. In this way
+ * not all the URLs are shared or realistic, necessarily, but they are
+ * reproducible.
+ *
+ * @param {integer} numPages
+ * @param {interger} peerNumber this is an integer value of a peer. This is
+ * used to generat a name of a URL domain in order to create unique URLs.
+ *
+ * @return {Array.<Object>} an arry of Objects like:
+ * {
+ *   fullUrl: 'http://foo.com',
+ *   captureDate: 'someDate'
+ * }
+ */
+exports.generateDummyPageInfos = function(numPages, peerNumber) {
+  var result = [];
+  var pagesRemaining = numPages;
+
+  // Add our shared URLs.
+  exports.SHARED_DUMMY_URLS.forEach(commonUrl => {
+    pagesRemaining--;
+    result.push({
+      fullUrl: commonUrl,
+      captureDate: new Date().toISOString()
+    });
+  });
+
+  var pathSuffix = '/foo-bar-baz-upsidedowncake/';
+  var urlPrefix = 'http://peer' + peerNumber + '.com/';
+  while (pagesRemaining > 0) {
+    var pagePath = 'page' + pagesRemaining;
+    var fullUrl = urlPrefix + pagePath + pathSuffix;
+    var captureDate = new Date().toISOString();
+
+    var pageInfo = {
+      fullUrl: fullUrl,
+      captureDate: captureDate
+    };
+    result.push(pageInfo);
+    pagesRemaining--;
+  }
+  
+  return result;
 };

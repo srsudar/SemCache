@@ -7,6 +7,9 @@ var peerIfMgr = require('../peer-interface/manager');
 var util = require('./util');
 var evaluation = require('../evaluation');
 
+var EVAL_NUM_DIGESTS = 30;
+var EVAL_NUM_PAGES_IN_DIGEST = 1000;
+
 /**
  * This module is responsible for the digest strategy of cache coalescence.
  */
@@ -16,7 +19,7 @@ var evaluation = require('../evaluation');
  *
  * Contains objects 
  */
-var DIGESTS = [];
+var BLOOM_FILTERS = [];
 
 var IS_INITIALIZED = false;
 var IS_INITIALIZING = false;
@@ -24,13 +27,12 @@ var IS_INITIALIZING = false;
 /**
  * An implementation of the coalescence strategy API.
  *
- * The digest strategy is to obtain a list of all the available pages from
- * peers and check those lists.
+ * The Bloom filter strategy is to check a Bloom filter for URLs.
  * @constructor
  */
-exports.DigestStrategy = function DigestStrategy() {
-  if (!(this instanceof DigestStrategy)) {
-    throw new Error('DigestStrategy must be called with new');
+exports.BloomStrategy = function BloomStrategy() {
+  if (!(this instanceof BloomStrategy)) {
+    throw new Error('BloomStrategy must be called with new');
   }
   // Don't like that we are basically exposing module-level state that isn't
   // tied to this object, but going to leave it for now. This is basically
@@ -41,8 +43,8 @@ exports.DigestStrategy = function DigestStrategy() {
 /**
  * Reset any state saved by this module
  */
-exports.DigestStrategy.prototype.reset = function() {
-  this.setDigests([]);
+exports.BloomStrategy.prototype.reset = function() {
+  this.setBloomFilters([]);
   IS_INITIALIZED = false;
   // If an initialization is in progress, this could not be a complete reset.
   IS_INITIALIZING = false;
@@ -51,10 +53,10 @@ exports.DigestStrategy.prototype.reset = function() {
 /**
  * Replace the saved Digest state with this new information.
  *
- * @param {Array.<Digest>} digests
+ * @param {Array.<BloomFilter>} digests
  */
-exports.DigestStrategy.prototype.setDigests = function(digests) {
-  DIGESTS = digests;
+exports.BloomStrategy.prototype.setBloomFilters = function(filters) {
+  BLOOM_FILTERS = filters;
 };
 
 /**
@@ -62,7 +64,7 @@ exports.DigestStrategy.prototype.setDigests = function(digests) {
  *
  * @return {boolean} true if queries can be performed
  */
-exports.DigestStrategy.prototype.isInitialized = function() {
+exports.BloomStrategy.prototype.isInitialized = function() {
   return IS_INITIALIZED;
 };
 
@@ -71,7 +73,7 @@ exports.DigestStrategy.prototype.isInitialized = function() {
  *
  * @return {boolean}
  */
-exports.DigestStrategy.prototype.isInitializing = function() {
+exports.BloomStrategy.prototype.isInitializing = function() {
   return IS_INITIALIZING;
 };
 
@@ -81,7 +83,7 @@ exports.DigestStrategy.prototype.isInitializing = function() {
  * @return {Promise.<undefined, Error>} Promise that resolves when
  * initialization is complete.
  */
-exports.DigestStrategy.prototype.initialize = function() {
+exports.BloomStrategy.prototype.initialize = function() {
   if (this.isInitializing()) {
     // no-op
     return Promise.resolve();
@@ -100,15 +102,25 @@ exports.DigestStrategy.prototype.initialize = function() {
   var that = this;
 
   return new Promise(function(resolve, reject) {
-    dnssdSem.browseForSemCacheInstances()
-    .then(peerInfos => {
-      return util.removeOwnInfo(peerInfos);
-    }).then(peerInfos => {
-      var peerAccessor = peerIfMgr.getPeerAccessor();
-      return that.getAndProcessDigests(peerAccessor, peerInfos);
+    // Changing this for evaluation.
+    console.warn('COALESCENCE IS IN EVALUATION MODE');
+    // This code is for the real mode.
+    // dnssdSem.browseForSemCacheInstances()
+    // .then(peerInfos => {
+    //   return util.removeOwnInfo(peerInfos);
+    // }).then(peerInfos => {
+    //   var peerAccessor = peerIfMgr.getPeerAccessor();
+    //   return that.getAndProcessDigests(peerAccessor, peerInfos);
+    // })
+    // This code is for evaluation mode.
+    Promise.resolve()
+    .then(() => {
+      return evaluation.generateDummyPeerBloomFilters(
+        EVAL_NUM_DIGESTS, EVAL_NUM_PAGES_IN_DIGEST
+      );
     })
-    .then(digests => {
-      that.setDigests(digests);
+    .then(bloomFilters => {
+      that.setBloomFilters(bloomFilters);
       IS_INITIALIZING = false;
       IS_INITIALIZED = true;
       resolve();
@@ -132,7 +144,7 @@ exports.DigestStrategy.prototype.initialize = function() {
  *
  * @return {Promise.<Array<Digest>>}
  */
-exports.DigestStrategy.prototype.getAndProcessDigests = function(
+exports.BloomStrategy.prototype.getAndProcessDigests = function(
   peerInterface, peerInfos
 ) {
   // Query them, create digests for those that succeed.
@@ -173,10 +185,21 @@ exports.DigestStrategy.prototype.getAndProcessDigests = function(
   });
 };
 
+window.performQueryNum = 0;
+window.performQueryTotal = 0;
+window.digestNum = 0;
+window.digestTotal = 0;
+
+function getNow() {
+  return window.performance.now();
+}
+
 /**
  * Obtain access information for the given array of URLs. The result will be an
  * array of length <= urls.length. Only those that are available will be
  * present.
+ *
+ * Note that this strategy cannot set capture dates.
  *
  * @param {Array.<string>} urls Array of URLs for which to query
  *
@@ -187,34 +210,43 @@ exports.DigestStrategy.prototype.getAndProcessDigests = function(
  *     url: [NetworkCachedPage, NetworkCachedPage],
  *   }
  */
-exports.DigestStrategy.prototype.performQuery = function(urls) {
+exports.BloomStrategy.prototype.performQuery = function(urls) {
   if (!this.isInitialized()) {
     console.warn('digest-strategy was queried but is not initialized');
   }
+  window.performQueryNum++;
+  var a = getNow();
   return new Promise(function(resolve, reject) {
     Promise.resolve()
     .then(() => {
       var result = {};
       urls.forEach(url => {
         var copiesForUrl = [];
-        DIGESTS.forEach(digest => {
-          var captureDate = digest.performQueryForPage(url);
+        BLOOM_FILTERS.forEach(bloomFilter => {
+          window.digestNum++;
+          var x = getNow();
+          var captureDate = bloomFilter.performQueryForPage(url);
           if (captureDate) {
             var NetworkCachedPage = new objects.NetworkCachedPage(
               'probable',
               {
                 url: url,
-                captureDate: captureDate
               },
-              digest.peerInfo
+              bloomFilter.peerInfo
             );
             copiesForUrl.push(NetworkCachedPage);
           }
+          var y = getNow();
+          window.digestTotal += y - x;
         });
         if (copiesForUrl.length > 0) {
           result[url] = copiesForUrl;
         }
       });
+      var b = getNow();
+      window.performQueryTotal += b - a;
+      console.log('performQuery: ', window.performQueryNum, window.performQueryTotal, 'mean:', window.performQueryTotal / window.performQueryNum);
+      console.log('digests: ', window.digestNum, window.digestTotal, 'mean:', window.digestTotal / window.digestNum);
       resolve(result);
     })
     .catch(err => {

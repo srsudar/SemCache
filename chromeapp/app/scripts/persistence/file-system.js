@@ -2,6 +2,7 @@
 /* globals Promise */
 'use strict';
 
+var Buffer = require('buffer/').Buffer;
 var chromep = require('../chrome-apis/chromep');
 var fsUtil = require('./file-system-util');
 

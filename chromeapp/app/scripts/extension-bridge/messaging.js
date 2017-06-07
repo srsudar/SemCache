@@ -18,6 +18,7 @@ exports.EXTENSION_ID = 'malgfdapbefeeidjfndgioclhfpfglhe';
  * @param {any} message
  */
 exports.sendMessageToExtension = function(message) {
+  message.timeSent = Date.now();
   chromep.getRuntime().sendMessage(exports.EXTENSION_ID, message);
 };
 
@@ -106,6 +107,7 @@ exports.handleExternalMessage = function(message, sender, response) {
     .then(result => {
       var successMsg = exports.createResponseSuccess(message);
       successMsg.response = result;
+      successMsg.timeSent = Date.now();
       if (response) {
         response(successMsg);
       }

@@ -4,6 +4,7 @@ var _ = require('underscore');
 var chunkingChannel = require('./chunking-channel');
 var EventEmitter = require('wolfy87-eventemitter');
 var message = require('./message');
+var util = require('../util');
 
 var EV_CLOSE = 'close';
 

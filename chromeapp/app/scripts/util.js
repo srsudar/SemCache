@@ -107,6 +107,13 @@ exports.trace = function trace(arg) {
 };
 
 /**
+ * @return {window.performance}
+ */
+exports.getPerf = function() {
+  return window.performance;
+};
+
+/**
  * Extract the hostname (or IP address) from a URL.
  *
  * @param {string} url

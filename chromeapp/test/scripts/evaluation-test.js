@@ -470,9 +470,11 @@ test('logTime calls storage correctly if new stream', function(t) {
   var key = 'foo';
   var time = 1234;
   var scopedKey = 'timing_foo';
+  var markKeys = { foo: 'from marks' };
 
   var setSpy = sinon.stub();
   var getSpy = sinon.stub().resolves({});
+  var getKeysFromMarksStub = sinon.stub().returns(markKeys);
   proxyquireEvaluation(
     {},
     {
@@ -480,9 +482,13 @@ test('logTime calls storage correctly if new stream', function(t) {
       get: getSpy
     }
   );
+  evaluation.getKeysFromMarks = getKeysFromMarksStub;
 
   var expectedSet = {};
-  expectedSet[scopedKey] = [ time ];
+  expectedSet[scopedKey] = [{
+      time: time,
+      keysFromMarks: markKeys
+  }];
 
   evaluation.logTime(key, time)
   .then(() => {
@@ -515,10 +521,14 @@ test('logTime calls storage correctly if appending to stream', function(t) {
       get: getSpy
     }
   );
+  evaluation.getKeysFromMarks = sinon.stub().returns({});
 
   var expectedSet = {};
   var newTimes = existingTimes.slice();
-  newTimes.push(time);
+  newTimes.push({
+    time: time,
+    keysFromMarks: {}
+  });
   expectedSet[scopedKey] = newTimes;
 
   evaluation.logTime(key, time)
@@ -959,4 +969,62 @@ test('runFetchFileTrial correct on success', function(t) {
     t.fail(err);
     end(t);
   });
+});
+
+test('generateDummyPageInfos broadly correct', function(t) {
+  // Going to only kind of test this...there's a lot to change.
+  var numPages = 12;
+  var peerNumber = 2;
+
+  var actual = evaluation.generateDummyPageInfos(numPages, peerNumber);
+
+  t.equal(actual.length, numPages);
+  actual.forEach(pageInfo => {
+    t.true(pageInfo.hasOwnProperty('fullUrl'));
+    t.true(pageInfo.hasOwnProperty('captureDate'));
+  });
+  end(t);
+});
+
+test('generateDummyDigests broadly correct', function(t) {
+  var numDigests = 10;
+  var numPages = 450;
+
+  var actual = evaluation.generateDummyDigests(numDigests, numPages);
+
+  t.equal(actual.length, numDigests);
+  actual.forEach(digest => {
+    // I don't trust instanceof after some weirdness a few days ago, so just
+    // use this as a kind of hack.
+    digest.hasOwnProperty('peerInfo');
+  });
+  end(t);
+});
+
+test('getKeysFromMarks correct' , function(t) {
+  var marks = [
+    {
+      name: 'alpha',
+      startTime: 100.0
+    },
+    {
+      name: 'beta',
+      startTime: 150.0
+    }
+  ];
+
+  var expected = {
+    MARK_alpha: 100.0,
+    MARK_beta: 150.0,
+    MARK_alpha_TO_MARK_beta: 50.0
+  };
+
+  var getEntriesStub = sinon.stub().withArgs('mark').returns(marks);
+  evaluation.getPerf = sinon.stub().returns({
+    getEntriesByType: getEntriesStub
+  });
+
+  var actual = evaluation.getKeysFromMarks();
+  t.deepEqual(actual, expected);
+  end(t);
 });

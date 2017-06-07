@@ -1,5 +1,7 @@
 'use strict';
 
+var bloomFilter = require('./bloom-filter');
+
 /**
  * Objects relevant to coalescence between instances on the local network.
  */
@@ -99,4 +101,32 @@ exports.Digest.prototype.performQueryForPage = function(url) {
   } else {
     return null;
   }
+};
+
+/**
+ * Create a Bloom filter to use for coalescence. This is a wrapper around the
+ * pure Bloom filter implementation and includes information about the peer
+ * itself.
+ */
+exports.PeerBloomFilter = function PeerBloomFilter(peerInfo, bloomBuff) {
+  if (!(this instanceof PeerBloomFilter)) {
+    throw new Error('PeerBloomFilter must be called with new');
+  }
+  this.peerInfo = peerInfo;
+
+  // Now process the pageInfos.
+  this.bloomFilter = bloomFilter.from(bloomBuff);
+};
+
+/**
+ * Query the Bloom filter to see if it contains the given url.
+ *
+ * @param {string} url
+ *
+ * @return {boolean} true if the peer likely has the URL, else false. Note that
+ * we cannot return a capture date with the Bloom filter strategy, so we do not
+ * have complete API parity with the Digest strategy.
+ */
+exports.PeerBloomFilter.prototype.performQueryForPage = function(url) {
+  return this.bloomFilter.test(url);
 };

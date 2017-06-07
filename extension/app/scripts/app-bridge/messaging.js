@@ -24,6 +24,7 @@ exports.APP_ID = 'dfafijifolbgimhdeahdmkkpapjpabka';
  * app or extension
  */
 exports.sendMessageToApp = function(message, callback) {
+  message.timeSent = Date.now();
   chromeRuntime.sendMessage(exports.APP_ID, message, callback);
 };
 
