@@ -185,15 +185,6 @@ exports.BloomStrategy.prototype.getAndProcessDigests = function(
   });
 };
 
-window.performQueryNum = 0;
-window.performQueryTotal = 0;
-window.digestNum = 0;
-window.digestTotal = 0;
-
-function getNow() {
-  return window.performance.now();
-}
-
 /**
  * Obtain access information for the given array of URLs. The result will be an
  * array of length <= urls.length. Only those that are available will be
@@ -214,7 +205,6 @@ exports.BloomStrategy.prototype.performQuery = function(urls) {
   if (!this.isInitialized()) {
     console.warn('digest-strategy was queried but is not initialized');
   }
-  window.performQueryNum++;
   var a = getNow();
   return new Promise(function(resolve, reject) {
     Promise.resolve()
@@ -223,7 +213,6 @@ exports.BloomStrategy.prototype.performQuery = function(urls) {
       urls.forEach(url => {
         var copiesForUrl = [];
         BLOOM_FILTERS.forEach(bloomFilter => {
-          window.digestNum++;
           var x = getNow();
           var captureDate = bloomFilter.performQueryForPage(url);
           if (captureDate) {
@@ -237,16 +226,11 @@ exports.BloomStrategy.prototype.performQuery = function(urls) {
             copiesForUrl.push(NetworkCachedPage);
           }
           var y = getNow();
-          window.digestTotal += y - x;
         });
         if (copiesForUrl.length > 0) {
           result[url] = copiesForUrl;
         }
       });
-      var b = getNow();
-      window.performQueryTotal += b - a;
-      console.log('performQuery: ', window.performQueryNum, window.performQueryTotal, 'mean:', window.performQueryTotal / window.performQueryNum);
-      console.log('digests: ', window.digestNum, window.digestTotal, 'mean:', window.digestTotal / window.digestNum);
       resolve(result);
     })
     .catch(err => {

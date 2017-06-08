@@ -475,8 +475,16 @@ test('logTime calls storage correctly if new stream', function(t) {
   var setSpy = sinon.stub();
   var getSpy = sinon.stub().resolves({});
   var getKeysFromMarksStub = sinon.stub().returns(markKeys);
+  var clearMarksStub = sinon.stub();
+  var getPerfStub = {
+    clearMarks: clearMarksStub
+  };
   proxyquireEvaluation(
-    {},
+    {
+      './util': {
+        getPerf: () => getPerfStub
+      }
+    },
     {
       set: setSpy,
       get: getSpy
@@ -493,6 +501,7 @@ test('logTime calls storage correctly if new stream', function(t) {
   evaluation.logTime(key, time)
   .then(() => {
     t.deepEqual(setSpy.args[0], [ expectedSet ]);
+    t.true(clearMarksStub.calledOnce);
     t.end();
     resetEvaluation();
   })
@@ -514,8 +523,16 @@ test('logTime calls storage correctly if appending to stream', function(t) {
 
   var setSpy = sinon.stub();
   var getSpy = sinon.stub().resolves(existingValues);
+  var clearMarksStub = sinon.stub();
+  var getPerfStub = {
+    clearMarks: clearMarksStub
+  };
   proxyquireEvaluation(
-    {},
+    {
+      './util': {
+        getPerf: () => getPerfStub
+      }
+    },
     {
       set: setSpy,
       get: getSpy
@@ -534,6 +551,7 @@ test('logTime calls storage correctly if appending to stream', function(t) {
   evaluation.logTime(key, time)
   .then(() => {
     t.deepEqual(setSpy.args[0], [ expectedSet ]);
+    t.true(clearMarksStub.calledOnce);
     t.end();
     resetEvaluation();
   })
