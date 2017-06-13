@@ -78,7 +78,7 @@ test('handleErrorMessage emits error', function(t) {
 
 test('requestChunk sends on success', function(t) {
   const msg = Client.createContinueMessage();
-  const expected = Buffer.from(JSON.stringify(msg)).buffer;
+  const expected = Buffer.from(JSON.stringify(msg));
   const channelStub = sinon.stub();
   const sendStub = sinon.stub();
   channelStub.send = sendStub;
@@ -186,7 +186,7 @@ test('constructor initializes correctly', function(t) {
 
 test('sendError sends buffer', function(t) {
   const err = 'error msg';
-  const expected = protocol.createErrorMessage(err).asBuffer().buffer;
+  const expected = protocol.createErrorMessage(err).asBuffer();
 
   const sendStub = sinon.stub();
   const channel = {
