@@ -4,7 +4,7 @@ var Buffer = require('buffer/').Buffer;
 
 var api = require('../server/server-api');
 var binUtil = require('../dnssd/binary-utils').BinaryUtils;
-var chunkingChannel = require('./chunking-channel');
+var bufferedChannel = require('./buffered-channel');
 var fileSystem = require('../persistence/file-system');
 var message = require('./message');
 var serverApi = require('../server/server-api');
@@ -65,7 +65,7 @@ exports.onList = function(channel) {
     serverApi.getResponseForAllCachedPages()
     .then(json => {
       var jsonBuff = Buffer.from(JSON.stringify(json));
-      var ccServer = exports.createCcServer(channel);
+      var ccServer = exports.createChannelServer(channel);
       ccServer.sendBuffer(jsonBuff);
       resolve();
     })
@@ -89,7 +89,7 @@ exports.onDigest = function(channel) {
     serverApi.getResponseForAllPagesDigest()
     .then(json => {
       var jsonBuff = Buffer.from(JSON.stringify(json));
-      var ccServer = exports.createCcServer(channel);
+      var ccServer = exports.createChannelServer(channel);
       ccServer.sendBuffer(jsonBuff);
       resolve();
     })
@@ -113,7 +113,7 @@ exports.onDigest = function(channel) {
  */
 exports.onFile = function(channel, msg) {
   return new Promise(function(resolve, reject) {
-    var ccServer = exports.createCcServer(channel);
+    var ccServer = exports.createChannelServer(channel);
     var fileName = api.getCachedFileNameFromPath(msg.request.accessPath);
     fileSystem.getFileContentsFromName(fileName)
     .then(buff => {
@@ -134,21 +134,8 @@ exports.onFile = function(channel, msg) {
  *
  * @param {RTCDataChannel} channel
  *
- * @return {Server} a new ChunkingChannel.Server object wrapping the channel.
+ * @return {ChannelServer} a new Server object wrapping the channel
  */
-exports.createCcServer = function(channel) {
-  return new chunkingChannel.Server(channel);
-};
-
-/**
- * Factory method for creating a ChunkingChannel.Client object.
- *
- * Exposed for testing.
- *
- * @param {RTCDataChannel} channel
- *
- * @return {Server} a new ChunkingChannel.Client object wrapping the channel.
- */
-exports.createCcClient = function(channel) {
-  return new chunkingChannel.Client(channel);
+exports.createChannelServer = function(channel) {
+  return new bufferedChannel.BufferedChannelServer(channel);
 };

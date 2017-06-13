@@ -43,6 +43,13 @@ class BufferedChannelServer extends commonChannel.BaseServer {
     this.bufferLowThreshold = bufferLowThreshold;
     this.bufferFullThreshold = bufferFullThreshold;
     this.channel.bufferedAmountLowThreshold = this.bufferLowThreshold;
+
+    // We save a reference to our bound listener to ensure that we can remove
+    // the event listener. This is nontrivial because we want the event handler
+    // to be invoked with `this` set to the Server object itself, not the
+    // channel receiving the bufferedamountlow event. Therefore we save a
+    // reference to this explicitly.
+    this._boundBufferedAmountLowListener = null;
   }
 
   /**
@@ -74,14 +81,12 @@ class BufferedChannelServer extends commonChannel.BaseServer {
    */
   bufferedAmountLowListener() {
     this.channel.removeEventListener(
-      // 'bufferedamountlow', this._lowBufferListener
-      'bufferedamountlow', this.bufferedAmountLowListener
+      'bufferedamountlow', this._boundBufferedAmountLowListener
     );
     this.sendAsMuchAsPossible();
   }
 
   sendAsMuchAsPossible() {
-    // this._lowBufferListener = this.bufferedAmountLowListener.bind(this);
     const gen = this.chunkGenerator;
     // pick up where we left off.
     var item = this._pendingItem;
@@ -92,11 +97,13 @@ class BufferedChannelServer extends commonChannel.BaseServer {
 
     while (!item.done) {
       if (this.channel.bufferedAmount > exports.BUFFER_FULL_THRESHOLD) {
+        console.log('TRIGGERED');
         // Save our pending item, which we can't send yet.
         this._pendingItem = item;
+        this._boundBufferedAmountLowListener =
+          this.bufferedAmountLowListener.bind(this);
         this.channel.addEventListener(
-          // 'bufferedamountlow', this._lowBufferListener
-          'bufferedamountlow', this.bufferedAmountLowListener
+          'bufferedamountlow', this._boundBufferedAmountLowListener
         );
         return;
       }

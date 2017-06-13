@@ -134,19 +134,32 @@ function integrationHelper(
   const serverSentArgs = [];
   let numExpectedRemoveListenerCalls = 0;
   serverChannel.send = function(sendArg) {
+    // We want to imitate the buffer filling up and the listener being set.
+    
+    // First, create an event and send it to the client. Whether or not this
+    // happens immediately or after some point in the future doesn't matter to
+    // the server, so we'll just send it right away.
     serverSentArgs.push(sendArg);
-
     let event = createMessageEvent(sendArg);
     clientChannel.onmessage(event);
 
+    // Second, increase the buffered amount. We'll rely on the addEventListener
+    // function to do the clearing for us.
+    
     // We will also increase the buffered amount as if we were filling up the
     // buffer.
     serverChannel.bufferedAmount += chunkSize;
-    if (serverChannel.bufferedAmount > bufferFullThreshold) {
-      serverChannel.bufferedAmount = 0;
-      numExpectedRemoveListenerCalls++;
-      server.bufferedAmountLowListener();
+  };
+
+  serverChannel.addEventListener = function(eventName, listenerFn) {
+    if (serverChannel.bufferedAmount <= bufferFullThreshold) {
+      throw new Error('Should not have added event listener');
     }
+    // Reset the buffered amount.
+    serverChannel.bufferedAmount = 0;
+    numExpectedRemoveListenerCalls++;
+    // invoke the callback
+    listenerFn();
   };
 
   var chunks = [];
@@ -165,10 +178,8 @@ function integrationHelper(
 
     t.equal(removeEventListenerStub.callCount, numExpectedRemoveListenerCalls);
     removeEventListenerStub.args.forEach(args => {
-      t.deepEqual(
-        args, 
-        ['bufferedamountlow', server.bufferedAmountLowListener]
-      );
+      t.equal(args.length, 2); // [string, fn]
+      t.deepEqual(args[0][0], 'bufferedamountlow');
     });
 
     t.deepEqual(chunks, expectedChunks);

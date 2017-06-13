@@ -64,7 +64,7 @@ exports.getRuntimeBare = function() {
   return chrome.runtime;
 };
 
-},{"chrome-promise":35}],2:[function(require,module,exports){
+},{"chrome-promise":36}],2:[function(require,module,exports){
 /* globals chrome */
 'use strict';
 
@@ -252,7 +252,7 @@ exports.from = function(buff) {
   return wrapper;
 };
 
-},{"bloomfilter":31,"buffer/":34,"to-arraybuffer":48}],4:[function(require,module,exports){
+},{"bloomfilter":32,"buffer/":35,"to-arraybuffer":50}],4:[function(require,module,exports){
 'use strict';
 
 var dnssdSem = require('../dnssd/dns-sd-semcache');
@@ -3488,7 +3488,7 @@ _.extend(exports.WebRtcOfferHandler.prototype,
   WSC.BaseHandler.prototype
 );
 
-},{"../dnssd/binary-utils":"binaryUtils","../persistence/file-system":"fileSystem","../persistence/file-system-util":"fsUtil","../webrtc/connection-manager":"cmgr","../webrtc/responder":28,"./server-api":22,"underscore":49}],22:[function(require,module,exports){
+},{"../dnssd/binary-utils":"binaryUtils","../persistence/file-system":"fileSystem","../persistence/file-system-util":"fsUtil","../webrtc/connection-manager":"cmgr","../webrtc/responder":29,"./server-api":22,"underscore":51}],22:[function(require,module,exports){
 'use strict';
 
 /**
@@ -3868,277 +3868,432 @@ exports.getBufferAsBlob = function(buff) {
 },{}],24:[function(require,module,exports){
 'use strict';
 
-var _ = require('underscore');
-var Buffer = require('buffer/').Buffer;
-var EventEmitter = require('wolfy87-eventemitter');
-
+var commonChannel = require('./common-channel');
 var protocol = require('./protocol');
-var util = require('../util');
 
-var EV_CHUNK = 'chunk';
-var EV_COMPLETE = 'complete';
-var EV_ERR = 'error';
+/**
+ * This object communicates binary data over a data channel using the buffered
+ * amount low event to throttle on the sending side. Tests showed this to be
+ * considerably faster than chunking-channel, though buffered-channel lacks a
+ * backpressure mechanism. As a result it is possible that a sender might
+ * overwhelm a receiver.
+ */
 
 /**
  * The size of chunks that will be sent over WebRTC at a given time. This is
  * supposedly a reasonable value for Chrome, according to various documents
  * online.
  */
-exports.CHUNK_SIZE = 16000;
-
+exports.CHUNK_SIZE = 16384;  // 16 mibibytes
 /**
- * This object provides a way to communicate with a peer to chunk binary data
- * by default.
+ * The amount of data at which we will consider the buffer full. This should be
+ * well within the range Chrome allows, according to the internet. Some
+ * samples I found online used CHUNK_SIZE / 2, but this was considerably slower
+ * than the 5 chunks value I am using here.
  */
+exports.BUFFER_FULL_THRESHOLD = exports.CHUNK_SIZE * 5;
+exports.BUFFER_LOW_THRESHOLD = exports.CHUNK_SIZE / 2;
 
-/**
- * @constructor
- *
- * @param {RTCPeerConnection} rawConnection a raw connection to a peer
- * @param {boolean} cacheChunks true if the Client it self should save
- * chunks. If true, the 'complete' event will include the final ArrayBuffer. If
- * false, chunks will be emitted only on 'chunk' events.
- * @param {Object} msg the message for the server. The peer being connected to
- * and represented by rawConnection is expected to know how to respond to the
- * message
- */
-exports.Client = function Client(
-    rawConnection, cacheChunks, msg
+class BufferedChannelClient extends commonChannel.BaseClient {
+
+}
+
+class BufferedChannelServer extends commonChannel.BaseServer {
+  constructor(
+    channel,
+    chunkSize = exports.CHUNK_SIZE,
+    bufferLowThreshold = exports.BUFFER_LOW_THRESHOLD,
+    bufferFullThreshold = exports.BUFFER_FULL_THRESHOLD
 ) {
-  if (!(this instanceof Client)) {
-    throw new Error('Client must be called with new');
+    super(channel, chunkSize);
+
+    this.chunkSize = chunkSize;
+    this.bufferLowThreshold = bufferLowThreshold;
+    this.bufferFullThreshold = bufferFullThreshold;
+    this.channel.bufferedAmountLowThreshold = this.bufferLowThreshold;
+
+    // We save a reference to our bound listener to ensure that we can remove
+    // the event listener. This is nontrivial because we want the event handler
+    // to be invoked with `this` set to the Server object itself, not the
+    // channel receiving the bufferedamountlow event. Therefore we save a
+    // reference to this explicitly.
+    this._boundBufferedAmountLowListener = null;
   }
 
-  this.cacheChunks = cacheChunks;
-  this.rawConnection = rawConnection;
-  this.numChunksReceived = 0;
-  this.streamInfo = null;
-  this.awaitingFirstResponse = true;
-  this.msg = msg;
-  this.chunks = [];
-};
+  /**
+   * Send buff over the channel using chunks. The channel must have already
+   * been used to request a response--i.e. a ChannelClient must be listening.
+   *
+   * Note that currently this does not support streaming--buff must be able to
+   * be held in memory. It is not difficult to imagine this API being modified
+   * to change that, however.
+   *
+   * @param {Buffer} buff the buffer to send
+   */
+  sendBuffer(buff) {
+    super.prepareToSend(buff);
+    super.sendFirstMessage();
+  }
 
-_.extend(exports.Client.prototype, new EventEmitter());
+  handleMessageFromClient(msg) {
+    // First we invoke the superclass method to perform common error handling.
+    super.handleMessageFromClient(msg);
 
-/**
- * Send the message to the server that initiates the transfer of the content.
- */
-exports.Client.prototype.sendStartMessage = function() {
-  var msgBin = Buffer.from(JSON.stringify(this.msg));
-  this.channel.send(msgBin);
-};
+    // Start sending like crazy, leaving the other methods to get us to back
+    // off as necessary.
+    this.sendAsMuchAsPossible();
+  }
 
-/**
- * Handle an error from the Server.
- *
- * @param {ProtocolMessage} msg
- */
-exports.Client.prototype.handleErrorMessage = function(msg) {
-  this.emitError(msg);
-};
+  /**
+   * Should be set to listen for the 'bufferedamountlow' event on the channel.
+   */
+  bufferedAmountLowListener() {
+    this.channel.removeEventListener(
+      'bufferedamountlow', this._boundBufferedAmountLowListener
+    );
+    this.sendAsMuchAsPossible();
+  }
 
-/**
- * Request the information from the server and start receiving data.
- */
-exports.Client.prototype.start = function() {
-  var self = this;
-  var channel = this.rawConnection.createDataChannel(this.msg.channelName);
-  this.channel = channel;
-  channel.binaryType = 'arraybuffer';
-
-  channel.onopen = function() {
-    self.sendStartMessage();
-  };
-
-  channel.onmessage = function(event) {
-    var eventBuff = Buffer.from(event.data);
-
-    var msg = protocol.from(eventBuff);
-    if (msg.isError()) {
-      self.handleErrorMessage(msg);
-      return;
+  sendAsMuchAsPossible() {
+    const gen = this.chunkGenerator;
+    // pick up where we left off.
+    var item = this._pendingItem;
+    this._pendingItem = null;
+    if (!item) {
+      item = gen.next();
     }
 
-    var dataBuff = msg.getData();
+    while (!item.done) {
+      if (this.channel.bufferedAmount > exports.BUFFER_FULL_THRESHOLD) {
+        console.log('TRIGGERED');
+        // Save our pending item, which we can't send yet.
+        this._pendingItem = item;
+        this._boundBufferedAmountLowListener =
+          this.bufferedAmountLowListener.bind(this);
+        this.channel.addEventListener(
+          'bufferedamountlow', this._boundBufferedAmountLowListener
+        );
+        return;
+      }
+      
+      // Otherwise, send data.
+      try {
+        // The number of chunks must be incremented before the send, otherwise
+        // if an ack comes back very quickly (impossibly quickly except in test
+        // conditions?) you can send the same chunk twice.
+        this.chunksSent++;
+        var chunk = item.value;
+        var chunkMsg = protocol.createSuccessMessage(chunk);
+        this.channel.send(chunkMsg.asBuffer());
+        item = gen.next();
+      } catch (err) {
+        this.chunksSent--;
+        console.log('Error sending chunk: ', err);
+      }
+    }
+    this._pendingItem = null;
+    this._activeGenerator = null;
+  }
+}
+
+exports.BufferedChannelClient = BufferedChannelClient;
+exports.BufferedChannelServer = BufferedChannelServer;
+
+},{"./common-channel":25,"./protocol":28}],25:[function(require,module,exports){
+'use strict';
+
+const Buffer = require('buffer/').Buffer;
+const EventEmitter = require('events').EventEmitter;
+
+const protocol = require('./protocol');
+
+const EV_CHUNK = 'chunk';
+const EV_COMPLETE = 'complete';
+const EV_ERR = 'error';
+
+/**
+ * These are the base classes for our WebRTC channel wrappers. Common
+ * functionality lives here, and classes should extend these as necessary.
+ */
+
+class BaseClient extends EventEmitter {
+  /**
+   * @constructor
+   *
+   * @param {RTCPeerConnection} rawConnection a raw connection to a peer
+   * @param {boolean} cacheChunks true if the Client it self should save
+   * chunks. If true, the 'complete' event will include the final ArrayBuffer.
+   * If false, chunks will be emitted only on 'chunk' events.
+   * @param {Object} msg the message for the server. The peer being connected
+   * to and represented by rawConnection is expected to know how to respond to
+   * the message
+   */
+  constructor(rawConnection, cacheChunks, msg) {
+    super();
+    this.cacheChunks = cacheChunks;
+    this.rawConnection = rawConnection;
+    this.numChunksReceived = 0;
+    this.streamInfo = null;
+    this.awaitingFirstResponse = true;
+    this.msg = msg;
+    this.chunks = [];
+    this.channel = null;
+  }
+
+  /**
+   * Send the message to the server that initiates the transfer of the content.
+   */
+  sendStartMessage() {
+    const msgBin = Buffer.from(JSON.stringify(this.msg));
+    this.channel.send(msgBin);
+  }
+
+  /**
+   * Handle an error from the Server.
+   *
+   * @param {ProtocolMessage} msg
+   */
+  handleErrorMessage(msg) {
+    this.emitError(msg);
+  }
+
+  /**
+   * Inform the server that we are ready for the next chunk.
+   */
+  requestChunk() {
+    const continueMsg = BaseClient.createContinueMessage();
+    const continueMsgBin = Buffer.from(JSON.stringify(continueMsg));
+    try {
+      this.channel.send(continueMsgBin);
+    } catch (err) {
+      this.emitError(err);
+    }
+  }
+
+  /**
+   * Respond to a message from the server. This handles all the basics as would
+   * be expected of any of our channel implementations.
+   *
+   * @param {Object} msg the protocol message from the server
+   *
+   * @return {boolean} true if processed successfully, false if error
+   */
+  handleMessageFromServer(msg) {
+    if (msg.isError()) {
+      this.handleErrorMessage(msg);
+      return false;
+    }
+
+    const dataBuff = msg.getData();
 
     // We expect a JSON message about our stream as the first message. All
     // subsequent messages will be ArrayBuffers. We know we receive them in
     // ordered fashion due to the guarantees of RTCDataChannel.
-    if (self.awaitingFirstResponse) {
-      self.streamInfo = JSON.parse(dataBuff.toString());
-      self.awaitingFirstResponse = false;
-      self.requestNext();
-      return;
-    }
-
-    // Otherwise, we've received a chunk of our data.
-    if (self.cacheChunks) {
-      self.chunks.push(dataBuff);
-    }
-    self.numChunksReceived++;
-    self.emitChunk(dataBuff);
-
-    if (self.numChunksReceived === self.streamInfo.numChunks) {
-      // We're done.
-      self.emitComplete();
-      self.channel.close();
+    if (this.awaitingFirstResponse) {
+      this.streamInfo = JSON.parse(dataBuff.toString());
+      this.awaitingFirstResponse = false;
+      this.requestChunk();
     } else {
-      self.requestNext();
+      // Otherwise, we've received a chunk of our data.
+      if (this.cacheChunks) {
+        this.chunks.push(dataBuff);
+      }
+      this.numChunksReceived++;
+      this.emitChunk(dataBuff);
+
+      if (this.numChunksReceived === this.streamInfo.numChunks) {
+        // We're done.
+        this.channel.close();
+        this.emitComplete();
+      }
     }
-  };
-};
-
-/**
- * Inform the server that we are ready for the next chunk.
- */
-exports.Client.prototype.requestNext = function() {
-  var continueMsg = exports.createContinueMessage();
-  var continueMsgBin = Buffer.from(JSON.stringify(continueMsg));
-  try {
-    this.channel.send(continueMsgBin);
-  } catch (err) {
-    this.emitError(err);
-  }
-};
-
-/**
- * Emit a 'chunk' event with the Buffer representing this chunk.
- *
- * @param {Buffer} buff the Buffer object representing this chunk
- */
-exports.Client.prototype.emitChunk = function(buff) {
-  this.emit(EV_CHUNK, buff);
-};
-
-/**
- * Emit an error event.
- *
- * @param {any} msg the message to emit with the error
- */
-exports.Client.prototype.emitError = function(msg) {
-  this.emit(EV_ERR, msg);
-};
-
-/**
- * Emit a 'complete' event signifying that everything has been received. If
- * cacheChunks is true, the event will be emitted with a single buffer
- * containing all concatenated chunks.
- */
-exports.Client.prototype.emitComplete = function() {
-  if (this.cacheChunks) {
-    var reclaimed = Buffer.concat(this.chunks);
-    this.emit(EV_COMPLETE, reclaimed);
-  } else {
-    this.emit(EV_COMPLETE);
-  }
-};
-
-/**
- * Create a Server to respond to Client requests.
- *
- * @constructor
- *
- * @param {RTCDataChannel} channel a channel that has been initiated by a
- * Client.
- */
-exports.Server = function Server(channel) {
-  if (!(this instanceof Server)) {
-    throw new Error('Server must be called with new');
+    return true;
   }
 
-  this.channel = channel;
-  this.numChunks = null;
-  this.streamInfo = null;
-  this.chunksSent = null;
-};
+  /**
+   * Request the information from the server and start receiving data.
+   */
+  start() {
+    const self = this;
+    const channel = this.rawConnection.createDataChannel(this.msg.channelName);
+    this.channel = channel;
+    channel.binaryType = 'arraybuffer';
 
-/**
- * Send buff over the channel using chunks. The channel must have already been
- * used to request a response--i.e. a ChannelClient must be listening.
- *
- * Note that currently this does not support streaming--buff must be able to be
- * held in memory. It is not difficult to imagine this API being modified to
- * change that, however.
- *
- * @param {Buffer} buff the buffer to send
- */
-exports.Server.prototype.sendBuffer = function(buff) {
-  this.buffToSend = buff;
-  this.numChunks = Math.ceil(buff.length / exports.CHUNK_SIZE);
-  this.streamInfo = exports.createStreamInfo(this.numChunks);
-  this.chunksSent = 0;
+    channel.onopen = function() {
+      self.sendStartMessage();
+    };
 
-  var self = this;
-  this.channel.onmessage = function(event) {
-    var dataBuff = Buffer.from(event.data);
-    var msg = JSON.parse(dataBuff);
+    channel.onmessage = function(event) {
+      const eventBuff = Buffer.from(event.data);
+      const msg = protocol.from(eventBuff);
+      self.handleMessageFromServer(msg);
+    };
+  }
 
-    if (msg.message !== 'next') {
-      console.log('Unrecognized control signal: ', msg);
-      return;
+  /**
+   * Emit a 'chunk' event with the Buffer representing this chunk.
+   *
+   * @param {Buffer} buff the Buffer object representing this chunk
+   */
+  emitChunk(buff) {
+    this.emit(EV_CHUNK, buff);
+  }
+
+  /**
+   * Emit an error event.
+   *
+   * @param {any} msg the message to emit with the error
+   */
+  emitError(msg) {
+    this.emit(EV_ERR, msg);
+  }
+
+  /**
+   * Emit a 'complete' event signifying that everything has been received. If
+   * cacheChunks is true, the event will be emitted with a single buffer
+   * containing all concatenated chunks.
+   */
+  emitComplete() {
+    if (this.cacheChunks) {
+      const reclaimed = Buffer.concat(this.chunks);
+      this.emit(EV_COMPLETE, reclaimed);
+    } else {
+      this.emit(EV_COMPLETE);
     }
+  }
 
-    var chunkStart = self.chunksSent * exports.CHUNK_SIZE;
-    var chunkEnd = chunkStart + exports.CHUNK_SIZE;
-    chunkEnd = Math.min(chunkEnd, buff.length);
-    var chunk = buff.slice(chunkStart, chunkEnd);
+  /**
+   * Create an object to be sent to the server to signify that the next chunk
+   * is ready to be received.
+   *
+   * @return {Object}
+   */
+  static createContinueMessage() {
+    return { message: 'next' };
+  }
+}
 
-    try {
-      // The number of chunks must be incremented before the send, otherwise if
-      // an ack comes back very quickly (impossibly quickly except in test
-      // conditions?) you can send the same chunk twice.
-      self.chunksSent++;
-      var chunkMsg = protocol.createSuccessMessage(chunk);
-      self.channel.send(chunkMsg.asBuffer());
-    } catch (err) {
-      console.log('Error sending chunk: ', err);
+class BaseServer extends EventEmitter {
+  /**
+   * Create a Server to respond to Client requests.
+   *
+   * @constructor
+   *
+   * @param {RTCDataChannel} channel a channel that has been initiated by a
+   * Client.
+   */
+  constructor(channel, chunkSize) {
+    super();
+    this.channel = channel;
+    this.chunkSize = chunkSize;
+    this.numChunks = null;
+    this.streamInfo = null;
+    this.chunksSent = null;
+    // This is the active generator we are using to create chunks.
+    this._activeGenerator = null;
+  }
+
+  /**
+   * Create the chunk generator or return the existing active generator.
+   */
+  get chunkGenerator() {
+    if (!this._activeGenerator) {
+      this._activeGenerator = this.createChunkGenerator();
     }
-  };
-  
-  // Start the process by sending the streamInfo to the client.
-  try {
+    return this._activeGenerator;
+  }
+
+  /**
+   * Send a message indicating an error to the client. This is similar to
+   * replying with a 500 error for a web server.
+   *
+   * @param {any} err error to send to the client.
+   */
+  sendError(err) {
+    const msg = protocol.createErrorMessage(err);
+    this.channel.send(msg.asBuffer());
+  }
+
+  sendFirstMessage() {
+    // Start the process by sending the streamInfo to the client.
     var streamInfoMsg = protocol.createSuccessMessage(
       Buffer.from(JSON.stringify(this.streamInfo))
     );
     this.channel.send(streamInfoMsg.asBuffer());
-  } catch (err) {
-    console.log('Error sending streamInfo: ', this.streamInfo);
   }
-};
 
-/**
- * Send a message indicating an error to the client. This is similar to
- * replying with a 500 error for a web server.
- *
- * @param {any} err error to send to the client.
- */
-exports.Server.prototype.sendError = function(err) {
-  var msg = protocol.createErrorMessage(err);
-  this.channel.send(msg.asBuffer());
-};
+  /**
+   * Initialize state to prepare for sending the buffer. The channel must have
+   * already been used to request a response--i.e. a ChannelClient must be
+   * listening.
+   *
+   * This must should be called by subclasses to handle common bookkeeping.
+   *
+   * @param {Buffer} buff the buffer to send
+   */
+  prepareToSend(buff) {
+    this.buffToSend = buff;
+    this.numChunks = Math.ceil(buff.length / this.chunkSize);
+    this.streamInfo = BaseServer.createStreamInfo(this.numChunks);
+    this.chunksSent = 0;
 
-/**
- * Create a stream info object. This is the first message sent by the Server.
- *
- * @param {integer} numChunks the total number of chunks that will be sent.
- * This is not the total number of messages, but the number of chunks in the
- * file.
- */
-exports.createStreamInfo = function(numChunks) {
-  return { numChunks: numChunks };
-};
+    var self = this;
+    this.channel.onmessage = function(event) {
+      var dataBuff = Buffer.from(event.data);
+      var msg = JSON.parse(dataBuff);
+      
+      self.handleMessageFromClient(msg);
+    };
+  }
 
-/**
- * Create an object to be sent to the server to signify that the next chunk is
- * ready to be received.
- *
- * @return {Object}
- */
-exports.createContinueMessage = function() {
-  return { message: 'next' };
-};
+  /**
+   * Respond to a message from the client. This handles all the basics as would
+   * be expected of any of our channel implementations.
+   *
+   * @param {Object} msg the protocol message from the server
+   */
+  handleMessageFromClient(msg) {
+    if (msg.message !== 'next') {
+      throw new Error('Unrecognized control signal');
+    }
+  }
 
-},{"../util":23,"./protocol":27,"buffer/":34,"underscore":49,"wolfy87-eventemitter":50}],25:[function(require,module,exports){
+  /**
+   * Generate chunks of the buffer we are sending. Throws an error if this is
+   * called when buffToSend is not set.
+   */
+  *createChunkGenerator() {
+    if (!this.buffToSend) {
+      throw new Error('buffer not set');
+    }
+    const totalNumChunks = this.numChunks;
+    let chunksYielded = 0;
+    while (chunksYielded < totalNumChunks) {
+      let chunkStart = chunksYielded * this.chunkSize;
+      let chunkEnd = chunkStart + this.chunkSize;
+      chunkEnd = Math.min(chunkEnd, this.buffToSend.length);
+      let chunk = this.buffToSend.slice(chunkStart, chunkEnd);
+      chunksYielded++;
+      yield chunk;
+    }
+  }
+
+  /**
+   * Create a stream info object. This is the first message sent by the Server.
+   *
+   * @param {integer} numChunks the total number of chunks that will be sent.
+   * This is not the total number of messages, but the number of chunks in the
+   * file.
+   */
+  static createStreamInfo(numChunks) {
+    return { numChunks: numChunks };
+  }
+}
+
+exports.BaseClient = BaseClient;
+exports.BaseServer = BaseServer;
+
+},{"./protocol":28,"buffer/":35,"events":37}],26:[function(require,module,exports){
 'use strict';
 
 /**
@@ -4258,16 +4413,17 @@ exports.isDigest = function(msg) {
   return msg.type && msg.type === exports.TYPE_DIGEST;
 };
 
-},{}],26:[function(require,module,exports){
+},{}],27:[function(require,module,exports){
 'use strict';
 
-var _ = require('underscore');
-var chunkingChannel = require('./chunking-channel');
-var EventEmitter = require('wolfy87-eventemitter');
-var message = require('./message');
-var util = require('../util');
+let _ = require('underscore');
+let bufferedChannel = require('./buffered-channel');
+let EventEmitter = require('wolfy87-eventemitter');
+let message = require('./message');
 
-var EV_CLOSE = 'close';
+let EV_CLOSE = 'close';
+
+let Client = bufferedChannel.BufferedChannelClient;
 
 /**
  * Handles a connection to a SemCache peer. 
@@ -4414,21 +4570,21 @@ exports.PeerConnection.prototype.getFile = function(remotePath) {
  */
 exports.sendAndGetResponse = function(pc, msg) {
   return new Promise(function(resolve, reject) {
-    var ccClient = new chunkingChannel.Client(pc, true, msg);
+    var client = new Client(pc, true, msg);
 
-    ccClient.on('complete', buff => {
+    client.on('complete', buff => {
       resolve(buff);
     });
 
-    ccClient.on('error', err => {
+    client.on('error', err => {
       reject(err);
     });
 
-    ccClient.start();
+    client.start();
   });
 };
 
-},{"../util":23,"./chunking-channel":24,"./message":25,"underscore":49,"wolfy87-eventemitter":50}],27:[function(require,module,exports){
+},{"./buffered-channel":24,"./message":26,"underscore":51,"wolfy87-eventemitter":52}],28:[function(require,module,exports){
 'use strict';
 
 var Buffer = require('buffer/').Buffer;
@@ -4621,14 +4777,14 @@ exports.createErrorMessage = function(reason) {
   return new exports.ProtocolMessage(header, null);
 };
 
-},{"buffer/":34}],28:[function(require,module,exports){
+},{"buffer/":35}],29:[function(require,module,exports){
 'use strict';
 
 var Buffer = require('buffer/').Buffer;
 
 var api = require('../server/server-api');
 var binUtil = require('../dnssd/binary-utils').BinaryUtils;
-var chunkingChannel = require('./chunking-channel');
+var bufferedChannel = require('./buffered-channel');
 var fileSystem = require('../persistence/file-system');
 var message = require('./message');
 var serverApi = require('../server/server-api');
@@ -4689,7 +4845,7 @@ exports.onList = function(channel) {
     serverApi.getResponseForAllCachedPages()
     .then(json => {
       var jsonBuff = Buffer.from(JSON.stringify(json));
-      var ccServer = exports.createCcServer(channel);
+      var ccServer = exports.createChannelServer(channel);
       ccServer.sendBuffer(jsonBuff);
       resolve();
     })
@@ -4713,7 +4869,7 @@ exports.onDigest = function(channel) {
     serverApi.getResponseForAllPagesDigest()
     .then(json => {
       var jsonBuff = Buffer.from(JSON.stringify(json));
-      var ccServer = exports.createCcServer(channel);
+      var ccServer = exports.createChannelServer(channel);
       ccServer.sendBuffer(jsonBuff);
       resolve();
     })
@@ -4737,7 +4893,7 @@ exports.onDigest = function(channel) {
  */
 exports.onFile = function(channel, msg) {
   return new Promise(function(resolve, reject) {
-    var ccServer = exports.createCcServer(channel);
+    var ccServer = exports.createChannelServer(channel);
     var fileName = api.getCachedFileNameFromPath(msg.request.accessPath);
     fileSystem.getFileContentsFromName(fileName)
     .then(buff => {
@@ -4758,26 +4914,13 @@ exports.onFile = function(channel, msg) {
  *
  * @param {RTCDataChannel} channel
  *
- * @return {Server} a new ChunkingChannel.Server object wrapping the channel.
+ * @return {ChannelServer} a new Server object wrapping the channel
  */
-exports.createCcServer = function(channel) {
-  return new chunkingChannel.Server(channel);
+exports.createChannelServer = function(channel) {
+  return new bufferedChannel.BufferedChannelServer(channel);
 };
 
-/**
- * Factory method for creating a ChunkingChannel.Client object.
- *
- * Exposed for testing.
- *
- * @param {RTCDataChannel} channel
- *
- * @return {Server} a new ChunkingChannel.Client object wrapping the channel.
- */
-exports.createCcClient = function(channel) {
-  return new chunkingChannel.Client(channel);
-};
-
-},{"../dnssd/binary-utils":"binaryUtils","../persistence/file-system":"fileSystem","../server/server-api":22,"./chunking-channel":24,"./message":25,"buffer/":34}],29:[function(require,module,exports){
+},{"../dnssd/binary-utils":"binaryUtils","../persistence/file-system":"fileSystem","../server/server-api":22,"./buffered-channel":24,"./message":26,"buffer/":35}],30:[function(require,module,exports){
 (function (global){
 /*! http://mths.be/base64 v0.1.0 by @mathias | MIT license */
 ;(function(root) {
@@ -4946,7 +5089,7 @@ exports.createCcClient = function(channel) {
 }(this));
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],30:[function(require,module,exports){
+},{}],31:[function(require,module,exports){
 'use strict'
 
 exports.byteLength = byteLength
@@ -5062,7 +5205,7 @@ function fromByteArray (uint8) {
   return parts.join('')
 }
 
-},{}],31:[function(require,module,exports){
+},{}],32:[function(require,module,exports){
 (function(exports) {
   exports.BloomFilter = BloomFilter;
   exports.fnv_1a = fnv_1a;
@@ -5182,7 +5325,7 @@ function fromByteArray (uint8) {
   }
 })(typeof exports !== "undefined" ? exports : this);
 
-},{}],32:[function(require,module,exports){
+},{}],33:[function(require,module,exports){
 (function (global){
 /*!
  * The buffer module from node.js, for the browser.
@@ -6975,14 +7118,14 @@ function isnan (val) {
 }
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"base64-js":30,"ieee754":37,"isarray":33}],33:[function(require,module,exports){
+},{"base64-js":31,"ieee754":39,"isarray":34}],34:[function(require,module,exports){
 var toString = {}.toString;
 
 module.exports = Array.isArray || function (arr) {
   return toString.call(arr) == '[object Array]';
 };
 
-},{}],34:[function(require,module,exports){
+},{}],35:[function(require,module,exports){
 /*!
  * The buffer module from node.js, for the browser.
  *
@@ -8690,7 +8833,7 @@ function isnan (val) {
   return val !== val // eslint-disable-line no-self-compare
 }
 
-},{"base64-js":30,"ieee754":37}],35:[function(require,module,exports){
+},{"base64-js":31,"ieee754":39}],36:[function(require,module,exports){
 /*!
  * chrome-promise 2.0.2
  * https://github.com/tfoxy/chrome-promise
@@ -8785,7 +8928,311 @@ function isnan (val) {
   }
 }));
 
-},{}],36:[function(require,module,exports){
+},{}],37:[function(require,module,exports){
+// Copyright Joyent, Inc. and other Node contributors.
+//
+// Permission is hereby granted, free of charge, to any person obtaining a
+// copy of this software and associated documentation files (the
+// "Software"), to deal in the Software without restriction, including
+// without limitation the rights to use, copy, modify, merge, publish,
+// distribute, sublicense, and/or sell copies of the Software, and to permit
+// persons to whom the Software is furnished to do so, subject to the
+// following conditions:
+//
+// The above copyright notice and this permission notice shall be included
+// in all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+// OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+// MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN
+// NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+// DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
+// OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
+// USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+function EventEmitter() {
+  this._events = this._events || {};
+  this._maxListeners = this._maxListeners || undefined;
+}
+module.exports = EventEmitter;
+
+// Backwards-compat with node 0.10.x
+EventEmitter.EventEmitter = EventEmitter;
+
+EventEmitter.prototype._events = undefined;
+EventEmitter.prototype._maxListeners = undefined;
+
+// By default EventEmitters will print a warning if more than 10 listeners are
+// added to it. This is a useful default which helps finding memory leaks.
+EventEmitter.defaultMaxListeners = 10;
+
+// Obviously not all Emitters should be limited to 10. This function allows
+// that to be increased. Set to zero for unlimited.
+EventEmitter.prototype.setMaxListeners = function(n) {
+  if (!isNumber(n) || n < 0 || isNaN(n))
+    throw TypeError('n must be a positive number');
+  this._maxListeners = n;
+  return this;
+};
+
+EventEmitter.prototype.emit = function(type) {
+  var er, handler, len, args, i, listeners;
+
+  if (!this._events)
+    this._events = {};
+
+  // If there is no 'error' event listener then throw.
+  if (type === 'error') {
+    if (!this._events.error ||
+        (isObject(this._events.error) && !this._events.error.length)) {
+      er = arguments[1];
+      if (er instanceof Error) {
+        throw er; // Unhandled 'error' event
+      } else {
+        // At least give some kind of context to the user
+        var err = new Error('Uncaught, unspecified "error" event. (' + er + ')');
+        err.context = er;
+        throw err;
+      }
+    }
+  }
+
+  handler = this._events[type];
+
+  if (isUndefined(handler))
+    return false;
+
+  if (isFunction(handler)) {
+    switch (arguments.length) {
+      // fast cases
+      case 1:
+        handler.call(this);
+        break;
+      case 2:
+        handler.call(this, arguments[1]);
+        break;
+      case 3:
+        handler.call(this, arguments[1], arguments[2]);
+        break;
+      // slower
+      default:
+        args = Array.prototype.slice.call(arguments, 1);
+        handler.apply(this, args);
+    }
+  } else if (isObject(handler)) {
+    args = Array.prototype.slice.call(arguments, 1);
+    listeners = handler.slice();
+    len = listeners.length;
+    for (i = 0; i < len; i++)
+      listeners[i].apply(this, args);
+  }
+
+  return true;
+};
+
+EventEmitter.prototype.addListener = function(type, listener) {
+  var m;
+
+  if (!isFunction(listener))
+    throw TypeError('listener must be a function');
+
+  if (!this._events)
+    this._events = {};
+
+  // To avoid recursion in the case that type === "newListener"! Before
+  // adding it to the listeners, first emit "newListener".
+  if (this._events.newListener)
+    this.emit('newListener', type,
+              isFunction(listener.listener) ?
+              listener.listener : listener);
+
+  if (!this._events[type])
+    // Optimize the case of one listener. Don't need the extra array object.
+    this._events[type] = listener;
+  else if (isObject(this._events[type]))
+    // If we've already got an array, just append.
+    this._events[type].push(listener);
+  else
+    // Adding the second element, need to change to array.
+    this._events[type] = [this._events[type], listener];
+
+  // Check for listener leak
+  if (isObject(this._events[type]) && !this._events[type].warned) {
+    if (!isUndefined(this._maxListeners)) {
+      m = this._maxListeners;
+    } else {
+      m = EventEmitter.defaultMaxListeners;
+    }
+
+    if (m && m > 0 && this._events[type].length > m) {
+      this._events[type].warned = true;
+      console.error('(node) warning: possible EventEmitter memory ' +
+                    'leak detected. %d listeners added. ' +
+                    'Use emitter.setMaxListeners() to increase limit.',
+                    this._events[type].length);
+      if (typeof console.trace === 'function') {
+        // not supported in IE 10
+        console.trace();
+      }
+    }
+  }
+
+  return this;
+};
+
+EventEmitter.prototype.on = EventEmitter.prototype.addListener;
+
+EventEmitter.prototype.once = function(type, listener) {
+  if (!isFunction(listener))
+    throw TypeError('listener must be a function');
+
+  var fired = false;
+
+  function g() {
+    this.removeListener(type, g);
+
+    if (!fired) {
+      fired = true;
+      listener.apply(this, arguments);
+    }
+  }
+
+  g.listener = listener;
+  this.on(type, g);
+
+  return this;
+};
+
+// emits a 'removeListener' event iff the listener was removed
+EventEmitter.prototype.removeListener = function(type, listener) {
+  var list, position, length, i;
+
+  if (!isFunction(listener))
+    throw TypeError('listener must be a function');
+
+  if (!this._events || !this._events[type])
+    return this;
+
+  list = this._events[type];
+  length = list.length;
+  position = -1;
+
+  if (list === listener ||
+      (isFunction(list.listener) && list.listener === listener)) {
+    delete this._events[type];
+    if (this._events.removeListener)
+      this.emit('removeListener', type, listener);
+
+  } else if (isObject(list)) {
+    for (i = length; i-- > 0;) {
+      if (list[i] === listener ||
+          (list[i].listener && list[i].listener === listener)) {
+        position = i;
+        break;
+      }
+    }
+
+    if (position < 0)
+      return this;
+
+    if (list.length === 1) {
+      list.length = 0;
+      delete this._events[type];
+    } else {
+      list.splice(position, 1);
+    }
+
+    if (this._events.removeListener)
+      this.emit('removeListener', type, listener);
+  }
+
+  return this;
+};
+
+EventEmitter.prototype.removeAllListeners = function(type) {
+  var key, listeners;
+
+  if (!this._events)
+    return this;
+
+  // not listening for removeListener, no need to emit
+  if (!this._events.removeListener) {
+    if (arguments.length === 0)
+      this._events = {};
+    else if (this._events[type])
+      delete this._events[type];
+    return this;
+  }
+
+  // emit removeListener for all listeners on all events
+  if (arguments.length === 0) {
+    for (key in this._events) {
+      if (key === 'removeListener') continue;
+      this.removeAllListeners(key);
+    }
+    this.removeAllListeners('removeListener');
+    this._events = {};
+    return this;
+  }
+
+  listeners = this._events[type];
+
+  if (isFunction(listeners)) {
+    this.removeListener(type, listeners);
+  } else if (listeners) {
+    // LIFO order
+    while (listeners.length)
+      this.removeListener(type, listeners[listeners.length - 1]);
+  }
+  delete this._events[type];
+
+  return this;
+};
+
+EventEmitter.prototype.listeners = function(type) {
+  var ret;
+  if (!this._events || !this._events[type])
+    ret = [];
+  else if (isFunction(this._events[type]))
+    ret = [this._events[type]];
+  else
+    ret = this._events[type].slice();
+  return ret;
+};
+
+EventEmitter.prototype.listenerCount = function(type) {
+  if (this._events) {
+    var evlistener = this._events[type];
+
+    if (isFunction(evlistener))
+      return 1;
+    else if (evlistener)
+      return evlistener.length;
+  }
+  return 0;
+};
+
+EventEmitter.listenerCount = function(emitter, type) {
+  return emitter.listenerCount(type);
+};
+
+function isFunction(arg) {
+  return typeof arg === 'function';
+}
+
+function isNumber(arg) {
+  return typeof arg === 'number';
+}
+
+function isObject(arg) {
+  return typeof arg === 'object' && arg !== null;
+}
+
+function isUndefined(arg) {
+  return arg === void 0;
+}
+
+},{}],38:[function(require,module,exports){
 var isBuffer = require('is-buffer')
 
 var flat = module.exports = flatten
@@ -8892,7 +9339,7 @@ function unflatten(target, opts) {
   return result
 }
 
-},{"is-buffer":38}],37:[function(require,module,exports){
+},{"is-buffer":40}],39:[function(require,module,exports){
 exports.read = function (buffer, offset, isLE, mLen, nBytes) {
   var e, m
   var eLen = nBytes * 8 - mLen - 1
@@ -8978,7 +9425,7 @@ exports.write = function (buffer, value, offset, isLE, mLen, nBytes) {
   buffer[offset + i - d] |= s * 128
 }
 
-},{}],38:[function(require,module,exports){
+},{}],40:[function(require,module,exports){
 /*!
  * Determine if an object is a Buffer
  *
@@ -9001,7 +9448,7 @@ function isSlowBuffer (obj) {
   return typeof obj.readFloatLE === 'function' && typeof obj.slice === 'function' && isBuffer(obj.slice(0, 0))
 }
 
-},{}],39:[function(require,module,exports){
+},{}],41:[function(require,module,exports){
 (function (process){
 /**
  * Module dependencies.
@@ -9305,7 +9752,7 @@ function createDataRows(params) {
 }
 
 }).call(this,require('_process'))
-},{"_process":47,"flat":36,"lodash.clonedeep":40,"lodash.flatten":41,"lodash.get":42,"lodash.set":43,"lodash.uniq":44,"os":46}],40:[function(require,module,exports){
+},{"_process":49,"flat":38,"lodash.clonedeep":42,"lodash.flatten":43,"lodash.get":44,"lodash.set":45,"lodash.uniq":46,"os":48}],42:[function(require,module,exports){
 (function (global){
 /**
  * lodash (Custom Build) <https://lodash.com/>
@@ -11057,7 +11504,7 @@ function stubFalse() {
 module.exports = cloneDeep;
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],41:[function(require,module,exports){
+},{}],43:[function(require,module,exports){
 (function (global){
 /**
  * lodash (Custom Build) <https://lodash.com/>
@@ -11410,7 +11857,7 @@ function isObjectLike(value) {
 module.exports = flatten;
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],42:[function(require,module,exports){
+},{}],44:[function(require,module,exports){
 (function (global){
 /**
  * lodash (Custom Build) <https://lodash.com/>
@@ -12345,7 +12792,7 @@ function get(object, path, defaultValue) {
 module.exports = get;
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],43:[function(require,module,exports){
+},{}],45:[function(require,module,exports){
 (function (global){
 /**
  * lodash (Custom Build) <https://lodash.com/>
@@ -13339,7 +13786,7 @@ function set(object, path, value) {
 module.exports = set;
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],44:[function(require,module,exports){
+},{}],46:[function(require,module,exports){
 (function (global){
 /**
  * lodash (Custom Build) <https://lodash.com/>
@@ -14239,7 +14686,7 @@ function noop() {
 module.exports = uniq;
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],45:[function(require,module,exports){
+},{}],47:[function(require,module,exports){
 (function (global){
 /**
  * @license
@@ -31327,7 +31774,7 @@ module.exports = uniq;
 }.call(this));
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],46:[function(require,module,exports){
+},{}],48:[function(require,module,exports){
 exports.endianness = function () { return 'LE' };
 
 exports.hostname = function () {
@@ -31374,7 +31821,7 @@ exports.tmpdir = exports.tmpDir = function () {
 
 exports.EOL = '\n';
 
-},{}],47:[function(require,module,exports){
+},{}],49:[function(require,module,exports){
 // shim for using process in browser
 var process = module.exports = {};
 
@@ -31556,7 +32003,7 @@ process.chdir = function (dir) {
 };
 process.umask = function() { return 0; };
 
-},{}],48:[function(require,module,exports){
+},{}],50:[function(require,module,exports){
 var Buffer = require('buffer').Buffer
 
 module.exports = function (buf) {
@@ -31585,7 +32032,7 @@ module.exports = function (buf) {
 	}
 }
 
-},{"buffer":32}],49:[function(require,module,exports){
+},{"buffer":33}],51:[function(require,module,exports){
 //     Underscore.js 1.8.3
 //     http://underscorejs.org
 //     (c) 2009-2015 Jeremy Ashkenas, DocumentCloud and Investigative Reporters & Editors
@@ -33135,7 +33582,7 @@ module.exports = function (buf) {
   }
 }.call(this));
 
-},{}],50:[function(require,module,exports){
+},{}],52:[function(require,module,exports){
 /*!
  * EventEmitter v5.1.0 - git.io/ee
  * Unlicense - http://unlicense.org/
@@ -34675,7 +35122,7 @@ exports.createRTCSessionDescription = function(descJson) {
   return new RTCSessionDescription(descJson);
 };
 
-},{"../../../app/scripts/webrtc/peer-connection":26,"../server/server-api":22,"../util":23,"buffer/":34}],"coalMgr":[function(require,module,exports){
+},{"../../../app/scripts/webrtc/peer-connection":27,"../server/server-api":22,"../util":23,"buffer/":35}],"coalMgr":[function(require,module,exports){
 'use strict';
 
 var stratBloom = require('./bloom-strategy');
@@ -36547,7 +36994,7 @@ exports.queryForResponses = function(
   });
 };
 
-},{"../util":23,"./dns-codes":9,"./dns-controller":"dnsc","./dns-packet":10,"./dns-util":11,"./resource-record":13,"lodash":45}],"eval":[function(require,module,exports){
+},{"../util":23,"./dns-codes":9,"./dns-controller":"dnsc","./dns-packet":10,"./dns-util":11,"./resource-record":13,"lodash":47}],"eval":[function(require,module,exports){
 'use strict';
 
 /**
@@ -37504,7 +37951,7 @@ exports.generateDummyPageInfos = function(numPages, peerNumber) {
   return result;
 };
 
-},{"./app-controller":"appController","./chrome-apis/chromep":1,"./coalescence/bloom-filter":3,"./coalescence/objects":6,"./peer-interface/common":15,"./peer-interface/manager":17,"./persistence/datastore":19,"./server/server-api":22,"./util":23,"json2csv":39}],"extBridge":[function(require,module,exports){
+},{"./app-controller":"appController","./chrome-apis/chromep":1,"./coalescence/bloom-filter":3,"./coalescence/objects":6,"./peer-interface/common":15,"./peer-interface/manager":17,"./persistence/datastore":19,"./server/server-api":22,"./util":23,"json2csv":41}],"extBridge":[function(require,module,exports){
 'use strict';
 
 var base64 = require('base-64');
@@ -37828,7 +38275,7 @@ exports.sendMessageToOpenUrl = function(url) {
   exports.sendMessageToExtension(message);
 };
 
-},{"../app-controller":"appController","../chrome-apis/chromep":1,"../coalescence/manager":"coalMgr","../persistence/datastore":19,"base-64":29}],"fileSystem":[function(require,module,exports){
+},{"../app-controller":"appController","../chrome-apis/chromep":1,"../coalescence/manager":"coalMgr","../persistence/datastore":19,"base-64":30}],"fileSystem":[function(require,module,exports){
 /*jshint esnext:true*/
 /* globals Promise */
 'use strict';
@@ -38015,7 +38462,7 @@ exports.getFileContentsFromName = function(fileName) {
   });
 };
 
-},{"../chrome-apis/chromep":1,"./file-system-util":"fsUtil","buffer/":34}],"fsUtil":[function(require,module,exports){
+},{"../chrome-apis/chromep":1,"./file-system-util":"fsUtil","buffer/":35}],"fsUtil":[function(require,module,exports){
 /* globals Promise */
 'use strict';
 
@@ -38224,7 +38671,7 @@ exports.createFileReader = function() {
   return new FileReader();
 };
 
-},{"buffer/":34}],"moment":[function(require,module,exports){
+},{"buffer/":35}],"moment":[function(require,module,exports){
 //! moment.js
 //! version : 2.17.1
 //! authors : Tim Wood, Iskren Chernev, Moment.js contributors

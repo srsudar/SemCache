@@ -39,7 +39,7 @@ test('onList calls sendBuffer with binary contents', function(t) {
   var ccServerSpy = sinon.stub();
   ccServerSpy.sendBuffer = sinon.stub();
 
-  var createCcServerSpy = sinon.stub().withArgs(channel)
+  var createChannelServerSpy = sinon.stub().withArgs(channel)
     .returns(ccServerSpy);
 
   proxyquireResponder({
@@ -47,7 +47,7 @@ test('onList calls sendBuffer with binary contents', function(t) {
       getResponseForAllCachedPages: getResponseForAllCachedPagesSpy
     }
   });
-  responder.createCcServer = createCcServerSpy;
+  responder.createChannelServer = createChannelServerSpy;
 
   responder.onList(channel)
   .then(() => {
@@ -90,7 +90,7 @@ test('onFile calls sendBuffer with file contents', function(t) {
   var channel = { testType: 'channel' };
 
   var ccServerSpy = sinon.stub();
-  var createCcServerSpy = sinon.stub().withArgs(channel)
+  var createChannelServerSpy = sinon.stub().withArgs(channel)
     .returns(ccServerSpy);
 
   var sendBufferSpy = sinon.stub();
@@ -109,11 +109,11 @@ test('onFile calls sendBuffer with file contents', function(t) {
       getCachedFileNameFromPath: getCachedFileNameFromPathSpy
     }
   });
-  responder.createCcServer = createCcServerSpy;
+  responder.createChannelServer = createChannelServerSpy;
 
   responder.onFile(channel, msg)
   .then(() => {
-    t.deepEqual(createCcServerSpy.args[0], [channel]);
+    t.deepEqual(createChannelServerSpy.args[0], [channel]);
     t.deepEqual(sendBufferSpy.args[0], [buff]);
     end(t);
   })
@@ -146,7 +146,7 @@ test('onFile rejects with error', function(t) {
       getCachedFileNameFromPath: getCachedFileNameFromPathSpy
     }
   });
-  responder.createCcServer = sinon.stub().withArgs(channel)
+  responder.createChannelServer = sinon.stub().withArgs(channel)
     .returns(serverMock);
 
   responder.onFile(channel, msg)
@@ -249,22 +249,22 @@ test('onDigest calls sendBuffer with binary contents', function(t) {
   var buffer = Buffer.from(JSON.stringify(json));
   var getResponseForAllPagesDigestSpy = sinon.stub().resolves(json);
 
-  var ccServerSpy = sinon.stub();
-  ccServerSpy.sendBuffer = sinon.stub();
+  var serverSpy = sinon.stub();
+  serverSpy.sendBuffer = sinon.stub();
 
-  var createCcServerSpy = sinon.stub().withArgs(channel)
-    .returns(ccServerSpy);
+  var createChannelServerSpy = sinon.stub().withArgs(channel)
+    .returns(serverSpy);
 
   proxyquireResponder({
     '../server/server-api': {
       getResponseForAllPagesDigest: getResponseForAllPagesDigestSpy
     }
   });
-  responder.createCcServer = createCcServerSpy;
+  responder.createChannelServer = createChannelServerSpy;
 
   responder.onDigest(channel)
   .then(() => {
-    t.deepEqual(ccServerSpy.sendBuffer.args[0], [buffer]);
+    t.deepEqual(serverSpy.sendBuffer.args[0], [buffer]);
     end(t);
   })
   .catch(err => {

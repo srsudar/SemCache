@@ -1,12 +1,13 @@
 'use strict';
 
-var _ = require('underscore');
-var chunkingChannel = require('./chunking-channel');
-var EventEmitter = require('wolfy87-eventemitter');
-var message = require('./message');
-var util = require('../util');
+let _ = require('underscore');
+let bufferedChannel = require('./buffered-channel');
+let EventEmitter = require('wolfy87-eventemitter');
+let message = require('./message');
 
-var EV_CLOSE = 'close';
+let EV_CLOSE = 'close';
+
+let Client = bufferedChannel.BufferedChannelClient;
 
 /**
  * Handles a connection to a SemCache peer. 
@@ -153,16 +154,16 @@ exports.PeerConnection.prototype.getFile = function(remotePath) {
  */
 exports.sendAndGetResponse = function(pc, msg) {
   return new Promise(function(resolve, reject) {
-    var ccClient = new chunkingChannel.Client(pc, true, msg);
+    var client = new Client(pc, true, msg);
 
-    ccClient.on('complete', buff => {
+    client.on('complete', buff => {
       resolve(buff);
     });
 
-    ccClient.on('error', err => {
+    client.on('error', err => {
       reject(err);
     });
 
-    ccClient.start();
+    client.start();
   });
 };
