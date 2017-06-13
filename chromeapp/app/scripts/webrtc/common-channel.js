@@ -43,7 +43,7 @@ class BaseClient extends EventEmitter {
    */
   sendStartMessage() {
     const msgBin = Buffer.from(JSON.stringify(this.msg));
-    this.channel.send(msgBin.buffer);
+    this.channel.send(msgBin);
   }
 
   /**
@@ -62,7 +62,7 @@ class BaseClient extends EventEmitter {
     const continueMsg = BaseClient.createContinueMessage();
     const continueMsgBin = Buffer.from(JSON.stringify(continueMsg));
     try {
-      this.channel.send(continueMsgBin.buffer);
+      this.channel.send(continueMsgBin);
     } catch (err) {
       this.emitError(err);
     }
@@ -101,8 +101,8 @@ class BaseClient extends EventEmitter {
 
       if (this.numChunksReceived === this.streamInfo.numChunks) {
         // We're done.
-        this.emitComplete();
         this.channel.close();
+        this.emitComplete();
       }
     }
     return true;
@@ -112,7 +112,7 @@ class BaseClient extends EventEmitter {
    * Request the information from the server and start receiving data.
    */
   start() {
-    var self = this;
+    const self = this;
     const channel = this.rawConnection.createDataChannel(this.msg.channelName);
     this.channel = channel;
     channel.binaryType = 'arraybuffer';
@@ -209,7 +209,7 @@ class BaseServer extends EventEmitter {
    */
   sendError(err) {
     const msg = protocol.createErrorMessage(err);
-    this.channel.send(msg.asBuffer().buffer);
+    this.channel.send(msg.asBuffer());
   }
 
   sendFirstMessage() {
@@ -235,11 +235,12 @@ class BaseServer extends EventEmitter {
     this.streamInfo = BaseServer.createStreamInfo(this.numChunks);
     this.chunksSent = 0;
 
+    var self = this;
     this.channel.onmessage = function(event) {
       var dataBuff = Buffer.from(event.data);
       var msg = JSON.parse(dataBuff);
       
-      this.handleMessageFromClient(msg);
+      self.handleMessageFromClient(msg);
     };
   }
 
