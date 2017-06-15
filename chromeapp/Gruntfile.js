@@ -19,6 +19,7 @@ module.exports = function (grunt) {
   var config = {
     app: 'app',
     dist: 'dist',
+    test: 'test',
     tasks: grunt.cli.tasks
   };
 
@@ -60,6 +61,8 @@ module.exports = function (grunt) {
           './<%= config.app %>/scripts/evaluation:eval',
           './<%= config.app %>/scripts/webrtc/connection-manager:cmgr',
           './<%= config.app %>/scripts/coalescence/manager:coalMgr',
+          './<%= config.app %>/scripts/persistence/database:db',
+          './<%= config.app %>/scripts/persistence/objects:persistenceObjs',
           'moment:moment',
         ],
       },
@@ -74,7 +77,11 @@ module.exports = function (grunt) {
       frontEnd: {
         src: '<%= config.app %>/polymer-ui/main.js',
         dest: '<%= config.app %>/polymer-ui/mainBundle.js'
-      }
+      },
+      integrationTests: {
+        src: '<%= config.test %>/polymer-ui/elements/database-integration-test.js',
+        dest: '<%= config.test %>/polymer-ui/elements/dbIntegrationTestBundle.js',
+      },
     },
 
     tape: {
@@ -196,6 +203,7 @@ module.exports = function (grunt) {
           src: [
             '<%= config.app %>/scripts/bundle.js',
             '<%= config.app %>/polymer-ui/mainBundle.js',
+            // '<%= config.test %>/polymer-ui/elements/dbIntegrationTestBundle.js',
           ],
         }],
       }
@@ -366,6 +374,11 @@ module.exports = function (grunt) {
 
   grunt.registerTask('test', [
     'tape',
+    'wct-test:local',
+  ]);
+
+  // Give an alias to this b/c I always forget it
+  grunt.registerTask('wct', [
     'wct-test:local',
   ]);
 
