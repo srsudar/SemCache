@@ -18,6 +18,12 @@ function resetUtil() {
   util = require('../../app/scripts/util');
 }
 
+function end(t) {
+  if (!t) { throw new Error('You forgot to pass tape'); }
+  t.end();
+  resetUtil();
+}
+
 test('fetchJson invokes promises and resolves', function(t) {
   var url = 'http://ip.jsontest.com';
 
@@ -170,6 +176,21 @@ test('getPortFromUrl not deceived by later colons', function(t) {
   var url = 'http://1.2.3.4/hello:yes';
   t.throws(() => { util.getPortFromUrl(url); });
   t.end();
+});
+
+test('toArray correct for item', function(t) {
+  let item = { hey: 'yo' };
+  let expected = [item];
+  let actual = util.toArray(item);
+  t.deepEqual(actual, expected);
+  end(t);
+});
+
+test('toArray correct for array', function(t) {
+  let expected = ['hey', 'ho'];
+  let actual = util.toArray(expected);
+  t.deepEqual(actual, expected);
+  end(t);
 });
 
 // test.only('getBufferAsBlob returns Blob', function(t) {

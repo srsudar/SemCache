@@ -57,6 +57,21 @@ function addCachedPagesToDb(num) {
   return Promise.all(cpdisks.map(cpdisk => database.addPageToDb(cpdisk)));
 }
 
+function getCPSummaryByHrefHelper(numToInsert, hrefParam, expected) {
+  return new Promise(function(resolve) {
+    clearDatabase()
+    .then(() => {
+      return addCachedPagesToDb(numToInsert);
+    })
+    .then(() => {
+      return database.getCPSummariesForHrefs(hrefParam);
+    })
+    .then(actual => {
+      resolve({ actual, expected });
+    });
+  });
+}
+
 /**
  * @return {Promise.<Object(actual, expected), Error>}
  */
@@ -118,10 +133,40 @@ function addAndGetCPSummaries() {
   });
 }
 
+function addAndGetSingleCPSummary() {
+  let num = 25;
+
+  let cpDisks = [...genCPDisks(num)];
+
+  // We want only one.
+  let desiredIdx = 12;
+  let expected = [cpDisks[desiredIdx].asCPSummary()];
+
+  return getCPSummaryByHrefHelper(num, expected[0].captureHref, expected);
+}
+
+function addAndGetMultipleCPSummaries() {
+  let num = 100;
+
+  let cpDisks = [...genCPDisks(num)];
+
+  // Take 3 of them.
+  let first = cpDisks[0].asCPSummary();
+  let second = cpDisks[50].asCPSummary();
+  let third = cpDisks[90].asCPSummary();
+
+  let expected = [first, second, third];
+  let hrefs = [first.captureHref, third.captureHref, second.captureHref];
+
+  return getCPSummaryByHrefHelper(num, hrefs, expected);
+}
+
 
 // Expose them to our Polymer infrastructure.
 window.databaseTests = {
   addAndGetAllCPInfos: addAndGetAllCPInfos,
   clearDatabase: clearDatabase,
-  addAndGetCPSummaries: addAndGetCPSummaries
+  addAndGetCPSummaries: addAndGetCPSummaries,
+  addAndGetSingleCPSummary: addAndGetSingleCPSummary,
+  addAndGetMultipleCPSummaries: addAndGetMultipleCPSummaries
 };

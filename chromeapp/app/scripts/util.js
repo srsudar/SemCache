@@ -206,3 +206,16 @@ exports.getBufferAsBlob = function(buff) {
     }
   );
 };
+
+/**
+ * Convert arg to an array. Leaves untouched if it is already an array.
+ *
+ * @return {Array}
+ */
+exports.toArray = function(arg) {
+  let result = arg;
+  if (!Array.isArray(result)) {
+    result = [result];
+  }
+  return result;
+};

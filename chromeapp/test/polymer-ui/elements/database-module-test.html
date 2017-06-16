@@ -49,10 +49,6 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
             assert.deepEqual(result.actual, result.expected);
             done();
           });
-          // .catch(err => {
-          //   console.error('Caught an error', err);
-          //   done();
-          // });
         });
 
         test('addAndGetCPSummaries', function(done) {
@@ -61,10 +57,22 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
             assert.deepEqual(result.actual, result.expected);
             done();
           });
-         // .catch(err => {
-         //    console.error('Caught an error', err);
-         //    done();
-         //  });
+        });
+
+        test('addAndGetSingleCPSummary', function(done) {
+          databaseTests.addAndGetSingleCPSummary()
+          .then(result => {
+            assert.deepEqual(result.actual, result.expected);
+            done();
+          });
+        });
+
+        test('addAndGetMultipleCPSummaries', function(done) {
+          databaseTests.addAndGetMultipleCPSummaries()
+          .then(result => {
+            assert.deepEqual(result.actual, result.expected);
+            done();
+          });
         });
 
       });

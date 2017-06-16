@@ -132,6 +132,44 @@ exports.getAllCPInfos = function() {
 };
 
 /**
+ * Return the CPSummary objects that match the given hrefs.
+ *
+ * @param {string|Array<string>} hrefs hrefs of the pages in question
+ * 
+ * @return {Promise.<Array<CPSummary>, Error>}
+ */
+exports.getCPSummariesForHrefs = function(hrefs) {
+  return new Promise(function(resolve) {
+    if (!Array.isArray(hrefs)) {
+      hrefs = [hrefs];
+    }
+    let result = null;
+    db.transaction('r', db.pagesummary, db.pageblobs, function() {
+      let summaryItems = null;
+      db.pagesummary
+        .where('captureHref')
+        .anyOf(hrefs)
+        .toArray()
+      .then(summariesArr => {
+        summaryItems = summariesArr;
+        CPInfo.sort(summaryItems);
+        let summaryIds = summaryItems.map(item => item.id);
+        return db.pageblobs
+          .where('pagesummaryId')
+          .anyOf(summaryIds)
+          .toArray();
+      })
+      .then(pageblobArr => {
+        result = exports.getAsCPSummaryArr(summaryItems, pageblobArr);
+      });
+    })
+    .then(() => {
+      resolve(result);
+    });
+  });
+};
+
+/**
  * The number of results is limited by default because it is an expensive
  * operation.
  *

@@ -15,7 +15,7 @@ var fileSystem = require('../../../app/scripts/persistence/file-system');
  * test that modifies the required object should call this method to get a
  * fresh version
  */
-function resetFileSystem() {
+function reset() {
   delete require.cache[
     require.resolve('../../../app/scripts/persistence/file-system')
   ];
@@ -39,7 +39,7 @@ function proxyquireFileSystem(proxies, localStorageProxies, chromefsProxies) {
 function end(t) {
   if (!t) { throw new Error('You forgot to pass t to end'); }
   t.end();
-  resetFileSystem();
+  reset();
 }
 
 test('promptForDir calls chrome API and returns Entry', function(t) {
@@ -55,12 +55,12 @@ test('promptForDir calls chrome API and returns Entry', function(t) {
     t.deepEqual(chooseEntrySpy.args[0][0], { type: 'openDirectory' });
     t.equal(actualEntry, expectedEntry);
     t.end();
-    resetFileSystem();
+    reset();
   })
   .catch(err => {
     t.fail(err);
     t.end();
-    resetFileSystem();
+    reset();
   });
 });
 
@@ -102,7 +102,7 @@ test('setBaseCacheDir calls persist functions', function(t) {
   t.true(setSpy.calledOnce);
   t.true(setSpy.calledWith({baseDir: expectedId}));
 
-  resetFileSystem();
+  reset();
   t.end();
 });
 
@@ -120,12 +120,12 @@ test('baseDirIsSet true correctly', function(t) {
     t.true(getSpy.calledOnce);
     t.true(getSpy.calledWith(fileSystem.KEY_BASE_DIR));
     t.end();
-    resetFileSystem();
+    reset();
   })
   .catch(err => {
     t.fail(err);
     t.end();
-    resetFileSystem();
+    reset();
   });
 
 });
@@ -142,12 +142,12 @@ test('baseDirIsSet true correctly', function(t) {
     t.true(getSpy.calledOnce);
     t.true(getSpy.calledWith(fileSystem.KEY_BASE_DIR));
     t.end();
-    resetFileSystem();
+    reset();
   })
   .catch(err => {
     t.fail(err);
     t.end();
-    resetFileSystem();
+    reset();
   });
 });
 
@@ -179,12 +179,12 @@ test('getPersistedBaseDir returns null if not set', function(t) {
   .then(dirEntry => {
     t.equal(dirEntry, expected);
     t.end();
-    resetFileSystem();
+    reset();
   })
   .catch(err => {
     t.fail(err);
     t.end();
-    resetFileSystem();
+    reset();
   });
 });
 
@@ -203,12 +203,12 @@ test('getPersistedBaseDir retrieves from storage', function(t) {
     t.equal(actualDir, expectedDirEntry);
     t.true(getSpy.calledWith(fileSystem.KEY_BASE_DIR));
     t.end();
-    resetFileSystem();
+    reset();
   })
   .catch(err => {
     t.fail(err);
     t.end();
-    resetFileSystem();
+    reset();
   });
 });
 
@@ -237,12 +237,12 @@ test('getDirectoryForCacheEntries rejects if no base dir', function(t) {
   .then(res => {
     t.fail(res);
     t.end();
-    resetFileSystem();
+    reset();
   })
   .catch(actualErr => {
     t.deepEqual(actualErr, errObj);
     t.end();
-    resetFileSystem();
+    reset();
   });
 });
 
@@ -264,12 +264,12 @@ test(
     .then(res => {
       t.fail(res);
       t.end();
-      resetFileSystem();
+      reset();
     })
     .catch(actualErr => {
       t.deepEqual(actualErr, errObj);
       t.end();
-      resetFileSystem();
+      reset();
     });
   }
 );
@@ -298,12 +298,12 @@ test('getDirectoryForCacheEntries resolves with entry', function(t) {
       ]
     );
     t.end();
-    resetFileSystem();
+    reset();
   })
   .catch(err => {
     t.fail(err);
     t.end();
-    resetFileSystem();
+    reset();
   });
 });
 
@@ -347,12 +347,12 @@ test('getFileContentsFromName resolves with contents', function(t) {
 
     t.deepEqual(actual, expected);
     t.end();
-    resetFileSystem();
+    reset();
   })
   .catch(err => {
     t.fail(err);
     t.end();
-    resetFileSystem();
+    reset();
   });
 });
 
@@ -367,11 +367,71 @@ test('getFileContentsFromName rejects with error', function(t) {
   .then(res => {
     t.fail(res);
     t.end();
-    resetFileSystem();
+    reset();
   })
   .catch(actual => {
     t.deepEqual(actual, expected);
     t.end();
-    resetFileSystem();
+    reset();
+  });
+});
+
+test('getFileForWritingCachedPage resolves on success', function(t) {
+  const filePath = 'hello.mhtml';
+  const dirEntry = { name: 'directory entry' };
+
+  const expected = { hello: 'I am the file entry' };
+  const getFileStub = sinon.stub().withArgs(
+    dirEntry,
+    { create: true, exclusive: true },
+    filePath
+  )
+  .resolves(expected);
+
+  proxyquireFileSystem({
+    './file-system-util': {
+      getFile: getFileStub
+    }
+  });
+
+  const getDirectoryForCacheEntriesStub = sinon.stub().resolves(dirEntry);
+  fileSystem.getDirectoryForCacheEntries = getDirectoryForCacheEntriesStub;
+
+
+  fileSystem.getFileForWritingCachedPage(filePath)
+  .then(actual => {
+    t.deepEqual(actual, expected);
+    end(t);
+  })
+  .catch(err => {
+    t.fail(err);
+    end(t);
+  });
+});
+
+test('getFileForWritingCachedPage rejects on error', function(t) {
+  const filePath = 'hello.mhtml';
+
+  const expected = { err: 'went wrong' };
+  const getFileStub = sinon.stub().rejects(expected);
+  fileSystem.getFile = getFileStub;
+
+  proxyquireFileSystem({
+    './file-system-util': {
+      getFile: getFileStub
+    }
+  });
+
+  const getDirectoryForCacheEntriesStub = sinon.stub().resolves();
+  fileSystem.getDirectoryForCacheEntries = getDirectoryForCacheEntriesStub;
+
+  fileSystem.getFileForWritingCachedPage(filePath)
+  .then(actual => {
+    t.fail(actual);
+    end(t);
+  })
+  .catch(actual => {
+    t.deepEqual(actual, expected);
+    end(t);
   });
 });

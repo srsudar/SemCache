@@ -3,34 +3,14 @@ let test = require('tape');
 require('sinon-as-promised');
 
 let objects = require('../../../app/scripts/persistence/objects');
+let putil = require('./persistence-util');
 
 let CPInfo = objects.CPInfo;
 let CPSummary = objects.CPSummary;
 let CPDisk = objects.CPDisk;
 
-function* genAllParams(num) {
-  for (let i = 0; i < num; i++) {
-    let href = `http://page.com/${i}`;
-    let date = `2017-06-01_${i}`;
-    let title = `Title: ${i}`;
-    let filePath = `path/to/file_${i}`;
-    let favicon = `favicon ${i}`;
-    let screenshot = `screenshot ${i}`;
-    let mhtml = `blob ${i}`;
-    yield {
-      captureHref: href,
-      captureDate: date,
-      title: title,
-      filePath: filePath,
-      favicon: favicon,
-      screenshot: screenshot,
-      mhtml: mhtml
-    };
-  }
-}
-
 function getSingleParams() {
-  return genAllParams(1).next().value;
+  return putil.genAllParams(1).next().value;
 }
 
 function end(t) {
@@ -125,5 +105,17 @@ test('asCPSummary correct', function(t) {
   let expected = new CPSummary(params);
 
   t.deepEqual(actual, expected);
+  end(t);
+});
+
+test('asDPDisk correct', function(t) {
+  let params = getSingleParams();
+
+  let expected = new CPDisk(params);
+  let cpsummary = new CPSummary(params);
+
+  let actual = cpsummary.asCPDisk(params.mhtml);
+  t.deepEqual(actual, expected);
+
   end(t);
 });

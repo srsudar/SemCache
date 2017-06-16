@@ -46,6 +46,35 @@ class CPInfo {
       this.captureHref !== null &&
       this.captureDate !== null;
   }
+
+  /**
+   * Sort an array of CPInfo objects. Sorts in place using the .sort() method
+   * on the array.
+   *
+   * Sort by captureHref and then by date.
+   *
+   * @return {undefined}
+   */
+  static sort(arr) {
+    arr.sort((a, b) => {
+      var ahref = a.captureHref.toUpperCase();
+      var bhref = b.captureHref.toUpperCase();
+      if (ahref < bhref) {
+        return -1;
+      }
+      if (ahref > bhref) {
+        return 1;
+      }
+      if (a.captureDate < b.captureDate) {
+        return -1;
+      }
+      if (a.captureDate > b.captureDate) {
+        return 1;
+      }
+      // Equal
+      return 0;
+    });
+  }
 }
 
 class CPSummary extends CPInfo {
@@ -85,6 +114,26 @@ class CPSummary extends CPInfo {
       filePath: this.filePath
     };
     return new CPInfo(params);
+  }
+
+  /**
+   * Create a copy of the object as a CPDisk.
+   *
+   * @param {??} mhtml
+   *
+   * @return {CPDisk}
+   */
+  asCPDisk(mhtml) {
+    let params = {
+      captureHref: this.captureHref,
+      captureDate: this.captureDate,
+      title: this.title,
+      filePath: this.filePath,
+      favicon: this.favicon,
+      screenshot: this.screenshot,
+      mhtml: mhtml
+    };
+    return new CPDisk(params);
   }
 }
 

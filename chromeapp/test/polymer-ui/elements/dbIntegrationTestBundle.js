@@ -2889,6 +2889,7 @@ exports.WebrtcPeerAccessor.prototype.getCacheDigest = function(params) {
 let database = require('./database');
 let fileSystem = require('./file-system');
 let fsUtil = require('./file-system-util');
+let util = require('../util');
 
 const URL_DATE_DELIMITER = '_';
 
@@ -2933,12 +2934,38 @@ exports.addPageToCache = function(cpdisk) {
 };
 
 /**
- * @param {string} href
+ * Return an array of CPDisk objects for an Array of hrefs.
+ * @param {string|Array.<string>} hrefs
  *
- * @return {Promise.<CPDisk, Error>}
+ * @return {Promise.<Array.<CPDisk>, Error>}
  */
-exports.getCPDiskForHref = function(href) {
-  // TODO:
+exports.getCPDiskForHrefs = function(hrefs) {
+  return new Promise(function(resolve, reject) {
+    hrefs = util.toArray(hrefs);
+
+    // Read the data from the database, then populate the mhtml properties.
+    let cpsummaries = null;
+    database.getCPSummariesForHrefs(hrefs)
+    .then(summariesFromDb => {
+      cpsummaries = summariesFromDb;
+      let readFilePromises = cpsummaries.map(cpsummary => {
+        return fileSystem.getFileContentsFromName(cpsummary.filePath);
+      });
+      return Promise.all(readFilePromises);
+    })
+    .then(mhtmls => {
+      if (cpsummaries.length !== mhtmls.length) {
+        throw new Error('different numbers of file contents from requests');
+      }
+      let result = cpsummaries.map((summary, i) => {
+        return summary.asCPDisk(mhtmls[i]);
+      });
+      resolve(result);
+    })
+    .catch(err => {
+      reject(err);
+    });
+  });
 };
 
 /**
@@ -2948,10 +2975,7 @@ exports.getCPDiskForHref = function(href) {
  * @return {Promise.<Array.<CPSummary>, Error>}
  */
 exports.getCachedPageSummaries = function(offset, numDesired) {
-  return database.getCachedPageSummaries({
-    offset: offset,
-    numDesired: numDesired
-  });
+  return database.getCachedPageSummaries(offset, numDesired);
 };
 
 
@@ -2981,7 +3005,7 @@ exports.createFileNameForPage = function(captureUrl, captureDate) {
     exports.MHTML_EXTENSION;
 };
 
-},{"./database":"db","./file-system":"fileSystem","./file-system-util":"fsUtil"}],19:[function(require,module,exports){
+},{"../util":22,"./database":"db","./file-system":"fileSystem","./file-system-util":"fsUtil"}],19:[function(require,module,exports){
 /* globals WSC, _, TextEncoder */
 'use strict';
 
@@ -3630,6 +3654,19 @@ exports.getBufferAsBlob = function(buff) {
       type: 'application/octet-binary' 
     }
   );
+};
+
+/**
+ * Convert arg to an array. Leaves untouched if it is already an array.
+ *
+ * @return {Array}
+ */
+exports.toArray = function(arg) {
+  let result = arg;
+  if (!Array.isArray(result)) {
+    result = [result];
+  }
+  return result;
 };
 
 },{}],23:[function(require,module,exports){
@@ -38505,6 +38542,21 @@ function addCachedPagesToDb(num) {
   return Promise.all(cpdisks.map(cpdisk => database.addPageToDb(cpdisk)));
 }
 
+function getCPSummaryByHrefHelper(numToInsert, hrefParam, expected) {
+  return new Promise(function(resolve) {
+    clearDatabase()
+    .then(() => {
+      return addCachedPagesToDb(numToInsert);
+    })
+    .then(() => {
+      return database.getCPSummariesForHrefs(hrefParam);
+    })
+    .then(actual => {
+      resolve({ actual, expected });
+    });
+  });
+}
+
 /**
  * @return {Promise.<Object(actual, expected), Error>}
  */
@@ -38566,12 +38618,42 @@ function addAndGetCPSummaries() {
   });
 }
 
+function addAndGetSingleCPSummary() {
+  let num = 25;
+
+  let cpDisks = [...genCPDisks(num)];
+
+  // We want only one.
+  let desiredIdx = 12;
+  let expected = [cpDisks[desiredIdx].asCPSummary()];
+
+  return getCPSummaryByHrefHelper(num, expected[0].captureHref, expected);
+}
+
+function addAndGetMultipleCPSummaries() {
+  let num = 100;
+
+  let cpDisks = [...genCPDisks(num)];
+
+  // Take 3 of them.
+  let first = cpDisks[0].asCPSummary();
+  let second = cpDisks[50].asCPSummary();
+  let third = cpDisks[90].asCPSummary();
+
+  let expected = [first, second, third];
+  let hrefs = [first.captureHref, third.captureHref, second.captureHref];
+
+  return getCPSummaryByHrefHelper(num, hrefs, expected);
+}
+
 
 // Expose them to our Polymer infrastructure.
 window.databaseTests = {
   addAndGetAllCPInfos: addAndGetAllCPInfos,
   clearDatabase: clearDatabase,
-  addAndGetCPSummaries: addAndGetCPSummaries
+  addAndGetCPSummaries: addAndGetCPSummaries,
+  addAndGetSingleCPSummary: addAndGetSingleCPSummary,
+  addAndGetMultipleCPSummaries: addAndGetMultipleCPSummaries
 };
 
 },{"db":"db","persistenceObjs":"persistenceObjs"}],"appController":[function(require,module,exports){
@@ -39822,6 +39904,44 @@ exports.getAllCPInfos = function() {
     db.transaction('r', db.pagesummary, function() {
       db.pagesummary.toArray(itemArr => {
         result = exports.getAsCPInfos(itemArr);
+      });
+    })
+    .then(() => {
+      resolve(result);
+    });
+  });
+};
+
+/**
+ * Return the CPSummary objects that match the given hrefs.
+ *
+ * @param {string|Array<string>} hrefs hrefs of the pages in question
+ * 
+ * @return {Promise.<Array<CPSummary>, Error>}
+ */
+exports.getCPSummariesForHrefs = function(hrefs) {
+  return new Promise(function(resolve) {
+    if (!Array.isArray(hrefs)) {
+      hrefs = [hrefs];
+    }
+    let result = null;
+    db.transaction('r', db.pagesummary, db.pageblobs, function() {
+      let summaryItems = null;
+      db.pagesummary
+        .where('captureHref')
+        .anyOf(hrefs)
+        .toArray()
+      .then(summariesArr => {
+        summaryItems = summariesArr;
+        CPInfo.sort(summaryItems);
+        let summaryIds = summaryItems.map(item => item.id);
+        return db.pageblobs
+          .where('pagesummaryId')
+          .anyOf(summaryIds)
+          .toArray();
+      })
+      .then(pageblobArr => {
+        result = exports.getAsCPSummaryArr(summaryItems, pageblobArr);
       });
     })
     .then(() => {
@@ -42957,10 +43077,15 @@ exports.sendMessageToOpenUrl = function(url) {
 };
 
 },{"../app-controller":"appController","../chrome-apis/chromep":1,"../coalescence/manager":"coalMgr","../persistence/datastore":18,"base-64":29}],"fileSystem":[function(require,module,exports){
-/* globals Promise */
 'use strict';
 
-var Buffer = require('buffer/').Buffer;
+/**
+ * This module provides an API to interact with our file system backing
+ * SemCache. It does not provide general purpose file system manipulation;
+ * rather it provides things like "get the directory where we save pages", "get
+ * the contents of a cached page", etc.
+ */
+
 var chromep = require('../chrome-apis/chromep');
 var fsUtil = require('./file-system-util');
 
@@ -43160,7 +43285,7 @@ exports.getFileContentsFromName = function(fileName) {
   });
 };
 
-},{"../chrome-apis/chromep":1,"./file-system-util":"fsUtil","buffer/":34}],"fsUtil":[function(require,module,exports){
+},{"../chrome-apis/chromep":1,"./file-system-util":"fsUtil"}],"fsUtil":[function(require,module,exports){
 /* globals Promise */
 'use strict';
 
@@ -47721,6 +47846,35 @@ class CPInfo {
       this.captureHref !== null &&
       this.captureDate !== null;
   }
+
+  /**
+   * Sort an array of CPInfo objects. Sorts in place using the .sort() method
+   * on the array.
+   *
+   * Sort by captureHref and then by date.
+   *
+   * @return {undefined}
+   */
+  static sort(arr) {
+    arr.sort((a, b) => {
+      var ahref = a.captureHref.toUpperCase();
+      var bhref = b.captureHref.toUpperCase();
+      if (ahref < bhref) {
+        return -1;
+      }
+      if (ahref > bhref) {
+        return 1;
+      }
+      if (a.captureDate < b.captureDate) {
+        return -1;
+      }
+      if (a.captureDate > b.captureDate) {
+        return 1;
+      }
+      // Equal
+      return 0;
+    });
+  }
 }
 
 class CPSummary extends CPInfo {
@@ -47760,6 +47914,26 @@ class CPSummary extends CPInfo {
       filePath: this.filePath
     };
     return new CPInfo(params);
+  }
+
+  /**
+   * Create a copy of the object as a CPDisk.
+   *
+   * @param {??} mhtml
+   *
+   * @return {CPDisk}
+   */
+  asCPDisk(mhtml) {
+    let params = {
+      captureHref: this.captureHref,
+      captureDate: this.captureDate,
+      title: this.title,
+      filePath: this.filePath,
+      favicon: this.favicon,
+      screenshot: this.screenshot,
+      mhtml: mhtml
+    };
+    return new CPDisk(params);
   }
 }
 

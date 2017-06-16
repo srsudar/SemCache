@@ -1,100 +1,50 @@
-/* globals Promise */
 'use strict';
 
 /**
- * Abstractions for reading and writing cached pages. Clients of this class
- * should not be concerned with the underlying file system.
+ * Data is stored both in a database (via the database module) and on disk. The
+ * datastore is the API access point to modules interested in persistence. They
+ * should not need any other classes.
+ *
+ * A 'CachedPage' is the fundamental unit.
  */
 
-// Overview of the Datastore
-//
-// For the time being, there is no separate database or datastore. All
-// information is saved in the file name on disk, eg
-// "www.example.com_date". This will serve for a prototype but might become
-// limiting in the future.
+let database = require('./database');
+let fileSystem = require('./file-system');
+let fsUtil = require('./file-system-util');
+let util = require('../util');
 
-var chromep = require('../chrome-apis/chromep');
-var fileSystem = require('./file-system');
-var fsUtil = require('./file-system-util');
-var serverApi = require('../server/server-api');
-
-/** The number of characters output by Date.toISOString() */
-var LENGTH_ISO_DATE_STR = 24;
-
-var URL_DATE_DELIMITER = '_';
+const URL_DATE_DELIMITER = '_';
 
 exports.MHTML_EXTENSION = '.mhtml';
 
 exports.DEBUG = false;
 
 /**
- * This object represents a page that is stored in the cache and can be browsed
- * to.
+ * Add a page to the cache. Updates internal data structures and writes the
+ * page to disk.
  *
- * @constructor
- *
- * @param {string} captureUrl the URL of the original captured page
- * @param {string} captureDate the ISO String representation of the datetime
- * @param {string} accessPath the path in the cache that can be used to access
- * the file the page was captured
- * @param {Object} metadata an object stored and associated with the page.
- * Allows additional metadata to be stored, e.g. mime type, thumbnail, etc.
- * Must be safe to serialize via chrome.storage.local.set().
- */
-exports.CachedPage = function CachedPage(
-  captureUrl,
-  captureDate,
-  path,
-  metadata
-) {
-  if (!(this instanceof CachedPage)) {
-    throw new Error('CachedPage must be called with new');
-  }
-  this.captureUrl = captureUrl;
-  this.captureDate = captureDate;
-  this.accessPath = path;
-  this.metadata = metadata;
-};
-
-/**
- * Write a page into the cache.
- *
- * @param {string} captureUrl the URL that generated the MHTML
- * @param {string} captureDate the toISOString() of the date the page was
- * captured
- * @param {Blob} mhtmlBlob the contents of hte page
- * @param {Object} metadata metadata to store with the page
+ * @param {CPDisk} cpdisk the page to add to the cache. If
+ * canBePersisted() returns false, will reject with an Error.
  *
  * @return {Promise.<FileEntry, Error>} a Promise that resolves when the write
- * is complete
+ * is complete.
  */
-exports.addPageToCache = function(
-  captureUrl, captureDate, mhtmlBlob, metadata
-) {
+exports.addPageToCache = function(cpdisk) {
   return new Promise(function(resolve, reject) {
-    // Get the directory to write into
-    // Create the file entry
-    // Perform the write
-    // We'll use a default empty object so that downstream APIs can always
-    // assume to have a truthy opts value.
-    metadata = metadata || {};
+    var fileName = exports.createFileNameForPage(
+      cpdisk.captureHref,
+      cpdisk.captureDate
+    );
+    cpdisk.filePath = fileName;
+
     var heldEntry = null;
-    fileSystem.getDirectoryForCacheEntries()
-    .then(cacheDir => {
-      var fileName = exports.createFileNameForPage(captureUrl, captureDate);
-      var createOptions = {
-        create: true,     // create if it doesn't exist
-        exclusive: false  // OK if it already exists--will overwrite
-      };
-      return fsUtil.getFile(cacheDir, createOptions, fileName);
+    database.addPageToDb(cpdisk)
+    .then(() => {
+      return fileSystem.getFileForWritingCachedPage(cpdisk.filePath);
     })
     .then(fileEntry => {
       heldEntry = fileEntry;
-      return fsUtil.writeToFile(fileEntry, mhtmlBlob);
-    })
-    .then(() => {
-      // Save the metadata to storage.
-      return exports.writeMetadataForEntry(heldEntry, metadata);
+      return fsUtil.writeToFile(fileEntry, cpdisk.mhtml);
     })
     .then(() => {
       resolve(heldEntry);
@@ -106,152 +56,59 @@ exports.addPageToCache = function(
 };
 
 /**
+ * Return an array of CPDisk objects for an Array of hrefs.
+ * @param {string|Array.<string>} hrefs
+ *
+ * @return {Promise.<Array.<CPDisk>, Error>}
+ */
+exports.getCPDiskForHrefs = function(hrefs) {
+  return new Promise(function(resolve, reject) {
+    hrefs = util.toArray(hrefs);
+
+    // Read the data from the database, then populate the mhtml properties.
+    let cpsummaries = null;
+    database.getCPSummariesForHrefs(hrefs)
+    .then(summariesFromDb => {
+      cpsummaries = summariesFromDb;
+      let readFilePromises = cpsummaries.map(cpsummary => {
+        return fileSystem.getFileContentsFromName(cpsummary.filePath);
+      });
+      return Promise.all(readFilePromises);
+    })
+    .then(mhtmls => {
+      if (cpsummaries.length !== mhtmls.length) {
+        throw new Error('different numbers of file contents from requests');
+      }
+      let result = cpsummaries.map((summary, i) => {
+        return summary.asCPDisk(mhtmls[i]);
+      });
+      resolve(result);
+    })
+    .catch(err => {
+      reject(err);
+    });
+  });
+};
+
+/**
+ * @param {integer} offset
+ * @param {integer} numDesired
+ *
+ * @return {Promise.<Array.<CPSummary>, Error>}
+ */
+exports.getCachedPageSummaries = function(offset, numDesired) {
+  return database.getCachedPageSummaries(offset, numDesired);
+};
+
+
+/**
  * Get all the cached pages that are stored in the cache.
  *
- * @return {Promise.<Array.<CachedPage>, Error>} Promise that resolves with an
- * Array of CachedPage objects
+ * @return {Promise.<Array.<CPInfo>, Error>} Promise that resolves with an
+ * Array of CPInfo objects
  */
 exports.getAllCachedPages = function() {
-  return new Promise(function(resolve, reject) {
-    exports.getAllFileEntriesForPages()
-    .then(entries => {
-      var getPagePromises = [];
-      entries.forEach(entry => {
-        var promise = exports.getEntryAsCachedPage(entry);
-        getPagePromises.push(promise);
-      });
-      return Promise.all(getPagePromises);
-    })
-    .then(cachedPages => {
-      resolve(cachedPages);
-    })
-    .catch(err => {
-      reject(err);
-    });
-  });
-};
-
-/**
- * Get all the FileEntries representing saved pages.
- *
- * @return {Promise.<Array.<CachedPage>, Error>} Promise that resolves with an
- * array of FileEntry objects
- */
-exports.getAllFileEntriesForPages = function() {
-  var flagDirNotSet = 1;
-  return new Promise(function(resolve, reject) {
-    fileSystem.getDirectoryForCacheEntries()
-    .then(dirEntry => {
-      if (!dirEntry) {
-        // We haven't set an entry.
-        throw flagDirNotSet;
-      }
-      return fsUtil.listEntries(dirEntry);
-    })
-    .then(entries => {
-      resolve(entries);
-    })
-    .catch(errFlag => {
-      if (errFlag === flagDirNotSet) {
-        reject('dir not set');
-      } else {
-        console.warn('unrecognized error flag: ', errFlag);
-      }
-    });
-  });
-};
-
-/**
- * Convert an entry as represented on the file system to a CachedPage that can
- * be consumed by clients.
- *
- * This is the workhorse function for mapping between the two types.
- *
- * @param {FileEntry} entry
- *
- * @return {Promise.<CachedPage, Error>} Promise that resolves with the
- * CachedPage
- */
-exports.getEntryAsCachedPage = function(entry) {
-  // Retrieve the metadata from Chrome storage.
-  return new Promise(function(resolve, reject) {
-    var captureUrl = exports.getCaptureUrlFromName(entry.name);
-    var captureDate = exports.getCaptureDateFromName(entry.name);
-    var accessUrl = serverApi.getAccessUrlForCachedPage(entry.fullPath);
-
-    exports.getMetadataForEntry(entry)
-    .then(mdata => {
-      var result = new exports.CachedPage(
-        captureUrl, captureDate, accessUrl, mdata
-      );
-      resolve(result);
-    })
-    .catch(err => {
-      reject(err);
-    });
-  });
-};
-
-/**
- * Retrieve the metadata for the given file entry. This assumes that a
- * FileEntry is sufficient information to find the metadata in local storage,
- * e.g. that the name is the key.
- *
- * @param {FileEntry} entry 
- *
- * @return {Promise.<Object, Error>} Promise that resolves with the metadata
- * object
- */
-exports.getMetadataForEntry = function(entry) {
-  return new Promise(function(resolve, reject) {
-    var key = exports.createMetadataKey(entry);
-    chromep.getStorageLocal().get(key)
-    .then(obj => {
-      // The get API resolves with the key value pair in a single object,
-      // e.g. get('foo') -> { foo: bar }.
-      var result = {};
-      if (obj && obj[key]) {
-        result = obj[key];
-      }
-      if (exports.DEBUG) {
-        console.log('querying for key: ', key);
-        console.log('  get result: ', obj);
-        console.log('  metadata: ', result);
-      }
-      resolve(result);
-    })
-    .catch(err => {
-      reject(err);
-    });
-  });
-};
-
-/**
- * Create the key that will store the metadata for this entry.
- *
- * @param {FileEntry} entry
- *
- * @return {string} the key to use to find the metadata in the datastore
- */
-exports.createMetadataKey = function(entry) {
-  var prefix = 'fileMdata_';
-  return prefix + entry.name;
-};
-
-/**
- * Write the metadata object for the given entry.
- *
- * @param {FileEntry} entry file pertaining to the metadata
- * @param {Object} metadata the metadata to write
- *
- * @return {Promise.<undefined, Error>} Promise that resolves when the write is
- * complete
- */
-exports.writeMetadataForEntry = function(entry, metadata) {
-  var key = exports.createMetadataKey(entry);
-  var obj = {};
-  obj[key] = metadata;
-  return chromep.getStorageLocal().set(obj);
+  return database.getAllCPInfos();
 };
 
 /**
@@ -268,46 +125,4 @@ exports.createFileNameForPage = function(captureUrl, captureDate) {
     URL_DATE_DELIMITER +
     captureDate +
     exports.MHTML_EXTENSION;
-};
-
-/**
- * @param {string} name the name of the file
- *
- * @return {string} the capture url
- */
-exports.getCaptureUrlFromName = function(name) {
-  var nonNameLength = LENGTH_ISO_DATE_STR +
-    URL_DATE_DELIMITER.length +
-    exports.MHTML_EXTENSION.length;
-  if (name.length < nonNameLength) {
-    // The file name is too short, fail fast.
-    throw new Error('name too short to store a url: ', name);
-  }
-
-  var result = name.substring(
-    0,
-    name.length - nonNameLength
-  );
-  return result;
-};
-
-/**
- * @param {string} name the name of the file
- * 
- * @return {string} the capture date's ISO string representation
- */
-exports.getCaptureDateFromName = function(name) {
-  // The date is stored at the end of the string.
-  if (name.length < LENGTH_ISO_DATE_STR) {
-    // We've violated an invariant, fail fast.
-    throw new Error('name too short to store a date: ', name);
-  }
-
-  var dateStartIndex = name.length -
-    LENGTH_ISO_DATE_STR -
-    exports.MHTML_EXTENSION.length;
-  var dateEndIndex = name.length - exports.MHTML_EXTENSION.length;
-
-  var result = name.substring(dateStartIndex, dateEndIndex);
-  return result;
 };

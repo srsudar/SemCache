@@ -1,8 +1,12 @@
-/*jshint esnext:true*/
-/* globals Promise */
 'use strict';
 
-var Buffer = require('buffer/').Buffer;
+/**
+ * This module provides an API to interact with our file system backing
+ * SemCache. It does not provide general purpose file system manipulation;
+ * rather it provides things like "get the directory where we save pages", "get
+ * the contents of a cached page", etc.
+ */
+
 var chromep = require('../chrome-apis/chromep');
 var fsUtil = require('./file-system-util');
 
@@ -64,7 +68,25 @@ exports.getDirectoryForCacheEntries = function() {
       reject(err);
     });
   });
+};
 
+/**
+ * @param {string} filePath the file path relative to the directory where
+ * cached pages are stored.
+ *
+ * @return {Promise<FileEntry, Error>} Promise that resolves with a FileEntry
+ * at the location specified by filePath. The FileEntry will be created if it
+ * is not present.
+ */
+exports.getFileForWritingCachedPage = function(filePath) {
+  return exports.getDirectoryForCacheEntries()
+  .then(cacheDir => {
+    var createOptions = {
+      create: true,     // create if it doesn't exist
+      exclusive: false  // OK if it already exists--will overwrite
+    };
+    return fsUtil.getFile(cacheDir, createOptions, filePath);
+  });
 };
 
 /**

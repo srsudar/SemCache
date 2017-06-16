@@ -1,48 +1,39 @@
 'use strict';
-var test = require('tape');
-var sinon = require('sinon');
-var proxyquire = require('proxyquire');
+let test = require('tape');
+let sinon = require('sinon');
+let proxyquire = require('proxyquire');
 require('sinon-as-promised');
 
-var datastore = require('../../../app/scripts/persistence/datastore');
+let datastore = require('../../../app/scripts/persistence/datastore');
+let objects = require('../../../app/scripts/persistence/objects');
+let putil = require('./persistence-util');
+
+let CPDisk = objects.CPDisk;
+
 
 /**
  * Manipulating the object directly leads to polluting the require cache. Any
  * test that modifies the required object should call this method to get a
  * fresh version
  */
-function resetDatastore() {
+function reset() {
   delete require.cache[
     require.resolve('../../../app/scripts/persistence/datastore')
   ];
   datastore = require('../../../app/scripts/persistence/datastore');
 }
 
-function proxyquireDatastore(proxies, localStorageProxies) {
-  proxies['../chrome-apis/chromep'] = {
-    getStorageLocal: sinon.stub().returns(localStorageProxies),
-  };
+function proxyquireDatastore(proxies) {
   datastore = proxyquire(
     '../../../app/scripts/persistence/datastore', proxies
   );
-
 }
 
-test('CachedPage constructs', function(t) {
-  var url = 'http://www.example.com';
-  var path = 'pages/www.example.com';
-  var captureDate = 'date';
-  var mdata = {foo: 'bar'};
-
-  var actual = new datastore.CachedPage(url, captureDate, path, mdata);
-
-  t.equal(actual.captureUrl, url);
-  t.equal(actual.captureDate, captureDate);
-  t.equal(actual.accessPath, path);
-  t.deepEqual(actual.metadata, mdata);
-
+function end(t) {
+  if (!t) { throw new Error('You forgot to pass tape'); }
   t.end();
-});
+  reset();
+}
 
 test('createFileNameForPage returns correct string', function(t) {
   var url = 'http://whatever-you-say.url.org.co.lt';
@@ -52,446 +43,186 @@ test('createFileNameForPage returns correct string', function(t) {
   var expected = url + '_' + captureDate + '.mhtml';
 
   t.equal(expected, actual);
-  t.end();
+  end(t);
 });
 
-test('getCaptureUrlFromName returns name', function(t) {
-  var expected = 'www.example.com/hello_world.html';
-  var name = expected + '_2016-07-22T08:49:19.182Z.mhtml';
-  var actual = datastore.getCaptureUrlFromName(name);
+test('getAllCachedPages returns database call', function(t) {
+  let expected = 'hello';
+  proxyquireDatastore({
+    './database': {
+      getAllCPInfos: sinon.stub().returns(expected)
+    }
+  });
 
+  let actual = datastore.getAllCachedPages();
   t.equal(actual, expected);
-  t.end();
+  end(t);
 });
 
-test('getCaptureDateFromName returns date string', function(t) {
-  var expected = '2016-07-22T08:49:19.182Z';
-  var name = 'www.example.com/hello_world.html_' + expected + '.mhtml';
-  var actual = datastore.getCaptureDateFromName(name);
+test('getCachedPageSummaries returns database call', function(t) {
+  let expected = 'summary info';
+  let offset = 5;
+  let num = 20;
 
+  let stub = sinon.stub();
+  stub.withArgs(offset, num).returns(expected);
+
+  proxyquireDatastore({
+    './database': {
+      getCachedPageSummaries: stub
+    }
+  });
+
+  let actual = datastore.getCachedPageSummaries(offset, num);
   t.equal(actual, expected);
-  t.end();
-});
-
-test('getAllCachedPages resolves all pages', function(t) {
-  var entries = ['a', 'b', 3, {}];
-  var getAllFileEntriesSpy = sinon.stub().resolves(entries);
-
-  var getMockCachedPage = function(param) {
-    return { cachedPage: param };
-  };
-  var expectedCachedPages = [];
-  entries.forEach(entry => {
-    expectedCachedPages.push(getMockCachedPage(entry));
-  });
-
-  var getEntryAsCachedPageSpy = sinon.stub();
-  for (var i = 0; i < expectedCachedPages.length; i++) {
-    getEntryAsCachedPageSpy.onCall(i).resolves(expectedCachedPages[i]);
-  }
-
-  datastore.getAllFileEntriesForPages = getAllFileEntriesSpy;
-  datastore.getEntryAsCachedPage = getEntryAsCachedPageSpy;
-
-  datastore.getAllCachedPages()
-  .then(pages => {
-    t.deepEqual(pages, expectedCachedPages);
-    t.end();
-    resetDatastore();
-  })
-  .catch(err => {
-    t.fail(err);
-    t.end();
-    resetDatastore();
-  });
-});
-
-test('getAllCachedPages rejects if base dir not set', function(t) {
-  var expectedErr = {cause: 'error msg from getAllFileEntriesForPages'};
-  var getAllFileEntriesSpy = sinon.stub().rejects(expectedErr);
-
-  datastore.getAllFileEntriesForPages = getAllFileEntriesSpy;
-
-  datastore.getAllCachedPages()
-  .then(res => {
-    t.fail(res);
-    t.end();
-    resetDatastore();
-  })
-  .catch(actualErr => {
-    t.equal(actualErr, expectedErr);
-    t.end();
-    resetDatastore();
-  });
-});
-
-test('getAllFileEntriesForPages resolves all pages', function(t) {
-  var dirEntry = 'cacheDir';
-  var getDirectoryForCacheEntriesSpy = sinon.stub().resolves(dirEntry);
-
-  var expectedEntries = ['a', 'b', 54321, 'foobar', {}];
-  var listEntriesSpy = sinon.stub().resolves(expectedEntries);
-
-  proxyquireDatastore({
-    './file-system': {
-      getDirectoryForCacheEntries: getDirectoryForCacheEntriesSpy
-    },
-    './file-system-util': {
-      listEntries: listEntriesSpy
-    }
-  });
-
-  datastore.getAllFileEntriesForPages()
-  .then(entries => {
-    t.deepEqual(entries, expectedEntries);
-    t.end();
-    resetDatastore();
-  })
-  .catch(err => {
-    t.fail(err);
-    t.end();
-    resetDatastore();
-  });
-});
-
-test('getAllFileEntriesForPages rejects if base dir not set', function(t) {
-  proxyquireDatastore({
-    './file-system': {
-      getDirectoryForCacheEntries: sinon.stub().resolves(null)
-    }
-  });
-
-  datastore.getAllFileEntriesForPages()
-  .then(res => {
-    t.fail(res);
-    t.end();
-    resetDatastore();
-  })
-  .catch(err => {
-    t.equal(err, 'dir not set');
-    t.end();
-    resetDatastore();
-  });
-});
-
-test('getEntryAsCachedPage returns CachedPage', function(t) {
-  var url = 'www.example.co.uk/fancyExample.html';
-  var date = 'dateTime';
-  var entry = {
-    name: url + '_' + date,
-    fullPath: '/cache/dir/www.example.co.uk/fancyExample.html_dateTime',
-  };
-  var mdata = {
-    favicon: 'so pretty',
-    acl: 'no page for you'
-  };
-  var getMetadataForEntrySpy = sinon.stub().resolves(mdata);
-
-
-  var accessUrl = 'the url with the file';
-  var getAccessUrlStub = sinon.stub().withArgs(entry).returns(accessUrl);
-
-  proxyquireDatastore({
-    '../server/server-api': {
-      getAccessUrlForCachedPage: getAccessUrlStub
-    }
-  });
-  datastore.getMetadataForEntry = getMetadataForEntrySpy;
-
-  var getUrlStub = sinon.stub().returns(url);
-  var getDateStub = sinon.stub().returns(date);
-
-  datastore.getCaptureUrlFromName = getUrlStub;
-  datastore.getCaptureDateFromName = getDateStub;
-
-  var expected = new datastore.CachedPage(url, date, accessUrl, mdata);
-  datastore.getEntryAsCachedPage(entry)
-  .then(actual => {
-    t.deepEqual(actual, expected);
-    t.end();
-    resetDatastore();
-  })
-  .catch(err => {
-    t.fail(err);
-    t.end();
-    resetDatastore();
-  });
-});
-
-test('getEntryAsCachedPage rejects if error', function(t) {
-  var expected = { error: 'trouble' };
-  proxyquireDatastore({
-    '../server/server-api': {
-      getAccessUrlForCachedPage: sinon.stub()
-    }
-  });
-  datastore.getMetadataForEntry = sinon.stub().rejects(expected);
-  datastore.getCaptureUrlFromName = sinon.stub();
-  datastore.getCaptureDateFromName = sinon.stub();
-  datastore.getEntryAsCachedPage({ fullPath: 'http://1234:30/foo' })
-  .then(res => {
-    t.fail(res);
-    t.end();
-    resetDatastore();
-  })
-  .catch(actual => {
-    t.equal(actual, expected);
-    t.end();
-    resetDatastore();
-  });
-});
-
-test(
-  'addPageToCache rejects if getDirectoryForCacheEntries rejects',
-  function(t) {
-    var errObj = { msg: 'no base dir' };
-    var getDirectoryForCacheEntriesSpy = sinon.stub().rejects(errObj);
-    var writeMetadataForEntrySpy = sinon.stub().resolves();
-
-    proxyquireDatastore({
-      './file-system': {
-        getDirectoryForCacheEntries: getDirectoryForCacheEntriesSpy
-      }
-    });
-    datastore.writeMetadataForEntry = writeMetadataForEntrySpy;
-
-    datastore.addPageToCache('url', 'date', 'blob')
-    .then(res => {
-      t.fail(res);
-      t.end();
-      resetDatastore();
-    })
-    .catch(err => {
-      t.equal(err, errObj);
-      t.end();
-      resetDatastore();
-    });
-  }
-);
-
-test('addPageToCache rejects if write metadata rejects', function(t) {
-  // At the time there is no way for write metadata to reject, as that is not
-  // supported by the chrome API, but we're going to test for it anyways in
-  // case the API changes.
-  var expected = { errMsg: 'write went wrong, son' };
-  var captureUrl = 'such a great url';
-  var captureDate = 'tomorrow';
-  var blob = {much: 'binary'};
-  var fileName = 'file_entry_name.mhtml';
-  var dirEntryStub = {cacheDir: 'someDir'};
-  var fileEntryStub = {fileName: 'sofancy'};
-  var getDirectoryForCacheEntriesSpy = sinon.stub().resolves(dirEntryStub);
-  var getFileSpy = sinon.stub().resolves(fileEntryStub);
-  var writeToFileSpy = sinon.stub().resolves();
-  var writeMetadataForEntrySpy = sinon.stub().rejects(expected);
-  var createFileNameSpy = sinon.stub().returns(fileName);
-
-  proxyquireDatastore({
-    './file-system': {
-      getDirectoryForCacheEntries: getDirectoryForCacheEntriesSpy
-    },
-    './file-system-util': {
-      getFile: getFileSpy,
-      writeToFile: writeToFileSpy
-    }
-  });
-  datastore.createFileNameForPage = createFileNameSpy;
-  datastore.writeMetadataForEntry = writeMetadataForEntrySpy;
-
-  datastore.addPageToCache(captureUrl, captureDate, blob)
-  .then(res => {
-    t.fail(res);
-    t.end();
-    resetDatastore();
-  })
-  .catch(actual => {
-    t.deepEqual(actual, expected);
-    t.end();
-    resetDatastore();
-  });
+  end(t);
 });
 
 test('addPageToCache rejects if getFile rejects', function(t) {
-  var errObj = { msg: 'no base dir' };
-  var getDirectoryForCacheEntriesSpy = sinon.stub().rejects(errObj);
-  var getFileSpy = sinon.stub().rejects(errObj);
-  var writeMetadataForEntrySpy = sinon.stub().resolves();
+  const expected = { err: 'things did not go as planned' };
+  const fileName = 'hello.mhtml';
+
+  const href = 'http://nytimes.com';
+  const date = '2017-06-24';
+
+  const cpdisk = new CPDisk({ captureHref: href, captureDate: date });
+  
+  const getFileForWritingCachedPageStub = sinon.stub().withArgs(fileName)
+    .rejects(expected);
 
   proxyquireDatastore({
     './file-system': {
-      getDirectoryForCacheEntries: getDirectoryForCacheEntriesSpy
+      getFileForWritingCachedPage: getFileForWritingCachedPageStub
     },
-    './file-system-util': {
-      getFile: getFileSpy
+    './database': {
+      addPageToDb: sinon.stub().resolves()
     }
   });
-  datastore.writeMetadataForEntry = writeMetadataForEntrySpy;
+  datastore.createFileNameForPage = sinon.stub().withArgs(href, date)
+    .returns(fileName);
 
-  datastore.addPageToCache('url', 'date', 'blob')
+  datastore.addPageToCache(cpdisk)
   .then(res => {
     t.fail(res);
-    t.end();
-    resetDatastore();
+    end(t);
   })
-  .catch(err => {
-    t.equal(err, errObj);
-    t.end();
-    resetDatastore();
-  });
-});
-
-test('addPageToCache rejects if writeToFile rejects', function(t) {
-  var errObj = { msg: 'no base dir' };
-  var getDirectoryForCacheEntriesSpy = sinon.stub().rejects(errObj);
-  var getFileSpy = sinon.stub().resolves();
-  var writeToFileSpy = sinon.stub().rejects(errObj);
-  var writeMetadataForEntrySpy = sinon.stub().resolves();
-
-  proxyquireDatastore({
-    './file-system': {
-      getDirectoryForCacheEntries: getDirectoryForCacheEntriesSpy
-    },
-    './file-system-util': {
-      getFile: getFileSpy,
-      writeToFile: writeToFileSpy
-    }
-  });
-  datastore.writeMetadataForEntry = writeMetadataForEntrySpy;
-
-  datastore.addPageToCache('url', 'date', 'blob')
-  .then(res => {
-    t.fail(res);
-    t.end();
-    resetDatastore();
-  })
-  .catch(err => {
-    t.equal(err, errObj);
-    t.end();
-    resetDatastore();
+  .catch(actual => {
+    t.deepEqual(actual, expected);
+    end(t);
   });
 });
 
 test('addPageToCache resolves if all others succeed', function(t) {
-  var captureUrl = 'http://www.example.com/hilarious/kitty/cats.html';
-  var captureDate = 'today';
-  var blob = {much: 'blob'};
-  var fileName = 'file_entry_name.mhtml';
-  var dirEntryStub = {cacheDir: 'someDir'};
-  var fileEntryStub = {fileName: 'sofancy'};
-  var getDirectoryForCacheEntriesSpy = sinon.stub().resolves(dirEntryStub);
-  var getFileSpy = sinon.stub().resolves(fileEntryStub);
-  var writeToFileSpy = sinon.stub().resolves();
-  var writeMetadataForEntrySpy = sinon.stub().resolves();
-  var createFileNameSpy = sinon.stub().returns(fileName);
+  const expected = { name: 'I am the file entry' };
+  const fileName = 'very_right.mhtml';
 
+  const href = 'http://nytimes.com';
+  const date = '2017-06-24';
+  const mhtml = 'I am the blob';
+
+  const page = new CPDisk({
+    captureHref: href,
+    captureDate: date,
+    mhtml: mhtml
+  });
+
+  // This page should be modified and a file name added.
+  const expectedPage = new CPDisk({
+    captureHref: href,
+    captureDate: date,
+    mhtml: mhtml,
+    filePath: fileName
+  });
+  
+  const getFileForWritingCachedPageStub = sinon.stub().withArgs(fileName)
+    .resolves(expected);
+  const writeToFileStub = sinon.stub().withArgs(expected, mhtml)
+    .resolves();
+
+  const addPageToDbStub = sinon.stub().resolves();
   proxyquireDatastore({
     './file-system': {
-      getDirectoryForCacheEntries: getDirectoryForCacheEntriesSpy
+      getFileForWritingCachedPage: getFileForWritingCachedPageStub
     },
     './file-system-util': {
-      getFile: getFileSpy,
-      writeToFile: writeToFileSpy
+      writeToFile: writeToFileStub
+    },
+    './database': {
+      addPageToDb: addPageToDbStub
     }
   });
-  datastore.createFileNameForPage = createFileNameSpy;
-  datastore.writeMetadataForEntry = writeMetadataForEntrySpy;
+  datastore.createFileNameForPage = sinon.stub().withArgs(href, date)
+    .returns(fileName);
 
-  datastore.addPageToCache(captureUrl, captureDate, blob)
-  .then(returnedFile => {
-    t.deepEqual(returnedFile, fileEntryStub);
-    t.deepEqual(createFileNameSpy.args[0], [captureUrl, captureDate]);
-    t.deepEqual(getFileSpy.args[0],
-      [
-        dirEntryStub, {create: true, exclusive: false},
-        fileName
-      ]
-    );
-    t.deepEqual(writeToFileSpy.args[0], [fileEntryStub, blob]);
-    t.end();
-    resetDatastore();
-  })
-  .catch(err => {
-    t.fail(err);
-    t.end();
-    resetDatastore();
-  });
-});
-
-test('createMetadataKey returns correct', function(t) {
-  var name = 'fancyFile.mhtml';
-  var entry = { name: name };
-  var expected = 'fileMdata_' + name;
-  var actual = datastore.createMetadataKey(entry);
-  t.equal(actual, expected);
-  t.end();
-});
-
-test('getMetadataForEntry resolves with result to storage', function(t) {
-  var expected = { meta: 'data', favicon: 'base64mebruh' };
-  var entry = { name: 'file_name.mhtml' };
-  var mdataKey = 'keyIntoStorage';
-  var getResult = {};
-  getResult[mdataKey] = expected;
-
-  var createMetadataKeySpy = sinon.stub().withArgs(entry).returns(mdataKey);
-  var getSpy = sinon.stub().withArgs(mdataKey).resolves(getResult);
-
-  proxyquireDatastore({}, { get: getSpy });
-  datastore.createMetadataKey = createMetadataKeySpy;
-
-  datastore.getMetadataForEntry(entry)
+  datastore.addPageToCache(page)
   .then(actual => {
     t.deepEqual(actual, expected);
-    t.end();
-    resetDatastore();
+    t.deepEqual(addPageToDbStub.args[0], [expectedPage]);
+    end(t);
   })
   .catch(err => {
     t.fail(err);
-    t.end();
-    resetDatastore();
+    end(t);
   });
 });
 
-test('getMetadataForEntry rejects if error', function(t) {
-  var expected = { error: 'mo storage mo problems' };
-  proxyquireDatastore({}, { get: sinon.stub().rejects(expected) });
-  datastore.createMetadataKey = sinon.stub();
+test('getCPDiskForHrefs correct on success', function(t) {
+  let num = 5;
+  let cpdisks = [...putil.genAllParams(num)].map(params => new CPDisk(params));
 
-  datastore.getMetadataForEntry()
-  .then(res => {
-    t.fail(res);
-    t.end();
-    resetDatastore();
+  let cpsummaries = cpdisks.map(cpdisk => cpdisk.asCPSummary());
+  let hrefs = cpdisks.map(cpdisk => cpdisk.captureHref);
+
+  let getCPSummariesStub = sinon.stub();
+  getCPSummariesStub.withArgs(hrefs).resolves(cpsummaries);
+
+  let getFileContentsStub = sinon.stub();
+  cpdisks.forEach(cpdisk => {
+    getFileContentsStub.withArgs(cpdisk.filePath).resolves(cpdisk.mhtml);
+  });
+
+  proxyquireDatastore({
+    './database': {
+      getCPSummariesForHrefs: getCPSummariesStub
+    },
+    './file-system': {
+      getFileContentsFromName: getFileContentsStub
+    }
+  });
+
+  let expected = cpdisks;
+
+  datastore.getCPDiskForHrefs(hrefs)
+  .then(actual => {
+    t.deepEqual(actual, expected);
+    end(t);
+  })
+  .catch(err => {
+    t.fail(err);
+    end(t);
+  });
+});
+
+test('getCPDiskForHrefs rejects on error', function(t) {
+  let expected = { err: 'they call me MR TRUBS' };
+  let hrefs = [...putil.genAllParams(10)].map(params => params.captureHref);
+
+  let getCPSummariesStub = sinon.stub();
+  getCPSummariesStub.withArgs(hrefs).rejects(expected);
+
+  proxyquireDatastore({
+    './database': {
+      getCPSummariesForHrefs: getCPSummariesStub
+    },
+  });
+
+  datastore.getCPDiskForHrefs(hrefs)
+  .then(actual => {
+    t.fail(actual);
+    end(t);
   })
   .catch(actual => {
-    t.equal(actual, expected);
-    t.end();
-    resetDatastore();
-  });
-});
-
-test('writeMetadataForEntry resolves if set resolves', function(t) {
-  var key = 'mdatakey';
-  var setArgs = {};
-  setArgs[key] = { favicon: 'pretteh', snapshot: 'nice' };
-  var entry = { name: 'fileName.mhtml' };
-
-  var setSpy = sinon.stub().withArgs(setArgs).resolves();
-  var createMetadataKeySpy = sinon.stub().withArgs(entry).returns(key);
-
-  proxyquireDatastore({}, { set: setSpy });
-  datastore.createMetadataKey = createMetadataKeySpy;
-
-  datastore.writeMetadataForEntry(entry)
-  .then(result => {
-    // We don't expect to resolve with anything.
-    t.equal(result, undefined);
-    t.end();
-    resetDatastore();
-  })
-  .catch(err => {
-    t.fail(err);
-    t.end();
-    resetDatastore();
+    t.deepEqual(actual, expected);
+    end(t);
   });
 });
