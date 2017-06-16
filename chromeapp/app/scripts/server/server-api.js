@@ -21,6 +21,9 @@ var PATH_GET_PAGE_DIGEST = 'page_digest';
 var PATH_EVAL_LIST_PAGE_CACHE = 'eval_list';
 var PATH_RECEIVE_WRTC_OFFER = 'receive_wrtc';
 
+const DEFAULT_OFFSET = 0;
+const DEFAULT_LIMIT = 50;
+
 /**
  * Create the metadata object that is returned in server responses.
  */
@@ -92,16 +95,16 @@ exports.getAccessUrlForCachedPage = function(fullPath) {
  * the following:
  * {
  *   metadata: {},
- *   cachedPages: [CachedPage, CachedPage]
+ *   cachedPages: [CPSummary, CPSummary]
  * }
  */
 exports.getResponseForAllCachedPages = function() {
   return new Promise(function(resolve, reject) {
-    datastore.getAllCachedPages()
-    .then(pages => {
+    datastore.getCachedPageSummaries(DEFAULT_OFFSET, DEFAULT_LIMIT)
+    .then(cpsums => {
       var result = {};
       result.metadata = exports.createMetadatObj();
-      result.cachedPages = pages;
+      result.cachedPages = cpsums.map(cpsum => cpsum.asJSON());
       resolve(result);
     })
     .catch(err => {
@@ -131,16 +134,15 @@ exports.getResponseForAllCachedPages = function() {
 exports.getResponseForAllPagesDigest = function() {
   return new Promise(function(resolve, reject) {
     datastore.getAllCachedPages()
-    .then(pages => {
+    .then(cpinfos => {
       var result = {};
       result.metadata = exports.createMetadatObj();
       
-      var pageInfos = [];
-      pages.forEach(page => {
-        var info = {};
-        info.fullUrl = page.metadata.fullUrl;
-        info.captureDate = page.captureDate;
-        pageInfos.push(info);
+      let pageInfos = cpinfos.map(cpinfo => {
+        return {
+          fullUrl: cpinfo.captureHref,
+          captureDate: cpinfo.captureDate
+        };
       });
 
       result.digest = pageInfos;

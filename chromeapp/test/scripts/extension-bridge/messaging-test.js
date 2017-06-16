@@ -3,7 +3,11 @@ var test = require('tape');
 var sinon = require('sinon');
 var proxyquire = require('proxyquire');
 require('sinon-as-promised');
+
 var messaging = require('../../../app/scripts/extension-bridge/messaging');
+
+var CPDisk = require('../../../app/scripts/persistence/objects').CPDisk;
+let putil = require('../persistence/persistence-util');
 
 /**
  * Manipulating the object directly leads to polluting the require cache. Any
@@ -37,9 +41,14 @@ function getDummyWriteMessage() {
   return {
     type: 'write',
     params: {
-      dataUrl: 'data url',
-      captureUrl: 'capture url',
-      metadata: { meta: 'data' }
+      pageInfo: {
+        captureHref: 'http://example.com',
+        captureDate: '2017-06-13',
+        title: 'Page title',
+        favicon: 'favicon',
+        screenshot: 'screenshot',
+        mhtml: 'data:text/plain;base64,aGVsbG8='
+      }
     }
   };
 }
@@ -132,7 +141,6 @@ test('handleExternalMessage invokes response on success', function(t) {
 test('handleExternalMessage invokes response on error', function(t) {
   var message = getDummyWriteMessage();
   var sender = getSender();
-  var expected = { hi: 'bye' };
   var errFromDatastore = { msg: 'much wrong' };
 
   proxyquireMessaging({
@@ -140,11 +148,7 @@ test('handleExternalMessage invokes response on error', function(t) {
       addPageToCache: sinon.stub().rejects(errFromDatastore)
     }
   });
-
-  var createResponseErrorSpy = sinon.stub().withArgs(message, errFromDatastore)
-    .returns(expected);
-  messaging.createResponseError = createResponseErrorSpy;
-  messaging.getBlobFromDataUrl = sinon.stub();
+  let expected = messaging.createResponseError(message, errFromDatastore);
 
   // This will be set below but not checked until our callback is invoked.
   var returnValue;
@@ -162,40 +166,25 @@ test('handleExternalMessage invokes response on error', function(t) {
 });
 
 test('handleExternalMessage adds page to cache for write', function(t) {
-  var params = {
-    captureUrl: 'www.example.com',
-    captureData: 'some day',
-    dataUrl: 'data:base64',
-    metadata: { foo: 'bar', favicon: 'ugly' }
-  };
-  var message = {
-    type: 'write',
-    params: params
-  };
-  var addPageToCacheSpy = sinon.stub().resolves();
+  let message = getDummyWriteMessage();
+  let cpdisk = CPDisk.fromJSON(getDummyWriteMessage().params.pageInfo);
+
+  var addPageToCacheSpy = sinon.stub();
+  addPageToCacheSpy.withArgs(cpdisk).resolves();
 
   proxyquireMessaging({
     '../persistence/datastore': {
       addPageToCache: addPageToCacheSpy
     }
   });
-
-  var blob = {binary: '101s', type: 'mhtml'};
-  var getBlobFromDataUrlSpy = sinon.stub().returns(blob);
-  messaging.getBlobFromDataUrl = getBlobFromDataUrlSpy;
+  let expectedResponse = messaging.createResponseSuccess(message);
 
   var sender = getSender();
-  messaging.handleExternalMessage(message, sender);
-
-  t.deepEqual(addPageToCacheSpy.args[0],
-    [
-      params.captureUrl,
-      params.captureDate,
-      blob,
-      params.metadata
-    ]
-  );
-  t.end();
+  messaging.handleExternalMessage(message, sender, function(actual) {
+    t.deepEqual(actual, expectedResponse);
+    t.deepEqual(addPageToCacheSpy.args[0], [cpdisk]);
+    end(t);
+  });
 });
 
 test('handleExternalMessage returns result of local query', function(t) {
@@ -287,24 +276,15 @@ test('handleExternalMessage responds with error if goes wrong', function(t) {
 });
 
 test('queryLocalNetworkForUrls returns empty if no match', function(t) {
-  var cachedPages = [
-    {
-      captureUrl: 'foo',
-      metadata: { fullUrl: 'foo' }
-    },
-    {
-      captureUrl: 'bar',
-      metadata: { fullUrl: 'bar' }
-    }
-  ];
+  let cpinfos = [...putil.genCPDisks(10)];
 
   proxyquireMessaging({
     '../persistence/datastore': {
-      getAllCachedPages: sinon.stub().resolves(cachedPages)
+      getAllCachedPages: sinon.stub().resolves(cpinfos)
     }
   });
 
-  messaging.queryLocalMachineForUrls(getDummyLocalQueryMessage(['url']))
+  messaging.queryLocalMachineForUrls(getDummyLocalQueryMessage(['nobody']))
   .then(actual => {
     t.deepEqual(actual, {});
     end(t);
@@ -316,40 +296,29 @@ test('queryLocalNetworkForUrls returns empty if no match', function(t) {
 });
 
 test('queryLocalMachineForUrls returns all matches', function(t) {
-  var cachedPages = [
-    {
-      captureUrl: 'foo',
-      metadata: { fullUrl: 'foo' }
-    },
-    {
-      captureUrl: 'bar',
-      metadata: { fullUrl: 'bar' }
-    },
-    {
-      captureUrl: 'www.nytimes.com',
-      accessPath: 'fetchmehere',
-      metadata: {
-        fullUrl: 'http://www.nytimes.com/story'
-      }
-    }
-  ];
+  // We'll say that 5 pages are saved locally. We'll query for two of those.
+  let num = 5;
+  let cpinfos = [...putil.genCPInfos(num)];
 
-  // We expect url: [ cachedpage, ... ] to keep the API the same with local
+  // We expect { url: [ cachedpage, ... ] } to keep the API the same with local
   // network queries.
-  var expected = {};
-  expected[cachedPages[0].metadata.fullUrl] = [ cachedPages[0] ];
-  expected[cachedPages[2].metadata.fullUrl] = [ cachedPages[2] ];
+  let foundCPInfo1 = cpinfos[0];
+  let foundCPInfo2 = cpinfos[3];
+  let foundUrl1 = foundCPInfo1.captureHref;
+  let foundUrl2 = foundCPInfo2.captureHref;
+
+  let expected = {
+    [foundUrl1]: [foundCPInfo1],
+    [foundUrl2]: [foundCPInfo2]
+  };
 
   proxyquireMessaging({
     '../persistence/datastore': {
-      getAllCachedPages: sinon.stub().resolves(cachedPages)
+      getAllCachedPages: sinon.stub().resolves(cpinfos)
     }
   });
 
-  var message = getDummyLocalQueryMessage([
-    cachedPages[2].metadata.fullUrl,
-    cachedPages[0].metadata.fullUrl
-  ]);
+  var message = getDummyLocalQueryMessage([ foundUrl1, foundUrl2 ]);
 
   messaging.queryLocalMachineForUrls(message)
   .then(actual => {

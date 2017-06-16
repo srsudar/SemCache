@@ -35,9 +35,19 @@ function end(t) {
   resetWebrtcImpl();
 }
 
+/**
+ * @return {WebrtcPeerAccessor}
+ */
+function createAccessor() {
+  return new webrtcImpl.WebrtcPeerAccessor('1.2.3.4', 8888);
+}
+
 test('can create PeerAccessor', function(t) {
-  var pa = new webrtcImpl.WebrtcPeerAccessor();
-  t.notEqual(null, pa);
+  let ipaddr = '1.2.3.4';
+  let port = 1111;
+  var pa = new webrtcImpl.WebrtcPeerAccessor({ ipaddr, port });
+  t.deepEqual(pa.ipaddr, ipaddr);
+  t.deepEqual(pa.port, port);
   end(t);
 });
 
@@ -202,6 +212,46 @@ test('getCacheDigest rejects with error', function(t) {
   })
   .catch(actual => {
     t.equal(actual, expected);
+    end(t);
+  });
+});
+
+test('getCachedPage succeeds', function(t) {
+  let href = 'http://www.cats.org';
+  let accessor = createAccessor();
+  let expected = { iam: 'cpdisk' };
+
+  let connectionStub = sinon.stub();
+  let getCachedPageStub = sinon.stub();
+  getCachedPageStub.withArgs(href).resolves(expected);
+  connectionStub.getCachedPage = getCachedPageStub;
+  accessor.getConnection = sinon.stub().resolves(connectionStub);
+
+  accessor.getCachedPage(href)
+  .then(actual => {
+    t.deepEqual(actual, expected);
+    end(t);
+  })
+  .catch(err => {
+    t.fail(err);
+    end(t);
+  });
+});
+
+test('getCachedPage rejects on error', function(t) {
+  let href = 'http://www.cats.org';
+  let accessor = createAccessor();
+  let expected = { err: 'trubbly wubbly' };
+
+  accessor.getConnection = sinon.stub().rejects(expected);
+
+  accessor.getCachedPage(href)
+  .then(actual => {
+    t.fail(actual);
+    end(t);
+  })
+  .catch(actual => {
+    t.deepEqual(actual, expected);
     end(t);
   });
 });

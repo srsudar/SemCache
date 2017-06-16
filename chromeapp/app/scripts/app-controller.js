@@ -4,18 +4,18 @@
  * The main controlling piece of the app. It composes the other modules.
  */
 
-var datastore = require('./persistence/datastore');
-var dnsController = require('./dnssd/dns-controller');
-var dnssdSem = require('./dnssd/dns-sd-semcache');
-var evaluation = require('./evaluation');
-var extBridge = require('./extension-bridge/messaging');
-var fileSystem = require('./persistence/file-system');
-var peerIfMgr = require('./peer-interface/manager');
-var ifCommon = require('./peer-interface/common');
-var settings = require('./settings');
-var serverApi = require('./server/server-api');
+const datastore = require('./persistence/datastore');
+const dnsController = require('./dnssd/dns-controller');
+const dnssdSem = require('./dnssd/dns-sd-semcache');
+const evaluation = require('./evaluation');
+const extBridge = require('./extension-bridge/messaging');
+const fileSystem = require('./persistence/file-system');
+const peerIfMgr = require('./peer-interface/manager');
+const ifCommon = require('./peer-interface/common');
+const settings = require('./settings');
+const serverApi = require('./server/server-api');
 
-var ABS_PATH_TO_BASE_DIR = null;
+let ABS_PATH_TO_BASE_DIR = null;
 
 exports.LISTENING_HTTP_INTERFACE = null;
 
@@ -414,36 +414,20 @@ exports.getListFromService = function(serviceName) {
 /**
  * Save the MHTML file at mhtmlUrl into the local cache and open the URL.
  *
- * @param {captureUrl} captureUrl
- * @param {captureDate} captureDate
- * @param {string} mhtmlUrl the url of the mhtml file to save and open
- * @param {Object} metadata the metadata that is stored along with the file
+ * @param {string} href the URL to fetch from the peer
  * @param {string} ipaddr IP address of the peer
  * @param {integer} port port of the peer
  *
  * @return {Promise.<number, Error>} a Promise that resolves with the total
  * time to save the MHTML and open the file.
  */
-exports.saveMhtmlAndOpen = function(
-  captureUrl,
-  captureDate,
-  mhtmlUrl,
-  metadata,
-  ipaddr,
-  port
-) {
+exports.saveMhtmlAndOpen = function(href, ipaddr, port) {
   return new Promise(function(resolve, reject) {
     var start = evaluation.getNow();
-    var streamName = 'open_' + captureUrl;
-    var params = ifCommon.createFileParams(ipaddr, port, mhtmlUrl);
-    peerIfMgr.getPeerAccessor().getFileBlob(params)
-    .then(blob => {
-      return datastore.addPageToCache(
-        captureUrl,
-        captureDate,
-        blob,
-        metadata
-      );
+    var streamName = 'open_' + href;
+    peerIfMgr.getPeerAccessor(ipaddr, port).getCachedPage(href)
+    .then(cpdisk => {
+      return datastore.addPageToCache(cpdisk);
     })
     .then((entry) => {
       var fileUrl = fileSystem.constructFileSchemeUrl(

@@ -1,10 +1,17 @@
 /*jshint esnext:true*/
 'use strict';
+
+var Buffer = require('buffer').Buffer;
 var test = require('tape');
 var sinon = require('sinon');
 require('sinon-as-promised');
 
 var util = require('../../app/scripts/util');
+
+/**
+ * A Data URI for a 'hello', in string represntation.
+ */
+const HELLO_URI_STR = 'data:application/octet-stream;base64,aGVsbG8=';
 
 /**
  * Manipulating the object directly leads to polluting the require cache. Any
@@ -193,13 +200,20 @@ test('toArray correct for array', function(t) {
   end(t);
 });
 
-// test.only('getBufferAsBlob returns Blob', function(t) {
-//   var targetStr = 'hello';
-//   var buff = Buffer.from(targetStr);
-//   var arrayBuffer = binUtil.arrayBufferToString(targetStr);
-//   var expected = new Blob([arrayBuffer], { type: 'application/octet-binary' });
+test('dataToBuff correct', function(t) {
+  let data = HELLO_URI_STR;
+  let expected = Buffer.from('hello');
+  let actual = util.dataToBuff(data);
 
-//   var actual = util.getBufferAsBlob(buff);
-//   t.deepEqual(actual, expected);
-//   t.end();
-// });
+  t.deepEqual(actual, expected);
+  end(t);
+});
+
+test('buffToData correct', function(t) {
+  let buff = Buffer.from('hello');
+  let expected = HELLO_URI_STR;
+  let actual = util.buffToData(buff);
+
+  t.deepEqual(actual, expected);
+  end(t);
+});

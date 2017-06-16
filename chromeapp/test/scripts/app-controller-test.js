@@ -49,27 +49,33 @@ function rejectIfMissingSettingHelper(instanceName, port, dirId, host, t) {
 }
 
 test('saveMhtmlAndOpen persists and opens', function(t) {
-  var fakeEntry = {
-    fullPath: 'a full path'
-  };
-  var addPageStub = sinon.stub().resolves(fakeEntry);
-  var sendMessageToOpenSpy = sinon.spy();
+  let href = 'href/of/thepage/to/open';
+  let ipaddr = '7.6.5.4';
+  let port = 7777;
 
-  var absPathToBaseDir = '/some/absolute/path/semcachedir';
+  let fakeEntry = { fullPath: 'a full path' };
+  let fakeCpdisk = { iam: 'cpdisk' };
 
-  var fileUrl = 'file:///some path to the dir';
-  var ipaddr = '7.6.5.4';
-  var port = 7777;
-  var constructFileSchemeUrlSpy = sinon.stub().returns(fileUrl);
+  let getPeerAccessorStub = sinon.stub();
+  let peerAccessorStub = sinon.stub();
+  getPeerAccessorStub.withArgs(ipaddr, port).returns(peerAccessorStub);
+  let getCachedPageStub = sinon.stub();
+  getCachedPageStub.withArgs(href).resolves(fakeCpdisk);
+  peerAccessorStub.getCachedPage = getCachedPageStub;
 
-  var getNowStub = sinon.stub().returns(1);
-  var logTimeStub = sinon.stub();
-  
-  var blob = 'the fake blob';
+  let addPageStub = sinon.stub();
+  addPageStub.withArgs(fakeCpdisk).resolves(fakeEntry);
 
-  var peerAccessorStub = sinon.stub();
-  var getFileBobStub = sinon.stub().resolves(blob);
-  peerAccessorStub.getFileBlob = getFileBobStub;
+  let sendMessageToOpenSpy = sinon.spy();
+
+  let absPathToBaseDir = '/some/absolute/path/semcachedir';
+
+  let fileUrl = 'file:///some path to the dir';
+  let constructFileSchemeUrlSpy = sinon.stub().returns(fileUrl);
+
+  let getNowStub = sinon.stub().returns(1);
+  let logTimeStub = sinon.stub();
+
 
   // ADD THE ABSOLUTE PATH TO THE BASE DIRECTORY
   proxyquireAppc({
@@ -87,30 +93,16 @@ test('saveMhtmlAndOpen persists and opens', function(t) {
         logTime: logTimeStub
       },
       './peer-interface/manager': {
-        getPeerAccessor: sinon.stub().returns(peerAccessorStub)
+        getPeerAccessor: getPeerAccessorStub
       }
     }
   );
   
   appc.getAbsPathToBaseDir = sinon.stub().returns(absPathToBaseDir);
 
-  var captureUrl = 'the capture url';
-  var captureDate = 'the date it was captured';
-  var accessPath = 'http://' + ipaddr + ':' + port;
-  var mdata = { muchMeta: 'so data' };
-  appc.saveMhtmlAndOpen(
-    captureUrl, captureDate, accessPath, mdata, ipaddr, port
-  )
+  appc.saveMhtmlAndOpen(href, ipaddr, port)
   .then(() => {
     t.equal(sendMessageToOpenSpy.args[0][0], fileUrl);
-    t.deepEqual(
-      getFileBobStub.args[0][0],
-      ifCommon.createFileParams(ipaddr, port, accessPath)
-    );
-    t.deepEqual(
-      addPageStub.args[0],
-      [captureUrl, captureDate, blob, mdata]
-    );
     t.end();
     resetAppController();
   })
@@ -122,23 +114,25 @@ test('saveMhtmlAndOpen persists and opens', function(t) {
 });
 
 test('saveMhtmlAndOpen rejects if error', function(t) {
-  var expected = { error: 'went south' };
-  var peerAccessorStub = sinon.stub();
-  peerAccessorStub.getFileBlob = sinon.stub().resolves();
+  let expected = { error: 'went south' };
+  let href = 'g.co';
+  let ipaddr = '4.3.2.1';
+  let port = 1234;
+
+  let getPeerAccessorStub = sinon.stub();
+  getPeerAccessorStub.withArgs(ipaddr, port).throws(expected);
+
   proxyquireAppc({
-    './persistence/datastore': {
-      addPageToCache: sinon.stub().rejects(expected)
-    },
     './evaluation': {
       getNow: sinon.stub().returns(0),
       logTime: sinon.stub().returns(0)
     },
     './peer-interface/manager': {
-      getPeerAccessor: sinon.stub().returns(peerAccessorStub)
+      getPeerAccessor: getPeerAccessorStub
     }
   });
 
-  appc.saveMhtmlAndOpen('url', 'capture', 'http://1.2.3.4:88')
+  appc.saveMhtmlAndOpen(href, ipaddr, port)
   .then(res => {
     t.fail(res);
     t.end();

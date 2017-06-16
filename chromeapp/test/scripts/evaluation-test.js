@@ -584,8 +584,8 @@ test('generateDummyPage incorporates nonce and number', function(t) {
 
   var actual = evaluation.generateDummyPage(index, nonce);
 
-  t.notEqual(actual.captureUrl.indexOf(index), -1);
-  t.notEqual(actual.captureUrl.indexOf(nonce), -1);
+  t.notEqual(actual.captureHref.indexOf(index), -1);
+  t.notEqual(actual.captureHref.indexOf(nonce), -1);
   t.end();
   resetEvaluation();
 });

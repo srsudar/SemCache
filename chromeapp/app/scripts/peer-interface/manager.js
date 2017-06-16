@@ -13,13 +13,13 @@ var ifWebrtc = require('./webrtc-impl');
  *
  * @return {HttpPeerAccessor|WebrtcPeerAccessor}
  */
-exports.getPeerAccessor = function() {
+exports.getPeerAccessor = function(ipaddr, port) {
   var transportMethod = settings.getTransportMethod();
   console.log(transportMethod);
   if (transportMethod === 'http') {
     return new ifHttp.HttpPeerAccessor(); 
   } else if (transportMethod === 'webrtc') {
-    return new ifWebrtc.WebrtcPeerAccessor();
+    return new ifWebrtc.WebrtcPeerAccessor({ ipaddr, port });
   } else {
     throw new Error('Unrecognized transport method: ' + transportMethod);
   }

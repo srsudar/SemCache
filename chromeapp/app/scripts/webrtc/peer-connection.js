@@ -111,6 +111,18 @@ exports.PeerConnection.prototype.getCacheDigest = function() {
 };
 
 /**
+ * Get a cached page from the peer.
+ *
+ * @param {string} href
+ *
+ * @return {Promise.<CPDisk, Error>}
+ */
+exports.PeerConnection.prototype.getCachedPage = function(href) {
+  // TODO:
+  throw new Error('unimplemented');
+};
+
+/**
  * Get a file from the peer.
  *
  * @param {string} remotePath the identifier on the remote machine

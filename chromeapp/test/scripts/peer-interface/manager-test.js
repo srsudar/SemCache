@@ -36,18 +36,6 @@ function end(t) {
   reset();
 }
 
-test('getPeerAccessor correct for webrtc', function(t) {
-  proxyquireManager({
-    '../settings': {
-      getTransportMethod: sinon.stub().returns('webrtc')
-    }
-  });
-
-  var actual = mgr.getPeerAccessor();
-  t.deepEqual(actual, new ifHttp.HttpPeerAccessor());
-  end(t);
-});
-
 test('getPeerAccessor correct for http', function(t) {
   proxyquireManager({
     '../settings': {
@@ -56,7 +44,22 @@ test('getPeerAccessor correct for http', function(t) {
   });
 
   var actual = mgr.getPeerAccessor();
-  t.deepEqual(actual, new ifWebrtc.WebrtcPeerAccessor());
+  t.deepEqual(actual, new ifHttp.HttpPeerAccessor());
+  end(t);
+});
+
+test('getPeerAccessor correct for webrtc', function(t) {
+  proxyquireManager({
+    '../settings': {
+      getTransportMethod: sinon.stub().returns('webrtc')
+    }
+  });
+
+  let ipaddr = '1.2.3.4';
+  let port = 5555;
+
+  var actual = mgr.getPeerAccessor(ipaddr, port);
+  t.deepEqual(actual, new ifWebrtc.WebrtcPeerAccessor({ ipaddr, port }));
   end(t);
 });
 

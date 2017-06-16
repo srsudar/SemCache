@@ -1,4 +1,6 @@
 'use strict';
+let proxyquire = require('proxyquire');
+let sinon = require('sinon');
 let test = require('tape');
 require('sinon-as-promised');
 
@@ -9,13 +11,39 @@ let CPInfo = objects.CPInfo;
 let CPSummary = objects.CPSummary;
 let CPDisk = objects.CPDisk;
 
+/**
+ * Manipulating the object directly leads to polluting the require cache. Any
+ * test that modifies the required object should call this method to get a
+ * fresh version
+ */
+function reset() {
+  delete require.cache[
+    require.resolve('../../../app/scripts/persistence/objects')
+  ];
+  objects = require('../../../app/scripts/persistence/objects');
+  CPInfo = objects.CPInfo;
+  CPSummary = objects.CPSummary;
+  CPDisk = objects.CPDisk;
+}
+
+function proxyquireObjects(proxies) {
+  objects = proxyquire(
+    '../../../app/scripts/persistence/objects', proxies
+  );
+  CPInfo = objects.CPInfo;
+  CPSummary = objects.CPSummary;
+  CPDisk = objects.CPDisk;
+}
+
 function getSingleParams() {
   return putil.genAllParams(1).next().value;
 }
 
+
 function end(t) {
   if (!t) { throw new Error('You forgot to pass tape'); }
   t.end();
+  reset();
 }
 
 function assertCPInfoPropertiesCorrect(t, params, cpinfo) {
@@ -62,6 +90,92 @@ test('canBePersisted correct', function(t) {
   actual = new CPInfo(params);
   t.false(actual.canBePersisted());
 
+  end(t);
+});
+
+test('CPInfo.asJSON correct', function(t) {
+  let params = getSingleParams();
+
+  let cp = new CPInfo(params);
+  let expected = {
+    captureHref: params.captureHref,
+    captureDate: params.captureDate,
+    title: params.title,
+    filePath: params.filePath
+  };
+
+  let actual = cp.asJSON();
+  t.deepEqual(actual, expected);
+  end(t);
+});
+
+test('CPSummary.asJSON correct', function(t) {
+  let params = getSingleParams();
+
+  let cp = new CPSummary(params);
+  let expected = {
+    captureHref: params.captureHref,
+    captureDate: params.captureDate,
+    title: params.title,
+    filePath: params.filePath,
+    screenshot: params.screenshot,
+    favicon: params.favicon
+  };
+
+  let actual = cp.asJSON();
+  t.deepEqual(actual, expected);
+  end(t);
+});
+
+test('CPDisk.asJSON correct', function(t) {
+  let params = getSingleParams();
+  let dataUrl = 'data: blob';
+
+  let buffToDataStub = sinon.stub();
+  buffToDataStub.withArgs(params.mhtml).returns(dataUrl);
+
+  proxyquireObjects({
+    '../util': {
+      buffToData: buffToDataStub
+    }
+  });
+
+  let cp = new CPDisk(params);
+  let expected = {
+    captureHref: params.captureHref,
+    captureDate: params.captureDate,
+    title: params.title,
+    filePath: params.filePath,
+    screenshot: params.screenshot,
+    favicon: params.favicon,
+    mhtml: dataUrl
+  };
+
+  let actual = cp.asJSON();
+  t.deepEqual(actual, expected);
+  end(t);
+});
+
+test('CPDisk.fromJSON correct', function(t) {
+  let params = getSingleParams();
+  let expected = new CPDisk(params);
+
+  // Swap the mhtml buff for a blob.
+  let dataUrl = 'data: blob';
+  let mhtml = params.mhtml;
+  params.mhtml = dataUrl;
+
+  let dataToBuffStub = sinon.stub();
+  dataToBuffStub.withArgs(dataUrl).returns(mhtml);
+
+  proxyquireObjects({
+    '../util': {
+      dataToBuff: dataToBuffStub
+    }
+  });
+
+  let actual = CPDisk.fromJSON(params);
+  t.deepEqual(actual, expected);
   end(t);
 });
 

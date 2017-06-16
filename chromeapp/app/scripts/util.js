@@ -1,5 +1,10 @@
 'use strict';
 
+const Buffer = require('buffer').Buffer;
+const Datauri = require('datauri');
+const dataUrlToBlob = require('dataurl-to-blob');
+const blobToBufferLib = require('blob-to-buffer');
+
 /**
  * Helper to fetch and parse JSON from a URL.
  *
@@ -218,4 +223,100 @@ exports.toArray = function(arg) {
     result = [result];
   }
   return result;
+};
+
+/**
+ * @param {Buffer} buff
+ *
+ * @return {string} the buffer encoded as a data URL
+ */
+exports.getBufferAsDataUrl = function(buff) {
+  return new Promise(function(resolve, reject) {
+    let blob = exports.getBufferAsBlob(buff);
+    exports.getBlobAsDataUrl(blob)
+    .then(result => {
+      resolve(result);
+    })
+    .catch(err => {
+      reject(err);
+    });
+  });
+};
+
+/**
+ * @param {string} dataUrl
+ *
+ * @return {Promise.<Buffer, Error>}
+ */
+exports.getDataUrlAsBuffer = function(dataUrl) {
+  return new Promise(function(resolve, reject) {
+    let blob = dataUrlToBlob(dataUrl);
+    exports.blobToBuffer(blob)
+    .then(buff => {
+      resolve(buff);
+    })
+    .catch(err => {
+      reject(err);
+    });
+  });
+};
+
+/**
+ * @param {Blob} blob
+ *
+ * @return {Promise} Promise that resolves with a data url string
+ */
+exports.getBlobAsDataUrl = function(blob) {
+  return new Promise(function(resolve) {
+    var reader = new window.FileReader();
+    reader.onloadend = function() {
+      var base64 = reader.result;
+      resolve(base64);
+    };
+    reader.readAsDataURL(blob);
+  });
+};
+
+/**
+ * @param {Blob} blob
+ *
+ * @return {Promise.<Buffer, Error>}
+ */
+exports.blobToBuffer = function(blob) {
+  return new Promise(function(resolve, reject) {
+    blobToBufferLib(blob, function(err, buff) {
+      if (err) {
+        reject(err);
+      } else {
+        resolve(buff);
+      }
+    });
+  });
+};
+
+/**
+ * Convert a data URI to a Buffer.
+ *
+ * @param {string} uri the data URI
+ *
+ * @return {Buffer} 
+ */
+exports.dataToBuff = function(uri) {
+  // We expect something like 'data:text/plain;base64,aGVsbG8='.
+  // Options are discussed here:
+  // https://stackoverflow.com/questions/11335460/how-do-i-parse-a-data-url-in-node
+  return new Buffer(uri.split(',')[1], 'base64');
+};
+
+/**
+ *
+ * Conver a Buffer to a dataUri.
+ *
+ * @param {Buffer} buff
+ *
+ * @return {string} data uri
+ */
+exports.buffToData = function(buff) {
+  let datauri = new Datauri();
+  return datauri.format('application/binary-octet', buff).content;
 };

@@ -5,6 +5,7 @@ var proxyquire = require('proxyquire');
 require('sinon-as-promised');
 
 var api = require('../../../app/scripts/server/server-api');
+let putil = require('../persistence/persistence-util');
 
 function proxyquireApi(proxies) {
   api = proxyquire('../../../app/scripts/server/server-api', proxies);
@@ -55,11 +56,11 @@ test('getAccessUrlForCachedPage outputs correct url', function(t) {
 
 test('getResponseForAllCachedPages rejects if read fails', function(t) {
   var errObj = {msg: 'could not read pages'};
-  var getAllCachedPagesSpy = sinon.stub().rejects(errObj);
+  var getCachedPageSummariesStub = sinon.stub().rejects(errObj);
 
   proxyquireApi({
     '../persistence/datastore': {
-      getAllCachedPages: getAllCachedPagesSpy
+      getCachedPageSummaries: getCachedPageSummariesStub
     }
   });
 
@@ -75,20 +76,21 @@ test('getResponseForAllCachedPages rejects if read fails', function(t) {
 });
 
 test('getResponseForAllCachedPages resolves with pages', function(t) {
-  var pages = ['alpha', 2, 'gamma'];
+  let cpsums = [...putil.genCPSummaries(9)];
   var metadataObj = { foo: 'bar' };
-  var getAllCachedPagesSpy = sinon.stub().resolves(pages);
+  var getSummariesStub = sinon.stub();
+  getSummariesStub.withArgs(0, 50).resolves(cpsums);
 
   proxyquireApi({
     '../persistence/datastore': {
-      getAllCachedPages: getAllCachedPagesSpy
+      getCachedPageSummaries: getSummariesStub
     }
   });
   api.createMetadatObj = sinon.stub().returns(metadataObj);
 
   var expected = {
     metadata: metadataObj,
-    cachedPages: pages
+    cachedPages: cpsums.map(sum => sum.asJSON())
   };
 
   api.getResponseForAllCachedPages()
@@ -145,21 +147,10 @@ test('getResponseForAllPagesDigest rejects if read fails', function(t) {
 });
 
 test('getResponseForAllPagesDigest resolves on success', function(t) {
-  var page1 = {
-    captureDate: '2017-04-03',
-    metadata: {
-      fullUrl: 'http://www.firstpage.com'
-    }
-  };
-  var page2 = {
-    captureDate: '2017-04-04',
-    metadata: {
-      fullUrl: 'http://www.secondpage.com'
-    }
-  };
-  var pages = [ page1, page2];
+  let cpinfos = [...putil.genCPInfos(2)];
+
   var metadataObj = { foo: 'bar' };
-  var getAllCachedPagesSpy = sinon.stub().resolves(pages);
+  var getAllCachedPagesSpy = sinon.stub().resolves(cpinfos);
 
   proxyquireApi({
     '../persistence/datastore': {
@@ -170,16 +161,12 @@ test('getResponseForAllPagesDigest resolves on success', function(t) {
 
   var expected = {
     metadata: metadataObj,
-    digest: [
-      {
-        fullUrl: page1.metadata.fullUrl,
-        captureDate: page1.captureDate
-      },
-      {
-        fullUrl: page2.metadata.fullUrl,
-        captureDate: page2.captureDate
-      }
-    ]
+    digest: cpinfos.map(info => {
+      return {
+        fullUrl: info.captureHref,
+        captureDate: info.captureDate
+      };
+    })
   };
 
   api.getResponseForAllPagesDigest()

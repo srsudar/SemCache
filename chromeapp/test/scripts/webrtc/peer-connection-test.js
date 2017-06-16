@@ -215,3 +215,13 @@ test('getFile rejects if error', function(t) {
     end(t);
   });
 });
+
+test('getCachedPage resolves with CPDisk', function(t) {
+  t.fail('unimplemented');
+  t.end();
+});
+
+test('getCachedPage rejects on error', function(t) {
+  t.fail('unimplemented');
+  t.end();
+});

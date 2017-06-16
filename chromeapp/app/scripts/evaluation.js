@@ -4,17 +4,19 @@
  * Functionality useful to evaluating SemCache.
  */
 
-var json2csv = require('json2csv');
+const json2csv = require('json2csv');
 
-var api = require('./server/server-api');
-var appc = require('./app-controller');
-var bloomFilter = require('./coalescence/bloom-filter');
-var chromep = require('./chrome-apis/chromep');
-var coalObjects = require('./coalescence/objects');
-var datastore = require('./persistence/datastore');
-var ifCommon = require('./peer-interface/common');
-var peerIfMgr = require('./peer-interface/manager');
-var util = require('./util');
+const api = require('./server/server-api');
+const appc = require('./app-controller');
+const bloomFilter = require('./coalescence/bloom-filter');
+const chromep = require('./chrome-apis/chromep');
+const coalObjects = require('./coalescence/objects');
+const ifCommon = require('./peer-interface/common');
+const peerIfMgr = require('./peer-interface/manager');
+const perObjs = require('./persistence/objects');
+const util = require('./util');
+
+const CPInfo = perObjs.CPInfo;
 
 /** The prefix value for timing keys we will use for local storage. */
 var TIMING_KEY_PREFIX = 'timing_';
@@ -70,20 +72,20 @@ exports.generateDummyPages = function(numPages, nonce) {
  * @param {string} nonce the unique string that will be contained in the
  * captureUrl value of the resulting CachedPage
  *
- * @return {CachedPage}
+ * @return {CPInfo}
  */
 exports.generateDummyPage = function(index, nonce) {
-  var captureUrl = 'www.' + nonce + '.' + index + '.com';
-  var captureDate = new Date().toISOString();
-  var path = 'http://somepath';
-  var metadata = { muchMeta: 'so data' };
+  let captureHref = `www.${nonce}.${index}.com`;
+  let captureDate = new Date().toISOString();
+  let filePath = 'http://somepath';
+  let title = 'the title';
 
-  var result = new datastore.CachedPage(
-    captureUrl,
+  let result = new CPInfo({
+    captureHref,
     captureDate,
-    path,
-    metadata
-  );
+    filePath,
+    title
+  });
   return result;
 };
 

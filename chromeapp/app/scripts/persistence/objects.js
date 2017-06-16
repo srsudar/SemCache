@@ -1,5 +1,7 @@
 'use strict';
 
+const util = require('../util');
+
 /**
  * Objects having to do with our persistence layer. CP stands for 'Cached
  * Page'.
@@ -45,6 +47,18 @@ class CPInfo {
     return this.filePath !== null &&
       this.captureHref !== null &&
       this.captureDate !== null;
+  }
+
+  /**
+   * @return {Object}
+   */
+  asJSON() {
+    return {
+      captureHref: this.captureHref,
+      captureDate: this.captureDate,
+      title: this.title,
+      filePath: this.filePath
+    };
   }
 
   /**
@@ -119,7 +133,7 @@ class CPSummary extends CPInfo {
   /**
    * Create a copy of the object as a CPDisk.
    *
-   * @param {??} mhtml
+   * @param {Buffer} mhtml
    *
    * @return {CPDisk}
    */
@@ -135,12 +149,19 @@ class CPSummary extends CPInfo {
     };
     return new CPDisk(params);
   }
+
+  asJSON() {
+    let result = super.asJSON();
+    result.favicon = this.favicon;
+    result.screenshot = this.screenshot;
+    return result;
+  }
 }
 
 class CPDisk extends CPSummary {
   /**
    * @param {Object} params
-   * @param {??} params.mhtml
+   * @param {Buffer} params.mhtml
    */
   constructor({
     captureHref,
@@ -177,6 +198,24 @@ class CPDisk extends CPSummary {
       screenshot: this.screenshot
     };
     return new CPSummary(params);
+  }
+
+  asJSON() {
+    let result = super.asJSON();
+    let dataUrl = util.buffToData(this.mhtml);
+    result.mhtml = dataUrl;
+    return result;
+  }
+
+  /**
+   * @param {string} json
+   *
+   * @return {CPDisk}
+   */
+  static fromJSON(json) {
+    let buff = util.dataToBuff(json.mhtml);
+    json.mhtml = buff;
+    return new CPDisk(json);
   }
 }
 

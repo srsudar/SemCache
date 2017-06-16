@@ -1,11 +1,15 @@
 'use strict';
 
-var base64 = require('base-64');
+const base64 = require('base-64');
 
-var appc = require('../app-controller');
-var chromep = require('../chrome-apis/chromep');
-var coalMgr = require('../coalescence/manager');
-var datastore = require('../persistence/datastore');
+const appc = require('../app-controller');
+const chromep = require('../chrome-apis/chromep');
+const coalMgr = require('../coalescence/manager');
+const datastore = require('../persistence/datastore');
+const persObjs = require('../persistence/objects');
+
+const CPDisk = persObjs.CPDisk;
+
 
 /**
  * ID of the Semcache extension.
@@ -53,11 +57,11 @@ exports.handleExternalMessage = function(message, sender, response) {
     result = true;
   }
   if (message.type === 'write') {
-    var blob = exports.getBlobFromDataUrl(message.params.dataUrl);
-    var captureUrl = message.params.captureUrl;
-    var captureDate = message.params.captureDate;
-    var metadata = message.params.metadata;
-    datastore.addPageToCache(captureUrl, captureDate, blob, metadata)
+    Promise.resolve()
+    .then(() => {
+      let cpdisk = CPDisk.fromJSON(message.params.pageInfo);
+      return datastore.addPageToCache(cpdisk);
+    })
     .then(() => {
       var successMsg = exports.createResponseSuccess(message);
       if (response) {
@@ -168,16 +172,16 @@ exports.queryLocalMachineForUrls = function(message) {
     var urls = message.params.urls;
     var result = {};
     datastore.getAllCachedPages()
-    .then(pages => {
-      pages.forEach(page => {
+    .then(cpinfos => {
+      cpinfos.forEach(cpinfo => {
         urls.forEach(url => {
-          if (exports.urlsMatch(url, page.metadata.fullUrl)) {
+          if (exports.urlsMatch(url, cpinfo.captureHref)) {
             var copies = result[url];
             if (!copies) {
               copies = [];
               result[url] = copies;
             }
-            copies.push(page);
+            copies.push(cpinfo);
           }
         });
       });
