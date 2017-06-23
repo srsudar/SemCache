@@ -25,10 +25,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
     <test-fixture id="my-fixture">
       <template is="dom-template">
         <cached-page-summary
-          capture-url="{{captureUrl}}"
-          capture-date="{{captureDate}}"
-          access-path="{{accessPath}}"
-          metadata="{{metadata}}">
+          cpsummary-json={{cpsummaryJson}} >
           <h2>seed-element</h2>
         </cached-page-summary>
       </template>
@@ -36,19 +33,22 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 
     <script>
       suite('<cached-page-summary>', function() {
-        var myEl;
-        var moment;
+        let myEl;
+        let moment;
 
-        var isoDate = '2016-08-24T19:38:22.016Z';
-        var fullDate = 'Wed Aug 24 2016 12:38:22 GMT-0700 (PDT)';
+        let isoDate = '2016-08-24T19:38:22.016Z';
+        let fullDate = 'Wed Aug 24 2016 12:38:22 GMT-0700 (PDT)';
 
-        var boundData = {
-          captureUrl: 'the capture url',
-          captureDate: isoDate,
-          accessPath: 'access me here',
-          metadata: {
-            title: 'why hello, francis'
+        let cpsummaryJson = {
+            captureHref: 'the capture url',
+            captureDate: isoDate,
+            favicon: 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7faviconDataUrl',
+            screenshot: 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7',
+            title: 'title of page',
           }
+
+        let boundData = {
+          cpsummaryJson: cpsummaryJson
         };
 
         setup(function() {
@@ -57,9 +57,9 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
           myEl.getMoment = sinon.stub().returns(moment);
         });
 
-        test('heading is metadata.title', function() {
+        test('heading is title', function() {
           var heading = myEl.$.title;
-          assert.equal(heading.innerText, boundData.metadata.title);
+          assert.equal(heading.innerText, cpsummaryJson.title);
         });
 
         test('fulldate is formatted', function() {

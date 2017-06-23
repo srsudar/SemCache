@@ -3143,20 +3143,22 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 
     <div class="card">
 
-      <template is="dom-if" if="{{metadata.snapshot}}">
+      <template is="dom-if" if="{{screenshot}}">
         <div id="header">
           <div id="hero-container">
-            <img id="snapshot" class="snapshot" src="{{metadata.snapshot}}" alt="snapshot">
+            <img id="snapshot" class="snapshot" src="{{screenshot}}" alt="snapshot">
           </div>
         </div>
       </template>
 
       <div class="title-row">
-        <img id="favicon" src="{{metadata.favicon}}" alt="favicon">
-        <h1 id="title">{{metadata.title}}</h1>
+        <template is="dom-if" if="{{favicon}}">
+          <img id="favicon" src="{{favicon}}" alt="favicon">
+        </template>
+        <h1 id="title">{{title}}</h1>
       </div>
         
-      <h3 id="full-url">{{metadata.fullUrl}}</h3>
+      <h3 id="full-url">{{captureHref}}</h3>
       <div id="date" class="card-content">{{friendlyDate}}</div>
       <div id="fulldate" class="card-content">{{fullDate}}</div>
       <div id="actioncontainer" class="card-actions">
@@ -4196,7 +4198,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 
 
     <template is="dom-repeat" items="{{pageList}}">
-      <cached-page-summary capture-url="{{item.captureUrl}}" capture-date="{{item.captureDate}}" access-path="{{item.accessPath}}" metadata="{{item.metadata}}">
+      <cached-page-summary cpsummary-json="{{item}}">
       </cached-page-summary>
     </template>
 

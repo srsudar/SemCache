@@ -210,7 +210,7 @@ test('saveTab resolves with response', function(t) {
   tab.title = cpdisk.title;
 
   let getFaviconStub = sinon.stub();
-  getFaviconStub.withArgs(tab.faviconUrl).resolves(cpdisk.favicon);
+  getFaviconStub.withArgs(tab.favIconUrl).resolves(cpdisk.favicon);
   
   let getSnapshotStub = sinon.stub();
   getSnapshotStub.resolves(cpdisk.screenshot);

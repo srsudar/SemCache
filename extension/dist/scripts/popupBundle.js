@@ -47284,7 +47284,7 @@ exports.saveTab = function(from, tab) {
     };
 
     let promises = [
-      exports.getFaviconAsUrl(tab.faviconUrl),
+      exports.getFaviconAsUrl(tab.favIconUrl),
       exports.getSnapshotDataUrl(),
       exports.getMhtmlBuff(tab)
     ];

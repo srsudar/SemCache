@@ -16747,16 +16747,32 @@ Polymer({
       is: 'cached-page-summary',
 
       properties: {
-        /**
-         * `fancy` indicates that the element should don a monocle and tophat,
-         * while checking its pocket watch.
-         */
-        fancy: Boolean,
+        // We will expect only a single object incoming from the parent
+        // element. This will help decouple changes between the two objects.
+        // Instead, each of the properties will be computed and retrieved from
+        // the object.
+        cpsummaryJson: Object,
 
-        captureUrl: String,
-        captureDate: String,
-        accessPath: String,
-        metadata: Object,
+        captureHref: {
+          type: String,
+          computed: 'computeCaptureHref(cpsummaryJson)'
+        },
+        captureDate: {
+          type: String,
+          computed: 'computeCaptureDate(cpsummaryJson)'
+        },
+        title: {
+          type: String,
+          computed: 'computeTitle(cpsummaryJson)'
+        },
+        screenshot: {
+          type: String,
+          computed: 'computeScreenshot(cpsummaryJson)'
+        },
+        favicon: {
+          type: String,
+          computed: 'computeFavicon(cpsummaryJson)'
+        },
         friendlyDate: {
           type: String,
           computed: 'computeFriendlyDate(captureDate)'
@@ -16765,32 +16781,26 @@ Polymer({
           type: String,
           computed: 'computeFullDate(captureDate)'
         },
+      },
 
+      computeCaptureHref: function(cpsummaryJson) {
+        return cpsummaryJson.captureHref;
+      },
 
-        /**
-         * Describes the author of the element, but is really just an excuse to
-         * show off JSDoc annotations.
-         *
-         * @type {{name: string, image: string}}
-         */
-        author: {
-          type: Object,
-          // Use `value` to provide a default value for a property, by setting it
-          // on your element's prototype.
-          //
-          // If you provide a function, as we do here, Polymer will call that
-          // _per element instance_.
-          //
-          // We do that to ensure that each element gets its own copy of the
-          // value, rather than having it shared across all instances (via the
-          // prototype).
-          value: function() {
-            return {
-              name:  'Dimitri Glazkov',
-              image: 'http://addyosmani.com/blog/wp-content/uploads/2013/04/unicorn.jpg',
-            };
-          }
-        },
+      computeCaptureDate: function(cpsummaryJson) {
+        return cpsummaryJson.captureDate;
+      },
+
+      computeTitle: function(cpsummaryJson) {
+        return cpsummaryJson.title;
+      },
+
+      computeScreenshot: function(cpsummaryJson) {
+        return cpsummaryJson.screenshot;
+      },
+
+      computeFavicon: function(cpsummaryJson) {
+        return cpsummaryJson.favicon;
       },
 
       computeFriendlyDate: function(isoString) {
@@ -18150,24 +18160,24 @@ Polymer({
         }
         thisEl.showLoading();
         Promise.resolve()
-          .then(() => {
-            return thisEl.getAppControllerModule();
-          })
-          .then(appController => {
-            appc = appController;
-            return appc.getListFromService(thisEl.serviceName);
-          })
-          .then(pageList => {
-            thisEl.pageList = pageList.cachedPages;
-            thisEl.hideLoading();
-            resolve();
-          })
-          .catch(err => {
-            console.log('refresh went wrong: ' + err);
-            thisEl.hideLoading();
-            thisEl.showError(err);
-            resolve();
-          });
+        .then(() => {
+          return thisEl.getAppControllerModule();
+        })
+        .then(appController => {
+          appc = appController;
+          return appc.getListFromService(thisEl.serviceName);
+        })
+        .then(pageList => {
+          thisEl.pageList = pageList.cachedPages;
+          thisEl.hideLoading();
+          resolve();
+        })
+        .catch(err => {
+          console.log('refresh went wrong: ' + err);
+          thisEl.hideLoading();
+          thisEl.showError(err);
+          resolve();
+        });
       });
     },
 

@@ -67,10 +67,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 
     <template is="dom-repeat" items="{{pageList}}">
       <cached-page-summary
-        capture-url="{{item.captureUrl}}"
-        capture-date="{{item.captureDate}}"
-        access-path="{{item.accessPath}}"
-        metadata="{{item.metadata}}" >
+        cpsummary-json="{{item}}" >
       </cached-page-summary>
     </template>
 
@@ -110,24 +107,24 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
         }
         thisEl.showLoading();
         Promise.resolve()
-          .then(() => {
-            return thisEl.getAppControllerModule();
-          })
-          .then(appController => {
-            appc = appController;
-            return appc.getListFromService(thisEl.serviceName);
-          })
-          .then(pageList => {
-            thisEl.pageList = pageList.cachedPages;
-            thisEl.hideLoading();
-            resolve();
-          })
-          .catch(err => {
-            console.log('refresh went wrong: ' + err);
-            thisEl.hideLoading();
-            thisEl.showError(err);
-            resolve();
-          });
+        .then(() => {
+          return thisEl.getAppControllerModule();
+        })
+        .then(appController => {
+          appc = appController;
+          return appc.getListFromService(thisEl.serviceName);
+        })
+        .then(pageList => {
+          thisEl.pageList = pageList.cachedPages;
+          thisEl.hideLoading();
+          resolve();
+        })
+        .catch(err => {
+          console.log('refresh went wrong: ' + err);
+          thisEl.hideLoading();
+          thisEl.showError(err);
+          resolve();
+        });
       });
     },
 

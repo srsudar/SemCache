@@ -45,16 +45,12 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
           metadata: { version: 0 },
           cachedPages: [
             {
-              captureUrl: 'url0.com',
+              captureHref: 'url0.com',
               captureDate: 'date0',
-              accessPath: 'access/path/for/url0.mhtml',
-              metadata: { mdata: 'mdata0' }
             },
             {
-              captureUrl: 'url1.com',
+              captureHref: 'url1.com',
               captureDate: 'date1',
-              accessPath: 'access/path/for/url1.mhtml',
-              metadata: { mdata: 'mdata1' }
             }
           ]
         };
@@ -83,36 +79,33 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
           myEl.hideLoading = hideLoadingSpy;
 
           myEl.refresh()
-            .then(() => {
-              var ajaxAssertionsComplete = false;
-              var promiseAssertionsComplete = false;
-              
-              assert.equal(showLoadingSpy.callCount, 1);
-              assert.equal(hideLoadingSpy.callCount, 1);
-              
-              flush(function() {
-                // We are using flush to ensure that dom-repeat has had time
-                // to add the cached-page-summary elements. Note that this is
-                // NOT intending to test that dom-repeat works, which could
-                // be a criticism of these assertions. Rather we are using
-                // these assertions to ensure we are configuring the repeat
-                // elements correctly.
-                var repeatedEls = Polymer.dom(myEl.root).querySelectorAll(
-                  'cached-page-summary'
-                );
-                var expectedPages = cacheJson.cachedPages;
-                for (var i = 0; i < expectedPages.length; i++) {
-                  var expected = expectedPages[i];
-                  var actual = repeatedEls[i];
-                  assert.equal(actual.captureUrl, expected.captureUrl);
-                  assert.equal(actual.captureDate, expected.captureDate);
-                  assert.equal(actual.accessPath, expected.accessPath);
-                  assert.deepEqual(actual.metadata, expected.metadata);
-                }
+          .then(() => {
+            assert.equal(showLoadingSpy.callCount, 1);
+            assert.equal(hideLoadingSpy.callCount, 1);
+            
+            flush(function() {
+              // We are using flush to ensure that dom-repeat has had time
+              // to add the cached-page-summary elements. Note that this is
+              // NOT intending to test that dom-repeat works, which could
+              // be a criticism of these assertions. Rather we are using
+              // these assertions to ensure we are configuring the repeat
+              // elements correctly.
+              var repeatedEls = Polymer.dom(myEl.root).querySelectorAll(
+                'cached-page-summary'
+              );
+              var expectedPages = cacheJson.cachedPages;
 
-                done();
-              });
+              // We expect one for each summary.
+              assert.equal(repeatedEls.length, expectedPages.length);
+              for (var i = 0; i < expectedPages.length; i++) {
+                var expected = expectedPages[i];
+                var actual = repeatedEls[i].cpsummaryJson;
+                assert.equal(actual, expected);
+              }
+
+              done();
             });
+          });
         });
 
         test('hides loading if getListFromService rejects', function(done) {
