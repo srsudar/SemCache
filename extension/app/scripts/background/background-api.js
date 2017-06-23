@@ -170,6 +170,7 @@ exports.queryForPageWithCallback = function(params, responseCallback) {
  * @param {function} sendResponse
  */
 exports.onMessageCallback = function(message, sender, sendResponse) {
+  console.log('onMessageCallback in background');
   if (message.type === 'savePageForContentScript') {
     exports.savePageForContentScript(sender.tab)
       .then(response => {

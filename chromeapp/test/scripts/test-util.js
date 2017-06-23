@@ -73,3 +73,13 @@ exports.createCacheObj = function(
   };
   return result;
 };
+
+/**
+ * Generate URLs.
+ */
+exports.genUrls = function*(num) {
+  num = num || 3;
+  for (let i = 0; i < num; i++) {
+    yield `http://foo.com/page_${i}`;
+  }
+};

@@ -64,11 +64,11 @@ exports.handleLoadMessage = function(message, sender, callback) {
   // Wait for document.readyState to be complete.
   // Send the response object.
   util.getOnCompletePromise()
-    .then(() => {
-      var response = exports.createLoadResponseMessage();
-      console.log('Invoking callback with response: ', response);
-      callback(response);
-    });
+  .then(() => {
+    var response = exports.createLoadResponseMessage();
+    console.log('Invoking callback with response: ', response);
+    callback(response);
+  });
 };
 
 exports.createLoadResponseMessage = function() {

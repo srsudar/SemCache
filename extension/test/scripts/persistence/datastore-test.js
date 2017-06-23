@@ -1,11 +1,15 @@
 /*jshint esnext:true*/
 /* globals Promise */
 'use strict';
-var test = require('tape');
-var proxyquire = require('proxyquire');
-var sinon = require('sinon');
+const test = require('tape');
+const proxyquire = require('proxyquire');
+const sinon = require('sinon');
 require('sinon-as-promised');
-var datastore = require('../../../app/scripts/persistence/datastore');
+
+let datastore = require('../../../app/scripts/persistence/datastore');
+
+const util = require('../test-util');
+const putil = require('../../../../chromeapp/test/scripts/persistence/persistence-util');
 
 /**
  * Proxyquire the datastore object with proxies passed as the proxied modules.
@@ -17,11 +21,6 @@ function proxyquireDatastore(proxies) {
   );
 }
 
-/**
- * Manipulating the object directly leads to polluting the require cache. Any
- * test that modifies the required object should call this method to get a
- * fresh version
- */
 function resetDatastore() {
   delete require.cache[
     require.resolve('../../../app/scripts/persistence/datastore')
@@ -29,31 +28,13 @@ function resetDatastore() {
   datastore = require('../../../app/scripts/persistence/datastore');
 }
 
-/**
- * @return {object} an object mimicking Chrome's Tab object
- */
-function createTabObj(id, title, url, faviconUrl) {
-  var result = {
-    tabId: id,
-    url: url,
-    favIconUrl: faviconUrl,
-    title: title
-  };
-  return result;
+function end(t) {
+  if (!t) { throw new Error('You forgot to pass tape'); }
+  t.end();
+  resetDatastore();
 }
 
-/**
- * A wrapper around test() that takes care of resetting anything that tests do
- * to the datastore object (e.g. changes to required modules by proxyquire).
- */
-function testWrapper(description, fn) {
-  test(description, function(t) {
-    fn(t);
-    resetDatastore();
-  });
-}
-
-testWrapper('getDomain works for http://www.google.com', function(t) {
+test('getDomain works for http://www.google.com', function(t) {
   var expected = 'www.google.com';
   var url = 'http://www.google.com';
   var actual = datastore.getDomain(url);
@@ -61,7 +42,7 @@ testWrapper('getDomain works for http://www.google.com', function(t) {
   t.end();
 });
 
-testWrapper('getDomain works for https://t.co', function(t) {
+test('getDomain works for https://t.co', function(t) {
   var expected = 't.co';
   var url = 'https://t.co';
   var actual = datastore.getDomain(url);
@@ -69,7 +50,7 @@ testWrapper('getDomain works for https://t.co', function(t) {
   t.end();
 });
 
-testWrapper('getDomain ignores hash', function(t) {
+test('getDomain ignores hash', function(t) {
   var expected = 'example.com';
   var url = 'http://example.com#foo';
   var actual = datastore.getDomain(url);
@@ -77,7 +58,7 @@ testWrapper('getDomain ignores hash', function(t) {
   t.end();
 });
 
-testWrapper('getDomain ignores query parameters', function(t) {
+test('getDomain ignores query parameters', function(t) {
   var expected = 'foo.bar.com';
   var url = 'https://foo.bar.com?happy=golucky&foo=bar';
   var actual = datastore.getDomain(url);
@@ -85,7 +66,7 @@ testWrapper('getDomain ignores query parameters', function(t) {
   t.end();
 });
 
-testWrapper('getDomain ignores both hash and query parameters', function(t) {
+test('getDomain ignores both hash and query parameters', function(t) {
   var expected = 'example.com';
   var url = 'https://example.com#frame?foo=baz';
   var actual = datastore.getDomain(url);
@@ -93,76 +74,64 @@ testWrapper('getDomain ignores both hash and query parameters', function(t) {
   t.end();
 });
 
-testWrapper('getSnapshotDataUrl resolves with correct result', function(t) {
-  // We are relying on chrome.tabs.captureVisibleTab, so just return the result
-  // of that.
-  var expected = 'data:someUrl';
-  var captureVisibleTabSpy = sinon.stub().resolves(expected);
+test('getSnapshotDataUrl resolves with correct result', function(t) {
+  let expected = 'data:someUrl';
+
+  let options = { quality: datastore.DEFAULT_SNAPSHOT_QUALITY };
+  let captureSpy = sinon.stub();
+  captureSpy.withArgs(null, options).resolves(expected);
 
   proxyquireDatastore({
     '../chrome-apis/tabs': {
-      captureVisibleTab: captureVisibleTabSpy
+      captureVisibleTab: captureSpy
     }
   });
 
   datastore.getSnapshotDataUrl()
-    .then(actual => {
-      t.deepEqual(
-        captureVisibleTabSpy.args[0],
-        [null, { quality: datastore.DEFAULT_SNAPSHOT_QUALITY }]
-      );
-      t.deepEqual(actual, expected);
-      t.end();
-    });
-});
-
-testWrapper('getFaviconAsUrl resolves with data url', function(t) {
-  var url = 'http://g.co/favicon.png';
-  var raw = 'rawfavicon';
-  var expected = 'dataurl';
-  
-  var fetchResponse = {
-    blob: sinon.stub().resolves(raw)
-  };
-  var fetchSpy = sinon.stub().withArgs(url).resolves(fetchResponse);
-  var getBlobAsDataUrlSpy = sinon.stub().withArgs(raw).resolves(expected);
-
-  proxyquireDatastore({
-    '../util/util': {
-      fetch: fetchSpy
-    }
+  .then(actual => {
+    t.deepEqual(actual, expected);
+    end(t);
+  })
+  .catch(err => {
+    t.fail(err);
+    end(t);
   });
-  datastore.getBlobAsDataUrl = getBlobAsDataUrlSpy;
-
-  datastore.getFaviconAsUrl(url)
-    .then(actual => {
-      t.equal(actual, expected);
-      t.deepEqual(fetchSpy.args[0], [url]);
-      t.deepEqual(getBlobAsDataUrlSpy.args[0], [raw]);
-      t.end();
-    });
 });
 
-testWrapper('getFaviconAsUrl empty if rejects', function(t) {
-  var url = 'hello.png';
-  var expected = '';
+test('getFaviconAsUrl resolves with data url', function(t) {
+  let url = 'http://g.co/favicon.png';
+  let blob = 'blob';
+  let expected = 'dataurl';
 
-  var fetchSpy = sinon.stub().withArgs(url).rejects(expected);
+  let fetchStub = sinon.stub();
+  fetchStub.withArgs(url).resolves({
+    blob: sinon.stub().resolves(blob)
+  });
+
+  let getBlobAsDataUrlStub = sinon.stub();
+  getBlobAsDataUrlStub.withArgs(blob).resolves(expected);
 
   proxyquireDatastore({
     '../util/util': {
-      fetch: fetchSpy
+      fetch: fetchStub
+    },
+    '../../../../chromeapp/app/scripts/util': {
+      getBlobAsDataUrl: getBlobAsDataUrlStub
     }
   });
 
   datastore.getFaviconAsUrl(url)
-    .catch(actual => {
-      t.deepEqual(actual, expected);
-      t.end();
-    });
+  .then(actual => {
+    t.deepEqual(actual, expected);
+    end(t);
+  })
+  .catch(err => {
+    t.fail(err);
+    end(t);
+  });
 });
 
-testWrapper('getFaviconAsUrl handles invalid url input', function(t) {
+test('getFaviconAsUrl handles invalid url input', function(t) {
   var invalid1 = datastore.getFaviconAsUrl(undefined);
   var invalid2 = datastore.getFaviconAsUrl('');
 
@@ -173,158 +142,128 @@ testWrapper('getFaviconAsUrl handles invalid url input', function(t) {
     });
 });
 
-testWrapper('createMetadataForWrite no favicon if empty', function(t) {
-  var fullUrl = 'https://www.foo.com#happyDays?happy=maybe';
-  var mimeType = 'multipart/related';
-  var favUrl = 'http://foo.com/tinyIcon.png';
-  var title = 'The Day The Earth Stood Still';
-  var tabId = 'the-tab-id';
+test('getMhtmlBuff resolves with Buffer', function(t) {
+  let tab = util.genTabs(1).next().value;
 
-  var tab = createTabObj(tabId, title, fullUrl, favUrl);
+  let blob = 'blob';
+  let buff = 'buff';
 
-  var snapshotUrl = 'data:snappy';
-  var faviconDataUrl = '';
+  let saveArg = { tabId: tab.id };
+  let saveAsMHTMLStub = sinon.stub();
+  saveAsMHTMLStub.withArgs(saveArg).resolves(blob);
 
-  var expected = {
-    fullUrl: fullUrl,
-    snapshot: snapshotUrl,
-    mimeType: mimeType,
-    title: title,
-  };
+  let blobToBufferStub = sinon.stub();
+  blobToBufferStub.withArgs(blob).resolves(buff);
 
-  datastore.getSnapshotDataUrl = sinon.stub().resolves(snapshotUrl);
-  datastore.getFaviconAsUrl = sinon.stub().withArgs(favUrl)
-    .resolves(faviconDataUrl);
+  proxyquireDatastore({
+    '../chrome-apis/page-capture': {
+      saveAsMHTML: saveAsMHTMLStub
+    },
+    '../../../../chromeapp/app/scripts/util': {
+      blobToBuffer: blobToBufferStub
+    }
+  });
 
-  datastore.createMetadataForWrite(tab)
-    .then(actual => {
-      t.deepEqual(actual, expected);
-      t.end();
-    });
+  datastore.getMhtmlBuff(tab)
+  .then(actual => {
+    t.deepEqual(actual, buff);
+    end(t);
+  })
+  .catch(err => {
+    t.fail(err);
+    end(t);
+  });
 });
 
-testWrapper('createMetadataForWrite correct if all resolve', function(t) {
-  var fullUrl = 'https://www.foo.com#happyDays?happy=maybe';
-  var mimeType = 'multipart/related';
-  var favUrl = 'http://foo.com/tinyIcon.png';
-  var title = 'The Day The Earth Stood Still';
-  var tabId = 'the-tab-id';
+test('getMhtmlBuff rejects', function(t) {
+  let expected = { err: 'no' };
 
-  var tab = createTabObj(tabId, title, fullUrl, favUrl);
+  proxyquireDatastore({
+    '../chrome-apis/page-capture': {
+      saveAsMHTML: sinon.stub().rejects(expected)
+    }
+  });
 
-  var snapshotUrl = 'data:snappy';
-  var faviconDataUrl = 'data:fromIcon';
-
-  var expected = {
-    fullUrl: fullUrl,
-    snapshot: snapshotUrl,
-    mimeType: mimeType,
-    title: title,
-    favicon: faviconDataUrl
-  };
-
-  datastore.getSnapshotDataUrl = sinon.stub().resolves(snapshotUrl);
-  datastore.getFaviconAsUrl = sinon.stub().withArgs(favUrl)
-    .resolves(faviconDataUrl);
-
-  datastore.createMetadataForWrite(tab)
-    .then(actual => {
-      t.deepEqual(actual, expected);
-      t.end();
-    });
+  datastore.getMhtmlBuff({})
+  .then(result => {
+    t.fail(result);
+    end(t);
+  })
+  .catch(actual => {
+    t.deepEqual(actual, expected);
+    end(t);
+  });
 });
 
-testWrapper('createMetadataForWrite correct if snapshot empty', function(t) {
-  // Make sure we fail gracefully if for some reason snapshot doesn't work.
-  var fullUrl = 'https://www.foo.com#happyDays?happy=maybe';
-  var snapshotUrl = '';
-  var mimeType = 'multipart/related';
-  var faviconUrl = 'path/to/favicon';
-  var faviconAsData = 'faviconAsData';
-  var id = 12345;
-  var title = 'fancy msg';
-  var expected = {
-    fullUrl: fullUrl,
-    mimeType: mimeType,
-    favicon: faviconAsData,
-    title: title
-  };
+test('saveTab resolves with response', function(t) {
+  let cpdisk = putil.genCPDisks(1).next().value;
+  // Make a copy b/c the as JSON methods mutate it in place.
+  let cpdiskCopy = putil.genCPDisks(1).next().value;
+  // Clear the  filepath on both.
+  cpdisk.filePath = null;
+  cpdiskCopy.filePath = null;
 
-  var tab = createTabObj(id, title, fullUrl, faviconUrl);
+  let expectedJson = cpdiskCopy.asJSON();
 
-  datastore.getSnapshotDataUrl = sinon.stub().resolves(snapshotUrl);
-  datastore.getFaviconAsUrl = sinon.stub().withArgs(faviconUrl)
-    .resolves(faviconAsData);
+  let tab = util.genTabs(1).next().value;
+  tab.url = cpdisk.captureHref;
+  tab.title = cpdisk.title;
 
-  datastore.createMetadataForWrite(tab)
-    .then(actual => {
-      t.deepEqual(actual, expected);
-      t.end();
-    });
-});
+  let getFaviconStub = sinon.stub();
+  getFaviconStub.withArgs(tab.faviconUrl).resolves(cpdisk.favicon);
+  
+  let getSnapshotStub = sinon.stub();
+  getSnapshotStub.resolves(cpdisk.screenshot);
 
-testWrapper('savePage rejects if messaging.savePage rejects', function(t) {
-  var tab = createTabObj(4, 'any title', 'any url', 'faviconUrl');
-  var blob = 'blobby mcblobface';
-  var dataUrl = 'data url for blobby';
-  var metadata = 'mdata';
+  let getMhtmlStub = sinon.stub();
+  getMhtmlStub.withArgs(tab).resolves(cpdisk.mhtml);
 
-  var errFromDatastore = { msg: 'things gone wrong' };
-  var savePageSpy = sinon.stub().rejects(errFromDatastore);
+  let getDateStub = sinon.stub();
+  getDateStub.returns(cpdisk.captureDate);
+
+  let from = 'popup';
+
+  let expected = 'from savepage';
+
+  let savePageStub = sinon.stub();
+  savePageStub.withArgs(from, expectedJson).resolves(expected);
 
   proxyquireDatastore({
     '../app-bridge/messaging': {
-      savePage: savePageSpy,
-      setTimeout: sinon.stub()
+      savePage: savePageStub
     }
   });
-  datastore.getDateForSave = sinon.stub();
-  datastore.getBlobAsDataUrl = sinon.stub().withArgs(blob).resolves(dataUrl);
-  datastore.createMetadataForWrite = sinon.stub().withArgs(tab)
-    .resolves(metadata);
+  datastore.getFaviconAsUrl = getFaviconStub;
+  datastore.getSnapshotDataUrl = getSnapshotStub;
+  datastore.getMhtmlBuff = getMhtmlStub;
+  datastore.getDateForSave = getDateStub;
 
-  datastore.savePage(tab, blob)
-    .catch(err => {
-      t.deepEqual(err, errFromDatastore);
-      t.end();
-    });
+  datastore.saveTab(from, tab)
+  .then(actual => {
+    t.deepEqual(actual, expected);
+    // Assert this again, even though we have the withArgs() above, so that we
+    // get more informative errors.
+    t.deepEqual(savePageStub.args[0][1], expectedJson);
+    end(t);
+  })
+  .catch(err => {
+    t.fail(err);
+    end(t);
+  });
 });
 
-testWrapper('savePage calls messaging component with params', function(t) {
-  var captureUrl = 'http://www.savemeplz.com';
-  var domain = 'www.savemeplz.com';
-  var captureDate = 'today';
-  var dataUrl = 'data: blob';
-  var metadata = { much: 'fancy', less: 'lame' };
-  var title = 'titular title';
-  var messageFromApp = 'from the app';
+test('saveTab rejects on error', function(t) {
+  let expected = { err: 'dating problems' };
+  
+  datastore.getDateForSave = sinon.stub().throws(expected);
 
-  var blob = 'mhtml blob';
-  var tab = createTabObj(4, title, captureUrl, 'faviconUrl');
-
-  var getBlobAsDataUrlSpy = sinon.stub().withArgs(blob).resolves(dataUrl);
-  var savePageSpy = sinon.stub().resolves(messageFromApp);
-  var createMetadataForWriteSpy = sinon.stub().withArgs(captureUrl)
-    .resolves(metadata);
-
-  proxyquireDatastore({
-    '../app-bridge/messaging': {
-      savePage: savePageSpy,
-      setTimeout: sinon.stub()
-    }
+  datastore.saveTab('popup', {})
+  .then(result => {
+    t.fail(result);
+    end(t);
+  })
+  .catch(actual => {
+    t.deepEqual(actual, expected);
+    end(t);
   });
-  datastore.getBlobAsDataUrl = getBlobAsDataUrlSpy;
-  datastore.getDateForSave = sinon.stub().returns(captureDate);
-  datastore.createMetadataForWrite = createMetadataForWriteSpy;
-
-  datastore.savePage(tab, blob)
-    .then(result => {
-      t.deepEqual(
-        savePageSpy.args[0],
-        [domain, captureDate, dataUrl, metadata]
-      );
-      t.deepEqual(createMetadataForWriteSpy.args[0], [tab]);
-      t.equal(result, messageFromApp);
-      t.end();
-    });
 });

@@ -8,10 +8,12 @@
  * A 'CachedPage' is the fundamental unit.
  */
 
-let database = require('./database');
-let fileSystem = require('./file-system');
-let fsUtil = require('./file-system-util');
-let util = require('../util');
+const database = require('./database');
+const fileSystem = require('./file-system');
+const fsUtil = require('./file-system-util');
+const sanitize = require('sanitize-filename');
+const URI = require('urijs');
+const util = require('../util');
 
 const URL_DATE_DELIMITER = '_';
 
@@ -114,15 +116,17 @@ exports.getAllCachedPages = function() {
 /**
  * Create the file name for the cached page in a way that can later be parsed.
  *
- * @param {string} captureUrl
+ * @param {string} href
  * @param {string} captureDate the toISOString() representation of the date the
  * page was captured
  *
  * @return {string}
  */
-exports.createFileNameForPage = function(captureUrl, captureDate) {
-  return captureUrl +
-    URL_DATE_DELIMITER +
-    captureDate +
-    exports.MHTML_EXTENSION;
+exports.createFileNameForPage = function(href, captureDate) {
+  let uri = URI(href);
+  let raw = [
+    uri.hostname(), URL_DATE_DELIMITER, captureDate, exports.MHTML_EXTENSION
+  ].join('');
+  let result = sanitize(raw);
+  return result;
 };

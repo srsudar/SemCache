@@ -17,9 +17,15 @@
 exports.TYPE_LIST = 'list';
 exports.TYPE_FILE = 'file';
 exports.TYPE_DIGEST = 'digest';
+exports.TYPE_CACHED_PAGE = 'cachedpage';
 
 /** Valid types of request messages. */
-var VALID_TYPES = [exports.TYPE_LIST, exports.TYPE_FILE, exports.TYPE_DIGEST];
+var VALID_TYPES = [
+  exports.TYPE_LIST,
+  exports.TYPE_FILE,
+  exports.TYPE_DIGEST,
+  exports.TYPE_CACHED_PAGE
+];
 
 /**
  * An increasing suffix of numbers to ensure we create unique channel names.
@@ -57,6 +63,19 @@ exports.createListMessage = function() {
  */
 exports.createDigestMessage = function() {
   return exports.createMessage(exports.TYPE_DIGEST);
+};
+
+/**
+ * @param {string} href href of the cached page you are requesting
+ *
+ * @return {Object}
+ */
+exports.createCachedPageMessage = function(href) {
+  let result = exports.createMessage(exports.TYPE_CACHED_PAGE);
+  let request = {};
+  request.href = href;
+  result.request = request;
+  return result;
 };
 
 /**
@@ -115,4 +134,13 @@ exports.isFile = function(msg) {
  */
 exports.isDigest = function(msg) {
   return msg.type && msg.type === exports.TYPE_DIGEST;
+};
+
+/**
+ * @param {Object} msg
+ *
+ * @return {boolean}
+ */
+exports.isCachedPage = function(msg) {
+  return msg.type && msg.type === exports.TYPE_CACHED_PAGE;
 };

@@ -1,11 +1,14 @@
 'use strict';
-var test = require('tape');
-var sinon = require('sinon');
-var proxyquire = require('proxyquire');
+
+const Buffer = require('buffer/').Buffer;
+const test = require('tape');
+const sinon = require('sinon');
+const proxyquire = require('proxyquire');
 require('sinon-as-promised');
 
-var api = require('../../../app/scripts/server/server-api');
-let putil = require('../persistence/persistence-util');
+let api = require('../../../app/scripts/server/server-api');
+const putil = require('../persistence/persistence-util');
+const sutil = require('./util');
 
 function proxyquireApi(proxies) {
   api = proxyquire('../../../app/scripts/server/server-api', proxies);
@@ -77,8 +80,8 @@ test('getResponseForAllCachedPages rejects if read fails', function(t) {
 
 test('getResponseForAllCachedPages resolves with pages', function(t) {
   let cpsums = [...putil.genCPSummaries(9)];
-  var metadataObj = { foo: 'bar' };
-  var getSummariesStub = sinon.stub();
+  let metadataObj = { foo: 'bar' };
+  let getSummariesStub = sinon.stub();
   getSummariesStub.withArgs(0, 50).resolves(cpsums);
 
   proxyquireApi({
@@ -88,14 +91,15 @@ test('getResponseForAllCachedPages resolves with pages', function(t) {
   });
   api.createMetadatObj = sinon.stub().returns(metadataObj);
 
-  var expected = {
+  let expectedJson = {
     metadata: metadataObj,
-    cachedPages: cpsums.map(sum => sum.asJSON())
+    cachedPages: cpsums
   };
+  let expectedBuff = Buffer.from(JSON.stringify(expectedJson));
 
   api.getResponseForAllCachedPages()
   .then(actual => {
-    t.deepEqual(actual, expected);
+    t.deepEqual(actual, expectedBuff);
     end(t);
   })
   .catch(err => {
@@ -149,8 +153,8 @@ test('getResponseForAllPagesDigest rejects if read fails', function(t) {
 test('getResponseForAllPagesDigest resolves on success', function(t) {
   let cpinfos = [...putil.genCPInfos(2)];
 
-  var metadataObj = { foo: 'bar' };
-  var getAllCachedPagesSpy = sinon.stub().resolves(cpinfos);
+  let metadataObj = { foo: 'bar' };
+  let getAllCachedPagesSpy = sinon.stub().resolves(cpinfos);
 
   proxyquireApi({
     '../persistence/datastore': {
@@ -159,7 +163,7 @@ test('getResponseForAllPagesDigest resolves on success', function(t) {
   });
   api.createMetadatObj = sinon.stub().returns(metadataObj);
 
-  var expected = {
+  let expectedJson = {
     metadata: metadataObj,
     digest: cpinfos.map(info => {
       return {
@@ -168,8 +172,42 @@ test('getResponseForAllPagesDigest resolves on success', function(t) {
       };
     })
   };
+  let expectedBuff = Buffer.from(JSON.stringify(expectedJson));
 
   api.getResponseForAllPagesDigest()
+  .then(actual => {
+    t.deepEqual(actual, expectedBuff);
+    end(t);
+  })
+  .catch(err => {
+    t.fail(err);
+    end(t);
+  });
+});
+
+test('getResponseForCachedPage resolves on success', function(t) {
+  let href = 'https://hello';
+  let params = { href };
+  let metadataObj = { meta: 'oh my ' };
+
+  let disks = [...putil.genCPDisks(2)];
+
+  let disk1 = disks[0];
+  let disk2 = disks[1];
+
+  let expected = disk1.asBuffer();
+
+  let getSpy = sinon.stub();
+  getSpy.withArgs(href).resolves([ disk1, disk2 ]);
+
+  proxyquireApi({
+    '../persistence/datastore': {
+      getCPDiskForHrefs: getSpy
+    }
+  });
+  api.createMetadatObj = sinon.stub().returns(metadataObj);
+
+  api.getResponseForCachedPage(params)
   .then(actual => {
     t.deepEqual(actual, expected);
     end(t);
@@ -178,4 +216,71 @@ test('getResponseForAllPagesDigest resolves on success', function(t) {
     t.fail(err);
     end(t);
   });
+});
+
+test('getResponseForCachedPage resolves null if not found', function(t) {
+  proxyquireApi({
+    '../persistence/datastore': {
+      getCPDiskForHrefs: sinon.stub().resolves([])
+    }
+  });
+
+  api.getResponseForCachedPage({})
+  .then(actual => {
+    t.deepEqual(actual, null);
+    end(t);
+  })
+  .catch(err => {
+    t.fail(err);
+    end(t);
+  });
+});
+
+test('getResponseForCachedPage rejects on err', function(t) {
+  let expected = { err: 'ohno' };
+  proxyquireApi({
+    '../persistence/datastore': {
+      getCPDiskForHrefs: sinon.stub().rejects(expected)
+    }
+  });
+
+  api.getResponseForCachedPage({})
+  .then(res => {
+    t.fail(res);
+    end(t);
+  })
+  .catch(actual => {
+    t.deepEqual(actual, expected);
+    end(t);
+  });
+});
+
+test('parseResponseForList correct', function(t) {
+  let expected = sutil.getListResponseObj();
+  let response = sutil.getListResponseBuff();
+  
+  let actual = api.parseResponseForList(response);
+
+  t.deepEqual(actual, expected);
+  end(t);
+});
+
+test('parseResponseForCachedPage correct if non-null', function(t) {
+  let expected = sutil.getCachedPageResponseObj();
+  let response = sutil.getCachedPageResponseBuff();
+
+  let actual = api.parseResponseForCachedPage(response);
+
+  t.deepEqual(actual, expected);
+  end(t);
+});
+
+test('parseResponseForDigest correct', function(t) {
+  let expected = sutil.getDigestResponseJson();
+  let response = sutil.getDigestResponseBuff();
+
+  let actual = api.parseResponseForDigest(response);
+
+  t.deepEqual(actual, expected);
+  end(t);
 });

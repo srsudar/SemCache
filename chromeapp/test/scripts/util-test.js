@@ -31,6 +31,14 @@ function end(t) {
   resetUtil();
 }
 
+function helperAssertCanReclaim(t, obj) {
+  let buff = util.objToBuff(obj);
+  let reclaimed = util.buffToObj(buff);
+
+  t.deepEqual(reclaimed, obj);
+  end(t);
+}
+
 test('fetchJson invokes promises and resolves', function(t) {
   var url = 'http://ip.jsontest.com';
 
@@ -216,4 +224,41 @@ test('buffToData correct', function(t) {
 
   t.deepEqual(actual, expected);
   end(t);
+});
+
+test('objToBuff/bufftoObj correct for all JSON', function(t) {
+  let obj = {
+    hello: 'hey!',
+    age: 48
+  };
+
+  helperAssertCanReclaim(t, obj);
+});
+
+test('objToBuff/bufftoObj correct for all Buffers', function(t) {
+  let obj = {
+    buff1: Buffer.from('i am buff 1'),
+    buff2: Buffer.from('you dont know me')
+  };
+
+  helperAssertCanReclaim(t, obj);
+});
+
+test('objToBuff/bufftoObj correct for single Buffer', function(t) {
+  let obj = {
+    buff1: Buffer.from('heyyyy'),
+  };
+
+  helperAssertCanReclaim(t, obj);
+});
+
+test('objToBuff/bufftoObj correct for mixed properties', function(t) {
+  let obj = {
+    name: 'sam',
+    age: 999,
+    buff1: Buffer.from('number 1'),
+    buff2: Buffer.from('do you even lift')
+  };
+
+  helperAssertCanReclaim(t, obj);
 });

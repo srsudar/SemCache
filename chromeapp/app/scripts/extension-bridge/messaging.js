@@ -5,6 +5,7 @@ const base64 = require('base-64');
 const appc = require('../app-controller');
 const chromep = require('../chrome-apis/chromep');
 const coalMgr = require('../coalescence/manager');
+const common = require('./common-messaging');
 const datastore = require('../persistence/datastore');
 const persObjs = require('../persistence/objects');
 
@@ -28,17 +29,7 @@ exports.sendMessageToExtension = function(message) {
 /**
  * Function to handle messages coming from the SemCache extension.
  *
- * @param {Object} message message sent by the extension. Expected to have the
- * following format:
- * {
- *   type: 'write'
- *   params: {
- *     captureUrl: 'url',
- *     captureDate: 'iso',
- *     dataUrl: 'string',
- *     metadata: {}
- *   }
- * }
+ * @param {Object} message message sent by the extension.
  * @param {MessageSender} sender
  * @param {function} response
  */
@@ -56,66 +47,70 @@ exports.handleExternalMessage = function(message, sender, response) {
     // inform Chrome to keep the channel open for us.
     result = true;
   }
-  if (message.type === 'write') {
+  if (message.type === common.initiatorTypes.addPageToCache) {
     Promise.resolve()
     .then(() => {
-      let cpdisk = CPDisk.fromJSON(message.params.pageInfo);
+      let cpdisk = CPDisk.fromJSON(message.params.cachedPage);
       return datastore.addPageToCache(cpdisk);
     })
     .then(() => {
-      var successMsg = exports.createResponseSuccess(message);
+      let successMsg = common.createAddPageResponse();
       if (response) {
         response(successMsg);
       }
     })
     .catch(err => {
-      var errorMsg = exports.createResponseError(message, err);
+      let errorMsg = common.createResponseError(
+        common.responderTypes.addPageToCache, {}, err
+      );
       if (response) {
         response(errorMsg);
       }
     });
-  } else if (message.type === 'local-query') {
+  } else if (message.type === common.initiatorTypes.localQuery) {
     exports.queryLocalMachineForUrls(message)
     .then(result => {
-      var successMsg = exports.createResponseSuccess(message);
-      successMsg.response = result;
+      let successMsg = common.createLocalQueryResponse({}, result);
       if (response) {
         response(successMsg);
       }
     })
     .catch(err => {
-      var errorMsg = exports.createResponseError(message, err);
+      var errorMsg = common.createResponseError(
+        common.responderTypes.localQuery, {}, err
+      );
       if (response) {
         response(errorMsg);
       }
     });
-  } else if (message.type === 'open') {
+  } else if (message.type === common.initiatorTypes.openPage) {
     exports.handleOpenRequest(message)
     .then(result => {
-      var successMsg = exports.createResponseSuccess(message);
-      successMsg.response = result;
+      let successMsg = common.createOpenResponse({}, result);
       if (response) {
         response(successMsg);
       }
     })
     .catch(err => {
-      var errorMsg = exports.createResponseError(message, err);
+      let errorMsg = common.createResponseError(
+        common.responderTypes.openPage, {}, err
+      );
       if (response) {
         response(errorMsg);
       }
     });
-  } else if (message.type === 'network-query') {
-    console.log('received network-query: ', message);
+  } else if (message.type === common.initiatorTypes.networkQuery) {
     exports.queryLocalNetworkForUrls(message)
     .then(result => {
-      var successMsg = exports.createResponseSuccess(message);
-      successMsg.response = result;
+      let successMsg = common.createNetworkQueryResponse({}, result);
       if (response) {
         response(successMsg);
       }
     })
     .catch(err => {
-      var errorMsg = exports.createResponseError(message, err);
+      let errorMsg = common.createResponseError(
+        common.responderTypes.networkQuery, {}, err
+      );
       if (response) {
         response(errorMsg);
       }
@@ -161,7 +156,7 @@ exports.handleOpenRequest = function(message) {
  * @return {Promise.<Object, Error>} the result of the query. We expect an
  * object like:
  * {
- *   url: [ pageinfo, ... ]
+ *   url: [ CPInfo.asJSON(), ... ]
  * }
  * This should mirror the API of queryLocalNetworkForUrls.
  */
@@ -247,36 +242,6 @@ exports.urlsMatch = function(url, savedUrl) {
 
   // This isn't a perfect way to do this, but it will work in most usual cases.
   return url.endsWith(savedUrl);
-};
-
-/**
- * Create a message to send to the extension upon a successful action.
- *
- * @param {Object} message the original message that generated the request
- *
- * @return {Object} a response object. Contains at a result key, indicating
- * 'success', a type key, indicating the type of the original message, and an
- * optional params key with additional values.
- */
-exports.createResponseSuccess = function(message) {
-  return {
-    type: message.type,
-    result: 'success',
-  };
-};
-
-/**
- * Create a message to send to the extension upon an error.
- *
- * @param {Object} message the original message that generated the request
- * @param {any} err the error info to send to the extension
- */
-exports.createResponseError = function(message, err) {
-  return {
-    type: message.type,
-    result: 'error',
-    err: err
-  };
 };
 
 /**

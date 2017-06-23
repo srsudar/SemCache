@@ -97,7 +97,6 @@ class BufferedChannelServer extends commonChannel.BaseServer {
 
     while (!item.done) {
       if (this.channel.bufferedAmount > exports.BUFFER_FULL_THRESHOLD) {
-        console.log('TRIGGERED');
         // Save our pending item, which we can't send yet.
         this._pendingItem = item;
         this._boundBufferedAmountLowListener =

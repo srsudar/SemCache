@@ -1,11 +1,13 @@
 'use strict';
-var Buffer = require('buffer/').Buffer;
-var test = require('tape');
-var sinon = require('sinon');
-var proxyquire = require('proxyquire');
+
+const Buffer = require('buffer/').Buffer;
+const test = require('tape');
+const sinon = require('sinon');
+const proxyquire = require('proxyquire');
 require('sinon-as-promised');
 
-var responder = require('../../../app/scripts/webrtc/responder');
+let responder = require('../../../app/scripts/webrtc/responder');
+const sutil = require('../server/util');
 
 /**
  * Manipulating the object directly leads to polluting the require cache. Any
@@ -31,27 +33,22 @@ function end(t) {
 
 
 test('onList calls sendBuffer with binary contents', function(t) {
-  var json = { page1: 'nyt', page2: 'wapo' };
-  var channel = 'i am the channel';
-  var buffer = Buffer.from(JSON.stringify(json));
-  var getResponseForAllCachedPagesSpy = sinon.stub().resolves(json);
-
-  var ccServerSpy = sinon.stub();
-  ccServerSpy.sendBuffer = sinon.stub();
-
-  var createChannelServerSpy = sinon.stub().withArgs(channel)
-    .returns(ccServerSpy);
+  let apiResponse = sutil.getListResponseBuff();
+  let channel = 'i am the channel';
+  let getResponseForAllCachedPagesSpy = sinon.stub().resolves(apiResponse);
+  let sendBuffSpy = sinon.stub();
+  sendBuffSpy.withArgs(channel, apiResponse).resolves();
 
   proxyquireResponder({
     '../server/server-api': {
       getResponseForAllCachedPages: getResponseForAllCachedPagesSpy
     }
   });
-  responder.createChannelServer = createChannelServerSpy;
+  responder.sendBufferOverChannel = sendBuffSpy;
 
   responder.onList(channel)
   .then(() => {
-    t.deepEqual(ccServerSpy.sendBuffer.args[0], [buffer]);
+    t.deepEqual(sendBuffSpy.args[0], [channel, apiResponse]);
     end(t);
   })
   .catch(err => {
@@ -162,66 +159,90 @@ test('onFile rejects with error', function(t) {
 });
 
 test('onDataChannelMessageHandler routes correctly', function(t) {
-  var channel = { testType: 'channel' };
-  var msg = { foo: 'msg' };
-  var msgBin = Buffer.from(JSON.stringify(msg));
+  let channel = { testType: 'channel' };
+  let msg = { foo: 'msg' };
+  let msgBin = Buffer.from(JSON.stringify(msg));
 
-  var event = { data: msgBin };
+  let event = { data: msgBin };
 
-  var isListSpy = sinon.stub();
-  var isFileSpy = sinon.stub();
-  var isDigestSpy = sinon.stub();
+  let isListSpy = sinon.stub();
+  let isFileSpy = sinon.stub();
+  let isDigestSpy = sinon.stub();
+  let isCachedPageSpy = sinon.stub();
  
-  var onListSpy = sinon.stub();
-  var onFileSpy = sinon.stub();
-  var onDigestSpy = sinon.stub();
+  let onListSpy = sinon.stub();
+  let onFileSpy = sinon.stub();
+  let onDigestSpy = sinon.stub();
+  let onCachedPageSpy = sinon.stub();
 
   proxyquireResponder({
     './message': {
       isList: isListSpy,
       isFile: isFileSpy,
-      isDigest: isDigestSpy
+      isDigest: isDigestSpy,
+      isCachedPage: isCachedPageSpy
     }
   });
   responder.onList = onListSpy;
   responder.onFile = onFileSpy;
   responder.onDigest = onDigestSpy;
+  responder.onCachedPage = onCachedPageSpy;
 
   // First a list message
   isListSpy.returns(true);
   isFileSpy.returns(false);
   isDigestSpy.returns(false);
+  isCachedPageSpy.returns(false);
 
   responder.onDataChannelMessageHandler(channel, event);
 
   t.equal(onListSpy.callCount, 1);
   t.equal(onFileSpy.callCount, 0);
   t.equal(onDigestSpy.callCount, 0);
+  t.equal(onCachedPageSpy.callCount, 0);
   t.deepEqual(onListSpy.args[0], [channel, msg]);
 
   // Now a file message
   isListSpy.returns(false);
   isFileSpy.returns(true);
   isDigestSpy.returns(false);
+  isCachedPageSpy.returns(false);
 
   responder.onDataChannelMessageHandler(channel, event);
 
   t.equal(onListSpy.callCount, 1);
   t.equal(onFileSpy.callCount, 1);
   t.equal(onDigestSpy.callCount, 0);
+  t.equal(onCachedPageSpy.callCount, 0);
   t.deepEqual(onFileSpy.args[0], [channel, msg]);
 
   // Now a digest message
   isListSpy.returns(false);
   isFileSpy.returns(false);
   isDigestSpy.returns(true);
+  isCachedPageSpy.returns(false);
 
   responder.onDataChannelMessageHandler(channel, event);
 
   t.equal(onListSpy.callCount, 1);
   t.equal(onFileSpy.callCount, 1);
   t.equal(onDigestSpy.callCount, 1);
+  t.equal(onCachedPageSpy.callCount, 0);
   t.deepEqual(onDigestSpy.args[0], [channel, msg]);
+
+  // Now a cached page
+  isListSpy.returns(false);
+  isFileSpy.returns(false);
+  isDigestSpy.returns(false);
+  isCachedPageSpy.returns(true);
+
+  responder.onDataChannelMessageHandler(channel, event);
+
+  t.equal(onListSpy.callCount, 1);
+  t.equal(onFileSpy.callCount, 1);
+  t.equal(onDigestSpy.callCount, 1);
+  t.equal(onCachedPageSpy.callCount, 1);
+  t.deepEqual(onCachedPageSpy.args[0], [channel, msg]);
 
   end(t);
 });
@@ -244,27 +265,22 @@ test('onDataChannelHandler adds onmessage handler to channels', function(t) {
 });
 
 test('onDigest calls sendBuffer with binary contents', function(t) {
-  var json = { page1: 'woot', page2: 'boo' };
-  var channel = 'i am the channel';
-  var buffer = Buffer.from(JSON.stringify(json));
-  var getResponseForAllPagesDigestSpy = sinon.stub().resolves(json);
-
-  var serverSpy = sinon.stub();
-  serverSpy.sendBuffer = sinon.stub();
-
-  var createChannelServerSpy = sinon.stub().withArgs(channel)
-    .returns(serverSpy);
+  let apiResponse = sutil.getDigestResponseBuff();
+  let channel = 'i am the channel';
+  let getResponseForAllPagesDigestSpy = sinon.stub().resolves(apiResponse);
+  let sendBufferSpy = sinon.stub();
+  sendBufferSpy.withArgs(channel, apiResponse).resolves();
 
   proxyquireResponder({
     '../server/server-api': {
       getResponseForAllPagesDigest: getResponseForAllPagesDigestSpy
     }
   });
-  responder.createChannelServer = createChannelServerSpy;
+  responder.sendBufferOverChannel = sendBufferSpy;
 
   responder.onDigest(channel)
   .then(() => {
-    t.deepEqual(serverSpy.sendBuffer.args[0], [buffer]);
+    t.deepEqual(sendBufferSpy.args[0], [channel, apiResponse]);
     end(t);
   })
   .catch(err => {
@@ -287,6 +303,98 @@ test('onDigest rejects with error', function(t) {
   responder.onDigest(channel)
   .then(res => {
     t.fail(res);
+    end(t);
+  })
+  .catch(actual => {
+    t.deepEqual(actual, expected);
+    end(t);
+  });
+});
+
+test('onCachedPage resolves on success', function(t) {
+  let href = 'heyo';
+  let channelStub = { iam: 'a channel' };
+  let msg = {
+    request: { href: href }
+  };
+  let apiResponse = sutil.getCachedPageResponseBuff();
+
+  let getResponseSpy = sinon.stub();
+  getResponseSpy.withArgs(msg.request).resolves(apiResponse);
+  let sendBufferSpy = sinon.stub().resolves();
+
+  proxyquireResponder({
+    '../server/server-api': {
+      getResponseForCachedPage: getResponseSpy
+    }
+  });
+  responder.sendBufferOverChannel = sendBufferSpy;
+
+  responder.onCachedPage(channelStub, msg)
+  .then(actual => {
+    t.deepEqual(actual, undefined);
+    t.deepEqual(sendBufferSpy.args[0], [channelStub, apiResponse]);
+    end(t);
+  })
+  .catch(err => {
+    t.fail(err);
+    end(t);
+  });
+});
+
+test('onCachedPage rejects on error', function(t) {
+  let expected = { err: 'uh oh' };
+  let getResponseStub = sinon.stub();
+  getResponseStub.rejects(expected);
+
+  proxyquireResponder({
+    '../server/server-api': {
+      getResponseForCachedPage: getResponseStub
+    }
+  });
+
+  responder.onCachedPage(null, {})
+  .then(res => {
+    t.fail(res);
+    end(t);
+  })
+  .catch(actual => {
+    t.deepEqual(actual, expected);
+    end(t);
+  });
+});
+
+test('sendBufferOverChannel correct on success', function(t) {
+  let channel = { iam: 'channel' };
+  let buff = Buffer.from('yo');
+
+  let sendBufferStub = sinon.stub();
+  let serverStub = {
+    sendBuffer: sendBufferStub
+  };
+  let createChannelServerSpy = sinon.stub();
+  createChannelServerSpy.withArgs(channel).returns(serverStub);
+
+  responder.createChannelServer = createChannelServerSpy;
+
+  responder.sendBufferOverChannel(channel, buff)
+  .then(() => {
+    t.deepEqual(sendBufferStub.args[0], [buff]);
+    end(t);
+  })
+  .catch(err => {
+    t.fail(err);
+    end(t);
+  });
+});
+
+test('sendBufferOverChannel rejects on error', function(t) {
+  let expected = { err: 'wrong' };
+  responder.createChannelServer = sinon.stub().throws(expected);
+
+  responder.sendBufferOverChannel()
+  .then(result => {
+    t.fail(result);
     end(t);
   })
   .catch(actual => {

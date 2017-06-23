@@ -1,7 +1,9 @@
 /* globals Promise */
 'use strict';
 
-var Buffer = require('buffer/').Buffer;
+const Buffer = require('buffer/').Buffer;
+
+const util = require('../util');
 
 /**
  * General file system operations on top of the web APIs.
@@ -49,13 +51,14 @@ exports.listEntries = function(dirEntry) {
 
 /**
  * @param {FileEntry} fileEntry the file that will be written to
- * @param {Blob} fileBlob the content to write
+ * @param {Buffer} buff the content to write
  *
  * @return {Promise.<undefined, Error>} Promise that resolves when the write is
  * complete or rejects with an error
  */
-exports.writeToFile = function(fileEntry, fileBlob) {
+exports.writeToFile = function(fileEntry, buff) {
   return new Promise(function(resolve, reject) {
+    let blob = util.getBufferAsBlob(buff);
     fileEntry.createWriter(function(fileWriter) {
 
       fileWriter.onwriteend = function() {
@@ -66,7 +69,7 @@ exports.writeToFile = function(fileEntry, fileBlob) {
         reject(err);
       };
 
-      fileWriter.write(fileBlob);
+      fileWriter.write(blob);
     });
   });
 };

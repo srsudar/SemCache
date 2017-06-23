@@ -4,9 +4,10 @@ var sinon = require('sinon');
 var proxyquire = require('proxyquire');
 require('sinon-as-promised');
 
-var messaging = require('../../../app/scripts/extension-bridge/messaging');
+let messaging = require('../../../app/scripts/extension-bridge/messaging');
+const common = require('../../../app/scripts/extension-bridge/common-messaging');
 
-var CPDisk = require('../../../app/scripts/persistence/objects').CPDisk;
+let mutil = require('./test-util');
 let putil = require('../persistence/persistence-util');
 
 /**
@@ -34,44 +35,6 @@ function getSender() {
 }
 
 /**
- * Get a dummy value for a message to handle from the extension. Includes
- * properties such that handleExternalMessage() looks for.
- */
-function getDummyWriteMessage() {
-  return {
-    type: 'write',
-    params: {
-      pageInfo: {
-        captureHref: 'http://example.com',
-        captureDate: '2017-06-13',
-        title: 'Page title',
-        favicon: 'favicon',
-        screenshot: 'screenshot',
-        mhtml: 'data:text/plain;base64,aGVsbG8='
-      }
-    }
-  };
-}
-
-function getDummyLocalQueryMessage(urls) {
-  return {
-    type: 'local-query',
-    params: {
-      urls: urls
-    }
-  };
-}
-
-function getDummyNetworkQueryMessage(urls) {
-  return {
-    type: 'network-query',
-    params: {
-      urls: urls
-    }
-  };
-}
-
-/**
  * Proxyquire the messaging module with proxies set as the proxied modules.
  */
 function proxyquireMessaging(proxies, runtimeProxies) {
@@ -91,7 +54,7 @@ function end(t) {
 }
 
 test('handleExternalMessage returns false if response undefined', function(t) {
-  var message = getDummyWriteMessage();
+  var message = mutil.getAddPageMessage();
   var sender = getSender();
 
   proxyquireMessaging({
@@ -108,66 +71,62 @@ test('handleExternalMessage returns false if response undefined', function(t) {
   resetMessaging();
 });
 
-test('handleExternalMessage invokes response on success', function(t) {
-  var message = getDummyWriteMessage();
-  var sender = getSender();
-  var expected = { hi: 'bye' };
-
-  proxyquireMessaging({
-    '../persistence/datastore': {
-      addPageToCache: sinon.stub().resolves()
-    }
-  });
-
-  var createResponseSuccessSpy = sinon.stub().withArgs(expected)
-    .returns(expected);
-  messaging.createResponseSuccess = createResponseSuccessSpy;
-  messaging.getBlobFromDataUrl = sinon.stub();
-
-  var returnValue;
-
-  var callbackFromExtension = function(actual) {
-    t.deepEqual(actual, expected);
-    t.true(returnValue);
-    t.end();
-    resetMessaging();
-  };
-
-  returnValue = messaging.handleExternalMessage(
-    message, sender, callbackFromExtension
-  );
-});
-
-test('handleExternalMessage invokes response on error', function(t) {
-  var message = getDummyWriteMessage();
-  var sender = getSender();
-  var errFromDatastore = { msg: 'much wrong' };
-
-  proxyquireMessaging({
-    '../persistence/datastore': {
-      addPageToCache: sinon.stub().rejects(errFromDatastore)
-    }
-  });
-  let expected = messaging.createResponseError(message, errFromDatastore);
-
-  // This will be set below but not checked until our callback is invoked.
-  var returnValue;
-
-  var callbackFromExtension = function(actual) {
-    t.deepEqual(actual, expected);
-    t.true(returnValue);
-    t.end();
-    resetMessaging();
-  };
-
-  returnValue = messaging.handleExternalMessage(
-    message, sender, callbackFromExtension
-  );
-});
+// test.only('handleExternalMessage invokes response on success', function(t) {
+//   let { initiator: i, responder: r } = mutil.getAddPageMsgs();
+//   let cpdisk = putil.genCPDisks(1).next().value;
+//   let sender = getSender();
+//
+//   proxyquireMessaging({
+//     '../persistence/datastore': {
+//       addPageToCache: sinon.stub().resolves()
+//     }
+//   });
+//
+//   var returnValue;
+//
+//   var callbackFromExtension = function(actual) {
+//     t.deepEqual(actual, expected);
+//     t.true(returnValue);
+//     t.end();
+//     resetMessaging();
+//   };
+//
+//   returnValue = messaging.handleExternalMessage(
+//     message, sender, callbackFromExtension
+//   );
+// });
+//
+// test('handleExternalMessage invokes response on error', function(t) {
+//   var message = getDummyWriteMessage();
+//   var sender = getSender();
+//   var errFromDatastore = { msg: 'much wrong' };
+//
+//   proxyquireMessaging({
+//     '../persistence/datastore': {
+//       addPageToCache: sinon.stub().rejects(errFromDatastore)
+//     }
+//   });
+//   let expected = messaging.createResponseError(message, errFromDatastore);
+//
+//   // This will be set below but not checked until our callback is invoked.
+//   var returnValue;
+//
+//   var callbackFromExtension = function(actual) {
+//     t.deepEqual(actual, expected);
+//     t.true(returnValue);
+//     t.end();
+//     resetMessaging();
+//   };
+//
+//   returnValue = messaging.handleExternalMessage(
+//     message, sender, callbackFromExtension
+//   );
+// });
 
 test('handleExternalMessage adds page to cache for write', function(t) {
-  let message = getDummyWriteMessage();
-  let cpdisk = CPDisk.fromJSON(getDummyWriteMessage().params.pageInfo);
+  let { i: initiator, r: responder } = mutil.getAddPageMsgs();
+  let sender = getSender();
+  let cpdisk = putil.genCPDisks(1).next().value;
 
   var addPageToCacheSpy = sinon.stub();
   addPageToCacheSpy.withArgs(cpdisk).resolves();
@@ -177,106 +136,164 @@ test('handleExternalMessage adds page to cache for write', function(t) {
       addPageToCache: addPageToCacheSpy
     }
   });
-  let expectedResponse = messaging.createResponseSuccess(message);
 
-  var sender = getSender();
-  messaging.handleExternalMessage(message, sender, function(actual) {
-    t.deepEqual(actual, expectedResponse);
-    t.deepEqual(addPageToCacheSpy.args[0], [cpdisk]);
+  messaging.handleExternalMessage(initiator, sender, function(actual) {
+    t.deepEqual(actual, responder);
+    end(t);
+  });
+});
+
+test('handleExternalMessage rejects with error on write', function(t) {
+  let { i: initiator } = mutil.getAddPageMsgs();
+  let sender = getSender();
+  let error = 'went wrong';
+  let expected = common.createResponseError(
+    common.responderTypes.addPageToCache, {}, error
+  );
+
+  let addPageToCacheSpy = sinon.stub();
+  addPageToCacheSpy.rejects(error);
+
+  proxyquireMessaging({
+    '../persistence/datastore': {
+      addPageToCache: addPageToCacheSpy
+    }
+  });
+
+  messaging.handleExternalMessage(initiator, sender, function(actual) {
+    t.deepEqual(actual, expected);
     end(t);
   });
 });
 
 test('handleExternalMessage returns result of local query', function(t) {
-  var urls = ['http://tyrion.com'];
-  var queryMessage = getDummyLocalQueryMessage(urls);
-
-  var cachedPage = {
-    captureUrl: urls,
-    accessPath: 'comeFetchMeBro'
-  };
+  let { i: initiator, r: responder } = mutil.getLocalQueryMsgs();
   
-  var expected = {
-    type: 'local-query',
-    result: 'success',
-    response: cachedPage
+  let queryStub = sinon.stub();
+  queryStub.withArgs(initiator).resolves(responder.body);
+  messaging.queryLocalMachineForUrls = queryStub;
+
+  var returnValue;
+
+  var callbackFromExtension = function(actual) {
+    t.deepEqual(actual, responder);
+    t.true(returnValue);
+    end(t);
   };
 
-  messaging.queryLocalMachineForUrls = sinon.stub().withArgs(urls)
-    .resolves(cachedPage);
+  returnValue = messaging.handleExternalMessage(
+    initiator, getSender(), callbackFromExtension
+  );
+});
+
+test('handleExternalMessage rejects on local query error', function(t) {
+  let { i: initiator } = mutil.getLocalQueryMsgs();
+  let error = 'uhoh';
+  let expected = common.createResponseError(
+    common.responderTypes.localQuery, {}, error
+  );
+  
+  messaging.queryLocalMachineForUrls = sinon.stub().rejects(error);
 
   var returnValue;
 
   var callbackFromExtension = function(actual) {
     t.deepEqual(actual, expected);
-    t.deepEqual(messaging.queryLocalMachineForUrls.args[0], [queryMessage]);
     t.true(returnValue);
     end(t);
   };
 
   returnValue = messaging.handleExternalMessage(
-    queryMessage, getSender(), callbackFromExtension
+    initiator, getSender(), callbackFromExtension
   );
 });
 
 test('handleExternalMessage returns result of network query', function(t) {
-  var urls = [ 'a.com', 'b.org' ];
-  var message = getDummyNetworkQueryMessage(urls);
+  let { i: initiator, r: responder } = mutil.getNetworkQueryMsgs();
+  
+  let queryStub = sinon.stub();
+  queryStub.withArgs(initiator).resolves(responder.body);
+  messaging.queryLocalNetworkForUrls = queryStub;
 
-  var queryResult = 'heyo';
+  var returnValue;
 
-  var expected = {
-    type: 'network-query',
-    result: 'success',
-    response: queryResult
-  };
-
-  messaging.queryLocalNetworkForUrls = sinon.stub().withArgs(message)
-    .resolves(queryResult);
-
-  var returnValue = null;
   var callbackFromExtension = function(actual) {
-    t.deepEqual(actual, expected);
-    t.deepEqual(messaging.queryLocalNetworkForUrls.args[0], [message]);
+    t.deepEqual(actual, responder);
     t.true(returnValue);
     end(t);
   };
 
   returnValue = messaging.handleExternalMessage(
-    message, getSender(), callbackFromExtension
+    initiator, getSender(), callbackFromExtension
   );
 });
 
-test('handleExternalMessage responds with error if goes wrong', function(t) {
-  var urls = [ 'a.com', 'b.org' ];
-  var message = getDummyNetworkQueryMessage(urls);
+test('handleExternalMessage rejects on network query error', function(t) {
+  let { i: initiator } = mutil.getNetworkQueryMsgs();
+  let error = 'uhoh';
+  let expected = common.createResponseError(
+    common.responderTypes.networkQuery, {}, error
+  );
+  
+  messaging.queryLocalNetworkForUrls = sinon.stub().rejects(error);
 
-  var expectedErr = { msg: 'local query went wrong' };
+  var returnValue;
 
-  var expected = {
-    type: 'network-query',
-    result: 'error',
-    err: expectedErr
-  };
-
-  messaging.queryLocalNetworkForUrls = sinon.stub().withArgs(message)
-    .rejects(expectedErr);
-
-  var returnValue = null;
   var callbackFromExtension = function(actual) {
     t.deepEqual(actual, expected);
-    t.deepEqual(messaging.queryLocalNetworkForUrls.args[0], [message]);
     t.true(returnValue);
     end(t);
   };
 
   returnValue = messaging.handleExternalMessage(
-    message, getSender(), callbackFromExtension
+    initiator, getSender(), callbackFromExtension
+  );
+});
+
+test('handleExternalMessage correct for open', function(t) {
+  let { i: initiator, r: responder } = mutil.getOpenMsgs();
+  
+  let handleOpenStub = sinon.stub();
+  handleOpenStub.withArgs(initiator).resolves(responder.body);
+  messaging.handleOpenRequest = handleOpenStub;
+
+  var returnValue;
+
+  var callbackFromExtension = function(actual) {
+    t.deepEqual(actual, responder);
+    t.true(returnValue);
+    end(t);
+  };
+
+  returnValue = messaging.handleExternalMessage(
+    initiator, getSender(), callbackFromExtension
+  );
+});
+
+test('handleExternalMessage rejects on error for open', function(t) {
+  let { i: initiator } = mutil.getOpenMsgs();
+  let error = 'could not find page';
+  let expected = common.createResponseError(
+    common.responderTypes.openPage, {}, error
+  );
+  
+  messaging.handleOpenRequest = sinon.stub().rejects(error);
+
+  var returnValue;
+
+  var callbackFromExtension = function(actual) {
+    t.deepEqual(actual, expected);
+    t.true(returnValue);
+    end(t);
+  };
+
+  returnValue = messaging.handleExternalMessage(
+    initiator, getSender(), callbackFromExtension
   );
 });
 
 test('queryLocalNetworkForUrls returns empty if no match', function(t) {
-  let cpinfos = [...putil.genCPDisks(10)];
+  let cpinfos = [...putil.genCPInfos(10)];
 
   proxyquireMessaging({
     '../persistence/datastore': {
@@ -284,7 +301,9 @@ test('queryLocalNetworkForUrls returns empty if no match', function(t) {
     }
   });
 
-  messaging.queryLocalMachineForUrls(getDummyLocalQueryMessage(['nobody']))
+  let msg = common.createLocalQueryMessage('popup', ['nobody']);
+
+  messaging.queryLocalMachineForUrls(msg)
   .then(actual => {
     t.deepEqual(actual, {});
     end(t);
@@ -318,7 +337,9 @@ test('queryLocalMachineForUrls returns all matches', function(t) {
     }
   });
 
-  var message = getDummyLocalQueryMessage([ foundUrl1, foundUrl2 ]);
+  var message = common.createLocalQueryMessage(
+    'popup', [ foundUrl1, foundUrl2 ]
+  );
 
   messaging.queryLocalMachineForUrls(message)
   .then(actual => {
@@ -339,8 +360,10 @@ test('queryLocalMachineForUrls rejects if something goes wrong', function(t) {
       getAllCachedPages: sinon.stub().rejects(expected)
     }
   });
+  
+  let msg = common.createLocalQueryMessage('popup', ['url']);
 
-  messaging.queryLocalMachineForUrls(getDummyLocalQueryMessage(['url']))
+  messaging.queryLocalMachineForUrls(msg)
   .then(actual => {
     t.fail(actual);
     end(t);
@@ -430,39 +453,10 @@ test('sendMessageToOpenUrl sends correct message', function(t) {
   resetMessaging();
 });
 
-test('createResponseSuccess correct', function(t) {
-  var message = {
-    type: 'write',
-  };
-  var expected = {
-    type: 'write',
-    result: 'success'
-  };
-
-  var actual = messaging.createResponseSuccess(message);
-  t.deepEqual(actual, expected);
-  t.end();
-});
-
-test('createResponseError correct', function(t) {
-  var message = { type: 'write' };
-  var err = 'disk too fragmented--things are ruhl crazy over here';
-
-  var expected = {
-    type: 'write',
-    result: 'error',
-    err: err
-  };
-
-  var actual = messaging.createResponseError(message, err);
-  t.deepEqual(actual, expected);
-  t.end();
-});
-
 test('queryLocalNetworkForUrls rejects on error', function(t) {
   var expectedErr = { msg: 'query failed' };
   var urls = ['a', 'b'];
-  var message = getDummyNetworkQueryMessage(urls);
+  let message = common.createNetworkQueryMessage('popup', urls);
   proxyquireMessaging({
     '../coalescence/manager': {
       queryForUrls: sinon.stub().withArgs(urls).rejects(expectedErr)
@@ -483,7 +477,7 @@ test('queryLocalNetworkForUrls rejects on error', function(t) {
 test('queryLocalNetworkForUrls resolves with result', function(t) {
   var urls = [ 'bar.com', 'foo.com' ];
 
-  var message = getDummyNetworkQueryMessage(urls);
+  var message = common.createNetworkQueryMessage('cs', urls);
   var expected = [ 'hooray', 'woohoo' ];
   proxyquireMessaging({
     '../coalescence/manager': {

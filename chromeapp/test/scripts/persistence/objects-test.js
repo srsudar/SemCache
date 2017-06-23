@@ -93,36 +93,22 @@ test('canBePersisted correct', function(t) {
   end(t);
 });
 
-test('CPInfo.asJSON correct', function(t) {
-  let params = getSingleParams();
+test('CPInfo.asJSON and fromJSON correct', function(t) {
+  let expected = putil.genCPInfos(1).next().value;
 
-  let cp = new CPInfo(params);
-  let expected = {
-    captureHref: params.captureHref,
-    captureDate: params.captureDate,
-    title: params.title,
-    filePath: params.filePath
-  };
+  let json = expected.asJSON();
+  let actual = CPInfo.fromJSON(json);
 
-  let actual = cp.asJSON();
   t.deepEqual(actual, expected);
   end(t);
 });
 
-test('CPSummary.asJSON correct', function(t) {
-  let params = getSingleParams();
+test('CPSummary.asJSON and fromJSON correct', function(t) {
+  let expected = putil.genCPSummaries(1).next().value;
+  
+  let json = expected.asJSON();
+  let actual = CPSummary.fromJSON(json);
 
-  let cp = new CPSummary(params);
-  let expected = {
-    captureHref: params.captureHref,
-    captureDate: params.captureDate,
-    title: params.title,
-    filePath: params.filePath,
-    screenshot: params.screenshot,
-    favicon: params.favicon
-  };
-
-  let actual = cp.asJSON();
   t.deepEqual(actual, expected);
   end(t);
 });
@@ -152,6 +138,18 @@ test('CPDisk.asJSON correct', function(t) {
   };
 
   let actual = cp.asJSON();
+  t.deepEqual(actual, expected);
+  end(t);
+});
+
+test('CPDisk.asBuffer and fromBuffer correct', function(t) {
+  // Taking an integration test approach here to avoid trying to assert things
+  // about the Buffer itself.
+  let expected = [...putil.genCPDisks(1)][0];
+  
+  let buff = expected.asBuffer();
+  let actual = CPDisk.fromBuffer(buff);
+
   t.deepEqual(actual, expected);
   end(t);
 });
@@ -189,7 +187,7 @@ test('CPSummary constructs', function(t) {
   end(t);
 });
 
-test('CPDisk consturcts', function(t) {
+test('CPDisk constructs', function(t) {
   let params = getSingleParams();
 
   let actual = new CPDisk(params);

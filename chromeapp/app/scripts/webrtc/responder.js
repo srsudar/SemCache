@@ -1,7 +1,5 @@
 'use strict';
 
-var Buffer = require('buffer/').Buffer;
-
 var api = require('../server/server-api');
 var binUtil = require('../dnssd/binary-utils').BinaryUtils;
 var bufferedChannel = require('./buffered-channel');
@@ -10,7 +8,7 @@ var message = require('./message');
 var serverApi = require('../server/server-api');
 
 /**
- * This module is responsible for responding to incoming requests.
+ * This module is responsible for responding to incoming requests via WebRTC.
  */
 
 /**
@@ -44,6 +42,8 @@ exports.onDataChannelMessageHandler = function(channel, event) {
     exports.onFile(channel, msg);
   } else if (message.isDigest(msg)) {
     exports.onDigest(channel, msg);
+  } else if (message.isCachedPage(msg)) {
+    exports.onCachedPage(channel, msg);
   } else {
     console.log('Unrecognized message type: ', msg.type, msg);
   }
@@ -63,10 +63,10 @@ exports.onDataChannelMessageHandler = function(channel, event) {
 exports.onList = function(channel) {
   return new Promise(function(resolve, reject) {
     serverApi.getResponseForAllCachedPages()
-    .then(json => {
-      var jsonBuff = Buffer.from(JSON.stringify(json));
-      var ccServer = exports.createChannelServer(channel);
-      ccServer.sendBuffer(jsonBuff);
+    .then(buff => {
+      return exports.sendBufferOverChannel(channel, buff);
+    })
+    .then(() => {
       resolve();
     })
     .catch(err => {
@@ -87,10 +87,45 @@ exports.onList = function(channel) {
 exports.onDigest = function(channel) {
   return new Promise(function(resolve, reject) {
     serverApi.getResponseForAllPagesDigest()
-    .then(json => {
-      var jsonBuff = Buffer.from(JSON.stringify(json));
-      var ccServer = exports.createChannelServer(channel);
-      ccServer.sendBuffer(jsonBuff);
+    .then(buff => {
+      return exports.sendBufferOverChannel(channel, buff);
+    })
+    .then(() => {
+      resolve();
+    })
+    .catch(err => {
+      reject(err);
+    });
+  });
+};
+
+exports.onCachedPage = function(channel, msg) {
+  return new Promise(function(resolve, reject) {
+    serverApi.getResponseForCachedPage(msg.request)
+    .then(buff => {
+      return exports.sendBufferOverChannel(channel, buff);   
+    })
+    .then(() => {
+      resolve();
+    })
+    .catch(err => {
+      reject(err);
+    });
+  });
+};
+
+/**
+ * @param {RTCDataChannel} channel
+ * @param {Buffer} buff
+ *
+ * @return {Promise.<undefined>}
+ */
+exports.sendBufferOverChannel = function(channel, buff) {
+  return new Promise(function(resolve, reject) {
+    Promise.resolve()
+    .then(() => {
+      let ccServer = exports.createChannelServer(channel);
+      ccServer.sendBuffer(buff);
       resolve();
     })
     .catch(err => {

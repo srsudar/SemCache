@@ -12,7 +12,7 @@ exports.genAllParams = function*(num) {
     let filePath = `path/to/file_${i}`;
     let favicon = `favicon ${i}`;
     let screenshot = `screenshot ${i}`;
-    let mhtml = `buff ${i}`;
+    let mhtml = Buffer.from(`<body>${i}</body>`);
     yield {
       captureHref: href,
       captureDate: date,

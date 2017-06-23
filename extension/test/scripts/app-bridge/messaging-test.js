@@ -7,6 +7,8 @@ require('sinon-as-promised');
 
 var messaging = require('../../../app/scripts/app-bridge/messaging');
 
+const mutil = require('../../../../chromeapp/test/scripts/extension-bridge/test-util');
+
 /**
  * Manipulating the object directly leads to polluting the require cache. Any
  * test that modifies the required object should call this method to get a
@@ -35,17 +37,6 @@ function end(t) {
   resetMessaging();
 }
 
-/**
- * Return an object that mimics a successful write from the app. This is an
- * object like the one that is passed when the callback is invoked.
- */
-function getSuccessResponseFromApp() {
-  return {
-    type: 'write',
-    result: 'success'
-  };
-}
-
 test('sendMessageToApp calls chromeRuntime', function(t) {
   var sendMessageSpy = sinon.spy();
   proxyquireMessaging({
@@ -65,22 +56,39 @@ test('sendMessageToApp calls chromeRuntime', function(t) {
 });
 
 test('sendMessageForResponse resolves on success', function(t) {
-  var expected = { msg: 'I am from app' };
-  var message = { msg: 'I am for app' };
+  let { i: initiator, r: responder } = mutil.getOpenMsgs();
+  let timeout = 100;
 
-  var sendMessageToAppSpy = sinon.stub().callsArgWith(
-    1, expected
-  );
+  var sendMessageToAppSpy = sinon.stub().callsArgWith(1, responder);
   messaging.sendMessageToApp = sendMessageToAppSpy;
   messaging.setTimeout = sinon.stub();
 
-  messaging.sendMessageForResponse(message, 100)
+  messaging.sendMessageForResponse(initiator, timeout)
   .then(actual => {
-    t.deepEqual(sendMessageToAppSpy.args[0][0], message);
-    t.deepEqual(actual, expected);
+    t.deepEqual(sendMessageToAppSpy.args[0][0], initiator);
+    t.deepEqual(actual, responder);
     end(t);
   }).catch(err => {
     t.fail(err);
+    end(t);
+  });
+});
+
+test('sendMessageForResponse rejects if message is error', function(t) {
+  let { i: initiator } = mutil.getOpenMsgs();
+  let expected = mutil.getPageOpenError();
+  let sendMessageToAppSpy = sinon.stub().callsArgWith(1, expected);
+
+  messaging.sendMessageToApp = sendMessageToAppSpy;
+  messaging.setTimeout = sinon.stub();
+
+  messaging.sendMessageForResponse(initiator)
+  .then(result => {
+    t.fail(result);
+    end(t);
+  })
+  .catch(actual => {
+    t.deepEqual(actual, expected);
     end(t);
   });
 });
@@ -129,34 +137,24 @@ test('sendMessageForResponse rejects if something goes wrong', function(t) {
 });
 
 test('savePage sends correct message and resolves', function(t) {
-  var timeout = 5555;
-  var captureUrl = 'someurl';
-  var captureDate = 'why-not-today';
-  var dataUrl = 'data:url';
-  var metadata = { hello: 'how are you doing', three: 3 };
+  let { i: initiator, r: responder } = mutil.getAddPageMsgs();
+  let timeout = 7887;
 
-  var expectedResponseFromApp = getSuccessResponseFromApp();
-
-  var expectedMessage = {
-    type: 'write',
-    params: {
-      captureUrl: captureUrl,
-      captureDate: captureDate,
-      dataUrl: dataUrl,
-      metadata: metadata
-    }
-  };
-
-  var sendMessageForResponseSpy = sinon.stub()
-    .resolves(expectedResponseFromApp);
+  let sendMessageForResponseSpy = sinon.stub();
+  sendMessageForResponseSpy
+    .withArgs(initiator, timeout)
+    .resolves(responder);
   messaging.sendMessageForResponse = sendMessageForResponseSpy;
 
-  messaging.savePage(captureUrl, captureDate, dataUrl, metadata, timeout)
+  messaging.savePage('popup', initiator.params.cachedPage, timeout)
   .then(actual => {
-    t.deepEqual(sendMessageForResponseSpy.args[0], [expectedMessage, timeout]);
-    t.deepEqual(actual, expectedResponseFromApp);
+    t.deepEqual(actual, responder.body);
     t.end();
     resetMessaging();  
+  })
+  .catch(err => {
+    t.fail(err);
+    end(t);
   });
 });
 
@@ -185,7 +183,7 @@ test('savePage rejects if write fails', function(t) {
     err: 'something done gone wrong'
   };
 
-  var sendMessageForResponseSpy = sinon.stub().resolves(errFromApp);
+  var sendMessageForResponseSpy = sinon.stub().rejects(errFromApp);
   messaging.sendMessageForResponse = sendMessageForResponseSpy;
 
   messaging.savePage('url', 'date', 'dataurl', 'so meta')
@@ -200,48 +198,18 @@ test('savePage rejects if write fails', function(t) {
   });
 });
 
-test('savePage resolves if callback invoked', function(t) {
-  var successFromApp = {
-    type: 'write',
-    result: 'success',
-  };
-  var timeout = 8675309;
-
-  var setTimeoutSpy = sinon.stub();
-  messaging.setTimeout = setTimeoutSpy;
-  var sendMessageToAppSpy = sinon.stub().callsArgWith(1, successFromApp);
-  messaging.sendMessageToApp = sendMessageToAppSpy;
-
-  messaging.savePage('url', 'date', 'dataurl', 'so meta', timeout)
-    .then(resp => {
-      t.deepEqual(resp, successFromApp);
-      t.equal(setTimeoutSpy.args[0][1], timeout);
-      t.equal(sendMessageToAppSpy.callCount, 1);
-      t.end();
-      resetMessaging();
-    });
-});
-
 test('queryForPagesLocally resolves response from app', function(t) {
-  var timeout = 7887;
-  var urls = [ 'http://www.nytimes.com', 'http://www.foo.org' ];
-  var options = { localhost: true };
-  var message = {
-    type: 'local-query',
-    params: {
-      urls: urls,
-      options: options 
-    }
-  };
+  let { i: initiator, r: responder } = mutil.getLocalQueryMsgs();
+  let timeout = 7887;
+  let urls = initiator.params.urls;
 
-  var expected = { msg: 'why yes! it is available' };
-  var sendMessageForResponseSpy = sinon.stub().resolves(expected);
+  var sendMessageForResponseSpy = sinon.stub();
+  sendMessageForResponseSpy.withArgs(initiator, timeout).resolves(responder);
   messaging.sendMessageForResponse = sendMessageForResponseSpy;
 
-  messaging.queryForPagesLocally(urls, options, timeout)
+  messaging.queryForPagesLocally('popup', urls, timeout)
   .then(actual => {
-    t.deepEqual(actual, expected);
-    t.deepEqual(sendMessageForResponseSpy.args[0], [message, timeout]);
+    t.deepEqual(actual, responder.body);
     end(t);
   })
   .catch(err => {
@@ -251,13 +219,11 @@ test('queryForPagesLocally resolves response from app', function(t) {
 });
 
 test('queryForPagesLocally rejects correctly', function(t) {
-  var options = { localhost: false };
-
   var expected = { msg: 'you little devil!' };
   var sendMessageForResponseSpy = sinon.stub().rejects(expected);
   messaging.sendMessageForResponse = sendMessageForResponseSpy;
 
-  messaging.queryForPagesLocally([], options)
+  messaging.queryForPagesLocally('popup', [])
   .then(actual => {
     t.fail(actual);
     end(t);
@@ -309,23 +275,17 @@ test('onMessageExternalCallback responds to type open', function(t) {
 });
 
 test('queryForPagesOnNetwork resolves response from app', function(t) {
-  var timeout = 4444;
-  var urls = ['a', 'b'];
-  var message = {
-    type: 'network-query',
-    params: {
-      urls: urls
-    }
-  };
+  let timeout = 100;
+  let { i: initiator, r: responder } = mutil.getNetworkQueryMsgs();
 
-  var expected = { msg: 'all are ready' };
-  var sendMessageForResponseSpy = sinon.stub().resolves(expected);
+  var sendMessageForResponseSpy = sinon.stub();
+  sendMessageForResponseSpy.withArgs(initiator, timeout).resolves(responder);
   messaging.sendMessageForResponse = sendMessageForResponseSpy;
 
-  messaging.queryForPagesOnNetwork(urls, timeout)
+  let urls = initiator.params.urls;
+  messaging.queryForPagesOnNetwork('popup', urls, timeout)
   .then(actual => {
-    t.deepEqual(actual, expected);
-    t.deepEqual(sendMessageForResponseSpy.args[0], [message, timeout]);
+    t.deepEqual(actual, responder.body);
     end(t);
   })
   .catch(err => {
@@ -348,6 +308,26 @@ test('queryForPagesOnNetwork rejects correctly', function(t) {
   })
   .catch(actual => {
     t.deepEqual(actual, expected);
+    end(t);
+  });
+});
+
+test('sendMessageToOpenPage resolves', function(t) {
+  let timeout = 100;
+  let { i: initiator, r: responder } = mutil.getOpenMsgs();
+
+  var sendMessageForResponseSpy = sinon.stub();
+  sendMessageForResponseSpy.withArgs(initiator, timeout).resolves(responder);
+  messaging.sendMessageForResponse = sendMessageForResponseSpy;
+
+  let href = initiator.params.href;
+  messaging.sendMessageToOpenPage('popup', href, timeout)
+  .then(actual => {
+    t.deepEqual(actual, responder.body);
+    end(t);
+  })
+  .catch(err => {
+    t.fail(err);
     end(t);
   });
 });

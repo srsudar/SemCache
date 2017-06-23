@@ -5,8 +5,8 @@ var proxyquire = require('proxyquire');
 var sinon = require('sinon');
 require('sinon-as-promised');
 
-var binUtil = require('../../../app/scripts/dnssd/binary-utils').BinaryUtils;
-var util = require('../../../app/scripts/persistence/file-system-util');
+let binUtil = require('../../../app/scripts/dnssd/binary-utils').BinaryUtils;
+let util = require('../../../app/scripts/persistence/file-system-util');
 
 /**
  * Manipulating the object directly leads to polluting the require cache. Any
@@ -18,6 +18,18 @@ function resetUtil() {
     require.resolve('../../../app/scripts/persistence/file-system-util')
   ];
   util = require('../../../app/scripts/persistence/file-system-util');
+}
+
+function proxyquireUtil(proxies) {
+  util = proxyquire(
+    '../../../app/scripts/persistence/file-system-util', proxies
+  );
+}
+
+function end(t) {
+  if (!t) { throw new Error('You forgot to pass tape'); }
+  t.end();
+  resetUtil();
 }
 
 test('listEntries returns all entries', function(t) {
@@ -104,7 +116,11 @@ test('listEntries catches if error callback invoked', function(t) {
 });
 
 test('writeToFile resolves on completion', function(t) {
-  var fileBlob = 'blobbity blob';
+  let buff = 'buff';
+  let blob = 'blob';
+
+  let buffToBlobStub = sinon.stub();
+  buffToBlobStub.withArgs(buff).returns(blob);
 
   var writerSpy = {};
   var fileBlobArg = null;
@@ -121,9 +137,15 @@ test('writeToFile resolves on completion', function(t) {
   createWriterSpy.callsArgWith(0, writerSpy);
   fileEntry.createWriter = createWriterSpy;
 
-  util.writeToFile(fileEntry, fileBlob)
+  proxyquireUtil({
+    '../util': {
+      getBufferAsBlob: buffToBlobStub
+    }
+  });
+
+  util.writeToFile(fileEntry, buff)
   .then(function() {
-    t.equal(fileBlobArg, fileBlob);
+    t.equal(fileBlobArg, blob);
     t.end();
   })
   .catch(err => {
@@ -134,8 +156,8 @@ test('writeToFile resolves on completion', function(t) {
 });
 
 test('writeToFile rejects on error', function(t) {
-  var fileBlob = 'erroneous blob';
-  var error = 'the error';
+  let buff = 'erroneous blob';
+  let error = 'the error';
 
   var writerSpy = {};
   var fileBlobArg = null;
@@ -152,16 +174,20 @@ test('writeToFile rejects on error', function(t) {
   createWriterSpy.callsArgWith(0, writerSpy);
   fileEntry.createWriter = createWriterSpy;
 
-  util.writeToFile(fileEntry, fileBlob)
+  proxyquireUtil({
+    '../util': {
+      getBufferAsBlob: sinon.stub()
+    }
+  });
+
+  util.writeToFile(fileEntry, buff)
   .then(res => {
     t.fail(res);
-    t.end();
-    resetUtil();
+    end(t);
   })
-  .catch(function(actualError) {
-    t.equal(actualError, error);
-    t.equal(fileBlobArg, fileBlob);
-    t.end();
+  .catch(actual => {
+    t.equal(actual, error);
+    end(t);
   });
 });
 
@@ -461,12 +487,10 @@ test('getFileContents rejects when onerror called', function(t) {
   util.getFileContents(fileEntry)
   .then(res => {
     t.fail(res);
-    t.end();
-    resetUtil();
+    end(t);
   })
   .catch(actual => {
     t.deepEqual(actual, expectedError);
-    t.end();
-    resetUtil();
+    end(t);
   });
 });

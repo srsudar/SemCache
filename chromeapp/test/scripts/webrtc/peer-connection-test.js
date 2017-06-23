@@ -1,11 +1,16 @@
 'use strict';
-var Buffer = require('buffer/').Buffer;
-var test = require('tape');
-var sinon = require('sinon');
-var proxyquire = require('proxyquire');
+
+const Buffer = require('buffer/').Buffer;
+const test = require('tape');
+const sinon = require('sinon');
+const proxyquire = require('proxyquire');
 require('sinon-as-promised');
 
-var peerConn = require('../../../app/scripts/webrtc/peer-connection');
+let peerConn = require('../../../app/scripts/webrtc/peer-connection');
+
+const message = require('../../../app/scripts/webrtc/message');
+const sutil = require('../server/util');
+const commonChannel = require('../../../app/scripts/webrtc/common-channel');
 
 /**
  * Manipulating the object directly leads to polluting the require cache. Any
@@ -58,22 +63,22 @@ test('emits close event when rawConnection onclose invoked', function(t) {
 });
 
 test('getList issues call to peer', function(t) {
-  var rawConnection = sinon.stub();
+  let rawConnection = sinon.stub();
   rawConnection.on = sinon.stub();
-  var msg = 'list message';
+  let msg = 'list message';
 
-  var expected = { response: 'from the server' };
-  var buffer = Buffer.from(JSON.stringify(expected));
+  let expected = sutil.getListResponseObj();
 
   proxyquirePeerConn({
     './message': {
       createListMessage: sinon.stub().returns(msg)
     }
   });
-  peerConn.sendAndGetResponse = sinon.stub().withArgs(rawConnection, msg)
-    .resolves(buffer);
-  
+
   var pc = new peerConn.PeerConnection(rawConnection);
+  pc.sendAndGetResponse = sinon.stub().withArgs(msg)
+    .resolves(sutil.getListResponseBuff());
+  
 
   pc.getList()
   .then(actual => {
@@ -115,18 +120,19 @@ test('getCacheDigest issues call to peer', function(t) {
   rawConnection.on = sinon.stub();
   var msg = 'digest message';
 
-  var expected = { response: 'from the server' };
-  var buffer = Buffer.from(JSON.stringify(expected));
+  var expected = sutil.getDigestResponseJson();
+  var buffer = sutil.getDigestResponseBuff();
 
   proxyquirePeerConn({
     './message': {
       createDigestMessage: sinon.stub().returns(msg)
     }
   });
-  peerConn.sendAndGetResponse = sinon.stub().withArgs(rawConnection, msg)
+
+  var pc = new peerConn.PeerConnection(rawConnection);
+  pc.sendAndGetResponse = sinon.stub().withArgs(rawConnection, msg)
     .resolves(buffer);
   
-  var pc = new peerConn.PeerConnection(rawConnection);
 
   pc.getCacheDigest()
   .then(actual => {
@@ -175,10 +181,11 @@ test('getFile resolves with response from server', function(t) {
       createFileMessage: sinon.stub().returns(msg)
     }
   });
-  peerConn.sendAndGetResponse = sinon.stub().withArgs(rawConnection, msg)
+
+  var pc = new peerConn.PeerConnection(rawConnection);
+  pc.sendAndGetResponse = sinon.stub().withArgs(msg)
     .resolves(expected);
   
-  var pc = new peerConn.PeerConnection(rawConnection);
 
   pc.getFile()
   .then(actual => {
@@ -217,11 +224,108 @@ test('getFile rejects if error', function(t) {
 });
 
 test('getCachedPage resolves with CPDisk', function(t) {
-  t.fail('unimplemented');
-  t.end();
+  let rawConnection = sinon.stub();
+  rawConnection.on = sinon.stub();
+
+  let href = 'http://www.foobar.org';
+  let msg = message.createCachedPageMessage(href);
+
+  let expected = sutil.getCachedPageResponseObj();
+  let buffer = sutil.getCachedPageResponseBuff();
+
+  var pc = new peerConn.PeerConnection(rawConnection);
+  pc.sendAndGetResponse = sinon.stub().withArgs(msg)
+    .resolves(buffer);
+
+  pc.getCachedPage(href)
+  .then(actual => {
+    t.deepEqual(actual, expected);
+    end(t);
+  })
+  .catch(err => {
+    t.fail(err);
+    end(t);
+  });
 });
 
 test('getCachedPage rejects on error', function(t) {
-  t.fail('unimplemented');
-  t.end();
+  var rawConnection = sinon.stub();
+  rawConnection.on = sinon.stub();
+
+  var expected = { error: 'error during getCachedPage' };
+
+  proxyquirePeerConn({
+    './message': {
+      createCachedPageMessage: sinon.stub().throws(expected)
+    }
+  });
+  
+  var pc = new peerConn.PeerConnection(rawConnection);
+
+  pc.getCachedPage()
+  .then(res => {
+    t.fail(res);
+    end(t);
+  })
+  .catch(actual => {
+    t.deepEqual(actual, expected);
+    end(t);
+  });
+});
+
+test('sendAndGetResponse resolves on success', function(t) {
+  let rawConnection = { iam: 'RTCPeerConnection' };
+  let msg = { msg: 'get me a file' };
+
+  let clientStub = new commonChannel.BaseClient(rawConnection, msg);
+  let expected = Buffer.from('a response');
+  clientStub.chunks = [expected];
+  // Override start() to immediately emit a complete event.
+  clientStub.start = function() {
+    clientStub.emitComplete();
+  };
+
+  let createClientStub = sinon.stub();
+  createClientStub.withArgs(rawConnection, msg).returns(clientStub);
+  peerConn.createClient = createClientStub;
+
+  let pc = new peerConn.PeerConnection(rawConnection);
+
+  pc.sendAndGetResponse(msg)
+  .then(actual => {
+    t.deepEqual(actual, expected);
+    end(t);
+  })
+  .catch(err => {
+    t.fail(err);
+    end(t);
+  });
+});
+
+test('sendAndGetResponse rejects on error', function(t) {
+  let rawConnection = { iam: 'RTCPeerConnection' };
+  let msg = { msg: 'get me a file' };
+
+  let clientStub = new commonChannel.BaseClient(rawConnection, msg);
+  let expected = { err: 'trouble' };
+  // Override start() to immediately emit an error.
+  clientStub.start = function() {
+    clientStub.emitError(expected);
+  };
+
+  let createClientStub = sinon.stub();
+  createClientStub.withArgs(rawConnection, msg).returns(clientStub);
+  peerConn.createClient = createClientStub;
+
+  let pc = new peerConn.PeerConnection(rawConnection);
+
+  pc.sendAndGetResponse(msg)
+  .then(result => {
+    t.fail(result);
+    end(t);
+  })
+  .catch(actual => {
+    t.deepEqual(actual, expected);
+    end(t);
+  });
 });

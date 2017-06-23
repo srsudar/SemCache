@@ -9,7 +9,6 @@
 var capture = require('../chrome-apis/page-capture');
 var datastore = require('../persistence/datastore');
 var messaging = require('../app-bridge/messaging');
-var runtime = require('../chrome-apis/runtime');
 var tabs = require('../chrome-apis/tabs');
 var util = require('../util/util');
 
@@ -20,21 +19,12 @@ var util = require('../util/util');
  * if the save fails
  */
 exports.saveCurrentPage = function() {
-  // Get all tabs.
-  // Get the active tab.
-  // Ask the datastore to perform the write.
-  return new Promise(function(resolve, reject) {
-    util.getActiveTab()
-      .then(activeTab => {
-        return exports.saveTab(activeTab);
-      })
-      .then(() => {
-        // all done
-        resolve();
-      })
-      .catch(err => {
-        reject(err);
-      });
+  return Promise.resolve()
+  .then(() => {
+    return util.getActiveTab();
+  })
+  .then(tab => {
+    return datastore.saveTab('popup', tab);
   });
 };
 
@@ -89,14 +79,13 @@ exports.waitForCurrentPageToLoad = function() {
   console.log('in waitForCurrentPageToLoad');
   return new Promise(function(resolve) {
     util.getActiveTab()
-      .then(tab => {
-        console.log('active tab: ', tab);
-        var message = exports.createLoadMessage();
-        tabs.sendMessage(tab.id, message, function(resp) {
-          console.log('Got response from tab: ', resp);
-          resolve(resp);
-        });
+    .then(tab => {
+      var message = exports.createLoadMessage();
+      tabs.sendMessage(tab.id, message, function(resp) {
+        console.log('Got response from tab: ', resp);
+        resolve(resp);
       });
+    });
   });
 };
 
@@ -130,34 +119,19 @@ exports.openCachedPage = function(page) {
  * @return {Promise.<CachedPage, Error>}
  */
 exports.getLocalPageInfo = function() {
-  return new Promise(function(resolve, reject) {
-    function onResponse(response) {
-      if (response && response.status === 'success') {
-        // We expect this to be a mapping of url: [cachedpage, ... ].
-        var url = Object.keys(response.result)[0];
-        resolve(response.result[url][0]);
-      } else if (response.status === 'error') {
-        reject(response.result);
-      }
+  return Promise.resolve()
+  .then(() => {
+    return util.getActiveTab();
+  })
+  .then(tab => {
+    return messaging.queryForPagesLocally('popup', [ tab.url ]);
+  })
+  .then(responderBody => {
+    if (Object.keys(responderBody).length === 0) {
+      return null;
+    } else {
+      let url = Object.keys(responderBody)[0];
+      return responderBody[url];
     }
-
-    util.getActiveTab()
-    .then(tab => {
-      var params = {
-        url: tab.url,
-        tabId: tab.id
-      };
-      runtime.sendMessage(
-        {
-          from: 'popup',
-          type: 'queryForPage',
-          params: params
-        },
-        onResponse
-      );
-    })
-    .catch(err => {
-      reject(err);
-    });
   });
 };

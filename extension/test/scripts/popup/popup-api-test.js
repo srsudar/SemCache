@@ -1,11 +1,15 @@
 /*jshint esnext:true*/
 'use strict';
-var test = require('tape');
-var proxyquire = require('proxyquire');
-var sinon = require('sinon');
+const test = require('tape');
+const proxyquire = require('proxyquire');
+const sinon = require('sinon');
 require('sinon-as-promised');
 
-var api = require('../../../app/scripts/popup/popup-api');
+let api = require('../../../app/scripts/popup/popup-api');
+
+const util = require('../test-util');
+// Get this from the app to generate objects like the app expects.
+const mutil = require('../../../../chromeapp/test/scripts/extension-bridge/test-util');
 
 /**
  * Proxyquire the api object with proxies passed as the proxied modules.
@@ -35,108 +39,53 @@ function end(t) {
   resetApi();
 }
 
-test('saveTab resolves if all resolve', function(t) {
-  var fullUrl = 'https://www.foo.com#money';
-  var blob = 'so blobby';
-  var tab = { id: 13, url: fullUrl };
-  var captureArg = { tabId: tab.id };
-
-  var saveAsMhtmlSpy = sinon.stub().withArgs(captureArg).resolves(blob);
-  var savePageSpy = sinon.stub().withArgs(tab, blob).resolves();
-  
-  proxyquireApi({
-    '../chrome-apis/page-capture': {
-      saveAsMHTML: saveAsMhtmlSpy
-    },
-    '../persistence/datastore': {
-      savePage: savePageSpy
-    }
-  });
-
-  api.saveTab(tab)
-    .then(result => {
-      // We don't expect a resolve object.
-      t.equal(result, undefined);
-      t.deepEqual(savePageSpy.args[0], [tab, blob]);
-      t.end();
-      resetApi();
-    });
-});
-
-test('saveTab rejects if savePage rejects', function(t) {
-  // We don't currently permit this, but we are going to test for it just in
-  // case.
-  var fullUrl = 'https://www.foo.com#money';
-  var blob = 'so blobby';
-  var tab = { id: 13, url: fullUrl };
-  var captureArg = { tabId: tab.id };
-
-  var expected = { msg: 'went wrong as expected' };
-
-  var saveAsMhtmlSpy = sinon.stub().withArgs(captureArg).resolves(blob);
-  var savePageSpy = sinon.stub().withArgs(fullUrl, blob).rejects(expected);
-  
-  proxyquireApi({
-    '../chrome-apis/page-capture': {
-      saveAsMHTML: saveAsMhtmlSpy
-    },
-    '../persistence/datastore': {
-      savePage: savePageSpy
-    }
-  });
-
-  api.saveTab(tab)
-    .catch(actual => {
-      t.equal(actual, expected);
-      t.end();
-      resetApi();
-    });
-});
-
 test('saveCurrentPage resolves if saveTab resolves', function(t) {
-  var tab = { id: 13 };
+  let tab = util.genTabs(1).next().value;
+  let expected = 'donezo';
 
-  var getActiveTabSpy = sinon.stub().resolves(tab);
-  var saveTabSpy = sinon.stub().withArgs(tab).resolves();
+  let saveTabStub = sinon.stub();
+  saveTabStub.withArgs('popup', tab).resolves(expected);
 
   proxyquireApi({
     '../util/util': {
-      getActiveTab: getActiveTabSpy
+      getActiveTab: sinon.stub().resolves(tab)
     },
+    '../persistence/datastore': {
+      saveTab: saveTabStub
+    }
   });
-  api.saveTab = saveTabSpy;
 
   api.saveCurrentPage()
-    .then(result => {
-      // We don't expect a resolve object.
-      t.equal(result, undefined);
-      t.deepEqual(saveTabSpy.args[0], [tab]);
-      t.end();
-      resetApi();
-    });
+  .then(actual => {
+    t.deepEqual(actual, expected);
+    end(t);
+  })
+  .catch(err => {
+    t.fail(err);
+    end(t);
+  });
 });
 
-test('saveCurrentPage rejects if saveTab rejects', function(t) {
-  var tab = { id: 13 };
-
+test('saveCurrentPage rejects', function(t) {
   var expected = { msg: 'went wrong as expected' };
 
-  var getActiveTabSpy = sinon.stub().resolves(tab);
-  var saveTabSpy = sinon.stub().withArgs(tab).rejects(expected);
+  var getActiveTabSpy = sinon.stub().rejects(expected);
   
   proxyquireApi({
     '../util/util': {
       getActiveTab: getActiveTabSpy
     }
   });
-  api.saveTab = saveTabSpy;
 
   api.saveCurrentPage()
-    .catch(actual => {
-      t.equal(actual, expected);
-      t.end();
-      resetApi();
-    });
+  .then(result => {
+    t.fail(result);
+    end(t);
+  })
+  .catch(actual => {
+    t.equal(actual, expected);
+    end(t);
+  });
 });
 
 test('waitForCurrentPageToLoad calls sendMessage and resolves', function(t) {
@@ -175,49 +124,33 @@ test('waitForCurrentPageToLoad calls sendMessage and resolves', function(t) {
     });
 });
 
-test('getLocalPageInfo resolves with page', function(t) {
-  var expectedPage = {
-    who: 'I am the page'
-  };
-  var currentTab = {
-    url: 'http://foobar.com',
-    id: 1111
-  };
+test('getLocalPageInfo resolves with single CPInfo', function(t) {
+  let { i: initiator, r: responder } = mutil.getLocalQueryMsgs();
+  // We only want one. Delete the extras to avoid test flakiness.
+  delete responder.body[initiator.params.urls[1]];
+  delete responder.body[initiator.params.urls[2]];
 
-  var queryResult = {};
-  queryResult[currentTab.url] = [ expectedPage ];
+  let expected = responder.body[initiator.params.urls[0]];
 
-  var expectedMessageToReceive = { 
-    status: 'success',
-    result: queryResult
-  };
-  var expectedMessageToSend = {
-    from: 'popup',
-    type: 'queryForPage',
-    params: {
-      url: currentTab.url,
-      tabId: currentTab.id
-    }
-  };
+  let tab = util.genTabs(1).next().value;
 
-  var getActiveTabSpy = sinon.stub().resolves(currentTab);
-  var sendMessageSpy = sinon.stub()
-    .withArgs(currentTab.id, expectedMessageToSend)
-    .callsArgWith(1, expectedMessageToReceive);
+  let localQueryStub = sinon.stub();
+  localQueryStub
+    .withArgs('popup', [tab.url])
+    .resolves(responder.body);
 
   proxyquireApi({
-    '../chrome-apis/runtime': {
-      sendMessage: sendMessageSpy
-    },
     '../util/util': {
-      getActiveTab: getActiveTabSpy
+      getActiveTab: sinon.stub().resolves(tab)
+    },
+    '../app-bridge/messaging': {
+      queryForPagesLocally: localQueryStub
     }
   });
 
   api.getLocalPageInfo()
   .then(actual => {
-    t.deepEqual(actual, expectedPage);
-    t.deepEqual(sendMessageSpy.args[0][0], expectedMessageToSend);
+    t.equal(actual, expected);
     end(t);
   })
   .catch(err => {
@@ -226,24 +159,52 @@ test('getLocalPageInfo resolves with page', function(t) {
   });
 });
 
-test('getLocalPageInfo rejects if error while sending', function(t) {
-  var expected = { msg: 'sendMessage was wrong' };
+test('getLocalPageInfo rejects if error', function(t) {
+  let expected = { err: 'sigh.' };
+  proxyquireApi({
+    '../util/util': {
+      getActiveTab: sinon.stub().throws(expected)
+    }
+  });
 
-  var getActiveTabSpy = sinon.stub().rejects(expected);
+  api.getLocalPageInfo()
+  .then(result => {
+    t.fail(result);
+    end(t);
+  })
+  .catch(actual => {
+    t.deepEqual(actual, expected);
+    end(t);
+  });
+});
+
+test('getLocalPageInfo resolves with null if no page', function(t) {
+  let { r: responder } = mutil.getLocalQueryMsgs();
+  responder.body = {};
+
+  let tab = util.genTabs(1).next().value;
+
+  let localQueryStub = sinon.stub();
+  localQueryStub
+    .withArgs('popup', [tab.url])
+    .resolves(responder.body);
 
   proxyquireApi({
     '../util/util': {
-      getActiveTab: getActiveTabSpy
+      getActiveTab: sinon.stub().resolves(tab)
+    },
+    '../app-bridge/messaging': {
+      queryForPagesLocally: localQueryStub
     }
   });
 
   api.getLocalPageInfo()
   .then(actual => {
-    t.fail(actual);
+    t.equal(actual, null);
     end(t);
   })
-  .catch(actual => {
-    t.deepEqual(actual, expected);
+  .catch(err => {
+    t.fail(err);
     end(t);
   });
 });
@@ -293,40 +254,6 @@ test('openCachedPage rejects if send message rejects', function(t) {
   })
   .catch(actual => {
     t.deepEqual(actual, expected);
-    end(t);
-  });
-});
-
-test('getLocalPageInfo rejects if error during query', function(t) {
-  var currentTab = {
-    url: 'http://tyrionrules.com',
-    id: 2222
-  };
-  var expectedMessageToReceive = { 
-    status: 'error',
-    result: { msg: 'error occurred during query, old chap' }
-  };
-  var expectedError = expectedMessageToReceive.result;
-
-  var getActiveTabSpy = sinon.stub().resolves(currentTab);
-  var sendMessageSpy = sinon.stub().callsArgWith(1, expectedMessageToReceive);
-
-  proxyquireApi({
-    '../chrome-apis/runtime': {
-      sendMessage: sendMessageSpy
-    },
-    '../util/util': {
-      getActiveTab: getActiveTabSpy
-    }
-  });
-
-  api.getLocalPageInfo()
-  .then(actual => {
-    t.fail(actual);
-    end(t);
-  })
-  .catch(actual => {
-    t.deepEqual(actual, expectedError);
     end(t);
   });
 });

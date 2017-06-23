@@ -36,13 +36,14 @@ function end(t) {
 }
 
 test('createFileNameForPage returns correct string', function(t) {
-  var url = 'http://whatever-you-say.url.org.co.lt';
-  var captureDate = '2016-07-22T08:49:19.182Z';
+  let href = 'http://www.nytimes.com/long/stuff.html?foo#bar';
 
-  var actual = datastore.createFileNameForPage(url, captureDate);
-  var expected = url + '_' + captureDate + '.mhtml';
+  let captureDate = '2016-07-22T08:49:19.182Z';
 
-  t.equal(expected, actual);
+  let actual = datastore.createFileNameForPage(href, captureDate);
+  let expected = 'www.nytimes.com' + '_' + '2016-07-22T084919.182Z' + '.mhtml';
+
+  t.equal(actual, expected);
   end(t);
 });
 

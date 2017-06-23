@@ -1,15 +1,19 @@
 'use strict';
 
 /**
- * Controls the API for the server backing SemCache.
+ * This module is responsible for generating responses coming from peers. It
+ * does not handle sending to peers, it only generates responses. It
+ * essentially provides endpoints that expose server-like functionality for the
+ * instance. E.g. listing saved pages, providing saved pages, etc.
  */
 
-var datastore = require('../persistence/datastore');
-var appController = require('../app-controller');
+const appController = require('../app-controller');
+const datastore = require('../persistence/datastore');
+const objects = require('../persistence/objects');
 
-var HTTP_SCHEME = 'http://';
+const HTTP_SCHEME = 'http://';
 
-var VERSION = 0.0;
+const VERSION = 0.0;
 
 /** 
  * The path from the root of the server that serves cached pages.
@@ -91,8 +95,8 @@ exports.getAccessUrlForCachedPage = function(fullPath) {
 /**
  * Return a JSON object response for the all cached pages endpoint.
  *
- * @return {Promise.<Object, Error} Promise that resolves with an object like
- * the following:
+ * @return {Promise.<Buffer, Error} Promise that resolves with Buffer from an
+ * object like the following:
  * {
  *   metadata: {},
  *   cachedPages: [CPSummary, CPSummary]
@@ -102,10 +106,35 @@ exports.getResponseForAllCachedPages = function() {
   return new Promise(function(resolve, reject) {
     datastore.getCachedPageSummaries(DEFAULT_OFFSET, DEFAULT_LIMIT)
     .then(cpsums => {
-      var result = {};
+      let result = {};
       result.metadata = exports.createMetadatObj();
       result.cachedPages = cpsums.map(cpsum => cpsum.asJSON());
-      resolve(result);
+      resolve(Buffer.from(JSON.stringify(result)));
+    })
+    .catch(err => {
+      reject(err);
+    });
+  });
+};
+
+/**
+ * @param {Object} params parameters for the request
+ * @param {string} params.href the href of the requested page
+ *
+ * @return {Promise.<Buffer, Error>} Promise that resolves with a Buffer
+ * representing the CPDisk, or a null value if the page is not found.
+ */
+exports.getResponseForCachedPage = function(params) {
+  return new Promise(function(resolve, reject) {
+    let href = params.href;
+    datastore.getCPDiskForHrefs(href)
+    .then(cpdiskArr => {
+      if (cpdiskArr.length === 0) {
+        // No matching pages.
+        resolve(null);
+      } else {
+        resolve(cpdiskArr[0].asBuffer());
+      }
     })
     .catch(err => {
       reject(err);
@@ -117,8 +146,9 @@ exports.getResponseForAllCachedPages = function() {
  * Return a JSON object representing the digest of all pages available on this
  * cache.
  *
- * @return {Promise.<Object, Error>} Promise that resolves with the response or
- * rejects with an Error. The response will be like the following:
+ * @return {Promise.<Buffer, Error>} Promise that resolves with the response or
+ * rejects with an Error. The response will be a Buffer from an object like the
+ * following:
  * {
  *   metadata: Object,
  *   digest:
@@ -146,12 +176,51 @@ exports.getResponseForAllPagesDigest = function() {
       });
 
       result.digest = pageInfos;
-      resolve(result);
+      resolve(Buffer.from(JSON.stringify(result)));
     })
     .catch(err => {
       reject(err);
     });
   });
+};
+
+/**
+ * @param {Buffer} buff
+ *
+ * @return {Object}
+ */
+exports.parseResponseForList = function(buff) {
+  // This is a pure JSON response. The only thing to do is parse and invoke the
+  // constructors.
+  let result = JSON.parse(buff.toString());
+  result.cachedPages = result.cachedPages.map(
+    cpsumJson => objects.CPSummary.fromJSON(cpsumJson)
+  );
+  return result;
+};
+
+/*
+ * @param {Buffer} buff
+ *
+ * @return {Object}
+ */
+exports.parseResponseForCachedPage = function(buff) {
+  // Here we expect either null or a CPDisk.
+  if (buff === null) {
+    return null;
+  } else {
+    return objects.CPDisk.fromBuffer(buff);
+  }
+};
+
+/*
+ * @param {Buffer} buff
+ *
+ * @return {Object}
+ */
+exports.parseResponseForDigest = function(buff) {
+  // This one is pure JSON.
+  return JSON.parse(buff.toString());
 };
 
 /**

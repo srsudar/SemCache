@@ -10,11 +10,17 @@ var message = require('../../../app/scripts/webrtc/message');
  * test that modifies the required object should call this method to get a
  * fresh version
  */
-function resetMessage() {
+function reset() {
   delete require.cache[
     require.resolve('../../../app/scripts/webrtc/message')
   ];
   message = require('../../../app/scripts/webrtc/message');
+}
+
+function end(t) {
+  if (!t) { throw new Error('You forgot to pass tape'); }
+  t.end();
+  reset();
 }
 
 test('creates correctly with legal args', function(t) {
@@ -32,8 +38,7 @@ test('creates correctly with legal args', function(t) {
   msg = new message.createMessage(typeFile);
   t.equal(msg.type, typeFile);
 
-  resetMessage();
-  t.end();
+  end(t);
 });
 
 test('createMessage throws with invalid type', function(t) {
@@ -42,19 +47,27 @@ test('createMessage throws with invalid type', function(t) {
   };
 
   t.throws(invalid, Error);
-  t.end();
+  end(t);
 });
 
 test('createListMessage returns type list', function(t) {
   var actual = message.createListMessage();
   t.equal(actual.type, message.TYPE_LIST);
-  t.end();
+  end(t);
 });
 
 test('createDigestMessage returns type digest', function(t) {
   var actual = message.createDigestMessage();
   t.equal(actual.type, message.TYPE_DIGEST);
-  t.end();
+  end(t);
+});
+
+test('createCachedPageMessage returns correct type', function(t) {
+  let href = 'http://nyt.com';
+  let actual = message.createCachedPageMessage(href);
+  t.true(message.isCachedPage(actual));
+  t.deepEqual(actual.request, { href });
+  end(t);
 });
 
 test('createFileMessage returns with request information', function(t) {
@@ -63,7 +76,7 @@ test('createFileMessage returns with request information', function(t) {
 
   t.equal(actual.type, message.TYPE_FILE);
   t.equal(actual.request.accessPath, path);
-  t.end();
+  end(t);
 });
 
 test('isList correct', function(t) {
@@ -76,7 +89,7 @@ test('isList correct', function(t) {
   obj.type = message.TYPE_LIST;
   t.true(message.isList(obj));
 
-  t.end();
+  end(t);
 });
 
 test('isFile correct', function(t) {
@@ -89,7 +102,7 @@ test('isFile correct', function(t) {
   obj.type = message.TYPE_FILE;
   t.true(message.isFile(obj));
 
-  t.end();
+  end(t);
 });
 
 test('isDigest correct', function(t) {
@@ -102,5 +115,18 @@ test('isDigest correct', function(t) {
   obj.type = message.TYPE_DIGEST;
   t.true(message.isDigest(obj));
 
-  t.end();
+  end(t);
+});
+
+test('isCachedPage correct', function(t) {
+  var obj = {};
+
+  t.false(message.isCachedPage(obj));
+  obj.type = 'fake';
+  t.false(message.isCachedPage(obj));
+
+  obj.type = message.TYPE_CACHED_PAGE;
+  t.true(message.isCachedPage(obj));
+
+  end(t);
 });

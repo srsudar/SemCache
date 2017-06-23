@@ -43566,7 +43566,7 @@ exports.getRuntimeBare = function() {
   return chrome.runtime;
 };
 
-},{"chrome-promise":36}],3:[function(require,module,exports){
+},{"chrome-promise":38}],3:[function(require,module,exports){
 /* globals chrome */
 'use strict';
 
@@ -43754,7 +43754,7 @@ exports.from = function(buff) {
   return wrapper;
 };
 
-},{"bloomfilter":32,"buffer/":35,"to-arraybuffer":51}],5:[function(require,module,exports){
+},{"bloomfilter":34,"buffer/":37,"to-arraybuffer":56}],5:[function(require,module,exports){
 'use strict';
 
 var dnssdSem = require('../dnssd/dns-sd-semcache');
@@ -43996,7 +43996,7 @@ exports.BloomStrategy.prototype.performQuery = function(urls) {
   });
 };
 
-},{"../dnssd/dns-sd-semcache":"dnsSem","../evaluation":"eval","../peer-interface/common":15,"../peer-interface/manager":17,"./objects":7,"./util":8}],6:[function(require,module,exports){
+},{"../dnssd/dns-sd-semcache":"dnsSem","../evaluation":"eval","../peer-interface/common":16,"../peer-interface/manager":18,"./objects":7,"./util":8}],6:[function(require,module,exports){
 'use strict';
 
 var dnssdSem = require('../dnssd/dns-sd-semcache');
@@ -44222,7 +44222,7 @@ exports.DigestStrategy.prototype.performQuery = function(urls) {
   });
 };
 
-},{"../dnssd/dns-sd-semcache":"dnsSem","../evaluation":"eval","../peer-interface/common":15,"../peer-interface/manager":17,"./objects":7,"./util":8}],7:[function(require,module,exports){
+},{"../dnssd/dns-sd-semcache":"dnsSem","../evaluation":"eval","../peer-interface/common":16,"../peer-interface/manager":18,"./objects":7,"./util":8}],7:[function(require,module,exports){
 'use strict';
 
 var bloomFilter = require('./bloom-filter');
@@ -46081,6 +46081,167 @@ exports.peekTypeInReader = function(reader) {
 },{"./byte-array":9,"./dns-codes":10,"./dns-util":12}],15:[function(require,module,exports){
 'use strict';
 
+/**
+ * Common messaging objects for communication between the app and extension.
+ *
+ * The messages are organized as two types: initiator and responder. An
+ * initiator is as follows:
+ *
+ * {
+ *   // The component that initiated the message
+ *   from: popup|content|background|app,
+ *   // Params for the request itself. Eg if this is an add page to cache
+ *   // message, this might be information about the page.
+ *   params: {},
+ *   // The type of the message.
+ *   type: <string>
+ * }
+ *
+ * A responder is as follows:
+ * {
+ *   // The type of the response. This will generally be something like
+ *   // networkQuery-response. The `-response` suffix indicates the type of the
+ *   // response.
+ *   type: <string>,
+ *   // the params of the original request. This allows callers to figure out
+ *   // if the response is for them.
+ *   params: {},
+ *   status: success|error,
+ *   // The body of the message. If this is for a local network query, this
+ *   // might be information about the message, eg.
+ *   body: {}
+ * }
+ */
+
+exports.initiatorTypes = {
+  localQuery: 'localQuery',
+  networkQuery: 'networkQuery',
+  addPageToCache: 'addPageToCache',
+  openPage: 'openPage',
+};
+
+exports.responderTypes = {
+  localQuery: 'localQuery-result',
+  networkQuery: 'networkQuery-result',
+  addPageToCache: 'addPageToCache-result',
+  openPage: 'openPage-result',
+};
+
+exports.statusTypes = {
+  success: 'success',
+  error: 'error'
+};
+
+/**
+ * @param {Object} msg
+ *
+ * @return {boolean}
+ */
+exports.isSuccess = function(msg) {
+  return msg && msg.status && msg.status === exports.statusTypes.success;
+};
+
+/**
+ * @param {Object} msg
+ *
+ * @return {boolean}
+ */
+exports.isError = function(msg) {
+  return msg && msg.status && msg.status === exports.statusTypes.error;
+};
+
+exports.createInitiatorMessage = function(from, type, params) {
+  if (![...Object.values(exports.initiatorTypes)].includes(type)) {
+    throw new Error('Unrecognized initiator type: ' + type);
+  }
+  return { from, type, params };
+};
+
+exports.createResponderMessage = function(type, status, params, body) {
+  if (![...Object.values(exports.responderTypes)].includes(type)) {
+    throw new Error('Unrecognized responder type: ' + type);
+  }
+  return { type, status, params, body };
+};
+
+/**
+ * @param {string} type
+ * @param {Object} params
+ * @param {Error|string} error
+ */
+exports.createResponseError = function(type, params, error) {
+  if (error && typeof error !== 'string') {
+    // It is an Error
+    error = error.message;
+  }
+  return exports.createResponderMessage(
+    type, exports.statusTypes.error, params, error
+  );
+};
+
+exports.createResponseSuccess = function(type, params, body) {
+  return exports.createResponderMessage(
+    type, exports.statusTypes.success, params, body
+  );
+};
+
+/**
+ * @param {string} from
+ * @param {Object} cpdiskJson
+ *
+ * @return {Object}
+ */
+exports.createAddPageMessage = function(from, cpdiskJson) {
+  return exports.createInitiatorMessage(
+    from, exports.initiatorTypes.addPageToCache, { cachedPage: cpdiskJson }
+  );
+};
+
+exports.createAddPageResponse = function() {
+  return exports.createResponseSuccess(
+    exports.responderTypes.addPageToCache, {}, {}
+  );
+};
+
+exports.createOpenMessage = function(from, href) {
+  return exports.createInitiatorMessage(
+    from, exports.initiatorTypes.openPage, { href: href }
+  );
+};
+
+exports.createOpenResponse = function(params, body) {
+  return exports.createResponseSuccess(
+    exports.responderTypes.openPage, params, body
+  );
+};
+
+exports.createLocalQueryMessage = function(from, urls) {
+  return exports.createInitiatorMessage(
+    from, exports.initiatorTypes.localQuery, { urls: urls }
+  );
+};
+
+exports.createLocalQueryResponse = function(params, body) {
+  return exports.createResponseSuccess(
+    exports.responderTypes.localQuery, params, body
+  );
+};
+
+exports.createNetworkQueryMessage = function(from, urls) {
+  return exports.createInitiatorMessage(
+    from, exports.initiatorTypes.networkQuery, { urls: urls }
+  );
+};
+
+exports.createNetworkQueryResponse = function(params, body) {
+  return exports.createResponseSuccess(
+    exports.responderTypes.networkQuery, params, body
+  );
+};
+
+},{}],16:[function(require,module,exports){
+'use strict';
+
 var util = require('../util');
 
 /**
@@ -46181,7 +46342,7 @@ exports.createFileParams = function(ipaddr, port, fileUrl) {
   };
 };
 
-},{"../util":23}],16:[function(require,module,exports){
+},{"../util":24}],17:[function(require,module,exports){
 'use strict';
 
 var util = require('../util');
@@ -46263,7 +46424,7 @@ exports.HttpPeerAccessor.prototype.getCacheDigest = function(params) {
   });
 };
 
-},{"../util":23}],17:[function(require,module,exports){
+},{"../util":24}],18:[function(require,module,exports){
 'use strict';
 
 var settings = require('../settings');
@@ -46279,105 +46440,126 @@ var ifWebrtc = require('./webrtc-impl');
  *
  * @return {HttpPeerAccessor|WebrtcPeerAccessor}
  */
-exports.getPeerAccessor = function() {
+exports.getPeerAccessor = function(ipaddr, port) {
   var transportMethod = settings.getTransportMethod();
   console.log(transportMethod);
   if (transportMethod === 'http') {
     return new ifHttp.HttpPeerAccessor(); 
   } else if (transportMethod === 'webrtc') {
-    return new ifWebrtc.WebrtcPeerAccessor();
+    return new ifWebrtc.WebrtcPeerAccessor({ ipaddr, port });
   } else {
     throw new Error('Unrecognized transport method: ' + transportMethod);
   }
 };
 
-},{"../settings":"settings","./http-impl":16,"./webrtc-impl":18}],18:[function(require,module,exports){
+},{"../settings":"settings","./http-impl":17,"./webrtc-impl":19}],19:[function(require,module,exports){
 'use strict';
 
 var cmgr = require('../webrtc/connection-manager');
 var util = require('../util');
 
-/**
- * @constructor
- */
-exports.WebrtcPeerAccessor = function WebrtcPeerAccessor() {
-  if (!(this instanceof WebrtcPeerAccessor)) {
-    throw new Error('PeerAccessor must be called with new');
+class WebrtcPeerAccessor {
+  /**
+   * @param {string} ipaddr
+   * @param {number} port
+   */
+  constructor({ ipaddr, port } = {}) {
+    this.ipaddr = ipaddr;
+    this.port = port;
   }
-  
-};
 
-/**
- * Retrieve a blob from the peer.
- *
- * @param {Object} params parameters for the get, as created by
- * peer-interface/common.
- *
- * @return {Promise.<Blob, Error>}
- */
-exports.WebrtcPeerAccessor.prototype.getFileBlob = function(params) {
-  return new Promise(function(resolve, reject) {
-    cmgr.getOrCreateConnection(params.ipAddress, params.port)
-    .then(peerConnection => {
-      return peerConnection.getFile(params.fileUrl);
-    })
-    .then(binary => {
-      var blob = util.getBufferAsBlob(binary);
-      resolve(blob);
-    })
-    .catch(err => {
-      reject(err);
+  /**
+   * @return {Promise.<PeerConnection, Error>}
+   */
+  getConnection() {
+    return cmgr.getOrCreateConnection(this.ipaddr, this.port);
+  }
+
+  /**
+   * Retrieve a cached page from a peer.
+   *
+   * @param {string} href
+   *
+   * @return {Promise.<CPDisk, Error>}
+   */
+  getCachedPage(href) {
+    return this.getConnection()
+      .then(peerConnection => {
+        return peerConnection.getCachedPage(href);
+      });
+  }
+
+  /**
+   * Retrieve a blob from the peer.
+   *
+   * @return {Promise.<Blob, Error>}
+   */
+  getFileBlob(params) {
+    return new Promise(function(resolve, reject) {
+      cmgr.getOrCreateConnection(params.ipAddress, params.port)
+      .then(peerConnection => {
+        return peerConnection.getFile(params.fileUrl);
+      })
+      .then(binary => {
+        var blob = util.getBufferAsBlob(binary);
+        resolve(blob);
+      })
+      .catch(err => {
+        reject(err);
+      });
     });
-  });
-};
+  }
 
-/**
- * Retrieve the list of pages in the peer's cache.
- *
- * @param {Object} params parameters for list request, as created by
- * peer-interface/common.
- *
- * @return {Promise.<Object, Error>}
- */
-exports.WebrtcPeerAccessor.prototype.getList = function(params) {
-  return new Promise(function(resolve, reject) {
-    cmgr.getOrCreateConnection(params.ipAddress, params.port)
-    .then(peerConnection => {
-      return peerConnection.getList();
-    })
-    .then(json => {
-      resolve(json);
-    })
-    .catch(err => {
-      reject(err);
+  /**
+   * Retrieve the list of pages in the peer's cache.
+   *
+   * @param {Object} params parameters for list request, as created by
+   * peer-interface/common.
+   *
+   * @return {Promise.<Object, Error>}
+   */
+  getList(params) {
+    return new Promise(function(resolve, reject) {
+      cmgr.getOrCreateConnection(params.ipAddress, params.port)
+      .then(peerConnection => {
+        return peerConnection.getList();
+      })
+      .then(json => {
+        resolve(json);
+      })
+      .catch(err => {
+        reject(err);
+      });
     });
-  });
-};
+  }
 
-/**
- * Retrieve the list of cached pages available in this cache.
- *
- * @param {Object} params parameter object as created by peer-interface/common
- *
- * @return {Promise.<Object, Error>} Promise that resolves with the digest
- * response or rejects with an Error.
- */
-exports.WebrtcPeerAccessor.prototype.getCacheDigest = function(params) {
-  return new Promise(function(resolve, reject) {
-    cmgr.getOrCreateConnection(params.ipAddress, params.port)
-    .then(peerConnection => {
-      return peerConnection.getCacheDigest();
-    })
-    .then(json => {
-      resolve(json);
-    })
-    .catch(err => {
-      reject(err);
+  /**
+   * Retrieve the list of cached pages available in this cache.
+   *
+   * @param {Object} params parameter object as created by peer-interface/common
+   *
+   * @return {Promise.<Object, Error>} Promise that resolves with the digest
+   * response or rejects with an Error.
+   */
+  getCacheDigest(params) {
+    return new Promise(function(resolve, reject) {
+      cmgr.getOrCreateConnection(params.ipAddress, params.port)
+      .then(peerConnection => {
+        return peerConnection.getCacheDigest();
+      })
+      .then(json => {
+        resolve(json);
+      })
+      .catch(err => {
+        reject(err);
+      });
     });
-  });
-};
+  }
+}
 
-},{"../util":23,"../webrtc/connection-manager":"cmgr"}],19:[function(require,module,exports){
+exports.WebrtcPeerAccessor = WebrtcPeerAccessor;
+
+},{"../util":24,"../webrtc/connection-manager":"cmgr"}],20:[function(require,module,exports){
 'use strict';
 
 /**
@@ -46388,10 +46570,12 @@ exports.WebrtcPeerAccessor.prototype.getCacheDigest = function(params) {
  * A 'CachedPage' is the fundamental unit.
  */
 
-let database = require('./database');
-let fileSystem = require('./file-system');
-let fsUtil = require('./file-system-util');
-let util = require('../util');
+const database = require('./database');
+const fileSystem = require('./file-system');
+const fsUtil = require('./file-system-util');
+const sanitize = require('sanitize-filename');
+const URI = require('urijs');
+const util = require('../util');
 
 const URL_DATE_DELIMITER = '_';
 
@@ -46494,20 +46678,22 @@ exports.getAllCachedPages = function() {
 /**
  * Create the file name for the cached page in a way that can later be parsed.
  *
- * @param {string} captureUrl
+ * @param {string} href
  * @param {string} captureDate the toISOString() representation of the date the
  * page was captured
  *
  * @return {string}
  */
-exports.createFileNameForPage = function(captureUrl, captureDate) {
-  return captureUrl +
-    URL_DATE_DELIMITER +
-    captureDate +
-    exports.MHTML_EXTENSION;
+exports.createFileNameForPage = function(href, captureDate) {
+  let uri = URI(href);
+  let raw = [
+    uri.hostname(), URL_DATE_DELIMITER, captureDate, exports.MHTML_EXTENSION
+  ].join('');
+  let result = sanitize(raw);
+  return result;
 };
 
-},{"../util":23,"./database":"db","./file-system":"fileSystem","./file-system-util":"fsUtil"}],20:[function(require,module,exports){
+},{"../util":24,"./database":"db","./file-system":"fileSystem","./file-system-util":"fsUtil","sanitize-filename":54,"urijs":62}],21:[function(require,module,exports){
 /* globals WSC, _, TextEncoder */
 'use strict';
 
@@ -46537,7 +46723,7 @@ _.extend(exports.EvaluationHandler.prototype, {
   }
 }, WSC.BaseHandler.prototype);
 
-},{"../evaluation":"eval"}],21:[function(require,module,exports){
+},{"../evaluation":"eval"}],22:[function(require,module,exports){
 /* globals WSC, RTCPeerConnection, RTCSessionDescription, RTCIceCandidate */
 'use strict';
 
@@ -46781,19 +46967,24 @@ _.extend(exports.WebRtcOfferHandler.prototype,
   WSC.BaseHandler.prototype
 );
 
-},{"../dnssd/binary-utils":"binaryUtils","../persistence/file-system":"fileSystem","../persistence/file-system-util":"fsUtil","../webrtc/connection-manager":"cmgr","../webrtc/responder":29,"./server-api":22,"underscore":52}],22:[function(require,module,exports){
+},{"../dnssd/binary-utils":"binaryUtils","../persistence/file-system":"fileSystem","../persistence/file-system-util":"fsUtil","../webrtc/connection-manager":"cmgr","../webrtc/responder":30,"./server-api":23,"underscore":59}],23:[function(require,module,exports){
+(function (Buffer){
 'use strict';
 
 /**
- * Controls the API for the server backing SemCache.
+ * This module is responsible for generating responses coming from peers. It
+ * does not handle sending to peers, it only generates responses. It
+ * essentially provides endpoints that expose server-like functionality for the
+ * instance. E.g. listing saved pages, providing saved pages, etc.
  */
 
-var datastore = require('../persistence/datastore');
-var appController = require('../app-controller');
+const appController = require('../app-controller');
+const datastore = require('../persistence/datastore');
+const objects = require('../persistence/objects');
 
-var HTTP_SCHEME = 'http://';
+const HTTP_SCHEME = 'http://';
 
-var VERSION = 0.0;
+const VERSION = 0.0;
 
 /** 
  * The path from the root of the server that serves cached pages.
@@ -46804,6 +46995,9 @@ var PATH_GET_PAGE_DIGEST = 'page_digest';
 /** The path we use for mimicking the list_pages endpoing during evaluation. */
 var PATH_EVAL_LIST_PAGE_CACHE = 'eval_list';
 var PATH_RECEIVE_WRTC_OFFER = 'receive_wrtc';
+
+const DEFAULT_OFFSET = 0;
+const DEFAULT_LIMIT = 50;
 
 /**
  * Create the metadata object that is returned in server responses.
@@ -46872,21 +47066,46 @@ exports.getAccessUrlForCachedPage = function(fullPath) {
 /**
  * Return a JSON object response for the all cached pages endpoint.
  *
- * @return {Promise.<Object, Error} Promise that resolves with an object like
- * the following:
+ * @return {Promise.<Buffer, Error} Promise that resolves with Buffer from an
+ * object like the following:
  * {
  *   metadata: {},
- *   cachedPages: [CachedPage, CachedPage]
+ *   cachedPages: [CPSummary, CPSummary]
  * }
  */
 exports.getResponseForAllCachedPages = function() {
   return new Promise(function(resolve, reject) {
-    datastore.getAllCachedPages()
-    .then(pages => {
-      var result = {};
+    datastore.getCachedPageSummaries(DEFAULT_OFFSET, DEFAULT_LIMIT)
+    .then(cpsums => {
+      let result = {};
       result.metadata = exports.createMetadatObj();
-      result.cachedPages = pages;
-      resolve(result);
+      result.cachedPages = cpsums.map(cpsum => cpsum.asJSON());
+      resolve(Buffer.from(JSON.stringify(result)));
+    })
+    .catch(err => {
+      reject(err);
+    });
+  });
+};
+
+/**
+ * @param {Object} params parameters for the request
+ * @param {string} params.href the href of the requested page
+ *
+ * @return {Promise.<Buffer, Error>} Promise that resolves with a Buffer
+ * representing the CPDisk, or a null value if the page is not found.
+ */
+exports.getResponseForCachedPage = function(params) {
+  return new Promise(function(resolve, reject) {
+    let href = params.href;
+    datastore.getCPDiskForHrefs(href)
+    .then(cpdiskArr => {
+      if (cpdiskArr.length === 0) {
+        // No matching pages.
+        resolve(null);
+      } else {
+        resolve(cpdiskArr[0].asBuffer());
+      }
     })
     .catch(err => {
       reject(err);
@@ -46898,8 +47117,9 @@ exports.getResponseForAllCachedPages = function() {
  * Return a JSON object representing the digest of all pages available on this
  * cache.
  *
- * @return {Promise.<Object, Error>} Promise that resolves with the response or
- * rejects with an Error. The response will be like the following:
+ * @return {Promise.<Buffer, Error>} Promise that resolves with the response or
+ * rejects with an Error. The response will be a Buffer from an object like the
+ * following:
  * {
  *   metadata: Object,
  *   digest:
@@ -46915,25 +47135,63 @@ exports.getResponseForAllCachedPages = function() {
 exports.getResponseForAllPagesDigest = function() {
   return new Promise(function(resolve, reject) {
     datastore.getAllCachedPages()
-    .then(pages => {
+    .then(cpinfos => {
       var result = {};
       result.metadata = exports.createMetadatObj();
       
-      var pageInfos = [];
-      pages.forEach(page => {
-        var info = {};
-        info.fullUrl = page.metadata.fullUrl;
-        info.captureDate = page.captureDate;
-        pageInfos.push(info);
+      let pageInfos = cpinfos.map(cpinfo => {
+        return {
+          fullUrl: cpinfo.captureHref,
+          captureDate: cpinfo.captureDate
+        };
       });
 
       result.digest = pageInfos;
-      resolve(result);
+      resolve(Buffer.from(JSON.stringify(result)));
     })
     .catch(err => {
       reject(err);
     });
   });
+};
+
+/**
+ * @param {Buffer} buff
+ *
+ * @return {Object}
+ */
+exports.parseResponseForList = function(buff) {
+  // This is a pure JSON response. The only thing to do is parse and invoke the
+  // constructors.
+  let result = JSON.parse(buff.toString());
+  result.cachedPages = result.cachedPages.map(
+    cpsumJson => objects.CPSummary.fromJSON(cpsumJson)
+  );
+  return result;
+};
+
+/*
+ * @param {Buffer} buff
+ *
+ * @return {Object}
+ */
+exports.parseResponseForCachedPage = function(buff) {
+  // Here we expect either null or a CPDisk.
+  if (buff === null) {
+    return null;
+  } else {
+    return objects.CPDisk.fromBuffer(buff);
+  }
+};
+
+/*
+ * @param {Buffer} buff
+ *
+ * @return {Object}
+ */
+exports.parseResponseForDigest = function(buff) {
+  // This one is pure JSON.
+  return JSON.parse(buff.toString());
 };
 
 /**
@@ -46948,8 +47206,16 @@ exports.getCachedFileNameFromPath = function(path) {
   return result;
 };
 
-},{"../app-controller":"appController","../persistence/datastore":19}],23:[function(require,module,exports){
+}).call(this,require("buffer").Buffer)
+},{"../app-controller":"appController","../persistence/datastore":20,"../persistence/objects":"persistenceObjs","buffer":35}],24:[function(require,module,exports){
 'use strict';
+
+const Buffer = require('buffer').Buffer;
+const blobToBufferLib = require('blob-to-buffer');
+const dataUrlToBlob = require('dataurl-to-blob');
+const SmartBuffer = require('smart-buffer').SmartBuffer;
+
+const DEFAULT_BUFFER_SIZE = 0;
 
 /**
  * Helper to fetch and parse JSON from a URL.
@@ -47171,7 +47437,180 @@ exports.toArray = function(arg) {
   return result;
 };
 
-},{}],24:[function(require,module,exports){
+/**
+ * @param {Buffer} buff
+ *
+ * @return {string} the buffer encoded as a data URL
+ */
+exports.getBufferAsDataUrl = function(buff) {
+  return new Promise(function(resolve, reject) {
+    let blob = exports.getBufferAsBlob(buff);
+    exports.getBlobAsDataUrl(blob)
+    .then(result => {
+      resolve(result);
+    })
+    .catch(err => {
+      reject(err);
+    });
+  });
+};
+
+/**
+ * @param {string} dataUrl
+ *
+ * @return {Promise.<Buffer, Error>}
+ */
+exports.getDataUrlAsBuffer = function(dataUrl) {
+  return new Promise(function(resolve, reject) {
+    let blob = dataUrlToBlob(dataUrl);
+    exports.blobToBuffer(blob)
+    .then(buff => {
+      resolve(buff);
+    })
+    .catch(err => {
+      reject(err);
+    });
+  });
+};
+
+/**
+ * @param {Blob} blob
+ *
+ * @return {Promise} Promise that resolves with a data url string
+ */
+exports.getBlobAsDataUrl = function(blob) {
+  return new Promise(function(resolve) {
+    var reader = new window.FileReader();
+    reader.onloadend = function() {
+      var base64 = reader.result;
+      resolve(base64);
+    };
+    reader.readAsDataURL(blob);
+  });
+};
+
+/**
+ * @param {Blob} blob
+ *
+ * @return {Promise.<Buffer, Error>}
+ */
+exports.blobToBuffer = function(blob) {
+  return new Promise(function(resolve, reject) {
+    blobToBufferLib(blob, function(err, buff) {
+      if (err) {
+        reject(err);
+      } else {
+        resolve(buff);
+      }
+    });
+  });
+};
+
+/**
+ * @param {Buffer} buff
+ *
+ * @return {Blob}
+ */
+exports.buffToBlob = function(buff) {
+  return new Blob([ buff ]);
+};
+
+/**
+ * Convert a data URI to a Buffer.
+ *
+ * @param {string} uri the data URI
+ *
+ * @return {Buffer} 
+ */
+exports.dataToBuff = function(uri) {
+  // We expect something like 'data:text/plain;base64,aGVsbG8='.
+  // Options are discussed here:
+  // https://stackoverflow.com/questions/11335460/how-do-i-parse-a-data-url-in-node
+  return new Buffer(uri.split(',')[1], 'base64');
+};
+
+/**
+ *
+ * Conver a Buffer to a dataUri.
+ *
+ * @param {Buffer} buff
+ *
+ * @return {string} data uri
+ */
+exports.buffToData = function(buff) {
+  // Do this by hand for our simple use cases. We might have to get fancier and
+  // use a dependency-lite library if we start leaning on this method.
+  // We'll always use this mimetype for now.
+  let startUri = 'data:application/octet-stream;base64,';
+  return startUri + buff.toString('base64');
+};
+
+/**
+ * Convert a JSON object to a Buffer. This tries to be intelligent, serializing
+ * the non-Buffer properties via JSON.stringify, and leaving Buffer properties
+ * untouched.
+ *
+ * @param {Object} obj
+ *
+ * @return {Buffer}
+ */
+exports.objToBuff = function(obj) {
+  // Get all the JSON-ifiable properties on their own and add them as a JSON
+  // string.
+  let json = {};
+  let buffSb = SmartBuffer.fromBuffer(new Buffer(DEFAULT_BUFFER_SIZE));
+  for (let prop of Object.keys(obj)) {
+    let value = obj[prop];
+    if (Buffer.isBuffer(value)) {
+      // We will add Buffers as [string, buffer_length, Buffer].
+      buffSb.writeStringNT(prop);
+      buffSb.writeUInt32LE(value.length);
+      buffSb.writeBuffer(value);
+    } else {
+      json[prop] = value;
+    }
+  }
+
+  // Give a semi-reasonable starting value. It will expand as necessary.
+  let sb = SmartBuffer.fromBuffer(new Buffer(DEFAULT_BUFFER_SIZE));
+
+  let jsonStr = JSON.stringify(json);
+  sb.writeUInt32LE(jsonStr.length);
+  sb.writeString(jsonStr);
+
+  sb.writeBuffer(buffSb.toBuffer());
+
+  return sb.toBuffer();
+};
+
+/**
+ * Reclaim an Object from a Buffer as generated by objToBuff.
+ *
+ * @param {Buffer}
+ *
+ * @return {Object}
+ */
+exports.buffToObj = function(buff) {
+  // We expect:
+  // [length, jsonString, (null-terminated string, buff length, buff) * n]
+  let sb = SmartBuffer.fromBuffer(buff);
+  let jsonLength = sb.readUInt32LE();
+  let jsonStr = sb.readString(jsonLength);
+
+  let result = JSON.parse(jsonStr);
+
+  // No reclaim the buffers.
+  while (sb.remaining() > 0) {
+    let propName = sb.readStringNT();
+    let buffLength = sb.readUInt32LE();
+    let buff = sb.readBuffer(buffLength);
+    result[propName] = buff;
+  }
+  
+  return result;
+};
+
+},{"blob-to-buffer":33,"buffer":35,"dataurl-to-blob":39,"smart-buffer":55}],25:[function(require,module,exports){
 'use strict';
 
 var commonChannel = require('./common-channel');
@@ -47271,7 +47710,6 @@ class BufferedChannelServer extends commonChannel.BaseServer {
 
     while (!item.done) {
       if (this.channel.bufferedAmount > exports.BUFFER_FULL_THRESHOLD) {
-        console.log('TRIGGERED');
         // Save our pending item, which we can't send yet.
         this._pendingItem = item;
         this._boundBufferedAmountLowListener =
@@ -47305,7 +47743,7 @@ class BufferedChannelServer extends commonChannel.BaseServer {
 exports.BufferedChannelClient = BufferedChannelClient;
 exports.BufferedChannelServer = BufferedChannelServer;
 
-},{"./common-channel":25,"./protocol":28}],25:[function(require,module,exports){
+},{"./common-channel":26,"./protocol":29}],26:[function(require,module,exports){
 'use strict';
 
 const Buffer = require('buffer/').Buffer;
@@ -47599,7 +48037,7 @@ class BaseServer extends EventEmitter {
 exports.BaseClient = BaseClient;
 exports.BaseServer = BaseServer;
 
-},{"./protocol":28,"buffer/":35,"events":38}],26:[function(require,module,exports){
+},{"./protocol":29,"buffer/":37,"events":41}],27:[function(require,module,exports){
 'use strict';
 
 /**
@@ -47619,9 +48057,15 @@ exports.BaseServer = BaseServer;
 exports.TYPE_LIST = 'list';
 exports.TYPE_FILE = 'file';
 exports.TYPE_DIGEST = 'digest';
+exports.TYPE_CACHED_PAGE = 'cachedpage';
 
 /** Valid types of request messages. */
-var VALID_TYPES = [exports.TYPE_LIST, exports.TYPE_FILE, exports.TYPE_DIGEST];
+var VALID_TYPES = [
+  exports.TYPE_LIST,
+  exports.TYPE_FILE,
+  exports.TYPE_DIGEST,
+  exports.TYPE_CACHED_PAGE
+];
 
 /**
  * An increasing suffix of numbers to ensure we create unique channel names.
@@ -47659,6 +48103,19 @@ exports.createListMessage = function() {
  */
 exports.createDigestMessage = function() {
   return exports.createMessage(exports.TYPE_DIGEST);
+};
+
+/**
+ * @param {string} href href of the cached page you are requesting
+ *
+ * @return {Object}
+ */
+exports.createCachedPageMessage = function(href) {
+  let result = exports.createMessage(exports.TYPE_CACHED_PAGE);
+  let request = {};
+  request.href = href;
+  result.request = request;
+  return result;
 };
 
 /**
@@ -47719,20 +48176,31 @@ exports.isDigest = function(msg) {
   return msg.type && msg.type === exports.TYPE_DIGEST;
 };
 
-},{}],27:[function(require,module,exports){
+/**
+ * @param {Object} msg
+ *
+ * @return {boolean}
+ */
+exports.isCachedPage = function(msg) {
+  return msg.type && msg.type === exports.TYPE_CACHED_PAGE;
+};
+
+},{}],28:[function(require,module,exports){
 'use strict';
 
-let _ = require('underscore');
-let bufferedChannel = require('./buffered-channel');
-let EventEmitter = require('wolfy87-eventemitter');
-let message = require('./message');
+const EventEmitter = require('wolfy87-eventemitter');
+
+const serverApi = require('../server/server-api');
+const bufferedChannel = require('./buffered-channel');
+const message = require('./message');
 
 let EV_CLOSE = 'close';
 
 let Client = bufferedChannel.BufferedChannelClient;
 
 /**
- * Handles a connection to a SemCache peer. 
+ * Handles a connection to a SemCache peer. This forms the client portion of a
+ * client/server pair.
  */
 
 /**
@@ -47745,152 +48213,169 @@ let Client = bufferedChannel.BufferedChannelClient;
  * be backing this connection. This rawConnection has its onclose handler
  * modified to allow the PeerConnection to emit its own 'close' event.
  */
-exports.PeerConnection = function PeerConnection(rawConnection) {
-  if (!(this instanceof PeerConnection)) {
-    throw new Error('PeerConnection must be called with new');
+class PeerConnection extends EventEmitter {
+  constructor(rawConnection) {
+    super();
+    this.rawConnection = rawConnection;
+
+    let self = this;
+    this.rawConnection.onclose = function() {
+      self.emitClose();
+    };
   }
-  var self = this;
 
-  this.rawConnection = rawConnection;
+  /**
+   * Emit a close event.
+   */
+  emitClose() {
+    this.emit(EV_CLOSE);
+  }
 
-  this.rawConnection.onclose = function() {
-    self.emitClose();
-  };
-};
+  /**
+   * Return the raw WebRTC connection backing this PeerConnection.
+   *
+   * @return {RTCPeerConnection} 
+   */
+  getRawConnection() {
+    return this.rawConnection;
+  }
 
-_.extend(exports.PeerConnection.prototype, new EventEmitter());
+  /**
+   * Get the list of available files from the peer.
+   *
+   * @return {Promise.<Object, Error>} Promise that resolves with the JSON list
+   * of the directory contents
+   */
+  getList() {
+    var self = this;
+    return new Promise(function(resolve, reject) {
+      var msg = message.createListMessage();
 
-/**
- * Emit a close event.
- */
-exports.PeerConnection.prototype.emitClose = function() {
-  this.emit(EV_CLOSE);
-};
-
-/**
- * Return the raw WebRTC connection backing this PeerConnection.
- *
- * @return {RTCPeerConnection} 
- */
-exports.PeerConnection.prototype.getRawConnection = function() {
-  return this.rawConnection;
-};
-
-/**
- * Get the list of available files from the peer.
- *
- * @return {Promise.<Object, Error>} Promise that resolves with the JSON list
- * of the directory contents
- */
-exports.PeerConnection.prototype.getList = function() {
-  // For now we are going to assume that all messages can be held in memory.
-  // This means that a single message can be processed without worrying about
-  // piecing it together from other messages. It is a simplification, but one
-  // that seems reasonable.
-  var self = this;
-  return new Promise(function(resolve, reject) {
-    var msg = message.createListMessage();
-    var rawConnection = self.getRawConnection();
-
-    exports.sendAndGetResponse(rawConnection, msg)
-    .then(buff => {
-      var str = buff.toString();
-      var result = JSON.parse(str);
-      resolve(result);
-    })
-    .catch(err => {
-      reject(err);
+      self.sendAndGetResponse(msg)
+      .then(buff => {
+        let result = serverApi.parseResponseForList(buff);
+        resolve(result);
+      })
+      .catch(err => {
+        reject(err);
+      });
     });
-  });
-};
+  }
+
+  /**
+   * Get the digest of page information from the peer.
+   *
+   * @return {Promise.<Object, Error>} Promise that resolves with the JSON object
+   * representing the digest or rejects with an Error.
+   */
+  getCacheDigest() {
+    var self = this;
+    return new Promise(function(resolve, reject) {
+      var msg = message.createDigestMessage();
+
+      self.sendAndGetResponse(msg)
+      .then(buff => {
+        let result = serverApi.parseResponseForDigest(buff);
+        resolve(result);
+      })
+      .catch(err => {
+        reject(err);
+      });
+    });
+  }
+
+  /**
+   * Get a cached page from the peer.
+   *
+   * @param {string} href
+   *
+   * @return {Promise.<CPDisk, Error>}
+   */
+  getCachedPage(href) {
+    var self = this;
+    return new Promise(function(resolve, reject) {
+      let msg = message.createCachedPageMessage(href);
+
+      self.sendAndGetResponse(msg)
+      .then(buff => {
+        let result = serverApi.parseResponseForCachedPage(buff);
+        resolve(result);
+      })
+      .catch(err => {
+        reject(err);
+      });
+    });
+  }
+
+  /**
+   * Get a file from the peer.
+   *
+   * @param {string} remotePath the identifier on the remote machine
+   *
+   * @return {Promise.<Buffer, Error>} Promise that resolves when the get is
+   * complete
+   */
+  getFile(remotePath) {
+    let self = this;
+    return new Promise(function(resolve, reject) {
+      var msg = message.createFileMessage(remotePath);
+      self.sendAndGetResponse(msg)
+      .then(buffer => {
+        resolve(buffer);
+      })
+      .catch(err => {
+        reject(err);
+      });
+    });
+  }
+
+  /**
+   * Helper for common functionality of creating a channel, sending a request
+   * message, and resolving after a response is received.
+   *
+   * After the response is received, the channel that was used to send the
+   * message will be closed. The response is resolved after the first message is
+   * received.
+   *
+   * @param {RTCPeerConnection} pc the connection over which to send the message
+   * @param {Object} msg the message to send to the peer
+   * 
+   * @return {Promise.<ArrayBuffer, Error>} Promise that resolves with the
+   * ArrayBuffer message received on the channel or with an Error if something
+   * went wrong. Callers are responsible for any parsing of the ArrayBuffer
+   * object, eg to reclaim a JSON response.
+   */
+  sendAndGetResponse(msg) {
+    let self = this;
+    return new Promise(function(resolve, reject) {
+      let client = exports.createClient(self.rawConnection, msg);
+
+      client.on('complete', buff => {
+        resolve(buff);
+      });
+
+      client.on('error', err => {
+        reject(err);
+      });
+
+      client.start();
+    });
+  }
+}
 
 /**
- * Get the digest of page information from the peer.
+ * @param {RTCPeerConnection} pc
+ * @param {Object} msg
  *
- * @return {Promise.<Object, Error>} Promise that resolves with the JSON object
- * representing the digest or rejects with an Error.
+ * @return {BufferedChannelClient}
  */
-exports.PeerConnection.prototype.getCacheDigest = function() {
-  // For now we are going to assume that all messages can be held in memory.
-  // This means that a single message can be processed without worrying about
-  // piecing it together from other messages. It is a simplification, but one
-  // that seems reasonable.
-  var self = this;
-  return new Promise(function(resolve, reject) {
-    var msg = message.createDigestMessage();
-    var rawConnection = self.getRawConnection();
-
-    exports.sendAndGetResponse(rawConnection, msg)
-    .then(buff => {
-      var str = buff.toString();
-      var result = JSON.parse(str);
-      resolve(result);
-    })
-    .catch(err => {
-      reject(err);
-    });
-  });
+exports.createClient = function(pc, msg) {
+  return new Client(pc, true, msg);
 };
 
-/**
- * Get a file from the peer.
- *
- * @param {string} remotePath the identifier on the remote machine
- *
- * @return {Promise.<Buffer, Error>} Promise that resolves when the get is
- * complete
- */
-exports.PeerConnection.prototype.getFile = function(remotePath) {
-  // For now we are assuming that all files can be held in memory and do not
-  // need to be written to disk as they are received. This is reasonable, I
-  // believe, given the way mhtml is displayed.
-  var self = this;
-  return new Promise(function(resolve, reject) {
-    var msg = message.createFileMessage(remotePath);
-    var rawConnection = self.getRawConnection();
-    exports.sendAndGetResponse(rawConnection, msg)
-    .then(buffer => {
-      resolve(buffer);
-    })
-    .catch(err => {
-      reject(err);
-    });
-  });
-};
+exports.PeerConnection = PeerConnection;
 
-/**
- * Helper for common functionality of creating a channel, sending a request
- * message, and resolving after a response is received.
- *
- * After the response is received, the channel that was used to send the
- * message will be closed. The response is resolved after the first message is
- * received.
- *
- * @param {RTCPeerConnection} pc the connection over which to send the message
- * @param {Object} msg the message to send to the peer
- * 
- * @return {Promise.<ArrayBuffer, Error>} Promise that resolves with the
- * ArrayBuffer message received on the channel or with an Error if something
- * went wrong. Callers are responsible for any parsing of the ArrayBuffer
- * object, eg to reclaim a JSON response.
- */
-exports.sendAndGetResponse = function(pc, msg) {
-  return new Promise(function(resolve, reject) {
-    var client = new Client(pc, true, msg);
-
-    client.on('complete', buff => {
-      resolve(buff);
-    });
-
-    client.on('error', err => {
-      reject(err);
-    });
-
-    client.start();
-  });
-};
-
-},{"./buffered-channel":24,"./message":26,"underscore":52,"wolfy87-eventemitter":53}],28:[function(require,module,exports){
+},{"../server/server-api":23,"./buffered-channel":25,"./message":27,"wolfy87-eventemitter":65}],29:[function(require,module,exports){
 'use strict';
 
 var Buffer = require('buffer/').Buffer;
@@ -48083,10 +48568,8 @@ exports.createErrorMessage = function(reason) {
   return new exports.ProtocolMessage(header, null);
 };
 
-},{"buffer/":35}],29:[function(require,module,exports){
+},{"buffer/":37}],30:[function(require,module,exports){
 'use strict';
-
-var Buffer = require('buffer/').Buffer;
 
 var api = require('../server/server-api');
 var binUtil = require('../dnssd/binary-utils').BinaryUtils;
@@ -48096,7 +48579,7 @@ var message = require('./message');
 var serverApi = require('../server/server-api');
 
 /**
- * This module is responsible for responding to incoming requests.
+ * This module is responsible for responding to incoming requests via WebRTC.
  */
 
 /**
@@ -48130,6 +48613,8 @@ exports.onDataChannelMessageHandler = function(channel, event) {
     exports.onFile(channel, msg);
   } else if (message.isDigest(msg)) {
     exports.onDigest(channel, msg);
+  } else if (message.isCachedPage(msg)) {
+    exports.onCachedPage(channel, msg);
   } else {
     console.log('Unrecognized message type: ', msg.type, msg);
   }
@@ -48149,10 +48634,10 @@ exports.onDataChannelMessageHandler = function(channel, event) {
 exports.onList = function(channel) {
   return new Promise(function(resolve, reject) {
     serverApi.getResponseForAllCachedPages()
-    .then(json => {
-      var jsonBuff = Buffer.from(JSON.stringify(json));
-      var ccServer = exports.createChannelServer(channel);
-      ccServer.sendBuffer(jsonBuff);
+    .then(buff => {
+      return exports.sendBufferOverChannel(channel, buff);
+    })
+    .then(() => {
       resolve();
     })
     .catch(err => {
@@ -48173,10 +48658,45 @@ exports.onList = function(channel) {
 exports.onDigest = function(channel) {
   return new Promise(function(resolve, reject) {
     serverApi.getResponseForAllPagesDigest()
-    .then(json => {
-      var jsonBuff = Buffer.from(JSON.stringify(json));
-      var ccServer = exports.createChannelServer(channel);
-      ccServer.sendBuffer(jsonBuff);
+    .then(buff => {
+      return exports.sendBufferOverChannel(channel, buff);
+    })
+    .then(() => {
+      resolve();
+    })
+    .catch(err => {
+      reject(err);
+    });
+  });
+};
+
+exports.onCachedPage = function(channel, msg) {
+  return new Promise(function(resolve, reject) {
+    serverApi.getResponseForCachedPage(msg.request)
+    .then(buff => {
+      return exports.sendBufferOverChannel(channel, buff);   
+    })
+    .then(() => {
+      resolve();
+    })
+    .catch(err => {
+      reject(err);
+    });
+  });
+};
+
+/**
+ * @param {RTCDataChannel} channel
+ * @param {Buffer} buff
+ *
+ * @return {Promise.<undefined>}
+ */
+exports.sendBufferOverChannel = function(channel, buff) {
+  return new Promise(function(resolve, reject) {
+    Promise.resolve()
+    .then(() => {
+      let ccServer = exports.createChannelServer(channel);
+      ccServer.sendBuffer(buff);
       resolve();
     })
     .catch(err => {
@@ -48226,7 +48746,7 @@ exports.createChannelServer = function(channel) {
   return new bufferedChannel.BufferedChannelServer(channel);
 };
 
-},{"../dnssd/binary-utils":"binaryUtils","../persistence/file-system":"fileSystem","../server/server-api":22,"./buffered-channel":24,"./message":26,"buffer/":35}],30:[function(require,module,exports){
+},{"../dnssd/binary-utils":"binaryUtils","../persistence/file-system":"fileSystem","../server/server-api":23,"./buffered-channel":25,"./message":27}],31:[function(require,module,exports){
 (function (global){
 /*! http://mths.be/base64 v0.1.0 by @mathias | MIT license */
 ;(function(root) {
@@ -48395,7 +48915,7 @@ exports.createChannelServer = function(channel) {
 }(this));
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],31:[function(require,module,exports){
+},{}],32:[function(require,module,exports){
 'use strict'
 
 exports.byteLength = byteLength
@@ -48511,7 +49031,32 @@ function fromByteArray (uint8) {
   return parts.join('')
 }
 
-},{}],32:[function(require,module,exports){
+},{}],33:[function(require,module,exports){
+(function (Buffer){
+/* global Blob, FileReader */
+
+module.exports = function blobToBuffer (blob, cb) {
+  if (typeof Blob === 'undefined' || !(blob instanceof Blob)) {
+    throw new Error('first argument must be a Blob')
+  }
+  if (typeof cb !== 'function') {
+    throw new Error('second argument must be a function')
+  }
+
+  var reader = new FileReader()
+
+  function onLoadEnd (e) {
+    reader.removeEventListener('loadend', onLoadEnd, false)
+    if (e.error) cb(e.error)
+    else cb(null, new Buffer(reader.result))
+  }
+
+  reader.addEventListener('loadend', onLoadEnd, false)
+  reader.readAsArrayBuffer(blob)
+}
+
+}).call(this,require("buffer").Buffer)
+},{"buffer":35}],34:[function(require,module,exports){
 (function(exports) {
   exports.BloomFilter = BloomFilter;
   exports.fnv_1a = fnv_1a;
@@ -48631,7 +49176,7 @@ function fromByteArray (uint8) {
   }
 })(typeof exports !== "undefined" ? exports : this);
 
-},{}],33:[function(require,module,exports){
+},{}],35:[function(require,module,exports){
 (function (global){
 /*!
  * The buffer module from node.js, for the browser.
@@ -50424,14 +50969,14 @@ function isnan (val) {
 }
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"base64-js":31,"ieee754":40,"isarray":34}],34:[function(require,module,exports){
+},{"base64-js":32,"ieee754":43,"isarray":36}],36:[function(require,module,exports){
 var toString = {}.toString;
 
 module.exports = Array.isArray || function (arr) {
   return toString.call(arr) == '[object Array]';
 };
 
-},{}],35:[function(require,module,exports){
+},{}],37:[function(require,module,exports){
 /*!
  * The buffer module from node.js, for the browser.
  *
@@ -52139,7 +52684,7 @@ function isnan (val) {
   return val !== val // eslint-disable-line no-self-compare
 }
 
-},{"base64-js":31,"ieee754":40}],36:[function(require,module,exports){
+},{"base64-js":32,"ieee754":43}],38:[function(require,module,exports){
 /*!
  * chrome-promise 2.0.2
  * https://github.com/tfoxy/chrome-promise
@@ -52234,7 +52779,51 @@ function isnan (val) {
   }
 }));
 
-},{}],37:[function(require,module,exports){
+},{}],39:[function(require,module,exports){
+module.exports = function (dataURL) {
+
+    'use strict';
+
+    if (!window || window.window !== window) {
+        throw new Error('This module is only available in browser');
+    }
+
+    var Blob = window.Blob || window.MozBlob || window.WebKitBlob;
+    if (!Blob) {
+        throw new Error('Blob was not supported');
+    }
+
+    var dataURLPattern = /^data:((.*?)(;charset=.*?)?)(;base64)?,/;
+
+    // parse the dataURL components as per RFC 2397
+    var matches = dataURL.match(dataURLPattern);
+    if (!matches) {
+        throw new Error('invalid dataURI');
+    }
+
+    // default to text/plain;charset=utf-8
+    var mediaType = matches[2]
+        ? matches[1]
+        : 'text/plain' + (matches[3] || ';charset=utf-8');
+
+    var isBase64   = !!matches[4];
+    var dataString = dataURL.slice(matches[0].length);
+    var byteString = isBase64
+        // convert base64 to raw binary data held in a string
+        ? atob(dataString)
+        // convert base64/URLEncoded data component to raw binary
+        : decodeURIComponent(dataString);
+
+    var array = [];
+    for (var i = 0; i < byteString.length; i++) {
+        array.push(byteString.charCodeAt(i));
+    }
+
+    return new Blob([new Uint8Array(array)], { type: mediaType });
+};
+
+
+},{}],40:[function(require,module,exports){
 (function (global){
 (function (global, factory) {
    typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory() :
@@ -56842,7 +57431,7 @@ return Dexie;
 
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],38:[function(require,module,exports){
+},{}],41:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -57146,7 +57735,7 @@ function isUndefined(arg) {
   return arg === void 0;
 }
 
-},{}],39:[function(require,module,exports){
+},{}],42:[function(require,module,exports){
 var isBuffer = require('is-buffer')
 
 var flat = module.exports = flatten
@@ -57253,7 +57842,7 @@ function unflatten(target, opts) {
   return result
 }
 
-},{"is-buffer":41}],40:[function(require,module,exports){
+},{"is-buffer":44}],43:[function(require,module,exports){
 exports.read = function (buffer, offset, isLE, mLen, nBytes) {
   var e, m
   var eLen = nBytes * 8 - mLen - 1
@@ -57339,7 +57928,7 @@ exports.write = function (buffer, value, offset, isLE, mLen, nBytes) {
   buffer[offset + i - d] |= s * 128
 }
 
-},{}],41:[function(require,module,exports){
+},{}],44:[function(require,module,exports){
 /*!
  * Determine if an object is a Buffer
  *
@@ -57362,7 +57951,7 @@ function isSlowBuffer (obj) {
   return typeof obj.readFloatLE === 'function' && typeof obj.slice === 'function' && isBuffer(obj.slice(0, 0))
 }
 
-},{}],42:[function(require,module,exports){
+},{}],45:[function(require,module,exports){
 (function (process){
 /**
  * Module dependencies.
@@ -57666,7 +58255,7 @@ function createDataRows(params) {
 }
 
 }).call(this,require('_process'))
-},{"_process":50,"flat":39,"lodash.clonedeep":43,"lodash.flatten":44,"lodash.get":45,"lodash.set":46,"lodash.uniq":47,"os":49}],43:[function(require,module,exports){
+},{"_process":53,"flat":42,"lodash.clonedeep":46,"lodash.flatten":47,"lodash.get":48,"lodash.set":49,"lodash.uniq":50,"os":52}],46:[function(require,module,exports){
 (function (global){
 /**
  * lodash (Custom Build) <https://lodash.com/>
@@ -59418,7 +60007,7 @@ function stubFalse() {
 module.exports = cloneDeep;
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],44:[function(require,module,exports){
+},{}],47:[function(require,module,exports){
 (function (global){
 /**
  * lodash (Custom Build) <https://lodash.com/>
@@ -59771,7 +60360,7 @@ function isObjectLike(value) {
 module.exports = flatten;
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],45:[function(require,module,exports){
+},{}],48:[function(require,module,exports){
 (function (global){
 /**
  * lodash (Custom Build) <https://lodash.com/>
@@ -60706,7 +61295,7 @@ function get(object, path, defaultValue) {
 module.exports = get;
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],46:[function(require,module,exports){
+},{}],49:[function(require,module,exports){
 (function (global){
 /**
  * lodash (Custom Build) <https://lodash.com/>
@@ -61700,7 +62289,7 @@ function set(object, path, value) {
 module.exports = set;
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],47:[function(require,module,exports){
+},{}],50:[function(require,module,exports){
 (function (global){
 /**
  * lodash (Custom Build) <https://lodash.com/>
@@ -62600,7 +63189,7 @@ function noop() {
 module.exports = uniq;
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],48:[function(require,module,exports){
+},{}],51:[function(require,module,exports){
 (function (global){
 /**
  * @license
@@ -79688,7 +80277,7 @@ module.exports = uniq;
 }.call(this));
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],49:[function(require,module,exports){
+},{}],52:[function(require,module,exports){
 exports.endianness = function () { return 'LE' };
 
 exports.hostname = function () {
@@ -79735,7 +80324,7 @@ exports.tmpdir = exports.tmpDir = function () {
 
 exports.EOL = '\n';
 
-},{}],50:[function(require,module,exports){
+},{}],53:[function(require,module,exports){
 // shim for using process in browser
 var process = module.exports = {};
 
@@ -79917,7 +80506,805 @@ process.chdir = function (dir) {
 };
 process.umask = function() { return 0; };
 
-},{}],51:[function(require,module,exports){
+},{}],54:[function(require,module,exports){
+/*jshint node:true*/
+'use strict';
+
+/**
+ * Replaces characters in strings that are illegal/unsafe for filenames.
+ * Unsafe characters are either removed or replaced by a substitute set
+ * in the optional `options` object.
+ *
+ * Illegal Characters on Various Operating Systems
+ * / ? < > \ : * | "
+ * https://kb.acronis.com/content/39790
+ *
+ * Unicode Control codes
+ * C0 0x00-0x1f & C1 (0x80-0x9f)
+ * http://en.wikipedia.org/wiki/C0_and_C1_control_codes
+ *
+ * Reserved filenames on Unix-based systems (".", "..")
+ * Reserved filenames in Windows ("CON", "PRN", "AUX", "NUL", "COM1",
+ * "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8", "COM9",
+ * "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", and
+ * "LPT9") case-insesitively and with or without filename extensions.
+ *
+ * Capped at 255 characters in length.
+ * http://unix.stackexchange.com/questions/32795/what-is-the-maximum-allowed-filename-and-folder-size-with-ecryptfs
+ *
+ * @param  {String} input   Original filename
+ * @param  {Object} options {replacement: String}
+ * @return {String}         Sanitized filename
+ */
+
+var truncate = require("truncate-utf8-bytes");
+
+var illegalRe = /[\/\?<>\\:\*\|":]/g;
+var controlRe = /[\x00-\x1f\x80-\x9f]/g;
+var reservedRe = /^\.+$/;
+var windowsReservedRe = /^(con|prn|aux|nul|com[0-9]|lpt[0-9])(\..*)?$/i;
+var windowsTrailingRe = /[\. ]+$/;
+
+function sanitize(input, replacement) {
+  var sanitized = input
+    .replace(illegalRe, replacement)
+    .replace(controlRe, replacement)
+    .replace(reservedRe, replacement)
+    .replace(windowsReservedRe, replacement)
+    .replace(windowsTrailingRe, replacement);
+  return truncate(sanitized, 255);
+}
+
+module.exports = function (input, options) {
+  var replacement = (options && options.replacement) || '';
+  var output = sanitize(input, replacement);
+  if (replacement === '') {
+    return output;
+  }
+  return sanitize(output, '');
+};
+
+},{"truncate-utf8-bytes":57}],55:[function(require,module,exports){
+(function (Buffer){
+"use strict";
+// The default Buffer size if one is not provided.
+const DEFAULT_SMARTBUFFER_SIZE = 4096;
+// The default string encoding to use for reading/writing strings. 
+const DEFAULT_SMARTBUFFER_ENCODING = 'utf8';
+class SmartBuffer {
+    /**
+     * Creates a new SmartBuffer instance.
+     *
+     * @param arg1 { Number | BufferEncoding | Buffer | SmartBufferOptions }
+     * @param arg2 { BufferEncoding }
+     */
+    constructor(arg1, arg2) {
+        this.length = 0;
+        this.encoding = DEFAULT_SMARTBUFFER_ENCODING;
+        this.writeOffset = 0;
+        this.readOffset = 0;
+        // Initial buffer size provided
+        if (typeof arg1 === 'number') {
+            if (Number.isFinite(arg1) && Number.isInteger(arg1) && arg1 > 0) {
+                this.buff = Buffer.allocUnsafe(arg1);
+            }
+            else {
+                throw new Error('Invalid size provided. Size must be a valid integer greater than zero.');
+            }
+        }
+        else if (typeof arg1 === 'string') {
+            if (Buffer.isEncoding(arg1)) {
+                this.buff = Buffer.allocUnsafe(DEFAULT_SMARTBUFFER_SIZE);
+                this.encoding = arg1;
+            }
+            else {
+                throw new Error('Invalid encoding provided. Please specify a valid encoding the internal Node.js Buffer supports.');
+            }
+        }
+        else if (arg1 instanceof Buffer) {
+            this.buff = arg1;
+            this.length = arg1.length;
+        }
+        else if (SmartBuffer.isSmartBufferOptions(arg1)) {
+            // Checks for encoding
+            if (arg1.encoding) {
+                if (Buffer.isEncoding(arg1.encoding)) {
+                    this.encoding = arg1.encoding;
+                }
+                else {
+                    throw new Error('Invalid encoding provided. Please specify a valid encoding the internal Node.js Buffer supports.');
+                }
+            }
+            // Checks for initial size length
+            if (arg1.size) {
+                if (Number.isFinite(arg1.size) && Number.isInteger(arg1.size) && arg1.size > 0) {
+                    this.buff = Buffer.allocUnsafe(arg1.size);
+                }
+                else {
+                    throw new Error('Invalid size provided. Size must be a valid integer greater than zero.');
+                }
+            }
+            else if (arg1.buff) {
+                if (arg1.buff instanceof Buffer) {
+                    this.buff = arg1.buff;
+                    this.length = arg1.buff.length;
+                }
+                else {
+                    throw new Error('Invalid buffer provided in SmartBufferOptions.');
+                }
+            }
+            else {
+                this.buff = Buffer.allocUnsafe(DEFAULT_SMARTBUFFER_SIZE);
+            }
+        }
+        else if (typeof arg1 === 'object') {
+            throw new Error('Invalid object supplied to SmartBuffer constructor.');
+        }
+        else {
+            this.buff = Buffer.allocUnsafe(DEFAULT_SMARTBUFFER_SIZE);
+        }
+        // Check for encoding (Buffer, Encoding) constructor.
+        if (typeof arg2 === 'string') {
+            if (Buffer.isEncoding(arg2)) {
+                this.encoding = arg2;
+            }
+            else {
+                throw new Error('Invalid encoding provided. Please specify a valid encoding the internal Node.js Buffer supports.');
+            }
+        }
+    }
+    /**
+     * Creates a new SmartBuffer instance with the provided internal Buffer size and optional encoding.
+     *
+     * @param size { Number } The size of the internal Buffer.
+     * @param encoding { String } The BufferEncoding to use for strings.
+     *
+     * @return { SmartBuffer }
+     */
+    static fromSize(size, encoding) {
+        return new this({
+            size: size,
+            encoding: encoding
+        });
+    }
+    /**
+     * Creates a new SmartBuffer instance with the provided Buffer and optional encoding.
+     *
+     * @param buffer { Buffer } The Buffer to use as the internal Buffer value.
+     * @param encoding { String } The BufferEncoding to use for strings.
+     *
+     * @return { SmartBuffer }
+     */
+    static fromBuffer(buff, encoding) {
+        return new this({
+            buff: buff,
+            encoding: encoding
+        });
+    }
+    /**
+     * Creates a new SmartBuffer instance with the provided SmartBufferOptions options.
+     *
+     * @param options { SmartBufferOptions } The options to use when creating the SmartBuffer instance.
+     */
+    static fromOptions(options) {
+        return new this(options);
+    }
+    /**
+     * Type checking function that determines if an object is a SmartBufferOptions object.
+     */
+    static isSmartBufferOptions(options) {
+        const castOptions = options;
+        return castOptions && (castOptions.encoding !== undefined || castOptions.size !== undefined || castOptions.buff !== undefined);
+    }
+    // Signed integers
+    /**
+     * Reads an Int8 value from the current read position.
+     *
+     * @return { Number }
+     */
+    readInt8() {
+        return this.readNumberValue(Buffer.prototype.readInt8, 1);
+    }
+    /**
+     * Reads an Int16BE value from the current read position.
+     *
+     * @return { Number }
+     */
+    readInt16BE() {
+        return this.readNumberValue(Buffer.prototype.readInt16BE, 2);
+    }
+    /**
+     * Reads an Int16LE value from the current read position.
+     *
+     * @return { Number }
+     */
+    readInt16LE() {
+        return this.readNumberValue(Buffer.prototype.readInt16LE, 2);
+    }
+    /**
+     * Reads an Int32BE value from the current read position.
+     *
+     * @return { Number }
+     */
+    readInt32BE() {
+        return this.readNumberValue(Buffer.prototype.readInt32BE, 4);
+    }
+    /**
+     * Reads an Int32LE value from the current read position.
+     *
+     * @return { Number }
+     */
+    readInt32LE() {
+        return this.readNumberValue(Buffer.prototype.readInt32LE, 4);
+    }
+    /**
+     * Writes an Int8 value to the current write position (or at optional offset).
+     *
+     * @param value { Number } The value to write.
+     * @param offset { Number } The offset to write the value at.
+     *
+     * @return this
+     */
+    writeInt8(value, offset) {
+        this.writeNumberValue(Buffer.prototype.writeInt8, 1, value, offset);
+        return this;
+    }
+    /**
+     * Writes an Int16BE value to the current write position (or at optional offset).
+     *
+     * @param value { Number } The value to write.
+     * @param offset { Number } The offset to write the value at.
+     *
+     * @return this
+     */
+    writeInt16BE(value, offset) {
+        this.writeNumberValue(Buffer.prototype.writeInt16BE, 2, value, offset);
+        return this;
+    }
+    /**
+     * Writes an Int16LE value to the current write position (or at optional offset).
+     *
+     * @param value { Number } The value to write.
+     * @param offset { Number } The offset to write the value at.
+     *
+     * @return this
+     */
+    writeInt16LE(value, offset) {
+        this.writeNumberValue(Buffer.prototype.writeInt16LE, 2, value, offset);
+        return this;
+    }
+    /**
+     * Writes an Int32BE value to the current write position (or at optional offset).
+     *
+     * @param value { Number } The value to write.
+     * @param offset { Number } The offset to write the value at.
+     *
+     * @return this
+     */
+    writeInt32BE(value, offset) {
+        this.writeNumberValue(Buffer.prototype.writeInt32BE, 4, value, offset);
+        return this;
+    }
+    /**
+     * Writes an Int32LE value to the current write position (or at optional offset).
+     *
+     * @param value { Number } The value to write.
+     * @param offset { Number } The offset to write the value at.
+     *
+     * @return this
+     */
+    writeInt32LE(value, offset) {
+        this.writeNumberValue(Buffer.prototype.writeInt32LE, 4, value, offset);
+        return this;
+    }
+    // Unsigned Integers
+    /**
+     * Reads an UInt8 value from the current read position.
+     *
+     * @return { Number }
+     */
+    readUInt8() {
+        return this.readNumberValue(Buffer.prototype.readUInt8, 1);
+    }
+    /**
+     * Reads an UInt16BE value from the current read position.
+     *
+     * @return { Number }
+     */
+    readUInt16BE() {
+        return this.readNumberValue(Buffer.prototype.readUInt16BE, 2);
+    }
+    /**
+     * Reads an UInt16LE value from the current read position.
+     *
+     * @return { Number }
+     */
+    readUInt16LE() {
+        return this.readNumberValue(Buffer.prototype.readUInt16LE, 2);
+    }
+    /**
+     * Reads an UInt32BE value from the current read position.
+     *
+     * @return { Number }
+     */
+    readUInt32BE() {
+        return this.readNumberValue(Buffer.prototype.readUInt32BE, 4);
+    }
+    /**
+     * Reads an UInt32LE value from the current read position.
+     *
+     * @return { Number }
+     */
+    readUInt32LE() {
+        return this.readNumberValue(Buffer.prototype.readUInt32LE, 4);
+    }
+    /**
+     * Writes an UInt8 value to the current write position (or at optional offset).
+     *
+     * @param value { Number } The value to write.
+     * @param offset { Number } The offset to write the value at.
+     *
+     * @return this
+     */
+    writeUInt8(value, offset) {
+        this.writeNumberValue(Buffer.prototype.writeUInt8, 1, value, offset);
+        return this;
+    }
+    /**
+     * Writes an UInt16BE value to the current write position (or at optional offset).
+     *
+     * @param value { Number } The value to write.
+     * @param offset { Number } The offset to write the value at.
+     *
+     * @return this
+     */
+    writeUInt16BE(value, offset) {
+        this.writeNumberValue(Buffer.prototype.writeUInt16BE, 2, value, offset);
+        return this;
+    }
+    /**
+     * Writes an UInt16LE value to the current write position (or at optional offset).
+     *
+     * @param value { Number } The value to write.
+     * @param offset { Number } The offset to write the value at.
+     *
+     * @return this
+     */
+    writeUInt16LE(value, offset) {
+        this.writeNumberValue(Buffer.prototype.writeUInt16LE, 2, value, offset);
+        return this;
+    }
+    /**
+     * Writes an UInt32BE value to the current write position (or at optional offset).
+     *
+     * @param value { Number } The value to write.
+     * @param offset { Number } The offset to write the value at.
+     *
+     * @return this
+     */
+    writeUInt32BE(value, offset) {
+        this.writeNumberValue(Buffer.prototype.writeUInt32BE, 4, value, offset);
+        return this;
+    }
+    /**
+     * Writes an UInt32LE value to the current write position (or at optional offset).
+     *
+     * @param value { Number } The value to write.
+     * @param offset { Number } The offset to write the value at.
+     *
+     * @return this
+     */
+    writeUInt32LE(value, offset) {
+        this.writeNumberValue(Buffer.prototype.writeUInt32LE, 4, value, offset);
+        return this;
+    }
+    // Floating Point
+    /**
+     * Reads an FloatBE value from the current read position.
+     *
+     * @return { Number }
+     */
+    readFloatBE() {
+        return this.readNumberValue(Buffer.prototype.readFloatBE, 4);
+    }
+    /**
+     * Reads an FloatLE value from the current read position.
+     *
+     * @return { Number }
+     */
+    readFloatLE() {
+        return this.readNumberValue(Buffer.prototype.readFloatLE, 4);
+    }
+    /**
+     * Writes a FloatBE value to the current write position (or at optional offset).
+     *
+     * @param value { Number } The value to write.
+     * @param offset { Number } The offset to write the value at.
+     *
+     * @return this
+     */
+    writeFloatBE(value, offset) {
+        this.writeNumberValue(Buffer.prototype.writeFloatBE, 4, value, offset);
+        return this;
+    }
+    /**
+     * Writes a FloatLE value to the current write position (or at optional offset).
+     *
+     * @param value { Number } The value to write.
+     * @param offset { Number } The offset to write the value at.
+     *
+     * @return this
+     */
+    writeFloatLE(value, offset) {
+        this.writeNumberValue(Buffer.prototype.writeFloatLE, 4, value, offset);
+        return this;
+    }
+    // Double Floating Point
+    /**
+     * Reads an DoublEBE value from the current read position.
+     *
+     * @return { Number }
+     */
+    readDoubleBE() {
+        return this.readNumberValue(Buffer.prototype.readDoubleBE, 8);
+    }
+    /**
+     * Reads an DoubleLE value from the current read position.
+     *
+     * @return { Number }
+     */
+    readDoubleLE() {
+        return this.readNumberValue(Buffer.prototype.readDoubleLE, 8);
+    }
+    /**
+     * Writes a DoubleBE value to the current write position (or at optional offset).
+     *
+     * @param value { Number } The value to write.
+     * @param offset { Number } The offset to write the value at.
+     *
+     * @return this
+     */
+    writeDoubleBE(value, offset) {
+        this.writeNumberValue(Buffer.prototype.writeDoubleBE, 8, value, offset);
+        return this;
+    }
+    /**
+     * Writes a DoubleLE value to the current write position (or at optional offset).
+     *
+     * @param value { Number } The value to write.
+     * @param offset { Number } The offset to write the value at.
+     *
+     * @return this
+     */
+    writeDoubleLE(value, offset) {
+        this.writeNumberValue(Buffer.prototype.writeDoubleLE, 8, value, offset);
+        return this;
+    }
+    // Strings
+    /**
+     * Reads a String from the current read position.
+     *
+     * @param length { Number } The number of bytes to read as a String.
+     * @param encoding { String } The BufferEncoding to use for the string (Defaults to instance level encoding).
+     *
+     * @return { String }
+     */
+    readString(length, encoding) {
+        const lengthVal = (typeof length === 'number') ? Math.min(length, this.length - this.readOffset) : this.length - this.readOffset;
+        const value = this.buff.slice(this.readOffset, this.readOffset + lengthVal).toString(encoding || this.encoding);
+        this.readOffset += lengthVal;
+        return value;
+    }
+    /**
+     * Writes a String to the current write position.
+     *
+     * @param value { String } The String value to write.
+     * @param arg2 { Number | String } The offset to write the string to, or the BufferEncoding to use.
+     * @param encoding { String } The BufferEncoding to use for writing strings (defaults to instance encoding).
+     */
+    writeString(value, arg2, encoding) {
+        let offsetVal = this.writeOffset;
+        let encodingVal = this.encoding;
+        // Check for offset
+        if (typeof arg2 === 'number') {
+            offsetVal = arg2;
+        }
+        else if (typeof arg2 === 'string') {
+            if (Buffer.isEncoding(arg2)) {
+                encodingVal = arg2;
+            }
+            else {
+                throw new Error('Invalid encoding provided. Please specify a valid encoding the internal Node.js Buffer supports.');
+            }
+        }
+        // Check for encoding (third param)
+        if (typeof encoding === 'string') {
+            if (Buffer.isEncoding(encoding)) {
+                encodingVal = encoding;
+            }
+            else {
+                throw new Error('Invalid encoding provided. Please specify a valid encoding the internal Node.js Buffer supports.');
+            }
+        }
+        // Calculate bytelength of string.
+        const byteLength = Buffer.byteLength(value, encodingVal);
+        // Ensure there is enough internal Buffer capacity.
+        this.ensureWriteable(byteLength, offsetVal);
+        // Write value
+        this.buff.write(value, offsetVal, byteLength, encodingVal);
+        // Increment internal Buffer write offset;
+        this.writeOffset += byteLength;
+        return this;
+    }
+    /**
+     * Reads a null-terminated String from the current read position.
+     *
+     * @param encoding { String } The BufferEncoding to use for the string (Defaults to instance level encoding).
+     *
+     * @return { String }
+     */
+    readStringNT(encoding) {
+        // Set null character position to the end SmartBuffer instance.
+        let nullPos = this.length;
+        // Find next null character (if one is not found, default from above is used)
+        for (let i = this.readOffset; i < this.length; i++) {
+            if (this.buff[i] === 0x00) {
+                nullPos = i;
+                break;
+            }
+        }
+        // Read string value
+        const value = this.buff.slice(this.readOffset, nullPos);
+        // Increment internal Buffer read offset
+        this.readOffset = nullPos + 1;
+        return value.toString(encoding || this.encoding);
+    }
+    /**
+     * Writes a null-terminated String to the current write position.
+     *
+     * @param value { String } The String value to write.
+     * @param arg2 { Number | String } The offset to write the string to, or the BufferEncoding to use.
+     * @param encoding { String } The BufferEncoding to use for writing strings (defaults to instance encoding).
+     */
+    writeStringNT(value, offset, encoding) {
+        // Write Values
+        this.writeString(value, offset, encoding);
+        this.writeUInt8(0x00, (typeof offset === 'number' ? offset + value.length : this.writeOffset));
+    }
+    // Buffers
+    /**
+     * Reads a Buffer from the internal read position.
+     *
+     * @param length { Number } The length of data to read as a Buffer.
+     *
+     * @return { Buffer }
+     */
+    readBuffer(length) {
+        const lengthVal = typeof length === 'number' ? length : this.length;
+        const endPoint = Math.min(this.length, this.readOffset + lengthVal);
+        // Read buffer value
+        const value = this.buff.slice(this.readOffset, endPoint);
+        // Increment internal Buffer read offset
+        this.readOffset = endPoint;
+        return value;
+    }
+    /**
+     * Writes a Buffer to the current write position.
+     *
+     * @param value { Buffer } The Buffer to write.
+     * @param offset { Number } The offset to write the Buffer to.
+     */
+    writeBuffer(value, offset) {
+        const offsetVal = typeof offset === 'number' ? offset : this.writeOffset;
+        // Ensure there is enough internal Buffer capacity.
+        this.ensureWriteable(value.length, offsetVal);
+        // Write buffer value
+        value.copy(this.buff, offsetVal);
+        // Increment internal Buffer write offset
+        this.writeOffset += value.length;
+        return this;
+    }
+    /**
+     * Reads a null-terminated Buffer from the current read poisiton.
+     *
+     * @return { Buffer }
+     */
+    readBufferNT() {
+        // Set null character position to the end SmartBuffer instance.
+        let nullPos = this.length;
+        // Find next null character (if one is not found, default from above is used)
+        for (let i = this.readOffset; i < this.length; i++) {
+            if (this.buff[i] === 0x00) {
+                nullPos = i;
+                break;
+            }
+        }
+        // Read value
+        const value = this.buff.slice(this.readOffset, nullPos);
+        // Increment internal Buffer read offset
+        this.readOffset = nullPos + 1;
+        return value;
+    }
+    /**
+     * Writes a null-terminated Buffer to the current write position.
+     *
+     * @param value { Buffer } The Buffer to write.
+     * @param offset { Number } The offset to write the Buffer to.
+     */
+    writeBufferNT(value, offset) {
+        // Write Values
+        this.writeBuffer(value, offset);
+        this.writeUInt8(0, (typeof offset === 'number' ? offset + value.length : this.writeOffset));
+        return this;
+    }
+    /**
+     * Clears the SmartBuffer instance to its original empty state.
+     */
+    clear() {
+        this.writeOffset = 0;
+        this.readOffset = 0;
+        this.length = 0;
+    }
+    /**
+     * Gets the remaining data left to be read from the SmartBuffer instance.
+     *
+     * @return { Number }
+     */
+    remaining() {
+        return this.length - this.readOffset;
+    }
+    /**
+     * Moves the read offset forward.
+     *
+     * @param amount { Number } The amount to move the read offset forward by.
+     */
+    skip(amount) {
+        if (this.readOffset + amount > this.length) {
+            throw new Error('Target position is beyond the bounds of the SmartBuffer size.');
+        }
+        this.readOffset += amount;
+    }
+    /**
+     * Moves the read offset backwards.
+     *
+     * @param amount { Number } The amount to move the read offset backwards by.
+     */
+    rewind(amount) {
+        if (this.readOffset - amount < 0) {
+            throw new Error('Target position is beyond the bounds of the SmartBuffer size.');
+        }
+        this.readOffset -= amount;
+    }
+    /**
+     * Moves the read offset to a specific position.
+     *
+     * @param position { Number } The position to move the read offset to.
+     */
+    skipTo(position) {
+        this.moveTo(position);
+    }
+    /**
+     * Moves the read offset to a specific position.
+     *
+     * @param position { Number } The position to move the read offset to.
+     */
+    moveTo(position) {
+        if (position > this.length) {
+            throw new Error('Target position is beyond the bounds of the SmartBuffer size.');
+        }
+        this.readOffset = position;
+    }
+    /**
+     * Gets the value of the internal managed Buffer
+     *
+     * @param { Buffer }
+     */
+    toBuffer() {
+        return this.buff.slice(0, this.length);
+    }
+    /**
+     * Gets the String value of the internal managed Buffer
+     *
+     * @param encoding { String } The BufferEncoding to display the Buffer as (defaults to instance level encoding).
+     */
+    toString(encoding) {
+        const encodingVal = typeof encoding === 'string' ? encoding : this.encoding;
+        if (Buffer.isEncoding(encodingVal)) {
+            return this.buff.toString(encodingVal, 0, this.length);
+        }
+        else {
+            throw new Error('Invalid encoding provided. Please specify a valid encoding the internal Node.js Buffer supports.');
+        }
+    }
+    /**
+     * Destroys the SmartBuffer instance.
+     */
+    destroy() {
+        this.clear();
+    }
+    /**
+     * Ensures that the internal Buffer is large enough to read data.
+     *
+     * @param length { Number } The length of the data that needs to be read.
+     */
+    ensureReadable(length) {
+        if (this.remaining() < length) {
+            throw new Error('Reading beyond the bounds of the data.');
+        }
+    }
+    /**
+     * Ensures that the internal Buffer is large enough to write data.
+     *
+     * @param minLength { Number } The minimum length of the data that needs to be written.
+     * @param offset { Number } The offset of the data to be written.
+     */
+    ensureWriteable(minLength, offset) {
+        const offsetVal = typeof offset === 'number' ? offset : 0;
+        // Ensure there is enough internal Buffer capacity.
+        this.ensureCapacity(this.length + minLength + offsetVal);
+        // If offset is provided, copy data into appropriate location in regards to the offset.
+        if (typeof offset === 'number') {
+            this.buff.copy(this.buff, offsetVal + minLength, offsetVal, this.buff.length);
+        }
+        // Adjust instance length.
+        this.length = Math.max(this.length + minLength, offsetVal + minLength);
+    }
+    /**
+     * Ensures that the internal Buffer is large enough to write at least the given amount of data.
+     *
+     * @param minLength { Number } The minimum length of the data needs to be written.
+     */
+    ensureCapacity(minLength) {
+        const oldLength = this.buff.length;
+        if (minLength > oldLength) {
+            let data = this.buff;
+            let newLength = (oldLength * 3) / 2 + 1;
+            if (newLength < minLength) {
+                newLength = minLength;
+            }
+            this.buff = Buffer.allocUnsafe(newLength);
+            data.copy(this.buff, 0, 0, oldLength);
+        }
+    }
+    /**
+     * Reads a numeric number value using the provided function.
+     *
+     * @param func { Function(offset: number) => number } The function to read data on the internal Buffer with.
+     * @param byteSize { Number } The number of bytes read.
+     *
+     * @param { Number }
+     */
+    readNumberValue(func, byteSize) {
+        this.ensureReadable(byteSize);
+        // Call Buffer.readXXXX();
+        const value = func.call(this.buff, this.readOffset);
+        // Adjust internal read offset
+        this.readOffset += byteSize;
+        return value;
+    }
+    /**
+     * Writes a numeric number value using the provided function.
+     *
+     * @param func { Function(offset: number, offset?) => number} The function to write data on the internal Buffer with.
+     * @param byteSize { Number } The number of bytes written.
+     * @param value { Number } The number value to write.
+     * @param offset { Number } the offset to write the number at.
+     *
+     */
+    writeNumberValue(func, byteSize, value, offset) {
+        const offsetVal = typeof offset === 'number' ? offset : this.writeOffset;
+        // Ensure there is enough internal Buffer capacity. (raw offset is passed)
+        this.ensureWriteable(byteSize, offset);
+        // Call buffer.writeXXXX();
+        func.call(this.buff, value, offsetVal);
+        // Adjusts internal write offset
+        this.writeOffset += byteSize;
+    }
+}
+exports.SmartBuffer = SmartBuffer;
+
+}).call(this,require("buffer").Buffer)
+},{"buffer":35}],56:[function(require,module,exports){
 var Buffer = require('buffer').Buffer
 
 module.exports = function (buf) {
@@ -79946,7 +81333,59 @@ module.exports = function (buf) {
 	}
 }
 
-},{"buffer":33}],52:[function(require,module,exports){
+},{"buffer":35}],57:[function(require,module,exports){
+'use strict';
+
+var truncate = require("./lib/truncate");
+var getLength = require("utf8-byte-length/browser");
+module.exports = truncate.bind(null, getLength);
+
+},{"./lib/truncate":58,"utf8-byte-length/browser":64}],58:[function(require,module,exports){
+'use strict';
+
+function isHighSurrogate(codePoint) {
+  return codePoint >= 0xd800 && codePoint <= 0xdbff;
+}
+
+function isLowSurrogate(codePoint) {
+  return codePoint >= 0xdc00 && codePoint <= 0xdfff;
+}
+
+// Truncate string by size in bytes
+module.exports = function truncate(getLength, string, byteLength) {
+  if (typeof string !== "string") {
+    throw new Error("Input must be string");
+  }
+
+  var charLength = string.length;
+  var curByteLength = 0;
+  var codePoint;
+  var segment;
+
+  for (var i = 0; i < charLength; i += 1) {
+    codePoint = string.charCodeAt(i);
+    segment = string[i];
+
+    if (isHighSurrogate(codePoint) && isLowSurrogate(string.charCodeAt(i + 1))) {
+      i += 1;
+      segment += string[i];
+    }
+
+    curByteLength += getLength(segment);
+
+    if (curByteLength === byteLength) {
+      return string.slice(0, i + 1);
+    }
+    else if (curByteLength > byteLength) {
+      return string.slice(0, i - segment.length + 1);
+    }
+  }
+
+  return string;
+};
+
+
+},{}],59:[function(require,module,exports){
 //     Underscore.js 1.8.3
 //     http://underscorejs.org
 //     (c) 2009-2015 Jeremy Ashkenas, DocumentCloud and Investigative Reporters & Editors
@@ -81496,7 +82935,3283 @@ module.exports = function (buf) {
   }
 }.call(this));
 
-},{}],53:[function(require,module,exports){
+},{}],60:[function(require,module,exports){
+/*!
+ * URI.js - Mutating URLs
+ * IPv6 Support
+ *
+ * Version: 1.18.10
+ *
+ * Author: Rodney Rehm
+ * Web: http://medialize.github.io/URI.js/
+ *
+ * Licensed under
+ *   MIT License http://www.opensource.org/licenses/mit-license
+ *
+ */
+
+(function (root, factory) {
+  'use strict';
+  // https://github.com/umdjs/umd/blob/master/returnExports.js
+  if (typeof module === 'object' && module.exports) {
+    // Node
+    module.exports = factory();
+  } else if (typeof define === 'function' && define.amd) {
+    // AMD. Register as an anonymous module.
+    define(factory);
+  } else {
+    // Browser globals (root is window)
+    root.IPv6 = factory(root);
+  }
+}(this, function (root) {
+  'use strict';
+
+  /*
+  var _in = "fe80:0000:0000:0000:0204:61ff:fe9d:f156";
+  var _out = IPv6.best(_in);
+  var _expected = "fe80::204:61ff:fe9d:f156";
+
+  console.log(_in, _out, _expected, _out === _expected);
+  */
+
+  // save current IPv6 variable, if any
+  var _IPv6 = root && root.IPv6;
+
+  function bestPresentation(address) {
+    // based on:
+    // Javascript to test an IPv6 address for proper format, and to
+    // present the "best text representation" according to IETF Draft RFC at
+    // http://tools.ietf.org/html/draft-ietf-6man-text-addr-representation-04
+    // 8 Feb 2010 Rich Brown, Dartware, LLC
+    // Please feel free to use this code as long as you provide a link to
+    // http://www.intermapper.com
+    // http://intermapper.com/support/tools/IPV6-Validator.aspx
+    // http://download.dartware.com/thirdparty/ipv6validator.js
+
+    var _address = address.toLowerCase();
+    var segments = _address.split(':');
+    var length = segments.length;
+    var total = 8;
+
+    // trim colons (:: or ::a:b:c… or …a:b:c::)
+    if (segments[0] === '' && segments[1] === '' && segments[2] === '') {
+      // must have been ::
+      // remove first two items
+      segments.shift();
+      segments.shift();
+    } else if (segments[0] === '' && segments[1] === '') {
+      // must have been ::xxxx
+      // remove the first item
+      segments.shift();
+    } else if (segments[length - 1] === '' && segments[length - 2] === '') {
+      // must have been xxxx::
+      segments.pop();
+    }
+
+    length = segments.length;
+
+    // adjust total segments for IPv4 trailer
+    if (segments[length - 1].indexOf('.') !== -1) {
+      // found a "." which means IPv4
+      total = 7;
+    }
+
+    // fill empty segments them with "0000"
+    var pos;
+    for (pos = 0; pos < length; pos++) {
+      if (segments[pos] === '') {
+        break;
+      }
+    }
+
+    if (pos < total) {
+      segments.splice(pos, 1, '0000');
+      while (segments.length < total) {
+        segments.splice(pos, 0, '0000');
+      }
+    }
+
+    // strip leading zeros
+    var _segments;
+    for (var i = 0; i < total; i++) {
+      _segments = segments[i].split('');
+      for (var j = 0; j < 3 ; j++) {
+        if (_segments[0] === '0' && _segments.length > 1) {
+          _segments.splice(0,1);
+        } else {
+          break;
+        }
+      }
+
+      segments[i] = _segments.join('');
+    }
+
+    // find longest sequence of zeroes and coalesce them into one segment
+    var best = -1;
+    var _best = 0;
+    var _current = 0;
+    var current = -1;
+    var inzeroes = false;
+    // i; already declared
+
+    for (i = 0; i < total; i++) {
+      if (inzeroes) {
+        if (segments[i] === '0') {
+          _current += 1;
+        } else {
+          inzeroes = false;
+          if (_current > _best) {
+            best = current;
+            _best = _current;
+          }
+        }
+      } else {
+        if (segments[i] === '0') {
+          inzeroes = true;
+          current = i;
+          _current = 1;
+        }
+      }
+    }
+
+    if (_current > _best) {
+      best = current;
+      _best = _current;
+    }
+
+    if (_best > 1) {
+      segments.splice(best, _best, '');
+    }
+
+    length = segments.length;
+
+    // assemble remaining segments
+    var result = '';
+    if (segments[0] === '')  {
+      result = ':';
+    }
+
+    for (i = 0; i < length; i++) {
+      result += segments[i];
+      if (i === length - 1) {
+        break;
+      }
+
+      result += ':';
+    }
+
+    if (segments[length - 1] === '') {
+      result += ':';
+    }
+
+    return result;
+  }
+
+  function noConflict() {
+    /*jshint validthis: true */
+    if (root.IPv6 === this) {
+      root.IPv6 = _IPv6;
+    }
+  
+    return this;
+  }
+
+  return {
+    best: bestPresentation,
+    noConflict: noConflict
+  };
+}));
+
+},{}],61:[function(require,module,exports){
+/*!
+ * URI.js - Mutating URLs
+ * Second Level Domain (SLD) Support
+ *
+ * Version: 1.18.10
+ *
+ * Author: Rodney Rehm
+ * Web: http://medialize.github.io/URI.js/
+ *
+ * Licensed under
+ *   MIT License http://www.opensource.org/licenses/mit-license
+ *
+ */
+
+(function (root, factory) {
+  'use strict';
+  // https://github.com/umdjs/umd/blob/master/returnExports.js
+  if (typeof module === 'object' && module.exports) {
+    // Node
+    module.exports = factory();
+  } else if (typeof define === 'function' && define.amd) {
+    // AMD. Register as an anonymous module.
+    define(factory);
+  } else {
+    // Browser globals (root is window)
+    root.SecondLevelDomains = factory(root);
+  }
+}(this, function (root) {
+  'use strict';
+
+  // save current SecondLevelDomains variable, if any
+  var _SecondLevelDomains = root && root.SecondLevelDomains;
+
+  var SLD = {
+    // list of known Second Level Domains
+    // converted list of SLDs from https://github.com/gavingmiller/second-level-domains
+    // ----
+    // publicsuffix.org is more current and actually used by a couple of browsers internally.
+    // downside is it also contains domains like "dyndns.org" - which is fine for the security
+    // issues browser have to deal with (SOP for cookies, etc) - but is way overboard for URI.js
+    // ----
+    list: {
+      'ac':' com gov mil net org ',
+      'ae':' ac co gov mil name net org pro sch ',
+      'af':' com edu gov net org ',
+      'al':' com edu gov mil net org ',
+      'ao':' co ed gv it og pb ',
+      'ar':' com edu gob gov int mil net org tur ',
+      'at':' ac co gv or ',
+      'au':' asn com csiro edu gov id net org ',
+      'ba':' co com edu gov mil net org rs unbi unmo unsa untz unze ',
+      'bb':' biz co com edu gov info net org store tv ',
+      'bh':' biz cc com edu gov info net org ',
+      'bn':' com edu gov net org ',
+      'bo':' com edu gob gov int mil net org tv ',
+      'br':' adm adv agr am arq art ato b bio blog bmd cim cng cnt com coop ecn edu eng esp etc eti far flog fm fnd fot fst g12 ggf gov imb ind inf jor jus lel mat med mil mus net nom not ntr odo org ppg pro psc psi qsl rec slg srv tmp trd tur tv vet vlog wiki zlg ',
+      'bs':' com edu gov net org ',
+      'bz':' du et om ov rg ',
+      'ca':' ab bc mb nb nf nl ns nt nu on pe qc sk yk ',
+      'ck':' biz co edu gen gov info net org ',
+      'cn':' ac ah bj com cq edu fj gd gov gs gx gz ha hb he hi hl hn jl js jx ln mil net nm nx org qh sc sd sh sn sx tj tw xj xz yn zj ',
+      'co':' com edu gov mil net nom org ',
+      'cr':' ac c co ed fi go or sa ',
+      'cy':' ac biz com ekloges gov ltd name net org parliament press pro tm ',
+      'do':' art com edu gob gov mil net org sld web ',
+      'dz':' art asso com edu gov net org pol ',
+      'ec':' com edu fin gov info med mil net org pro ',
+      'eg':' com edu eun gov mil name net org sci ',
+      'er':' com edu gov ind mil net org rochest w ',
+      'es':' com edu gob nom org ',
+      'et':' biz com edu gov info name net org ',
+      'fj':' ac biz com info mil name net org pro ',
+      'fk':' ac co gov net nom org ',
+      'fr':' asso com f gouv nom prd presse tm ',
+      'gg':' co net org ',
+      'gh':' com edu gov mil org ',
+      'gn':' ac com gov net org ',
+      'gr':' com edu gov mil net org ',
+      'gt':' com edu gob ind mil net org ',
+      'gu':' com edu gov net org ',
+      'hk':' com edu gov idv net org ',
+      'hu':' 2000 agrar bolt casino city co erotica erotika film forum games hotel info ingatlan jogasz konyvelo lakas media news org priv reklam sex shop sport suli szex tm tozsde utazas video ',
+      'id':' ac co go mil net or sch web ',
+      'il':' ac co gov idf k12 muni net org ',
+      'in':' ac co edu ernet firm gen gov i ind mil net nic org res ',
+      'iq':' com edu gov i mil net org ',
+      'ir':' ac co dnssec gov i id net org sch ',
+      'it':' edu gov ',
+      'je':' co net org ',
+      'jo':' com edu gov mil name net org sch ',
+      'jp':' ac ad co ed go gr lg ne or ',
+      'ke':' ac co go info me mobi ne or sc ',
+      'kh':' com edu gov mil net org per ',
+      'ki':' biz com de edu gov info mob net org tel ',
+      'km':' asso com coop edu gouv k medecin mil nom notaires pharmaciens presse tm veterinaire ',
+      'kn':' edu gov net org ',
+      'kr':' ac busan chungbuk chungnam co daegu daejeon es gangwon go gwangju gyeongbuk gyeonggi gyeongnam hs incheon jeju jeonbuk jeonnam k kg mil ms ne or pe re sc seoul ulsan ',
+      'kw':' com edu gov net org ',
+      'ky':' com edu gov net org ',
+      'kz':' com edu gov mil net org ',
+      'lb':' com edu gov net org ',
+      'lk':' assn com edu gov grp hotel int ltd net ngo org sch soc web ',
+      'lr':' com edu gov net org ',
+      'lv':' asn com conf edu gov id mil net org ',
+      'ly':' com edu gov id med net org plc sch ',
+      'ma':' ac co gov m net org press ',
+      'mc':' asso tm ',
+      'me':' ac co edu gov its net org priv ',
+      'mg':' com edu gov mil nom org prd tm ',
+      'mk':' com edu gov inf name net org pro ',
+      'ml':' com edu gov net org presse ',
+      'mn':' edu gov org ',
+      'mo':' com edu gov net org ',
+      'mt':' com edu gov net org ',
+      'mv':' aero biz com coop edu gov info int mil museum name net org pro ',
+      'mw':' ac co com coop edu gov int museum net org ',
+      'mx':' com edu gob net org ',
+      'my':' com edu gov mil name net org sch ',
+      'nf':' arts com firm info net other per rec store web ',
+      'ng':' biz com edu gov mil mobi name net org sch ',
+      'ni':' ac co com edu gob mil net nom org ',
+      'np':' com edu gov mil net org ',
+      'nr':' biz com edu gov info net org ',
+      'om':' ac biz co com edu gov med mil museum net org pro sch ',
+      'pe':' com edu gob mil net nom org sld ',
+      'ph':' com edu gov i mil net ngo org ',
+      'pk':' biz com edu fam gob gok gon gop gos gov net org web ',
+      'pl':' art bialystok biz com edu gda gdansk gorzow gov info katowice krakow lodz lublin mil net ngo olsztyn org poznan pwr radom slupsk szczecin torun warszawa waw wroc wroclaw zgora ',
+      'pr':' ac biz com edu est gov info isla name net org pro prof ',
+      'ps':' com edu gov net org plo sec ',
+      'pw':' belau co ed go ne or ',
+      'ro':' arts com firm info nom nt org rec store tm www ',
+      'rs':' ac co edu gov in org ',
+      'sb':' com edu gov net org ',
+      'sc':' com edu gov net org ',
+      'sh':' co com edu gov net nom org ',
+      'sl':' com edu gov net org ',
+      'st':' co com consulado edu embaixada gov mil net org principe saotome store ',
+      'sv':' com edu gob org red ',
+      'sz':' ac co org ',
+      'tr':' av bbs bel biz com dr edu gen gov info k12 name net org pol tel tsk tv web ',
+      'tt':' aero biz cat co com coop edu gov info int jobs mil mobi museum name net org pro tel travel ',
+      'tw':' club com ebiz edu game gov idv mil net org ',
+      'mu':' ac co com gov net or org ',
+      'mz':' ac co edu gov org ',
+      'na':' co com ',
+      'nz':' ac co cri geek gen govt health iwi maori mil net org parliament school ',
+      'pa':' abo ac com edu gob ing med net nom org sld ',
+      'pt':' com edu gov int net nome org publ ',
+      'py':' com edu gov mil net org ',
+      'qa':' com edu gov mil net org ',
+      're':' asso com nom ',
+      'ru':' ac adygeya altai amur arkhangelsk astrakhan bashkiria belgorod bir bryansk buryatia cbg chel chelyabinsk chita chukotka chuvashia com dagestan e-burg edu gov grozny int irkutsk ivanovo izhevsk jar joshkar-ola kalmykia kaluga kamchatka karelia kazan kchr kemerovo khabarovsk khakassia khv kirov koenig komi kostroma kranoyarsk kuban kurgan kursk lipetsk magadan mari mari-el marine mil mordovia mosreg msk murmansk nalchik net nnov nov novosibirsk nsk omsk orenburg org oryol penza perm pp pskov ptz rnd ryazan sakhalin samara saratov simbirsk smolensk spb stavropol stv surgut tambov tatarstan tom tomsk tsaritsyn tsk tula tuva tver tyumen udm udmurtia ulan-ude vladikavkaz vladimir vladivostok volgograd vologda voronezh vrn vyatka yakutia yamal yekaterinburg yuzhno-sakhalinsk ',
+      'rw':' ac co com edu gouv gov int mil net ',
+      'sa':' com edu gov med net org pub sch ',
+      'sd':' com edu gov info med net org tv ',
+      'se':' a ac b bd c d e f g h i k l m n o org p parti pp press r s t tm u w x y z ',
+      'sg':' com edu gov idn net org per ',
+      'sn':' art com edu gouv org perso univ ',
+      'sy':' com edu gov mil net news org ',
+      'th':' ac co go in mi net or ',
+      'tj':' ac biz co com edu go gov info int mil name net nic org test web ',
+      'tn':' agrinet com defense edunet ens fin gov ind info intl mincom nat net org perso rnrt rns rnu tourism ',
+      'tz':' ac co go ne or ',
+      'ua':' biz cherkassy chernigov chernovtsy ck cn co com crimea cv dn dnepropetrovsk donetsk dp edu gov if in ivano-frankivsk kh kharkov kherson khmelnitskiy kiev kirovograd km kr ks kv lg lugansk lutsk lviv me mk net nikolaev od odessa org pl poltava pp rovno rv sebastopol sumy te ternopil uzhgorod vinnica vn zaporizhzhe zhitomir zp zt ',
+      'ug':' ac co go ne or org sc ',
+      'uk':' ac bl british-library co cym gov govt icnet jet lea ltd me mil mod national-library-scotland nel net nhs nic nls org orgn parliament plc police sch scot soc ',
+      'us':' dni fed isa kids nsn ',
+      'uy':' com edu gub mil net org ',
+      've':' co com edu gob info mil net org web ',
+      'vi':' co com k12 net org ',
+      'vn':' ac biz com edu gov health info int name net org pro ',
+      'ye':' co com gov ltd me net org plc ',
+      'yu':' ac co edu gov org ',
+      'za':' ac agric alt bourse city co cybernet db edu gov grondar iaccess imt inca landesign law mil net ngo nis nom olivetti org pix school tm web ',
+      'zm':' ac co com edu gov net org sch ',
+      // https://en.wikipedia.org/wiki/CentralNic#Second-level_domains
+      'com': 'ar br cn de eu gb gr hu jpn kr no qc ru sa se uk us uy za ',
+      'net': 'gb jp se uk ',
+      'org': 'ae',
+      'de': 'com '
+    },
+    // gorhill 2013-10-25: Using indexOf() instead Regexp(). Significant boost
+    // in both performance and memory footprint. No initialization required.
+    // http://jsperf.com/uri-js-sld-regex-vs-binary-search/4
+    // Following methods use lastIndexOf() rather than array.split() in order
+    // to avoid any memory allocations.
+    has: function(domain) {
+      var tldOffset = domain.lastIndexOf('.');
+      if (tldOffset <= 0 || tldOffset >= (domain.length-1)) {
+        return false;
+      }
+      var sldOffset = domain.lastIndexOf('.', tldOffset-1);
+      if (sldOffset <= 0 || sldOffset >= (tldOffset-1)) {
+        return false;
+      }
+      var sldList = SLD.list[domain.slice(tldOffset+1)];
+      if (!sldList) {
+        return false;
+      }
+      return sldList.indexOf(' ' + domain.slice(sldOffset+1, tldOffset) + ' ') >= 0;
+    },
+    is: function(domain) {
+      var tldOffset = domain.lastIndexOf('.');
+      if (tldOffset <= 0 || tldOffset >= (domain.length-1)) {
+        return false;
+      }
+      var sldOffset = domain.lastIndexOf('.', tldOffset-1);
+      if (sldOffset >= 0) {
+        return false;
+      }
+      var sldList = SLD.list[domain.slice(tldOffset+1)];
+      if (!sldList) {
+        return false;
+      }
+      return sldList.indexOf(' ' + domain.slice(0, tldOffset) + ' ') >= 0;
+    },
+    get: function(domain) {
+      var tldOffset = domain.lastIndexOf('.');
+      if (tldOffset <= 0 || tldOffset >= (domain.length-1)) {
+        return null;
+      }
+      var sldOffset = domain.lastIndexOf('.', tldOffset-1);
+      if (sldOffset <= 0 || sldOffset >= (tldOffset-1)) {
+        return null;
+      }
+      var sldList = SLD.list[domain.slice(tldOffset+1)];
+      if (!sldList) {
+        return null;
+      }
+      if (sldList.indexOf(' ' + domain.slice(sldOffset+1, tldOffset) + ' ') < 0) {
+        return null;
+      }
+      return domain.slice(sldOffset+1);
+    },
+    noConflict: function(){
+      if (root.SecondLevelDomains === this) {
+        root.SecondLevelDomains = _SecondLevelDomains;
+      }
+      return this;
+    }
+  };
+
+  return SLD;
+}));
+
+},{}],62:[function(require,module,exports){
+/*!
+ * URI.js - Mutating URLs
+ *
+ * Version: 1.18.10
+ *
+ * Author: Rodney Rehm
+ * Web: http://medialize.github.io/URI.js/
+ *
+ * Licensed under
+ *   MIT License http://www.opensource.org/licenses/mit-license
+ *
+ */
+(function (root, factory) {
+  'use strict';
+  // https://github.com/umdjs/umd/blob/master/returnExports.js
+  if (typeof module === 'object' && module.exports) {
+    // Node
+    module.exports = factory(require('./punycode'), require('./IPv6'), require('./SecondLevelDomains'));
+  } else if (typeof define === 'function' && define.amd) {
+    // AMD. Register as an anonymous module.
+    define(['./punycode', './IPv6', './SecondLevelDomains'], factory);
+  } else {
+    // Browser globals (root is window)
+    root.URI = factory(root.punycode, root.IPv6, root.SecondLevelDomains, root);
+  }
+}(this, function (punycode, IPv6, SLD, root) {
+  'use strict';
+  /*global location, escape, unescape */
+  // FIXME: v2.0.0 renamce non-camelCase properties to uppercase
+  /*jshint camelcase: false */
+
+  // save current URI variable, if any
+  var _URI = root && root.URI;
+
+  function URI(url, base) {
+    var _urlSupplied = arguments.length >= 1;
+    var _baseSupplied = arguments.length >= 2;
+
+    // Allow instantiation without the 'new' keyword
+    if (!(this instanceof URI)) {
+      if (_urlSupplied) {
+        if (_baseSupplied) {
+          return new URI(url, base);
+        }
+
+        return new URI(url);
+      }
+
+      return new URI();
+    }
+
+    if (url === undefined) {
+      if (_urlSupplied) {
+        throw new TypeError('undefined is not a valid argument for URI');
+      }
+
+      if (typeof location !== 'undefined') {
+        url = location.href + '';
+      } else {
+        url = '';
+      }
+    }
+
+    if (url === null) {
+      if (_urlSupplied) {
+        throw new TypeError('null is not a valid argument for URI');
+      }
+    }
+
+    this.href(url);
+
+    // resolve to base according to http://dvcs.w3.org/hg/url/raw-file/tip/Overview.html#constructor
+    if (base !== undefined) {
+      return this.absoluteTo(base);
+    }
+
+    return this;
+  }
+
+  URI.version = '1.18.10';
+
+  var p = URI.prototype;
+  var hasOwn = Object.prototype.hasOwnProperty;
+
+  function escapeRegEx(string) {
+    // https://github.com/medialize/URI.js/commit/85ac21783c11f8ccab06106dba9735a31a86924d#commitcomment-821963
+    return string.replace(/([.*+?^=!:${}()|[\]\/\\])/g, '\\$1');
+  }
+
+  function getType(value) {
+    // IE8 doesn't return [Object Undefined] but [Object Object] for undefined value
+    if (value === undefined) {
+      return 'Undefined';
+    }
+
+    return String(Object.prototype.toString.call(value)).slice(8, -1);
+  }
+
+  function isArray(obj) {
+    return getType(obj) === 'Array';
+  }
+
+  function filterArrayValues(data, value) {
+    var lookup = {};
+    var i, length;
+
+    if (getType(value) === 'RegExp') {
+      lookup = null;
+    } else if (isArray(value)) {
+      for (i = 0, length = value.length; i < length; i++) {
+        lookup[value[i]] = true;
+      }
+    } else {
+      lookup[value] = true;
+    }
+
+    for (i = 0, length = data.length; i < length; i++) {
+      /*jshint laxbreak: true */
+      var _match = lookup && lookup[data[i]] !== undefined
+        || !lookup && value.test(data[i]);
+      /*jshint laxbreak: false */
+      if (_match) {
+        data.splice(i, 1);
+        length--;
+        i--;
+      }
+    }
+
+    return data;
+  }
+
+  function arrayContains(list, value) {
+    var i, length;
+
+    // value may be string, number, array, regexp
+    if (isArray(value)) {
+      // Note: this can be optimized to O(n) (instead of current O(m * n))
+      for (i = 0, length = value.length; i < length; i++) {
+        if (!arrayContains(list, value[i])) {
+          return false;
+        }
+      }
+
+      return true;
+    }
+
+    var _type = getType(value);
+    for (i = 0, length = list.length; i < length; i++) {
+      if (_type === 'RegExp') {
+        if (typeof list[i] === 'string' && list[i].match(value)) {
+          return true;
+        }
+      } else if (list[i] === value) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  function arraysEqual(one, two) {
+    if (!isArray(one) || !isArray(two)) {
+      return false;
+    }
+
+    // arrays can't be equal if they have different amount of content
+    if (one.length !== two.length) {
+      return false;
+    }
+
+    one.sort();
+    two.sort();
+
+    for (var i = 0, l = one.length; i < l; i++) {
+      if (one[i] !== two[i]) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  function trimSlashes(text) {
+    var trim_expression = /^\/+|\/+$/g;
+    return text.replace(trim_expression, '');
+  }
+
+  URI._parts = function() {
+    return {
+      protocol: null,
+      username: null,
+      password: null,
+      hostname: null,
+      urn: null,
+      port: null,
+      path: null,
+      query: null,
+      fragment: null,
+      // state
+      duplicateQueryParameters: URI.duplicateQueryParameters,
+      escapeQuerySpace: URI.escapeQuerySpace
+    };
+  };
+  // state: allow duplicate query parameters (a=1&a=1)
+  URI.duplicateQueryParameters = false;
+  // state: replaces + with %20 (space in query strings)
+  URI.escapeQuerySpace = true;
+  // static properties
+  URI.protocol_expression = /^[a-z][a-z0-9.+-]*$/i;
+  URI.idn_expression = /[^a-z0-9\.-]/i;
+  URI.punycode_expression = /(xn--)/i;
+  // well, 333.444.555.666 matches, but it sure ain't no IPv4 - do we care?
+  URI.ip4_expression = /^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/;
+  // credits to Rich Brown
+  // source: http://forums.intermapper.com/viewtopic.php?p=1096#1096
+  // specification: http://www.ietf.org/rfc/rfc4291.txt
+  URI.ip6_expression = /^\s*((([0-9A-Fa-f]{1,4}:){7}([0-9A-Fa-f]{1,4}|:))|(([0-9A-Fa-f]{1,4}:){6}(:[0-9A-Fa-f]{1,4}|((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3})|:))|(([0-9A-Fa-f]{1,4}:){5}(((:[0-9A-Fa-f]{1,4}){1,2})|:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3})|:))|(([0-9A-Fa-f]{1,4}:){4}(((:[0-9A-Fa-f]{1,4}){1,3})|((:[0-9A-Fa-f]{1,4})?:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){3}(((:[0-9A-Fa-f]{1,4}){1,4})|((:[0-9A-Fa-f]{1,4}){0,2}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){2}(((:[0-9A-Fa-f]{1,4}){1,5})|((:[0-9A-Fa-f]{1,4}){0,3}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){1}(((:[0-9A-Fa-f]{1,4}){1,6})|((:[0-9A-Fa-f]{1,4}){0,4}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(:(((:[0-9A-Fa-f]{1,4}){1,7})|((:[0-9A-Fa-f]{1,4}){0,5}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:)))(%.+)?\s*$/;
+  // expression used is "gruber revised" (@gruber v2) determined to be the
+  // best solution in a regex-golf we did a couple of ages ago at
+  // * http://mathiasbynens.be/demo/url-regex
+  // * http://rodneyrehm.de/t/url-regex.html
+  URI.find_uri_expression = /\b((?:[a-z][\w-]+:(?:\/{1,3}|[a-z0-9%])|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,4}\/)(?:[^\s()<>]+|\(([^\s()<>]+|(\([^\s()<>]+\)))*\))+(?:\(([^\s()<>]+|(\([^\s()<>]+\)))*\)|[^\s`!()\[\]{};:'".,<>?«»“”‘’]))/ig;
+  URI.findUri = {
+    // valid "scheme://" or "www."
+    start: /\b(?:([a-z][a-z0-9.+-]*:\/\/)|www\.)/gi,
+    // everything up to the next whitespace
+    end: /[\s\r\n]|$/,
+    // trim trailing punctuation captured by end RegExp
+    trim: /[`!()\[\]{};:'".,<>?«»“”„‘’]+$/,
+    // balanced parens inclusion (), [], {}, <>
+    parens: /(\([^\)]*\)|\[[^\]]*\]|\{[^}]*\}|<[^>]*>)/g,
+  };
+  // http://www.iana.org/assignments/uri-schemes.html
+  // http://en.wikipedia.org/wiki/List_of_TCP_and_UDP_port_numbers#Well-known_ports
+  URI.defaultPorts = {
+    http: '80',
+    https: '443',
+    ftp: '21',
+    gopher: '70',
+    ws: '80',
+    wss: '443'
+  };
+  // allowed hostname characters according to RFC 3986
+  // ALPHA DIGIT "-" "." "_" "~" "!" "$" "&" "'" "(" ")" "*" "+" "," ";" "=" %encoded
+  // I've never seen a (non-IDN) hostname other than: ALPHA DIGIT . -
+  URI.invalid_hostname_characters = /[^a-zA-Z0-9\.-]/;
+  // map DOM Elements to their URI attribute
+  URI.domAttributes = {
+    'a': 'href',
+    'blockquote': 'cite',
+    'link': 'href',
+    'base': 'href',
+    'script': 'src',
+    'form': 'action',
+    'img': 'src',
+    'area': 'href',
+    'iframe': 'src',
+    'embed': 'src',
+    'source': 'src',
+    'track': 'src',
+    'input': 'src', // but only if type="image"
+    'audio': 'src',
+    'video': 'src'
+  };
+  URI.getDomAttribute = function(node) {
+    if (!node || !node.nodeName) {
+      return undefined;
+    }
+
+    var nodeName = node.nodeName.toLowerCase();
+    // <input> should only expose src for type="image"
+    if (nodeName === 'input' && node.type !== 'image') {
+      return undefined;
+    }
+
+    return URI.domAttributes[nodeName];
+  };
+
+  function escapeForDumbFirefox36(value) {
+    // https://github.com/medialize/URI.js/issues/91
+    return escape(value);
+  }
+
+  // encoding / decoding according to RFC3986
+  function strictEncodeURIComponent(string) {
+    // see https://developer.mozilla.org/en-US/docs/JavaScript/Reference/Global_Objects/encodeURIComponent
+    return encodeURIComponent(string)
+      .replace(/[!'()*]/g, escapeForDumbFirefox36)
+      .replace(/\*/g, '%2A');
+  }
+  URI.encode = strictEncodeURIComponent;
+  URI.decode = decodeURIComponent;
+  URI.iso8859 = function() {
+    URI.encode = escape;
+    URI.decode = unescape;
+  };
+  URI.unicode = function() {
+    URI.encode = strictEncodeURIComponent;
+    URI.decode = decodeURIComponent;
+  };
+  URI.characters = {
+    pathname: {
+      encode: {
+        // RFC3986 2.1: For consistency, URI producers and normalizers should
+        // use uppercase hexadecimal digits for all percent-encodings.
+        expression: /%(24|26|2B|2C|3B|3D|3A|40)/ig,
+        map: {
+          // -._~!'()*
+          '%24': '$',
+          '%26': '&',
+          '%2B': '+',
+          '%2C': ',',
+          '%3B': ';',
+          '%3D': '=',
+          '%3A': ':',
+          '%40': '@'
+        }
+      },
+      decode: {
+        expression: /[\/\?#]/g,
+        map: {
+          '/': '%2F',
+          '?': '%3F',
+          '#': '%23'
+        }
+      }
+    },
+    reserved: {
+      encode: {
+        // RFC3986 2.1: For consistency, URI producers and normalizers should
+        // use uppercase hexadecimal digits for all percent-encodings.
+        expression: /%(21|23|24|26|27|28|29|2A|2B|2C|2F|3A|3B|3D|3F|40|5B|5D)/ig,
+        map: {
+          // gen-delims
+          '%3A': ':',
+          '%2F': '/',
+          '%3F': '?',
+          '%23': '#',
+          '%5B': '[',
+          '%5D': ']',
+          '%40': '@',
+          // sub-delims
+          '%21': '!',
+          '%24': '$',
+          '%26': '&',
+          '%27': '\'',
+          '%28': '(',
+          '%29': ')',
+          '%2A': '*',
+          '%2B': '+',
+          '%2C': ',',
+          '%3B': ';',
+          '%3D': '='
+        }
+      }
+    },
+    urnpath: {
+      // The characters under `encode` are the characters called out by RFC 2141 as being acceptable
+      // for usage in a URN. RFC2141 also calls out "-", ".", and "_" as acceptable characters, but
+      // these aren't encoded by encodeURIComponent, so we don't have to call them out here. Also
+      // note that the colon character is not featured in the encoding map; this is because URI.js
+      // gives the colons in URNs semantic meaning as the delimiters of path segements, and so it
+      // should not appear unencoded in a segment itself.
+      // See also the note above about RFC3986 and capitalalized hex digits.
+      encode: {
+        expression: /%(21|24|27|28|29|2A|2B|2C|3B|3D|40)/ig,
+        map: {
+          '%21': '!',
+          '%24': '$',
+          '%27': '\'',
+          '%28': '(',
+          '%29': ')',
+          '%2A': '*',
+          '%2B': '+',
+          '%2C': ',',
+          '%3B': ';',
+          '%3D': '=',
+          '%40': '@'
+        }
+      },
+      // These characters are the characters called out by RFC2141 as "reserved" characters that
+      // should never appear in a URN, plus the colon character (see note above).
+      decode: {
+        expression: /[\/\?#:]/g,
+        map: {
+          '/': '%2F',
+          '?': '%3F',
+          '#': '%23',
+          ':': '%3A'
+        }
+      }
+    }
+  };
+  URI.encodeQuery = function(string, escapeQuerySpace) {
+    var escaped = URI.encode(string + '');
+    if (escapeQuerySpace === undefined) {
+      escapeQuerySpace = URI.escapeQuerySpace;
+    }
+
+    return escapeQuerySpace ? escaped.replace(/%20/g, '+') : escaped;
+  };
+  URI.decodeQuery = function(string, escapeQuerySpace) {
+    string += '';
+    if (escapeQuerySpace === undefined) {
+      escapeQuerySpace = URI.escapeQuerySpace;
+    }
+
+    try {
+      return URI.decode(escapeQuerySpace ? string.replace(/\+/g, '%20') : string);
+    } catch(e) {
+      // we're not going to mess with weird encodings,
+      // give up and return the undecoded original string
+      // see https://github.com/medialize/URI.js/issues/87
+      // see https://github.com/medialize/URI.js/issues/92
+      return string;
+    }
+  };
+  // generate encode/decode path functions
+  var _parts = {'encode':'encode', 'decode':'decode'};
+  var _part;
+  var generateAccessor = function(_group, _part) {
+    return function(string) {
+      try {
+        return URI[_part](string + '').replace(URI.characters[_group][_part].expression, function(c) {
+          return URI.characters[_group][_part].map[c];
+        });
+      } catch (e) {
+        // we're not going to mess with weird encodings,
+        // give up and return the undecoded original string
+        // see https://github.com/medialize/URI.js/issues/87
+        // see https://github.com/medialize/URI.js/issues/92
+        return string;
+      }
+    };
+  };
+
+  for (_part in _parts) {
+    URI[_part + 'PathSegment'] = generateAccessor('pathname', _parts[_part]);
+    URI[_part + 'UrnPathSegment'] = generateAccessor('urnpath', _parts[_part]);
+  }
+
+  var generateSegmentedPathFunction = function(_sep, _codingFuncName, _innerCodingFuncName) {
+    return function(string) {
+      // Why pass in names of functions, rather than the function objects themselves? The
+      // definitions of some functions (but in particular, URI.decode) will occasionally change due
+      // to URI.js having ISO8859 and Unicode modes. Passing in the name and getting it will ensure
+      // that the functions we use here are "fresh".
+      var actualCodingFunc;
+      if (!_innerCodingFuncName) {
+        actualCodingFunc = URI[_codingFuncName];
+      } else {
+        actualCodingFunc = function(string) {
+          return URI[_codingFuncName](URI[_innerCodingFuncName](string));
+        };
+      }
+
+      var segments = (string + '').split(_sep);
+
+      for (var i = 0, length = segments.length; i < length; i++) {
+        segments[i] = actualCodingFunc(segments[i]);
+      }
+
+      return segments.join(_sep);
+    };
+  };
+
+  // This takes place outside the above loop because we don't want, e.g., encodeUrnPath functions.
+  URI.decodePath = generateSegmentedPathFunction('/', 'decodePathSegment');
+  URI.decodeUrnPath = generateSegmentedPathFunction(':', 'decodeUrnPathSegment');
+  URI.recodePath = generateSegmentedPathFunction('/', 'encodePathSegment', 'decode');
+  URI.recodeUrnPath = generateSegmentedPathFunction(':', 'encodeUrnPathSegment', 'decode');
+
+  URI.encodeReserved = generateAccessor('reserved', 'encode');
+
+  URI.parse = function(string, parts) {
+    var pos;
+    if (!parts) {
+      parts = {};
+    }
+    // [protocol"://"[username[":"password]"@"]hostname[":"port]"/"?][path]["?"querystring]["#"fragment]
+
+    // extract fragment
+    pos = string.indexOf('#');
+    if (pos > -1) {
+      // escaping?
+      parts.fragment = string.substring(pos + 1) || null;
+      string = string.substring(0, pos);
+    }
+
+    // extract query
+    pos = string.indexOf('?');
+    if (pos > -1) {
+      // escaping?
+      parts.query = string.substring(pos + 1) || null;
+      string = string.substring(0, pos);
+    }
+
+    // extract protocol
+    if (string.substring(0, 2) === '//') {
+      // relative-scheme
+      parts.protocol = null;
+      string = string.substring(2);
+      // extract "user:pass@host:port"
+      string = URI.parseAuthority(string, parts);
+    } else {
+      pos = string.indexOf(':');
+      if (pos > -1) {
+        parts.protocol = string.substring(0, pos) || null;
+        if (parts.protocol && !parts.protocol.match(URI.protocol_expression)) {
+          // : may be within the path
+          parts.protocol = undefined;
+        } else if (string.substring(pos + 1, pos + 3) === '//') {
+          string = string.substring(pos + 3);
+
+          // extract "user:pass@host:port"
+          string = URI.parseAuthority(string, parts);
+        } else {
+          string = string.substring(pos + 1);
+          parts.urn = true;
+        }
+      }
+    }
+
+    // what's left must be the path
+    parts.path = string;
+
+    // and we're done
+    return parts;
+  };
+  URI.parseHost = function(string, parts) {
+    // Copy chrome, IE, opera backslash-handling behavior.
+    // Back slashes before the query string get converted to forward slashes
+    // See: https://github.com/joyent/node/blob/386fd24f49b0e9d1a8a076592a404168faeecc34/lib/url.js#L115-L124
+    // See: https://code.google.com/p/chromium/issues/detail?id=25916
+    // https://github.com/medialize/URI.js/pull/233
+    string = string.replace(/\\/g, '/');
+
+    // extract host:port
+    var pos = string.indexOf('/');
+    var bracketPos;
+    var t;
+
+    if (pos === -1) {
+      pos = string.length;
+    }
+
+    if (string.charAt(0) === '[') {
+      // IPv6 host - http://tools.ietf.org/html/draft-ietf-6man-text-addr-representation-04#section-6
+      // I claim most client software breaks on IPv6 anyways. To simplify things, URI only accepts
+      // IPv6+port in the format [2001:db8::1]:80 (for the time being)
+      bracketPos = string.indexOf(']');
+      parts.hostname = string.substring(1, bracketPos) || null;
+      parts.port = string.substring(bracketPos + 2, pos) || null;
+      if (parts.port === '/') {
+        parts.port = null;
+      }
+    } else {
+      var firstColon = string.indexOf(':');
+      var firstSlash = string.indexOf('/');
+      var nextColon = string.indexOf(':', firstColon + 1);
+      if (nextColon !== -1 && (firstSlash === -1 || nextColon < firstSlash)) {
+        // IPv6 host contains multiple colons - but no port
+        // this notation is actually not allowed by RFC 3986, but we're a liberal parser
+        parts.hostname = string.substring(0, pos) || null;
+        parts.port = null;
+      } else {
+        t = string.substring(0, pos).split(':');
+        parts.hostname = t[0] || null;
+        parts.port = t[1] || null;
+      }
+    }
+
+    if (parts.hostname && string.substring(pos).charAt(0) !== '/') {
+      pos++;
+      string = '/' + string;
+    }
+
+    return string.substring(pos) || '/';
+  };
+  URI.parseAuthority = function(string, parts) {
+    string = URI.parseUserinfo(string, parts);
+    return URI.parseHost(string, parts);
+  };
+  URI.parseUserinfo = function(string, parts) {
+    // extract username:password
+    var firstSlash = string.indexOf('/');
+    var pos = string.lastIndexOf('@', firstSlash > -1 ? firstSlash : string.length - 1);
+    var t;
+
+    // authority@ must come before /path
+    if (pos > -1 && (firstSlash === -1 || pos < firstSlash)) {
+      t = string.substring(0, pos).split(':');
+      parts.username = t[0] ? URI.decode(t[0]) : null;
+      t.shift();
+      parts.password = t[0] ? URI.decode(t.join(':')) : null;
+      string = string.substring(pos + 1);
+    } else {
+      parts.username = null;
+      parts.password = null;
+    }
+
+    return string;
+  };
+  URI.parseQuery = function(string, escapeQuerySpace) {
+    if (!string) {
+      return {};
+    }
+
+    // throw out the funky business - "?"[name"="value"&"]+
+    string = string.replace(/&+/g, '&').replace(/^\?*&*|&+$/g, '');
+
+    if (!string) {
+      return {};
+    }
+
+    var items = {};
+    var splits = string.split('&');
+    var length = splits.length;
+    var v, name, value;
+
+    for (var i = 0; i < length; i++) {
+      v = splits[i].split('=');
+      name = URI.decodeQuery(v.shift(), escapeQuerySpace);
+      // no "=" is null according to http://dvcs.w3.org/hg/url/raw-file/tip/Overview.html#collect-url-parameters
+      value = v.length ? URI.decodeQuery(v.join('='), escapeQuerySpace) : null;
+
+      if (hasOwn.call(items, name)) {
+        if (typeof items[name] === 'string' || items[name] === null) {
+          items[name] = [items[name]];
+        }
+
+        items[name].push(value);
+      } else {
+        items[name] = value;
+      }
+    }
+
+    return items;
+  };
+
+  URI.build = function(parts) {
+    var t = '';
+
+    if (parts.protocol) {
+      t += parts.protocol + ':';
+    }
+
+    if (!parts.urn && (t || parts.hostname)) {
+      t += '//';
+    }
+
+    t += (URI.buildAuthority(parts) || '');
+
+    if (typeof parts.path === 'string') {
+      if (parts.path.charAt(0) !== '/' && typeof parts.hostname === 'string') {
+        t += '/';
+      }
+
+      t += parts.path;
+    }
+
+    if (typeof parts.query === 'string' && parts.query) {
+      t += '?' + parts.query;
+    }
+
+    if (typeof parts.fragment === 'string' && parts.fragment) {
+      t += '#' + parts.fragment;
+    }
+    return t;
+  };
+  URI.buildHost = function(parts) {
+    var t = '';
+
+    if (!parts.hostname) {
+      return '';
+    } else if (URI.ip6_expression.test(parts.hostname)) {
+      t += '[' + parts.hostname + ']';
+    } else {
+      t += parts.hostname;
+    }
+
+    if (parts.port) {
+      t += ':' + parts.port;
+    }
+
+    return t;
+  };
+  URI.buildAuthority = function(parts) {
+    return URI.buildUserinfo(parts) + URI.buildHost(parts);
+  };
+  URI.buildUserinfo = function(parts) {
+    var t = '';
+
+    if (parts.username) {
+      t += URI.encode(parts.username);
+    }
+
+    if (parts.password) {
+      t += ':' + URI.encode(parts.password);
+    }
+
+    if (t) {
+      t += '@';
+    }
+
+    return t;
+  };
+  URI.buildQuery = function(data, duplicateQueryParameters, escapeQuerySpace) {
+    // according to http://tools.ietf.org/html/rfc3986 or http://labs.apache.org/webarch/uri/rfc/rfc3986.html
+    // being »-._~!$&'()*+,;=:@/?« %HEX and alnum are allowed
+    // the RFC explicitly states ?/foo being a valid use case, no mention of parameter syntax!
+    // URI.js treats the query string as being application/x-www-form-urlencoded
+    // see http://www.w3.org/TR/REC-html40/interact/forms.html#form-content-type
+
+    var t = '';
+    var unique, key, i, length;
+    for (key in data) {
+      if (hasOwn.call(data, key) && key) {
+        if (isArray(data[key])) {
+          unique = {};
+          for (i = 0, length = data[key].length; i < length; i++) {
+            if (data[key][i] !== undefined && unique[data[key][i] + ''] === undefined) {
+              t += '&' + URI.buildQueryParameter(key, data[key][i], escapeQuerySpace);
+              if (duplicateQueryParameters !== true) {
+                unique[data[key][i] + ''] = true;
+              }
+            }
+          }
+        } else if (data[key] !== undefined) {
+          t += '&' + URI.buildQueryParameter(key, data[key], escapeQuerySpace);
+        }
+      }
+    }
+
+    return t.substring(1);
+  };
+  URI.buildQueryParameter = function(name, value, escapeQuerySpace) {
+    // http://www.w3.org/TR/REC-html40/interact/forms.html#form-content-type -- application/x-www-form-urlencoded
+    // don't append "=" for null values, according to http://dvcs.w3.org/hg/url/raw-file/tip/Overview.html#url-parameter-serialization
+    return URI.encodeQuery(name, escapeQuerySpace) + (value !== null ? '=' + URI.encodeQuery(value, escapeQuerySpace) : '');
+  };
+
+  URI.addQuery = function(data, name, value) {
+    if (typeof name === 'object') {
+      for (var key in name) {
+        if (hasOwn.call(name, key)) {
+          URI.addQuery(data, key, name[key]);
+        }
+      }
+    } else if (typeof name === 'string') {
+      if (data[name] === undefined) {
+        data[name] = value;
+        return;
+      } else if (typeof data[name] === 'string') {
+        data[name] = [data[name]];
+      }
+
+      if (!isArray(value)) {
+        value = [value];
+      }
+
+      data[name] = (data[name] || []).concat(value);
+    } else {
+      throw new TypeError('URI.addQuery() accepts an object, string as the name parameter');
+    }
+  };
+  URI.removeQuery = function(data, name, value) {
+    var i, length, key;
+
+    if (isArray(name)) {
+      for (i = 0, length = name.length; i < length; i++) {
+        data[name[i]] = undefined;
+      }
+    } else if (getType(name) === 'RegExp') {
+      for (key in data) {
+        if (name.test(key)) {
+          data[key] = undefined;
+        }
+      }
+    } else if (typeof name === 'object') {
+      for (key in name) {
+        if (hasOwn.call(name, key)) {
+          URI.removeQuery(data, key, name[key]);
+        }
+      }
+    } else if (typeof name === 'string') {
+      if (value !== undefined) {
+        if (getType(value) === 'RegExp') {
+          if (!isArray(data[name]) && value.test(data[name])) {
+            data[name] = undefined;
+          } else {
+            data[name] = filterArrayValues(data[name], value);
+          }
+        } else if (data[name] === String(value) && (!isArray(value) || value.length === 1)) {
+          data[name] = undefined;
+        } else if (isArray(data[name])) {
+          data[name] = filterArrayValues(data[name], value);
+        }
+      } else {
+        data[name] = undefined;
+      }
+    } else {
+      throw new TypeError('URI.removeQuery() accepts an object, string, RegExp as the first parameter');
+    }
+  };
+  URI.hasQuery = function(data, name, value, withinArray) {
+    switch (getType(name)) {
+      case 'String':
+        // Nothing to do here
+        break;
+
+      case 'RegExp':
+        for (var key in data) {
+          if (hasOwn.call(data, key)) {
+            if (name.test(key) && (value === undefined || URI.hasQuery(data, key, value))) {
+              return true;
+            }
+          }
+        }
+
+        return false;
+
+      case 'Object':
+        for (var _key in name) {
+          if (hasOwn.call(name, _key)) {
+            if (!URI.hasQuery(data, _key, name[_key])) {
+              return false;
+            }
+          }
+        }
+
+        return true;
+
+      default:
+        throw new TypeError('URI.hasQuery() accepts a string, regular expression or object as the name parameter');
+    }
+
+    switch (getType(value)) {
+      case 'Undefined':
+        // true if exists (but may be empty)
+        return name in data; // data[name] !== undefined;
+
+      case 'Boolean':
+        // true if exists and non-empty
+        var _booly = Boolean(isArray(data[name]) ? data[name].length : data[name]);
+        return value === _booly;
+
+      case 'Function':
+        // allow complex comparison
+        return !!value(data[name], name, data);
+
+      case 'Array':
+        if (!isArray(data[name])) {
+          return false;
+        }
+
+        var op = withinArray ? arrayContains : arraysEqual;
+        return op(data[name], value);
+
+      case 'RegExp':
+        if (!isArray(data[name])) {
+          return Boolean(data[name] && data[name].match(value));
+        }
+
+        if (!withinArray) {
+          return false;
+        }
+
+        return arrayContains(data[name], value);
+
+      case 'Number':
+        value = String(value);
+        /* falls through */
+      case 'String':
+        if (!isArray(data[name])) {
+          return data[name] === value;
+        }
+
+        if (!withinArray) {
+          return false;
+        }
+
+        return arrayContains(data[name], value);
+
+      default:
+        throw new TypeError('URI.hasQuery() accepts undefined, boolean, string, number, RegExp, Function as the value parameter');
+    }
+  };
+
+
+  URI.joinPaths = function() {
+    var input = [];
+    var segments = [];
+    var nonEmptySegments = 0;
+
+    for (var i = 0; i < arguments.length; i++) {
+      var url = new URI(arguments[i]);
+      input.push(url);
+      var _segments = url.segment();
+      for (var s = 0; s < _segments.length; s++) {
+        if (typeof _segments[s] === 'string') {
+          segments.push(_segments[s]);
+        }
+
+        if (_segments[s]) {
+          nonEmptySegments++;
+        }
+      }
+    }
+
+    if (!segments.length || !nonEmptySegments) {
+      return new URI('');
+    }
+
+    var uri = new URI('').segment(segments);
+
+    if (input[0].path() === '' || input[0].path().slice(0, 1) === '/') {
+      uri.path('/' + uri.path());
+    }
+
+    return uri.normalize();
+  };
+
+  URI.commonPath = function(one, two) {
+    var length = Math.min(one.length, two.length);
+    var pos;
+
+    // find first non-matching character
+    for (pos = 0; pos < length; pos++) {
+      if (one.charAt(pos) !== two.charAt(pos)) {
+        pos--;
+        break;
+      }
+    }
+
+    if (pos < 1) {
+      return one.charAt(0) === two.charAt(0) && one.charAt(0) === '/' ? '/' : '';
+    }
+
+    // revert to last /
+    if (one.charAt(pos) !== '/' || two.charAt(pos) !== '/') {
+      pos = one.substring(0, pos).lastIndexOf('/');
+    }
+
+    return one.substring(0, pos + 1);
+  };
+
+  URI.withinString = function(string, callback, options) {
+    options || (options = {});
+    var _start = options.start || URI.findUri.start;
+    var _end = options.end || URI.findUri.end;
+    var _trim = options.trim || URI.findUri.trim;
+    var _parens = options.parens || URI.findUri.parens;
+    var _attributeOpen = /[a-z0-9-]=["']?$/i;
+
+    _start.lastIndex = 0;
+    while (true) {
+      var match = _start.exec(string);
+      if (!match) {
+        break;
+      }
+
+      var start = match.index;
+      if (options.ignoreHtml) {
+        // attribut(e=["']?$)
+        var attributeOpen = string.slice(Math.max(start - 3, 0), start);
+        if (attributeOpen && _attributeOpen.test(attributeOpen)) {
+          continue;
+        }
+      }
+
+      var end = start + string.slice(start).search(_end);
+      var slice = string.slice(start, end);
+      // make sure we include well balanced parens
+      var parensEnd = -1;
+      while (true) {
+        var parensMatch = _parens.exec(slice);
+        if (!parensMatch) {
+          break;
+        }
+
+        var parensMatchEnd = parensMatch.index + parensMatch[0].length;
+        parensEnd = Math.max(parensEnd, parensMatchEnd);
+      }
+
+      if (parensEnd > -1) {
+        slice = slice.slice(0, parensEnd) + slice.slice(parensEnd).replace(_trim, '');
+      } else {
+        slice = slice.replace(_trim, '');
+      }
+
+      if (slice.length <= match[0].length) {
+        // the extract only contains the starting marker of a URI,
+        // e.g. "www" or "http://"
+        continue;
+      }
+
+      if (options.ignore && options.ignore.test(slice)) {
+        continue;
+      }
+
+      end = start + slice.length;
+      var result = callback(slice, start, end, string);
+      if (result === undefined) {
+        _start.lastIndex = end;
+        continue;
+      }
+
+      result = String(result);
+      string = string.slice(0, start) + result + string.slice(end);
+      _start.lastIndex = start + result.length;
+    }
+
+    _start.lastIndex = 0;
+    return string;
+  };
+
+  URI.ensureValidHostname = function(v) {
+    // Theoretically URIs allow percent-encoding in Hostnames (according to RFC 3986)
+    // they are not part of DNS and therefore ignored by URI.js
+
+    if (v.match(URI.invalid_hostname_characters)) {
+      // test punycode
+      if (!punycode) {
+        throw new TypeError('Hostname "' + v + '" contains characters other than [A-Z0-9.-] and Punycode.js is not available');
+      }
+
+      if (punycode.toASCII(v).match(URI.invalid_hostname_characters)) {
+        throw new TypeError('Hostname "' + v + '" contains characters other than [A-Z0-9.-]');
+      }
+    }
+  };
+
+  // noConflict
+  URI.noConflict = function(removeAll) {
+    if (removeAll) {
+      var unconflicted = {
+        URI: this.noConflict()
+      };
+
+      if (root.URITemplate && typeof root.URITemplate.noConflict === 'function') {
+        unconflicted.URITemplate = root.URITemplate.noConflict();
+      }
+
+      if (root.IPv6 && typeof root.IPv6.noConflict === 'function') {
+        unconflicted.IPv6 = root.IPv6.noConflict();
+      }
+
+      if (root.SecondLevelDomains && typeof root.SecondLevelDomains.noConflict === 'function') {
+        unconflicted.SecondLevelDomains = root.SecondLevelDomains.noConflict();
+      }
+
+      return unconflicted;
+    } else if (root.URI === this) {
+      root.URI = _URI;
+    }
+
+    return this;
+  };
+
+  p.build = function(deferBuild) {
+    if (deferBuild === true) {
+      this._deferred_build = true;
+    } else if (deferBuild === undefined || this._deferred_build) {
+      this._string = URI.build(this._parts);
+      this._deferred_build = false;
+    }
+
+    return this;
+  };
+
+  p.clone = function() {
+    return new URI(this);
+  };
+
+  p.valueOf = p.toString = function() {
+    return this.build(false)._string;
+  };
+
+
+  function generateSimpleAccessor(_part){
+    return function(v, build) {
+      if (v === undefined) {
+        return this._parts[_part] || '';
+      } else {
+        this._parts[_part] = v || null;
+        this.build(!build);
+        return this;
+      }
+    };
+  }
+
+  function generatePrefixAccessor(_part, _key){
+    return function(v, build) {
+      if (v === undefined) {
+        return this._parts[_part] || '';
+      } else {
+        if (v !== null) {
+          v = v + '';
+          if (v.charAt(0) === _key) {
+            v = v.substring(1);
+          }
+        }
+
+        this._parts[_part] = v;
+        this.build(!build);
+        return this;
+      }
+    };
+  }
+
+  p.protocol = generateSimpleAccessor('protocol');
+  p.username = generateSimpleAccessor('username');
+  p.password = generateSimpleAccessor('password');
+  p.hostname = generateSimpleAccessor('hostname');
+  p.port = generateSimpleAccessor('port');
+  p.query = generatePrefixAccessor('query', '?');
+  p.fragment = generatePrefixAccessor('fragment', '#');
+
+  p.search = function(v, build) {
+    var t = this.query(v, build);
+    return typeof t === 'string' && t.length ? ('?' + t) : t;
+  };
+  p.hash = function(v, build) {
+    var t = this.fragment(v, build);
+    return typeof t === 'string' && t.length ? ('#' + t) : t;
+  };
+
+  p.pathname = function(v, build) {
+    if (v === undefined || v === true) {
+      var res = this._parts.path || (this._parts.hostname ? '/' : '');
+      return v ? (this._parts.urn ? URI.decodeUrnPath : URI.decodePath)(res) : res;
+    } else {
+      if (this._parts.urn) {
+        this._parts.path = v ? URI.recodeUrnPath(v) : '';
+      } else {
+        this._parts.path = v ? URI.recodePath(v) : '/';
+      }
+      this.build(!build);
+      return this;
+    }
+  };
+  p.path = p.pathname;
+  p.href = function(href, build) {
+    var key;
+
+    if (href === undefined) {
+      return this.toString();
+    }
+
+    this._string = '';
+    this._parts = URI._parts();
+
+    var _URI = href instanceof URI;
+    var _object = typeof href === 'object' && (href.hostname || href.path || href.pathname);
+    if (href.nodeName) {
+      var attribute = URI.getDomAttribute(href);
+      href = href[attribute] || '';
+      _object = false;
+    }
+
+    // window.location is reported to be an object, but it's not the sort
+    // of object we're looking for:
+    // * location.protocol ends with a colon
+    // * location.query != object.search
+    // * location.hash != object.fragment
+    // simply serializing the unknown object should do the trick
+    // (for location, not for everything...)
+    if (!_URI && _object && href.pathname !== undefined) {
+      href = href.toString();
+    }
+
+    if (typeof href === 'string' || href instanceof String) {
+      this._parts = URI.parse(String(href), this._parts);
+    } else if (_URI || _object) {
+      var src = _URI ? href._parts : href;
+      for (key in src) {
+        if (hasOwn.call(this._parts, key)) {
+          this._parts[key] = src[key];
+        }
+      }
+    } else {
+      throw new TypeError('invalid input');
+    }
+
+    this.build(!build);
+    return this;
+  };
+
+  // identification accessors
+  p.is = function(what) {
+    var ip = false;
+    var ip4 = false;
+    var ip6 = false;
+    var name = false;
+    var sld = false;
+    var idn = false;
+    var punycode = false;
+    var relative = !this._parts.urn;
+
+    if (this._parts.hostname) {
+      relative = false;
+      ip4 = URI.ip4_expression.test(this._parts.hostname);
+      ip6 = URI.ip6_expression.test(this._parts.hostname);
+      ip = ip4 || ip6;
+      name = !ip;
+      sld = name && SLD && SLD.has(this._parts.hostname);
+      idn = name && URI.idn_expression.test(this._parts.hostname);
+      punycode = name && URI.punycode_expression.test(this._parts.hostname);
+    }
+
+    switch (what.toLowerCase()) {
+      case 'relative':
+        return relative;
+
+      case 'absolute':
+        return !relative;
+
+      // hostname identification
+      case 'domain':
+      case 'name':
+        return name;
+
+      case 'sld':
+        return sld;
+
+      case 'ip':
+        return ip;
+
+      case 'ip4':
+      case 'ipv4':
+      case 'inet4':
+        return ip4;
+
+      case 'ip6':
+      case 'ipv6':
+      case 'inet6':
+        return ip6;
+
+      case 'idn':
+        return idn;
+
+      case 'url':
+        return !this._parts.urn;
+
+      case 'urn':
+        return !!this._parts.urn;
+
+      case 'punycode':
+        return punycode;
+    }
+
+    return null;
+  };
+
+  // component specific input validation
+  var _protocol = p.protocol;
+  var _port = p.port;
+  var _hostname = p.hostname;
+
+  p.protocol = function(v, build) {
+    if (v !== undefined) {
+      if (v) {
+        // accept trailing ://
+        v = v.replace(/:(\/\/)?$/, '');
+
+        if (!v.match(URI.protocol_expression)) {
+          throw new TypeError('Protocol "' + v + '" contains characters other than [A-Z0-9.+-] or doesn\'t start with [A-Z]');
+        }
+      }
+    }
+    return _protocol.call(this, v, build);
+  };
+  p.scheme = p.protocol;
+  p.port = function(v, build) {
+    if (this._parts.urn) {
+      return v === undefined ? '' : this;
+    }
+
+    if (v !== undefined) {
+      if (v === 0) {
+        v = null;
+      }
+
+      if (v) {
+        v += '';
+        if (v.charAt(0) === ':') {
+          v = v.substring(1);
+        }
+
+        if (v.match(/[^0-9]/)) {
+          throw new TypeError('Port "' + v + '" contains characters other than [0-9]');
+        }
+      }
+    }
+    return _port.call(this, v, build);
+  };
+  p.hostname = function(v, build) {
+    if (this._parts.urn) {
+      return v === undefined ? '' : this;
+    }
+
+    if (v !== undefined) {
+      var x = {};
+      var res = URI.parseHost(v, x);
+      if (res !== '/') {
+        throw new TypeError('Hostname "' + v + '" contains characters other than [A-Z0-9.-]');
+      }
+
+      v = x.hostname;
+    }
+    return _hostname.call(this, v, build);
+  };
+
+  // compound accessors
+  p.origin = function(v, build) {
+    if (this._parts.urn) {
+      return v === undefined ? '' : this;
+    }
+
+    if (v === undefined) {
+      var protocol = this.protocol();
+      var authority = this.authority();
+      if (!authority) {
+        return '';
+      }
+
+      return (protocol ? protocol + '://' : '') + this.authority();
+    } else {
+      var origin = URI(v);
+      this
+        .protocol(origin.protocol())
+        .authority(origin.authority())
+        .build(!build);
+      return this;
+    }
+  };
+  p.host = function(v, build) {
+    if (this._parts.urn) {
+      return v === undefined ? '' : this;
+    }
+
+    if (v === undefined) {
+      return this._parts.hostname ? URI.buildHost(this._parts) : '';
+    } else {
+      var res = URI.parseHost(v, this._parts);
+      if (res !== '/') {
+        throw new TypeError('Hostname "' + v + '" contains characters other than [A-Z0-9.-]');
+      }
+
+      this.build(!build);
+      return this;
+    }
+  };
+  p.authority = function(v, build) {
+    if (this._parts.urn) {
+      return v === undefined ? '' : this;
+    }
+
+    if (v === undefined) {
+      return this._parts.hostname ? URI.buildAuthority(this._parts) : '';
+    } else {
+      var res = URI.parseAuthority(v, this._parts);
+      if (res !== '/') {
+        throw new TypeError('Hostname "' + v + '" contains characters other than [A-Z0-9.-]');
+      }
+
+      this.build(!build);
+      return this;
+    }
+  };
+  p.userinfo = function(v, build) {
+    if (this._parts.urn) {
+      return v === undefined ? '' : this;
+    }
+
+    if (v === undefined) {
+      var t = URI.buildUserinfo(this._parts);
+      return t ? t.substring(0, t.length -1) : t;
+    } else {
+      if (v[v.length-1] !== '@') {
+        v += '@';
+      }
+
+      URI.parseUserinfo(v, this._parts);
+      this.build(!build);
+      return this;
+    }
+  };
+  p.resource = function(v, build) {
+    var parts;
+
+    if (v === undefined) {
+      return this.path() + this.search() + this.hash();
+    }
+
+    parts = URI.parse(v);
+    this._parts.path = parts.path;
+    this._parts.query = parts.query;
+    this._parts.fragment = parts.fragment;
+    this.build(!build);
+    return this;
+  };
+
+  // fraction accessors
+  p.subdomain = function(v, build) {
+    if (this._parts.urn) {
+      return v === undefined ? '' : this;
+    }
+
+    // convenience, return "www" from "www.example.org"
+    if (v === undefined) {
+      if (!this._parts.hostname || this.is('IP')) {
+        return '';
+      }
+
+      // grab domain and add another segment
+      var end = this._parts.hostname.length - this.domain().length - 1;
+      return this._parts.hostname.substring(0, end) || '';
+    } else {
+      var e = this._parts.hostname.length - this.domain().length;
+      var sub = this._parts.hostname.substring(0, e);
+      var replace = new RegExp('^' + escapeRegEx(sub));
+
+      if (v && v.charAt(v.length - 1) !== '.') {
+        v += '.';
+      }
+
+      if (v) {
+        URI.ensureValidHostname(v);
+      }
+
+      this._parts.hostname = this._parts.hostname.replace(replace, v);
+      this.build(!build);
+      return this;
+    }
+  };
+  p.domain = function(v, build) {
+    if (this._parts.urn) {
+      return v === undefined ? '' : this;
+    }
+
+    if (typeof v === 'boolean') {
+      build = v;
+      v = undefined;
+    }
+
+    // convenience, return "example.org" from "www.example.org"
+    if (v === undefined) {
+      if (!this._parts.hostname || this.is('IP')) {
+        return '';
+      }
+
+      // if hostname consists of 1 or 2 segments, it must be the domain
+      var t = this._parts.hostname.match(/\./g);
+      if (t && t.length < 2) {
+        return this._parts.hostname;
+      }
+
+      // grab tld and add another segment
+      var end = this._parts.hostname.length - this.tld(build).length - 1;
+      end = this._parts.hostname.lastIndexOf('.', end -1) + 1;
+      return this._parts.hostname.substring(end) || '';
+    } else {
+      if (!v) {
+        throw new TypeError('cannot set domain empty');
+      }
+
+      URI.ensureValidHostname(v);
+
+      if (!this._parts.hostname || this.is('IP')) {
+        this._parts.hostname = v;
+      } else {
+        var replace = new RegExp(escapeRegEx(this.domain()) + '$');
+        this._parts.hostname = this._parts.hostname.replace(replace, v);
+      }
+
+      this.build(!build);
+      return this;
+    }
+  };
+  p.tld = function(v, build) {
+    if (this._parts.urn) {
+      return v === undefined ? '' : this;
+    }
+
+    if (typeof v === 'boolean') {
+      build = v;
+      v = undefined;
+    }
+
+    // return "org" from "www.example.org"
+    if (v === undefined) {
+      if (!this._parts.hostname || this.is('IP')) {
+        return '';
+      }
+
+      var pos = this._parts.hostname.lastIndexOf('.');
+      var tld = this._parts.hostname.substring(pos + 1);
+
+      if (build !== true && SLD && SLD.list[tld.toLowerCase()]) {
+        return SLD.get(this._parts.hostname) || tld;
+      }
+
+      return tld;
+    } else {
+      var replace;
+
+      if (!v) {
+        throw new TypeError('cannot set TLD empty');
+      } else if (v.match(/[^a-zA-Z0-9-]/)) {
+        if (SLD && SLD.is(v)) {
+          replace = new RegExp(escapeRegEx(this.tld()) + '$');
+          this._parts.hostname = this._parts.hostname.replace(replace, v);
+        } else {
+          throw new TypeError('TLD "' + v + '" contains characters other than [A-Z0-9]');
+        }
+      } else if (!this._parts.hostname || this.is('IP')) {
+        throw new ReferenceError('cannot set TLD on non-domain host');
+      } else {
+        replace = new RegExp(escapeRegEx(this.tld()) + '$');
+        this._parts.hostname = this._parts.hostname.replace(replace, v);
+      }
+
+      this.build(!build);
+      return this;
+    }
+  };
+  p.directory = function(v, build) {
+    if (this._parts.urn) {
+      return v === undefined ? '' : this;
+    }
+
+    if (v === undefined || v === true) {
+      if (!this._parts.path && !this._parts.hostname) {
+        return '';
+      }
+
+      if (this._parts.path === '/') {
+        return '/';
+      }
+
+      var end = this._parts.path.length - this.filename().length - 1;
+      var res = this._parts.path.substring(0, end) || (this._parts.hostname ? '/' : '');
+
+      return v ? URI.decodePath(res) : res;
+
+    } else {
+      var e = this._parts.path.length - this.filename().length;
+      var directory = this._parts.path.substring(0, e);
+      var replace = new RegExp('^' + escapeRegEx(directory));
+
+      // fully qualifier directories begin with a slash
+      if (!this.is('relative')) {
+        if (!v) {
+          v = '/';
+        }
+
+        if (v.charAt(0) !== '/') {
+          v = '/' + v;
+        }
+      }
+
+      // directories always end with a slash
+      if (v && v.charAt(v.length - 1) !== '/') {
+        v += '/';
+      }
+
+      v = URI.recodePath(v);
+      this._parts.path = this._parts.path.replace(replace, v);
+      this.build(!build);
+      return this;
+    }
+  };
+  p.filename = function(v, build) {
+    if (this._parts.urn) {
+      return v === undefined ? '' : this;
+    }
+
+    if (typeof v !== 'string') {
+      if (!this._parts.path || this._parts.path === '/') {
+        return '';
+      }
+
+      var pos = this._parts.path.lastIndexOf('/');
+      var res = this._parts.path.substring(pos+1);
+
+      return v ? URI.decodePathSegment(res) : res;
+    } else {
+      var mutatedDirectory = false;
+
+      if (v.charAt(0) === '/') {
+        v = v.substring(1);
+      }
+
+      if (v.match(/\.?\//)) {
+        mutatedDirectory = true;
+      }
+
+      var replace = new RegExp(escapeRegEx(this.filename()) + '$');
+      v = URI.recodePath(v);
+      this._parts.path = this._parts.path.replace(replace, v);
+
+      if (mutatedDirectory) {
+        this.normalizePath(build);
+      } else {
+        this.build(!build);
+      }
+
+      return this;
+    }
+  };
+  p.suffix = function(v, build) {
+    if (this._parts.urn) {
+      return v === undefined ? '' : this;
+    }
+
+    if (v === undefined || v === true) {
+      if (!this._parts.path || this._parts.path === '/') {
+        return '';
+      }
+
+      var filename = this.filename();
+      var pos = filename.lastIndexOf('.');
+      var s, res;
+
+      if (pos === -1) {
+        return '';
+      }
+
+      // suffix may only contain alnum characters (yup, I made this up.)
+      s = filename.substring(pos+1);
+      res = (/^[a-z0-9%]+$/i).test(s) ? s : '';
+      return v ? URI.decodePathSegment(res) : res;
+    } else {
+      if (v.charAt(0) === '.') {
+        v = v.substring(1);
+      }
+
+      var suffix = this.suffix();
+      var replace;
+
+      if (!suffix) {
+        if (!v) {
+          return this;
+        }
+
+        this._parts.path += '.' + URI.recodePath(v);
+      } else if (!v) {
+        replace = new RegExp(escapeRegEx('.' + suffix) + '$');
+      } else {
+        replace = new RegExp(escapeRegEx(suffix) + '$');
+      }
+
+      if (replace) {
+        v = URI.recodePath(v);
+        this._parts.path = this._parts.path.replace(replace, v);
+      }
+
+      this.build(!build);
+      return this;
+    }
+  };
+  p.segment = function(segment, v, build) {
+    var separator = this._parts.urn ? ':' : '/';
+    var path = this.path();
+    var absolute = path.substring(0, 1) === '/';
+    var segments = path.split(separator);
+
+    if (segment !== undefined && typeof segment !== 'number') {
+      build = v;
+      v = segment;
+      segment = undefined;
+    }
+
+    if (segment !== undefined && typeof segment !== 'number') {
+      throw new Error('Bad segment "' + segment + '", must be 0-based integer');
+    }
+
+    if (absolute) {
+      segments.shift();
+    }
+
+    if (segment < 0) {
+      // allow negative indexes to address from the end
+      segment = Math.max(segments.length + segment, 0);
+    }
+
+    if (v === undefined) {
+      /*jshint laxbreak: true */
+      return segment === undefined
+        ? segments
+        : segments[segment];
+      /*jshint laxbreak: false */
+    } else if (segment === null || segments[segment] === undefined) {
+      if (isArray(v)) {
+        segments = [];
+        // collapse empty elements within array
+        for (var i=0, l=v.length; i < l; i++) {
+          if (!v[i].length && (!segments.length || !segments[segments.length -1].length)) {
+            continue;
+          }
+
+          if (segments.length && !segments[segments.length -1].length) {
+            segments.pop();
+          }
+
+          segments.push(trimSlashes(v[i]));
+        }
+      } else if (v || typeof v === 'string') {
+        v = trimSlashes(v);
+        if (segments[segments.length -1] === '') {
+          // empty trailing elements have to be overwritten
+          // to prevent results such as /foo//bar
+          segments[segments.length -1] = v;
+        } else {
+          segments.push(v);
+        }
+      }
+    } else {
+      if (v) {
+        segments[segment] = trimSlashes(v);
+      } else {
+        segments.splice(segment, 1);
+      }
+    }
+
+    if (absolute) {
+      segments.unshift('');
+    }
+
+    return this.path(segments.join(separator), build);
+  };
+  p.segmentCoded = function(segment, v, build) {
+    var segments, i, l;
+
+    if (typeof segment !== 'number') {
+      build = v;
+      v = segment;
+      segment = undefined;
+    }
+
+    if (v === undefined) {
+      segments = this.segment(segment, v, build);
+      if (!isArray(segments)) {
+        segments = segments !== undefined ? URI.decode(segments) : undefined;
+      } else {
+        for (i = 0, l = segments.length; i < l; i++) {
+          segments[i] = URI.decode(segments[i]);
+        }
+      }
+
+      return segments;
+    }
+
+    if (!isArray(v)) {
+      v = (typeof v === 'string' || v instanceof String) ? URI.encode(v) : v;
+    } else {
+      for (i = 0, l = v.length; i < l; i++) {
+        v[i] = URI.encode(v[i]);
+      }
+    }
+
+    return this.segment(segment, v, build);
+  };
+
+  // mutating query string
+  var q = p.query;
+  p.query = function(v, build) {
+    if (v === true) {
+      return URI.parseQuery(this._parts.query, this._parts.escapeQuerySpace);
+    } else if (typeof v === 'function') {
+      var data = URI.parseQuery(this._parts.query, this._parts.escapeQuerySpace);
+      var result = v.call(this, data);
+      this._parts.query = URI.buildQuery(result || data, this._parts.duplicateQueryParameters, this._parts.escapeQuerySpace);
+      this.build(!build);
+      return this;
+    } else if (v !== undefined && typeof v !== 'string') {
+      this._parts.query = URI.buildQuery(v, this._parts.duplicateQueryParameters, this._parts.escapeQuerySpace);
+      this.build(!build);
+      return this;
+    } else {
+      return q.call(this, v, build);
+    }
+  };
+  p.setQuery = function(name, value, build) {
+    var data = URI.parseQuery(this._parts.query, this._parts.escapeQuerySpace);
+
+    if (typeof name === 'string' || name instanceof String) {
+      data[name] = value !== undefined ? value : null;
+    } else if (typeof name === 'object') {
+      for (var key in name) {
+        if (hasOwn.call(name, key)) {
+          data[key] = name[key];
+        }
+      }
+    } else {
+      throw new TypeError('URI.addQuery() accepts an object, string as the name parameter');
+    }
+
+    this._parts.query = URI.buildQuery(data, this._parts.duplicateQueryParameters, this._parts.escapeQuerySpace);
+    if (typeof name !== 'string') {
+      build = value;
+    }
+
+    this.build(!build);
+    return this;
+  };
+  p.addQuery = function(name, value, build) {
+    var data = URI.parseQuery(this._parts.query, this._parts.escapeQuerySpace);
+    URI.addQuery(data, name, value === undefined ? null : value);
+    this._parts.query = URI.buildQuery(data, this._parts.duplicateQueryParameters, this._parts.escapeQuerySpace);
+    if (typeof name !== 'string') {
+      build = value;
+    }
+
+    this.build(!build);
+    return this;
+  };
+  p.removeQuery = function(name, value, build) {
+    var data = URI.parseQuery(this._parts.query, this._parts.escapeQuerySpace);
+    URI.removeQuery(data, name, value);
+    this._parts.query = URI.buildQuery(data, this._parts.duplicateQueryParameters, this._parts.escapeQuerySpace);
+    if (typeof name !== 'string') {
+      build = value;
+    }
+
+    this.build(!build);
+    return this;
+  };
+  p.hasQuery = function(name, value, withinArray) {
+    var data = URI.parseQuery(this._parts.query, this._parts.escapeQuerySpace);
+    return URI.hasQuery(data, name, value, withinArray);
+  };
+  p.setSearch = p.setQuery;
+  p.addSearch = p.addQuery;
+  p.removeSearch = p.removeQuery;
+  p.hasSearch = p.hasQuery;
+
+  // sanitizing URLs
+  p.normalize = function() {
+    if (this._parts.urn) {
+      return this
+        .normalizeProtocol(false)
+        .normalizePath(false)
+        .normalizeQuery(false)
+        .normalizeFragment(false)
+        .build();
+    }
+
+    return this
+      .normalizeProtocol(false)
+      .normalizeHostname(false)
+      .normalizePort(false)
+      .normalizePath(false)
+      .normalizeQuery(false)
+      .normalizeFragment(false)
+      .build();
+  };
+  p.normalizeProtocol = function(build) {
+    if (typeof this._parts.protocol === 'string') {
+      this._parts.protocol = this._parts.protocol.toLowerCase();
+      this.build(!build);
+    }
+
+    return this;
+  };
+  p.normalizeHostname = function(build) {
+    if (this._parts.hostname) {
+      if (this.is('IDN') && punycode) {
+        this._parts.hostname = punycode.toASCII(this._parts.hostname);
+      } else if (this.is('IPv6') && IPv6) {
+        this._parts.hostname = IPv6.best(this._parts.hostname);
+      }
+
+      this._parts.hostname = this._parts.hostname.toLowerCase();
+      this.build(!build);
+    }
+
+    return this;
+  };
+  p.normalizePort = function(build) {
+    // remove port of it's the protocol's default
+    if (typeof this._parts.protocol === 'string' && this._parts.port === URI.defaultPorts[this._parts.protocol]) {
+      this._parts.port = null;
+      this.build(!build);
+    }
+
+    return this;
+  };
+  p.normalizePath = function(build) {
+    var _path = this._parts.path;
+    if (!_path) {
+      return this;
+    }
+
+    if (this._parts.urn) {
+      this._parts.path = URI.recodeUrnPath(this._parts.path);
+      this.build(!build);
+      return this;
+    }
+
+    if (this._parts.path === '/') {
+      return this;
+    }
+
+    _path = URI.recodePath(_path);
+
+    var _was_relative;
+    var _leadingParents = '';
+    var _parent, _pos;
+
+    // handle relative paths
+    if (_path.charAt(0) !== '/') {
+      _was_relative = true;
+      _path = '/' + _path;
+    }
+
+    // handle relative files (as opposed to directories)
+    if (_path.slice(-3) === '/..' || _path.slice(-2) === '/.') {
+      _path += '/';
+    }
+
+    // resolve simples
+    _path = _path
+      .replace(/(\/(\.\/)+)|(\/\.$)/g, '/')
+      .replace(/\/{2,}/g, '/');
+
+    // remember leading parents
+    if (_was_relative) {
+      _leadingParents = _path.substring(1).match(/^(\.\.\/)+/) || '';
+      if (_leadingParents) {
+        _leadingParents = _leadingParents[0];
+      }
+    }
+
+    // resolve parents
+    while (true) {
+      _parent = _path.search(/\/\.\.(\/|$)/);
+      if (_parent === -1) {
+        // no more ../ to resolve
+        break;
+      } else if (_parent === 0) {
+        // top level cannot be relative, skip it
+        _path = _path.substring(3);
+        continue;
+      }
+
+      _pos = _path.substring(0, _parent).lastIndexOf('/');
+      if (_pos === -1) {
+        _pos = _parent;
+      }
+      _path = _path.substring(0, _pos) + _path.substring(_parent + 3);
+    }
+
+    // revert to relative
+    if (_was_relative && this.is('relative')) {
+      _path = _leadingParents + _path.substring(1);
+    }
+
+    this._parts.path = _path;
+    this.build(!build);
+    return this;
+  };
+  p.normalizePathname = p.normalizePath;
+  p.normalizeQuery = function(build) {
+    if (typeof this._parts.query === 'string') {
+      if (!this._parts.query.length) {
+        this._parts.query = null;
+      } else {
+        this.query(URI.parseQuery(this._parts.query, this._parts.escapeQuerySpace));
+      }
+
+      this.build(!build);
+    }
+
+    return this;
+  };
+  p.normalizeFragment = function(build) {
+    if (!this._parts.fragment) {
+      this._parts.fragment = null;
+      this.build(!build);
+    }
+
+    return this;
+  };
+  p.normalizeSearch = p.normalizeQuery;
+  p.normalizeHash = p.normalizeFragment;
+
+  p.iso8859 = function() {
+    // expect unicode input, iso8859 output
+    var e = URI.encode;
+    var d = URI.decode;
+
+    URI.encode = escape;
+    URI.decode = decodeURIComponent;
+    try {
+      this.normalize();
+    } finally {
+      URI.encode = e;
+      URI.decode = d;
+    }
+    return this;
+  };
+
+  p.unicode = function() {
+    // expect iso8859 input, unicode output
+    var e = URI.encode;
+    var d = URI.decode;
+
+    URI.encode = strictEncodeURIComponent;
+    URI.decode = unescape;
+    try {
+      this.normalize();
+    } finally {
+      URI.encode = e;
+      URI.decode = d;
+    }
+    return this;
+  };
+
+  p.readable = function() {
+    var uri = this.clone();
+    // removing username, password, because they shouldn't be displayed according to RFC 3986
+    uri.username('').password('').normalize();
+    var t = '';
+    if (uri._parts.protocol) {
+      t += uri._parts.protocol + '://';
+    }
+
+    if (uri._parts.hostname) {
+      if (uri.is('punycode') && punycode) {
+        t += punycode.toUnicode(uri._parts.hostname);
+        if (uri._parts.port) {
+          t += ':' + uri._parts.port;
+        }
+      } else {
+        t += uri.host();
+      }
+    }
+
+    if (uri._parts.hostname && uri._parts.path && uri._parts.path.charAt(0) !== '/') {
+      t += '/';
+    }
+
+    t += uri.path(true);
+    if (uri._parts.query) {
+      var q = '';
+      for (var i = 0, qp = uri._parts.query.split('&'), l = qp.length; i < l; i++) {
+        var kv = (qp[i] || '').split('=');
+        q += '&' + URI.decodeQuery(kv[0], this._parts.escapeQuerySpace)
+          .replace(/&/g, '%26');
+
+        if (kv[1] !== undefined) {
+          q += '=' + URI.decodeQuery(kv[1], this._parts.escapeQuerySpace)
+            .replace(/&/g, '%26');
+        }
+      }
+      t += '?' + q.substring(1);
+    }
+
+    t += URI.decodeQuery(uri.hash(), true);
+    return t;
+  };
+
+  // resolving relative and absolute URLs
+  p.absoluteTo = function(base) {
+    var resolved = this.clone();
+    var properties = ['protocol', 'username', 'password', 'hostname', 'port'];
+    var basedir, i, p;
+
+    if (this._parts.urn) {
+      throw new Error('URNs do not have any generally defined hierarchical components');
+    }
+
+    if (!(base instanceof URI)) {
+      base = new URI(base);
+    }
+
+    if (resolved._parts.protocol) {
+      // Directly returns even if this._parts.hostname is empty.
+      return resolved;
+    } else {
+      resolved._parts.protocol = base._parts.protocol;
+    }
+
+    if (this._parts.hostname) {
+      return resolved;
+    }
+
+    for (i = 0; (p = properties[i]); i++) {
+      resolved._parts[p] = base._parts[p];
+    }
+
+    if (!resolved._parts.path) {
+      resolved._parts.path = base._parts.path;
+      if (!resolved._parts.query) {
+        resolved._parts.query = base._parts.query;
+      }
+    } else {
+      if (resolved._parts.path.substring(-2) === '..') {
+        resolved._parts.path += '/';
+      }
+
+      if (resolved.path().charAt(0) !== '/') {
+        basedir = base.directory();
+        basedir = basedir ? basedir : base.path().indexOf('/') === 0 ? '/' : '';
+        resolved._parts.path = (basedir ? (basedir + '/') : '') + resolved._parts.path;
+        resolved.normalizePath();
+      }
+    }
+
+    resolved.build();
+    return resolved;
+  };
+  p.relativeTo = function(base) {
+    var relative = this.clone().normalize();
+    var relativeParts, baseParts, common, relativePath, basePath;
+
+    if (relative._parts.urn) {
+      throw new Error('URNs do not have any generally defined hierarchical components');
+    }
+
+    base = new URI(base).normalize();
+    relativeParts = relative._parts;
+    baseParts = base._parts;
+    relativePath = relative.path();
+    basePath = base.path();
+
+    if (relativePath.charAt(0) !== '/') {
+      throw new Error('URI is already relative');
+    }
+
+    if (basePath.charAt(0) !== '/') {
+      throw new Error('Cannot calculate a URI relative to another relative URI');
+    }
+
+    if (relativeParts.protocol === baseParts.protocol) {
+      relativeParts.protocol = null;
+    }
+
+    if (relativeParts.username !== baseParts.username || relativeParts.password !== baseParts.password) {
+      return relative.build();
+    }
+
+    if (relativeParts.protocol !== null || relativeParts.username !== null || relativeParts.password !== null) {
+      return relative.build();
+    }
+
+    if (relativeParts.hostname === baseParts.hostname && relativeParts.port === baseParts.port) {
+      relativeParts.hostname = null;
+      relativeParts.port = null;
+    } else {
+      return relative.build();
+    }
+
+    if (relativePath === basePath) {
+      relativeParts.path = '';
+      return relative.build();
+    }
+
+    // determine common sub path
+    common = URI.commonPath(relativePath, basePath);
+
+    // If the paths have nothing in common, return a relative URL with the absolute path.
+    if (!common) {
+      return relative.build();
+    }
+
+    var parents = baseParts.path
+      .substring(common.length)
+      .replace(/[^\/]*$/, '')
+      .replace(/.*?\//g, '../');
+
+    relativeParts.path = (parents + relativeParts.path.substring(common.length)) || './';
+
+    return relative.build();
+  };
+
+  // comparing URIs
+  p.equals = function(uri) {
+    var one = this.clone();
+    var two = new URI(uri);
+    var one_map = {};
+    var two_map = {};
+    var checked = {};
+    var one_query, two_query, key;
+
+    one.normalize();
+    two.normalize();
+
+    // exact match
+    if (one.toString() === two.toString()) {
+      return true;
+    }
+
+    // extract query string
+    one_query = one.query();
+    two_query = two.query();
+    one.query('');
+    two.query('');
+
+    // definitely not equal if not even non-query parts match
+    if (one.toString() !== two.toString()) {
+      return false;
+    }
+
+    // query parameters have the same length, even if they're permuted
+    if (one_query.length !== two_query.length) {
+      return false;
+    }
+
+    one_map = URI.parseQuery(one_query, this._parts.escapeQuerySpace);
+    two_map = URI.parseQuery(two_query, this._parts.escapeQuerySpace);
+
+    for (key in one_map) {
+      if (hasOwn.call(one_map, key)) {
+        if (!isArray(one_map[key])) {
+          if (one_map[key] !== two_map[key]) {
+            return false;
+          }
+        } else if (!arraysEqual(one_map[key], two_map[key])) {
+          return false;
+        }
+
+        checked[key] = true;
+      }
+    }
+
+    for (key in two_map) {
+      if (hasOwn.call(two_map, key)) {
+        if (!checked[key]) {
+          // two contains a parameter not present in one
+          return false;
+        }
+      }
+    }
+
+    return true;
+  };
+
+  // state
+  p.duplicateQueryParameters = function(v) {
+    this._parts.duplicateQueryParameters = !!v;
+    return this;
+  };
+
+  p.escapeQuerySpace = function(v) {
+    this._parts.escapeQuerySpace = !!v;
+    return this;
+  };
+
+  return URI;
+}));
+
+},{"./IPv6":60,"./SecondLevelDomains":61,"./punycode":63}],63:[function(require,module,exports){
+(function (global){
+/*! https://mths.be/punycode v1.4.0 by @mathias */
+;(function(root) {
+
+	/** Detect free variables */
+	var freeExports = typeof exports == 'object' && exports &&
+		!exports.nodeType && exports;
+	var freeModule = typeof module == 'object' && module &&
+		!module.nodeType && module;
+	var freeGlobal = typeof global == 'object' && global;
+	if (
+		freeGlobal.global === freeGlobal ||
+		freeGlobal.window === freeGlobal ||
+		freeGlobal.self === freeGlobal
+	) {
+		root = freeGlobal;
+	}
+
+	/**
+	 * The `punycode` object.
+	 * @name punycode
+	 * @type Object
+	 */
+	var punycode,
+
+	/** Highest positive signed 32-bit float value */
+	maxInt = 2147483647, // aka. 0x7FFFFFFF or 2^31-1
+
+	/** Bootstring parameters */
+	base = 36,
+	tMin = 1,
+	tMax = 26,
+	skew = 38,
+	damp = 700,
+	initialBias = 72,
+	initialN = 128, // 0x80
+	delimiter = '-', // '\x2D'
+
+	/** Regular expressions */
+	regexPunycode = /^xn--/,
+	regexNonASCII = /[^\x20-\x7E]/, // unprintable ASCII chars + non-ASCII chars
+	regexSeparators = /[\x2E\u3002\uFF0E\uFF61]/g, // RFC 3490 separators
+
+	/** Error messages */
+	errors = {
+		'overflow': 'Overflow: input needs wider integers to process',
+		'not-basic': 'Illegal input >= 0x80 (not a basic code point)',
+		'invalid-input': 'Invalid input'
+	},
+
+	/** Convenience shortcuts */
+	baseMinusTMin = base - tMin,
+	floor = Math.floor,
+	stringFromCharCode = String.fromCharCode,
+
+	/** Temporary variable */
+	key;
+
+	/*--------------------------------------------------------------------------*/
+
+	/**
+	 * A generic error utility function.
+	 * @private
+	 * @param {String} type The error type.
+	 * @returns {Error} Throws a `RangeError` with the applicable error message.
+	 */
+	function error(type) {
+		throw new RangeError(errors[type]);
+	}
+
+	/**
+	 * A generic `Array#map` utility function.
+	 * @private
+	 * @param {Array} array The array to iterate over.
+	 * @param {Function} callback The function that gets called for every array
+	 * item.
+	 * @returns {Array} A new array of values returned by the callback function.
+	 */
+	function map(array, fn) {
+		var length = array.length;
+		var result = [];
+		while (length--) {
+			result[length] = fn(array[length]);
+		}
+		return result;
+	}
+
+	/**
+	 * A simple `Array#map`-like wrapper to work with domain name strings or email
+	 * addresses.
+	 * @private
+	 * @param {String} domain The domain name or email address.
+	 * @param {Function} callback The function that gets called for every
+	 * character.
+	 * @returns {Array} A new string of characters returned by the callback
+	 * function.
+	 */
+	function mapDomain(string, fn) {
+		var parts = string.split('@');
+		var result = '';
+		if (parts.length > 1) {
+			// In email addresses, only the domain name should be punycoded. Leave
+			// the local part (i.e. everything up to `@`) intact.
+			result = parts[0] + '@';
+			string = parts[1];
+		}
+		// Avoid `split(regex)` for IE8 compatibility. See #17.
+		string = string.replace(regexSeparators, '\x2E');
+		var labels = string.split('.');
+		var encoded = map(labels, fn).join('.');
+		return result + encoded;
+	}
+
+	/**
+	 * Creates an array containing the numeric code points of each Unicode
+	 * character in the string. While JavaScript uses UCS-2 internally,
+	 * this function will convert a pair of surrogate halves (each of which
+	 * UCS-2 exposes as separate characters) into a single code point,
+	 * matching UTF-16.
+	 * @see `punycode.ucs2.encode`
+	 * @see <https://mathiasbynens.be/notes/javascript-encoding>
+	 * @memberOf punycode.ucs2
+	 * @name decode
+	 * @param {String} string The Unicode input string (UCS-2).
+	 * @returns {Array} The new array of code points.
+	 */
+	function ucs2decode(string) {
+		var output = [],
+		    counter = 0,
+		    length = string.length,
+		    value,
+		    extra;
+		while (counter < length) {
+			value = string.charCodeAt(counter++);
+			if (value >= 0xD800 && value <= 0xDBFF && counter < length) {
+				// high surrogate, and there is a next character
+				extra = string.charCodeAt(counter++);
+				if ((extra & 0xFC00) == 0xDC00) { // low surrogate
+					output.push(((value & 0x3FF) << 10) + (extra & 0x3FF) + 0x10000);
+				} else {
+					// unmatched surrogate; only append this code unit, in case the next
+					// code unit is the high surrogate of a surrogate pair
+					output.push(value);
+					counter--;
+				}
+			} else {
+				output.push(value);
+			}
+		}
+		return output;
+	}
+
+	/**
+	 * Creates a string based on an array of numeric code points.
+	 * @see `punycode.ucs2.decode`
+	 * @memberOf punycode.ucs2
+	 * @name encode
+	 * @param {Array} codePoints The array of numeric code points.
+	 * @returns {String} The new Unicode string (UCS-2).
+	 */
+	function ucs2encode(array) {
+		return map(array, function(value) {
+			var output = '';
+			if (value > 0xFFFF) {
+				value -= 0x10000;
+				output += stringFromCharCode(value >>> 10 & 0x3FF | 0xD800);
+				value = 0xDC00 | value & 0x3FF;
+			}
+			output += stringFromCharCode(value);
+			return output;
+		}).join('');
+	}
+
+	/**
+	 * Converts a basic code point into a digit/integer.
+	 * @see `digitToBasic()`
+	 * @private
+	 * @param {Number} codePoint The basic numeric code point value.
+	 * @returns {Number} The numeric value of a basic code point (for use in
+	 * representing integers) in the range `0` to `base - 1`, or `base` if
+	 * the code point does not represent a value.
+	 */
+	function basicToDigit(codePoint) {
+		if (codePoint - 48 < 10) {
+			return codePoint - 22;
+		}
+		if (codePoint - 65 < 26) {
+			return codePoint - 65;
+		}
+		if (codePoint - 97 < 26) {
+			return codePoint - 97;
+		}
+		return base;
+	}
+
+	/**
+	 * Converts a digit/integer into a basic code point.
+	 * @see `basicToDigit()`
+	 * @private
+	 * @param {Number} digit The numeric value of a basic code point.
+	 * @returns {Number} The basic code point whose value (when used for
+	 * representing integers) is `digit`, which needs to be in the range
+	 * `0` to `base - 1`. If `flag` is non-zero, the uppercase form is
+	 * used; else, the lowercase form is used. The behavior is undefined
+	 * if `flag` is non-zero and `digit` has no uppercase form.
+	 */
+	function digitToBasic(digit, flag) {
+		//  0..25 map to ASCII a..z or A..Z
+		// 26..35 map to ASCII 0..9
+		return digit + 22 + 75 * (digit < 26) - ((flag != 0) << 5);
+	}
+
+	/**
+	 * Bias adaptation function as per section 3.4 of RFC 3492.
+	 * https://tools.ietf.org/html/rfc3492#section-3.4
+	 * @private
+	 */
+	function adapt(delta, numPoints, firstTime) {
+		var k = 0;
+		delta = firstTime ? floor(delta / damp) : delta >> 1;
+		delta += floor(delta / numPoints);
+		for (/* no initialization */; delta > baseMinusTMin * tMax >> 1; k += base) {
+			delta = floor(delta / baseMinusTMin);
+		}
+		return floor(k + (baseMinusTMin + 1) * delta / (delta + skew));
+	}
+
+	/**
+	 * Converts a Punycode string of ASCII-only symbols to a string of Unicode
+	 * symbols.
+	 * @memberOf punycode
+	 * @param {String} input The Punycode string of ASCII-only symbols.
+	 * @returns {String} The resulting string of Unicode symbols.
+	 */
+	function decode(input) {
+		// Don't use UCS-2
+		var output = [],
+		    inputLength = input.length,
+		    out,
+		    i = 0,
+		    n = initialN,
+		    bias = initialBias,
+		    basic,
+		    j,
+		    index,
+		    oldi,
+		    w,
+		    k,
+		    digit,
+		    t,
+		    /** Cached calculation results */
+		    baseMinusT;
+
+		// Handle the basic code points: let `basic` be the number of input code
+		// points before the last delimiter, or `0` if there is none, then copy
+		// the first basic code points to the output.
+
+		basic = input.lastIndexOf(delimiter);
+		if (basic < 0) {
+			basic = 0;
+		}
+
+		for (j = 0; j < basic; ++j) {
+			// if it's not a basic code point
+			if (input.charCodeAt(j) >= 0x80) {
+				error('not-basic');
+			}
+			output.push(input.charCodeAt(j));
+		}
+
+		// Main decoding loop: start just after the last delimiter if any basic code
+		// points were copied; start at the beginning otherwise.
+
+		for (index = basic > 0 ? basic + 1 : 0; index < inputLength; /* no final expression */) {
+
+			// `index` is the index of the next character to be consumed.
+			// Decode a generalized variable-length integer into `delta`,
+			// which gets added to `i`. The overflow checking is easier
+			// if we increase `i` as we go, then subtract off its starting
+			// value at the end to obtain `delta`.
+			for (oldi = i, w = 1, k = base; /* no condition */; k += base) {
+
+				if (index >= inputLength) {
+					error('invalid-input');
+				}
+
+				digit = basicToDigit(input.charCodeAt(index++));
+
+				if (digit >= base || digit > floor((maxInt - i) / w)) {
+					error('overflow');
+				}
+
+				i += digit * w;
+				t = k <= bias ? tMin : (k >= bias + tMax ? tMax : k - bias);
+
+				if (digit < t) {
+					break;
+				}
+
+				baseMinusT = base - t;
+				if (w > floor(maxInt / baseMinusT)) {
+					error('overflow');
+				}
+
+				w *= baseMinusT;
+
+			}
+
+			out = output.length + 1;
+			bias = adapt(i - oldi, out, oldi == 0);
+
+			// `i` was supposed to wrap around from `out` to `0`,
+			// incrementing `n` each time, so we'll fix that now:
+			if (floor(i / out) > maxInt - n) {
+				error('overflow');
+			}
+
+			n += floor(i / out);
+			i %= out;
+
+			// Insert `n` at position `i` of the output
+			output.splice(i++, 0, n);
+
+		}
+
+		return ucs2encode(output);
+	}
+
+	/**
+	 * Converts a string of Unicode symbols (e.g. a domain name label) to a
+	 * Punycode string of ASCII-only symbols.
+	 * @memberOf punycode
+	 * @param {String} input The string of Unicode symbols.
+	 * @returns {String} The resulting Punycode string of ASCII-only symbols.
+	 */
+	function encode(input) {
+		var n,
+		    delta,
+		    handledCPCount,
+		    basicLength,
+		    bias,
+		    j,
+		    m,
+		    q,
+		    k,
+		    t,
+		    currentValue,
+		    output = [],
+		    /** `inputLength` will hold the number of code points in `input`. */
+		    inputLength,
+		    /** Cached calculation results */
+		    handledCPCountPlusOne,
+		    baseMinusT,
+		    qMinusT;
+
+		// Convert the input in UCS-2 to Unicode
+		input = ucs2decode(input);
+
+		// Cache the length
+		inputLength = input.length;
+
+		// Initialize the state
+		n = initialN;
+		delta = 0;
+		bias = initialBias;
+
+		// Handle the basic code points
+		for (j = 0; j < inputLength; ++j) {
+			currentValue = input[j];
+			if (currentValue < 0x80) {
+				output.push(stringFromCharCode(currentValue));
+			}
+		}
+
+		handledCPCount = basicLength = output.length;
+
+		// `handledCPCount` is the number of code points that have been handled;
+		// `basicLength` is the number of basic code points.
+
+		// Finish the basic string - if it is not empty - with a delimiter
+		if (basicLength) {
+			output.push(delimiter);
+		}
+
+		// Main encoding loop:
+		while (handledCPCount < inputLength) {
+
+			// All non-basic code points < n have been handled already. Find the next
+			// larger one:
+			for (m = maxInt, j = 0; j < inputLength; ++j) {
+				currentValue = input[j];
+				if (currentValue >= n && currentValue < m) {
+					m = currentValue;
+				}
+			}
+
+			// Increase `delta` enough to advance the decoder's <n,i> state to <m,0>,
+			// but guard against overflow
+			handledCPCountPlusOne = handledCPCount + 1;
+			if (m - n > floor((maxInt - delta) / handledCPCountPlusOne)) {
+				error('overflow');
+			}
+
+			delta += (m - n) * handledCPCountPlusOne;
+			n = m;
+
+			for (j = 0; j < inputLength; ++j) {
+				currentValue = input[j];
+
+				if (currentValue < n && ++delta > maxInt) {
+					error('overflow');
+				}
+
+				if (currentValue == n) {
+					// Represent delta as a generalized variable-length integer
+					for (q = delta, k = base; /* no condition */; k += base) {
+						t = k <= bias ? tMin : (k >= bias + tMax ? tMax : k - bias);
+						if (q < t) {
+							break;
+						}
+						qMinusT = q - t;
+						baseMinusT = base - t;
+						output.push(
+							stringFromCharCode(digitToBasic(t + qMinusT % baseMinusT, 0))
+						);
+						q = floor(qMinusT / baseMinusT);
+					}
+
+					output.push(stringFromCharCode(digitToBasic(q, 0)));
+					bias = adapt(delta, handledCPCountPlusOne, handledCPCount == basicLength);
+					delta = 0;
+					++handledCPCount;
+				}
+			}
+
+			++delta;
+			++n;
+
+		}
+		return output.join('');
+	}
+
+	/**
+	 * Converts a Punycode string representing a domain name or an email address
+	 * to Unicode. Only the Punycoded parts of the input will be converted, i.e.
+	 * it doesn't matter if you call it on a string that has already been
+	 * converted to Unicode.
+	 * @memberOf punycode
+	 * @param {String} input The Punycoded domain name or email address to
+	 * convert to Unicode.
+	 * @returns {String} The Unicode representation of the given Punycode
+	 * string.
+	 */
+	function toUnicode(input) {
+		return mapDomain(input, function(string) {
+			return regexPunycode.test(string)
+				? decode(string.slice(4).toLowerCase())
+				: string;
+		});
+	}
+
+	/**
+	 * Converts a Unicode string representing a domain name or an email address to
+	 * Punycode. Only the non-ASCII parts of the domain name will be converted,
+	 * i.e. it doesn't matter if you call it with a domain that's already in
+	 * ASCII.
+	 * @memberOf punycode
+	 * @param {String} input The domain name or email address to convert, as a
+	 * Unicode string.
+	 * @returns {String} The Punycode representation of the given domain name or
+	 * email address.
+	 */
+	function toASCII(input) {
+		return mapDomain(input, function(string) {
+			return regexNonASCII.test(string)
+				? 'xn--' + encode(string)
+				: string;
+		});
+	}
+
+	/*--------------------------------------------------------------------------*/
+
+	/** Define the public API */
+	punycode = {
+		/**
+		 * A string representing the current Punycode.js version number.
+		 * @memberOf punycode
+		 * @type String
+		 */
+		'version': '1.3.2',
+		/**
+		 * An object of methods to convert from JavaScript's internal character
+		 * representation (UCS-2) to Unicode code points, and back.
+		 * @see <https://mathiasbynens.be/notes/javascript-encoding>
+		 * @memberOf punycode
+		 * @type Object
+		 */
+		'ucs2': {
+			'decode': ucs2decode,
+			'encode': ucs2encode
+		},
+		'decode': decode,
+		'encode': encode,
+		'toASCII': toASCII,
+		'toUnicode': toUnicode
+	};
+
+	/** Expose `punycode` */
+	// Some AMD build optimizers, like r.js, check for specific condition patterns
+	// like the following:
+	if (
+		typeof define == 'function' &&
+		typeof define.amd == 'object' &&
+		define.amd
+	) {
+		define('punycode', function() {
+			return punycode;
+		});
+	} else if (freeExports && freeModule) {
+		if (module.exports == freeExports) {
+			// in Node.js, io.js, or RingoJS v0.8.0+
+			freeModule.exports = punycode;
+		} else {
+			// in Narwhal or RingoJS v0.7.0-
+			for (key in punycode) {
+				punycode.hasOwnProperty(key) && (freeExports[key] = punycode[key]);
+			}
+		}
+	} else {
+		// in Rhino or a web browser
+		root.punycode = punycode;
+	}
+
+}(this));
+
+}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
+},{}],64:[function(require,module,exports){
+'use strict';
+
+function isHighSurrogate(codePoint) {
+  return codePoint >= 0xd800 && codePoint <= 0xdbff;
+}
+
+function isLowSurrogate(codePoint) {
+  return codePoint >= 0xdc00 && codePoint <= 0xdfff;
+}
+
+// Truncate string by size in bytes
+module.exports = function getByteLength(string) {
+  if (typeof string !== "string") {
+    throw new Error("Input must be string");
+  }
+
+  var charLength = string.length;
+  var byteLength = 0;
+  var codePoint = null;
+  var prevCodePoint = null;
+  for (var i = 0; i < charLength; i++) {
+    codePoint = string.charCodeAt(i);
+    // handle 4-byte non-BMP chars
+    // low surrogate
+    if (isLowSurrogate(codePoint)) {
+      // when parsing previous hi-surrogate, 3 is added to byteLength
+      if (prevCodePoint != null && isHighSurrogate(prevCodePoint)) {
+        byteLength += 1;
+      }
+      else {
+        byteLength += 3;
+      }
+    }
+    else if (codePoint <= 0x7f ) {
+      byteLength += 1;
+    }
+    else if (codePoint >= 0x80 && codePoint <= 0x7ff) {
+      byteLength += 2;
+    }
+    else if (codePoint >= 0x800 && codePoint <= 0xffff) {
+      byteLength += 3;
+    }
+    prevCodePoint = codePoint;
+  }
+
+  return byteLength;
+};
+
+},{}],65:[function(require,module,exports){
 /*!
  * EventEmitter v5.1.0 - git.io/ee
  * Unlicense - http://unlicense.org/
@@ -81991,18 +86706,18 @@ module.exports = function (buf) {
  * The main controlling piece of the app. It composes the other modules.
  */
 
-var datastore = require('./persistence/datastore');
-var dnsController = require('./dnssd/dns-controller');
-var dnssdSem = require('./dnssd/dns-sd-semcache');
-var evaluation = require('./evaluation');
-var extBridge = require('./extension-bridge/messaging');
-var fileSystem = require('./persistence/file-system');
-var peerIfMgr = require('./peer-interface/manager');
-var ifCommon = require('./peer-interface/common');
-var settings = require('./settings');
-var serverApi = require('./server/server-api');
+const datastore = require('./persistence/datastore');
+const dnsController = require('./dnssd/dns-controller');
+const dnssdSem = require('./dnssd/dns-sd-semcache');
+const evaluation = require('./evaluation');
+const extBridge = require('./extension-bridge/messaging');
+const fileSystem = require('./persistence/file-system');
+const peerIfMgr = require('./peer-interface/manager');
+const ifCommon = require('./peer-interface/common');
+const settings = require('./settings');
+const serverApi = require('./server/server-api');
 
-var ABS_PATH_TO_BASE_DIR = null;
+let ABS_PATH_TO_BASE_DIR = null;
 
 exports.LISTENING_HTTP_INTERFACE = null;
 
@@ -82401,36 +87116,20 @@ exports.getListFromService = function(serviceName) {
 /**
  * Save the MHTML file at mhtmlUrl into the local cache and open the URL.
  *
- * @param {captureUrl} captureUrl
- * @param {captureDate} captureDate
- * @param {string} mhtmlUrl the url of the mhtml file to save and open
- * @param {Object} metadata the metadata that is stored along with the file
+ * @param {string} href the URL to fetch from the peer
  * @param {string} ipaddr IP address of the peer
  * @param {integer} port port of the peer
  *
  * @return {Promise.<number, Error>} a Promise that resolves with the total
  * time to save the MHTML and open the file.
  */
-exports.saveMhtmlAndOpen = function(
-  captureUrl,
-  captureDate,
-  mhtmlUrl,
-  metadata,
-  ipaddr,
-  port
-) {
+exports.saveMhtmlAndOpen = function(href, ipaddr, port) {
   return new Promise(function(resolve, reject) {
     var start = evaluation.getNow();
-    var streamName = 'open_' + captureUrl;
-    var params = ifCommon.createFileParams(ipaddr, port, mhtmlUrl);
-    peerIfMgr.getPeerAccessor().getFileBlob(params)
-    .then(blob => {
-      return datastore.addPageToCache(
-        captureUrl,
-        captureDate,
-        blob,
-        metadata
-      );
+    var streamName = 'open_' + href;
+    peerIfMgr.getPeerAccessor(ipaddr, port).getCachedPage(href)
+    .then(cpdisk => {
+      return datastore.addPageToCache(cpdisk);
     })
     .then((entry) => {
       var fileUrl = fileSystem.constructFileSchemeUrl(
@@ -82450,7 +87149,7 @@ exports.saveMhtmlAndOpen = function(
   });
 };
 
-},{"./dnssd/dns-controller":"dnsc","./dnssd/dns-sd-semcache":"dnsSem","./evaluation":"eval","./extension-bridge/messaging":"extBridge","./peer-interface/common":15,"./peer-interface/manager":17,"./persistence/datastore":19,"./persistence/file-system":"fileSystem","./server/server-api":22,"./server/server-controller":"serverController","./settings":"settings"}],"binaryUtils":[function(require,module,exports){
+},{"./dnssd/dns-controller":"dnsc","./dnssd/dns-sd-semcache":"dnsSem","./evaluation":"eval","./extension-bridge/messaging":"extBridge","./peer-interface/common":16,"./peer-interface/manager":18,"./persistence/datastore":20,"./persistence/file-system":"fileSystem","./server/server-api":23,"./server/server-controller":"serverController","./settings":"settings"}],"binaryUtils":[function(require,module,exports){
 /*jshint esnext:true*/
 /*
  * https://github.com/justindarc/dns-sd.js
@@ -83036,7 +87735,7 @@ exports.createRTCSessionDescription = function(descJson) {
   return new RTCSessionDescription(descJson);
 };
 
-},{"../../../app/scripts/webrtc/peer-connection":27,"../server/server-api":22,"../util":23,"buffer/":35}],"coalMgr":[function(require,module,exports){
+},{"../../../app/scripts/webrtc/peer-connection":28,"../server/server-api":23,"../util":24,"buffer/":37}],"coalMgr":[function(require,module,exports){
 'use strict';
 
 var stratBloom = require('./bloom-strategy');
@@ -83321,7 +88020,7 @@ exports.getCachedPageSummaries = function(offset, numDesired) {
   });
 };
 
-},{"./objects":"persistenceObjs","dexie":37}],"dnsSem":[function(require,module,exports){
+},{"./objects":"persistenceObjs","dexie":40}],"dnsSem":[function(require,module,exports){
 /*jshint esnext:true*/
 'use strict';
 
@@ -83459,7 +88158,7 @@ exports.browseForSemCacheInstances = function() {
   return result;
 };
 
-},{"../server/server-api":22,"./dns-sd":"dnssd"}],"dnsc":[function(require,module,exports){
+},{"../server/server-api":23,"./dns-sd":"dnssd"}],"dnsc":[function(require,module,exports){
 /*jshint esnext:true*/
 /* globals Promise */
 'use strict';
@@ -84136,7 +88835,7 @@ exports.addRecord = function(name, record) {
   existingRecords.push(record);
 };
 
-},{"../chrome-apis/udp":"chromeUdp","../util":23,"./byte-array":9,"./dns-codes":10,"./dns-packet":11,"./dns-util":12,"./question-section":13}],"dnssd":[function(require,module,exports){
+},{"../chrome-apis/udp":"chromeUdp","../util":24,"./byte-array":9,"./dns-codes":10,"./dns-packet":11,"./dns-util":12,"./question-section":13}],"dnssd":[function(require,module,exports){
 /*jshint esnext:true*/
 /* globals Promise */
 'use strict';
@@ -85123,24 +89822,26 @@ exports.queryForResponses = function(
   });
 };
 
-},{"../util":23,"./dns-codes":10,"./dns-controller":"dnsc","./dns-packet":11,"./dns-util":12,"./resource-record":14,"lodash":48}],"eval":[function(require,module,exports){
+},{"../util":24,"./dns-codes":10,"./dns-controller":"dnsc","./dns-packet":11,"./dns-util":12,"./resource-record":14,"lodash":51}],"eval":[function(require,module,exports){
 'use strict';
 
 /**
  * Functionality useful to evaluating SemCache.
  */
 
-var json2csv = require('json2csv');
+const json2csv = require('json2csv');
 
-var api = require('./server/server-api');
-var appc = require('./app-controller');
-var bloomFilter = require('./coalescence/bloom-filter');
-var chromep = require('./chrome-apis/chromep');
-var coalObjects = require('./coalescence/objects');
-var datastore = require('./persistence/datastore');
-var ifCommon = require('./peer-interface/common');
-var peerIfMgr = require('./peer-interface/manager');
-var util = require('./util');
+const api = require('./server/server-api');
+const appc = require('./app-controller');
+const bloomFilter = require('./coalescence/bloom-filter');
+const chromep = require('./chrome-apis/chromep');
+const coalObjects = require('./coalescence/objects');
+const ifCommon = require('./peer-interface/common');
+const peerIfMgr = require('./peer-interface/manager');
+const perObjs = require('./persistence/objects');
+const util = require('./util');
+
+const CPInfo = perObjs.CPInfo;
 
 /** The prefix value for timing keys we will use for local storage. */
 var TIMING_KEY_PREFIX = 'timing_';
@@ -85196,20 +89897,20 @@ exports.generateDummyPages = function(numPages, nonce) {
  * @param {string} nonce the unique string that will be contained in the
  * captureUrl value of the resulting CachedPage
  *
- * @return {CachedPage}
+ * @return {CPInfo}
  */
 exports.generateDummyPage = function(index, nonce) {
-  var captureUrl = 'www.' + nonce + '.' + index + '.com';
-  var captureDate = new Date().toISOString();
-  var path = 'http://somepath';
-  var metadata = { muchMeta: 'so data' };
+  let captureHref = `www.${nonce}.${index}.com`;
+  let captureDate = new Date().toISOString();
+  let filePath = 'http://somepath';
+  let title = 'the title';
 
-  var result = new datastore.CachedPage(
-    captureUrl,
+  let result = new CPInfo({
+    captureHref,
     captureDate,
-    path,
-    metadata
-  );
+    filePath,
+    title
+  });
   return result;
 };
 
@@ -86080,15 +90781,20 @@ exports.generateDummyPageInfos = function(numPages, peerNumber) {
   return result;
 };
 
-},{"./app-controller":"appController","./chrome-apis/chromep":2,"./coalescence/bloom-filter":4,"./coalescence/objects":7,"./peer-interface/common":15,"./peer-interface/manager":17,"./persistence/datastore":19,"./server/server-api":22,"./util":23,"json2csv":42}],"extBridge":[function(require,module,exports){
+},{"./app-controller":"appController","./chrome-apis/chromep":2,"./coalescence/bloom-filter":4,"./coalescence/objects":7,"./peer-interface/common":16,"./peer-interface/manager":18,"./persistence/objects":"persistenceObjs","./server/server-api":23,"./util":24,"json2csv":45}],"extBridge":[function(require,module,exports){
 'use strict';
 
-var base64 = require('base-64');
+const base64 = require('base-64');
 
-var appc = require('../app-controller');
-var chromep = require('../chrome-apis/chromep');
-var coalMgr = require('../coalescence/manager');
-var datastore = require('../persistence/datastore');
+const appc = require('../app-controller');
+const chromep = require('../chrome-apis/chromep');
+const coalMgr = require('../coalescence/manager');
+const common = require('./common-messaging');
+const datastore = require('../persistence/datastore');
+const persObjs = require('../persistence/objects');
+
+const CPDisk = persObjs.CPDisk;
+
 
 /**
  * ID of the Semcache extension.
@@ -86107,17 +90813,7 @@ exports.sendMessageToExtension = function(message) {
 /**
  * Function to handle messages coming from the SemCache extension.
  *
- * @param {Object} message message sent by the extension. Expected to have the
- * following format:
- * {
- *   type: 'write'
- *   params: {
- *     captureUrl: 'url',
- *     captureDate: 'iso',
- *     dataUrl: 'string',
- *     metadata: {}
- *   }
- * }
+ * @param {Object} message message sent by the extension.
  * @param {MessageSender} sender
  * @param {function} response
  */
@@ -86135,66 +90831,70 @@ exports.handleExternalMessage = function(message, sender, response) {
     // inform Chrome to keep the channel open for us.
     result = true;
   }
-  if (message.type === 'write') {
-    var blob = exports.getBlobFromDataUrl(message.params.dataUrl);
-    var captureUrl = message.params.captureUrl;
-    var captureDate = message.params.captureDate;
-    var metadata = message.params.metadata;
-    datastore.addPageToCache(captureUrl, captureDate, blob, metadata)
+  if (message.type === common.initiatorTypes.addPageToCache) {
+    Promise.resolve()
     .then(() => {
-      var successMsg = exports.createResponseSuccess(message);
+      let cpdisk = CPDisk.fromJSON(message.params.cachedPage);
+      return datastore.addPageToCache(cpdisk);
+    })
+    .then(() => {
+      let successMsg = common.createAddPageResponse();
       if (response) {
         response(successMsg);
       }
     })
     .catch(err => {
-      var errorMsg = exports.createResponseError(message, err);
+      let errorMsg = common.createResponseError(
+        common.responderTypes.addPageToCache, {}, err
+      );
       if (response) {
         response(errorMsg);
       }
     });
-  } else if (message.type === 'local-query') {
+  } else if (message.type === common.initiatorTypes.localQuery) {
     exports.queryLocalMachineForUrls(message)
     .then(result => {
-      var successMsg = exports.createResponseSuccess(message);
-      successMsg.response = result;
+      let successMsg = common.createLocalQueryResponse({}, result);
       if (response) {
         response(successMsg);
       }
     })
     .catch(err => {
-      var errorMsg = exports.createResponseError(message, err);
+      var errorMsg = common.createResponseError(
+        common.responderTypes.localQuery, {}, err
+      );
       if (response) {
         response(errorMsg);
       }
     });
-  } else if (message.type === 'open') {
+  } else if (message.type === common.initiatorTypes.openPage) {
     exports.handleOpenRequest(message)
     .then(result => {
-      var successMsg = exports.createResponseSuccess(message);
-      successMsg.response = result;
+      let successMsg = common.createOpenResponse({}, result);
       if (response) {
         response(successMsg);
       }
     })
     .catch(err => {
-      var errorMsg = exports.createResponseError(message, err);
+      let errorMsg = common.createResponseError(
+        common.responderTypes.openPage, {}, err
+      );
       if (response) {
         response(errorMsg);
       }
     });
-  } else if (message.type === 'network-query') {
-    console.log('received network-query: ', message);
+  } else if (message.type === common.initiatorTypes.networkQuery) {
     exports.queryLocalNetworkForUrls(message)
     .then(result => {
-      var successMsg = exports.createResponseSuccess(message);
-      successMsg.response = result;
+      let successMsg = common.createNetworkQueryResponse({}, result);
       if (response) {
         response(successMsg);
       }
     })
     .catch(err => {
-      var errorMsg = exports.createResponseError(message, err);
+      let errorMsg = common.createResponseError(
+        common.responderTypes.networkQuery, {}, err
+      );
       if (response) {
         response(errorMsg);
       }
@@ -86240,7 +90940,7 @@ exports.handleOpenRequest = function(message) {
  * @return {Promise.<Object, Error>} the result of the query. We expect an
  * object like:
  * {
- *   url: [ pageinfo, ... ]
+ *   url: [ CPInfo.asJSON(), ... ]
  * }
  * This should mirror the API of queryLocalNetworkForUrls.
  */
@@ -86251,16 +90951,16 @@ exports.queryLocalMachineForUrls = function(message) {
     var urls = message.params.urls;
     var result = {};
     datastore.getAllCachedPages()
-    .then(pages => {
-      pages.forEach(page => {
+    .then(cpinfos => {
+      cpinfos.forEach(cpinfo => {
         urls.forEach(url => {
-          if (exports.urlsMatch(url, page.metadata.fullUrl)) {
+          if (exports.urlsMatch(url, cpinfo.captureHref)) {
             var copies = result[url];
             if (!copies) {
               copies = [];
               result[url] = copies;
             }
-            copies.push(page);
+            copies.push(cpinfo);
           }
         });
       });
@@ -86329,36 +91029,6 @@ exports.urlsMatch = function(url, savedUrl) {
 };
 
 /**
- * Create a message to send to the extension upon a successful action.
- *
- * @param {Object} message the original message that generated the request
- *
- * @return {Object} a response object. Contains at a result key, indicating
- * 'success', a type key, indicating the type of the original message, and an
- * optional params key with additional values.
- */
-exports.createResponseSuccess = function(message) {
-  return {
-    type: message.type,
-    result: 'success',
-  };
-};
-
-/**
- * Create a message to send to the extension upon an error.
- *
- * @param {Object} message the original message that generated the request
- * @param {any} err the error info to send to the extension
- */
-exports.createResponseError = function(message, err) {
-  return {
-    type: message.type,
-    result: 'error',
-    err: err
-  };
-};
-
-/**
  * @param {string} dataUrl a data url as encoded by FileReader.readAsDataURL
  *
  * @return {Blob}
@@ -86404,7 +91074,7 @@ exports.sendMessageToOpenUrl = function(url) {
   exports.sendMessageToExtension(message);
 };
 
-},{"../app-controller":"appController","../chrome-apis/chromep":2,"../coalescence/manager":"coalMgr","../persistence/datastore":19,"base-64":30}],"fileSystem":[function(require,module,exports){
+},{"../app-controller":"appController","../chrome-apis/chromep":2,"../coalescence/manager":"coalMgr","../persistence/datastore":20,"../persistence/objects":"persistenceObjs","./common-messaging":15,"base-64":31}],"fileSystem":[function(require,module,exports){
 'use strict';
 
 /**
@@ -86617,7 +91287,9 @@ exports.getFileContentsFromName = function(fileName) {
 /* globals Promise */
 'use strict';
 
-var Buffer = require('buffer/').Buffer;
+const Buffer = require('buffer/').Buffer;
+
+const util = require('../util');
 
 /**
  * General file system operations on top of the web APIs.
@@ -86665,13 +91337,14 @@ exports.listEntries = function(dirEntry) {
 
 /**
  * @param {FileEntry} fileEntry the file that will be written to
- * @param {Blob} fileBlob the content to write
+ * @param {Buffer} buff the content to write
  *
  * @return {Promise.<undefined, Error>} Promise that resolves when the write is
  * complete or rejects with an error
  */
-exports.writeToFile = function(fileEntry, fileBlob) {
+exports.writeToFile = function(fileEntry, buff) {
   return new Promise(function(resolve, reject) {
+    let blob = util.getBufferAsBlob(buff);
     fileEntry.createWriter(function(fileWriter) {
 
       fileWriter.onwriteend = function() {
@@ -86682,7 +91355,7 @@ exports.writeToFile = function(fileEntry, fileBlob) {
         reject(err);
       };
 
-      fileWriter.write(fileBlob);
+      fileWriter.write(blob);
     });
   });
 };
@@ -86822,7 +91495,7 @@ exports.createFileReader = function() {
   return new FileReader();
 };
 
-},{"buffer/":35}],"moment":[function(require,module,exports){
+},{"../util":24,"buffer/":37}],"moment":[function(require,module,exports){
 //! moment.js
 //! version : 2.17.1
 //! authors : Tim Wood, Iskren Chernev, Moment.js contributors
@@ -91128,6 +95801,8 @@ return hooks;
 },{}],"persistenceObjs":[function(require,module,exports){
 'use strict';
 
+const util = require('../util');
+
 /**
  * Objects having to do with our persistence layer. CP stands for 'Cached
  * Page'.
@@ -91173,6 +95848,27 @@ class CPInfo {
     return this.filePath !== null &&
       this.captureHref !== null &&
       this.captureDate !== null;
+  }
+
+  /**
+   * @return {Object}
+   */
+  asJSON() {
+    return {
+      captureHref: this.captureHref,
+      captureDate: this.captureDate,
+      title: this.title,
+      filePath: this.filePath
+    };
+  }
+
+  /**
+   * @param {Object} json
+   *
+   * @return {CPInfo}
+   */
+  static fromJSON(json) {
+    return new CPInfo(json);
   }
 
   /**
@@ -91247,7 +95943,7 @@ class CPSummary extends CPInfo {
   /**
    * Create a copy of the object as a CPDisk.
    *
-   * @param {??} mhtml
+   * @param {Buffer} mhtml
    *
    * @return {CPDisk}
    */
@@ -91263,12 +95959,28 @@ class CPSummary extends CPInfo {
     };
     return new CPDisk(params);
   }
+
+  asJSON() {
+    let result = super.asJSON();
+    result.favicon = this.favicon;
+    result.screenshot = this.screenshot;
+    return result;
+  }
+
+  /**
+   * @param {Object} json
+   *
+   * @return {CPSummary}
+   */
+  static fromJSON(json) {
+    return new CPSummary(json);
+  }
 }
 
 class CPDisk extends CPSummary {
   /**
    * @param {Object} params
-   * @param {??} params.mhtml
+   * @param {Buffer} params.mhtml
    */
   constructor({
     captureHref,
@@ -91306,13 +96018,58 @@ class CPDisk extends CPSummary {
     };
     return new CPSummary(params);
   }
+
+  asJSON() {
+    let result = super.asJSON();
+    let dataUrl = util.buffToData(this.mhtml);
+    result.mhtml = dataUrl;
+    return result;
+  }
+
+  /**
+   * Convert the object to a Buffer that can recreate the object via
+   * fromBuffer.
+   *
+   * @return {Buffer} Buffer that can be used to recreate the object via
+   * fromBuffer.
+   */
+  asBuffer() {
+    // We want an object literal.
+    let result = super.asJSON();
+    result.mhtml = this.mhtml;
+    return util.objToBuff(result);
+  }
+
+  /**
+   * Create a CPDisk from a Buffer generated by asBuffer.
+   *
+   * @param {Buffer} buff
+   *
+   * @return {CPDisk}
+   */
+  static fromBuffer(buff) {
+    let json = util.buffToObj(buff);
+    let cpsum = new CPSummary(json);
+    return cpsum.asCPDisk(json.mhtml);
+  }
+
+  /**
+   * @param {string} json
+   *
+   * @return {CPDisk}
+   */
+  static fromJSON(json) {
+    let buff = util.dataToBuff(json.mhtml);
+    json.mhtml = buff;
+    return new CPDisk(json);
+  }
 }
 
 exports.CPInfo = CPInfo;
 exports.CPSummary = CPSummary;
 exports.CPDisk = CPDisk;
 
-},{}],"serverController":[function(require,module,exports){
+},{"../util":24}],"serverController":[function(require,module,exports){
 /* global WSC, DummyHandler */
 'use strict';
 
@@ -91384,7 +96141,7 @@ exports.start = function(host, port) {
   startServer(host, port, endpointHandlers);
 };
 
-},{"./evaluation-handler":20,"./handlers":21,"./server-api":22}],"settings":[function(require,module,exports){
+},{"./evaluation-handler":21,"./handlers":22,"./server-api":23}],"settings":[function(require,module,exports){
 /* global Promise */
 'use strict';
 
