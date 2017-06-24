@@ -123,11 +123,11 @@ Example:
       is: 'cached-page-summary',
 
       properties: {
-        // We will expect only a single object incoming from the parent
-        // element. This will help decouple changes between the two objects.
-        // Instead, each of the properties will be computed and retrieved from
-        // the object.
+        // Information about the cached page will be stored in this object as
+        // properties. We expect this to correspond to CPDisk.asJSON().
         cpsummaryJson: Object,
+        // The name of the service hosting this page. Eg 'Sam._semcache_.tcp'
+        serviceName: String,
 
         captureHref: {
           type: String,
@@ -220,10 +220,8 @@ Example:
             toast.fitInto = thisEl.$.actioncontainer;
             toast.open();
             return appController.saveMhtmlAndOpen(
-                thisEl.captureUrl,
-                thisEl.captureDate,
-                thisEl.accessPath,
-                thisEl.metadata
+              thisEl.serviceName,
+              thisEl.captureHref
             );
           })
           .then(() => {

@@ -1,6 +1,6 @@
 'use strict';
 
-const Buffer = require('buffer').Buffer;
+const Buffer = require('buffer/').Buffer;
 const blobToBufferLib = require('blob-to-buffer');
 const dataUrlToBlob = require('dataurl-to-blob');
 const SmartBuffer = require('smart-buffer').SmartBuffer;

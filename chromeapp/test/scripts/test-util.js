@@ -29,6 +29,13 @@ exports.createCacheNames = function(serviceType, numCaches) {
   return result;
 };
 
+exports.genCacheInfos = function*(num) {
+  let names = exports.createCacheNames('_foo._bar', num);
+  let cacheInfos = exports.createCacheObjsFromNames(names);
+
+  yield* cacheInfos;
+};
+
 /**
  * Generate cache objects like those from createCacheObj() but using only the
  * output of createCacheNames() as input.

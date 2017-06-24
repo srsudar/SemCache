@@ -16747,11 +16747,11 @@ Polymer({
       is: 'cached-page-summary',
 
       properties: {
-        // We will expect only a single object incoming from the parent
-        // element. This will help decouple changes between the two objects.
-        // Instead, each of the properties will be computed and retrieved from
-        // the object.
+        // Information about the cached page will be stored in this object as
+        // properties. We expect this to correspond to CPDisk.asJSON().
         cpsummaryJson: Object,
+        // The name of the service hosting this page. Eg 'Sam._semcache_.tcp'
+        serviceName: String,
 
         captureHref: {
           type: String,
@@ -16844,10 +16844,8 @@ Polymer({
             toast.fitInto = thisEl.$.actioncontainer;
             toast.open();
             return appController.saveMhtmlAndOpen(
-                thisEl.captureUrl,
-                thisEl.captureDate,
-                thisEl.accessPath,
-                thisEl.metadata
+              thisEl.serviceName,
+              thisEl.captureHref
             );
           })
           .then(() => {
@@ -87126,18 +87124,22 @@ exports.getListFromService = function(serviceName) {
 /**
  * Save the MHTML file at mhtmlUrl into the local cache and open the URL.
  *
+ * @param {string} serviceName the service name of the peer
  * @param {string} href the URL to fetch from the peer
- * @param {string} ipaddr IP address of the peer
- * @param {integer} port port of the peer
  *
  * @return {Promise.<number, Error>} a Promise that resolves with the total
  * time to save the MHTML and open the file.
  */
-exports.saveMhtmlAndOpen = function(href, ipaddr, port) {
+exports.saveMhtmlAndOpen = function(serviceName, href) {
   return new Promise(function(resolve, reject) {
     var start = evaluation.getNow();
     var streamName = 'open_' + href;
-    peerIfMgr.getPeerAccessor(ipaddr, port).getCachedPage(href)
+    exports.resolveCache(serviceName)
+    .then(cacheInfo => {
+      return peerIfMgr.getPeerAccessor(
+        cacheInfo.ipAddress, cacheInfo.port
+      ).getCachedPage(href);
+    })
     .then(cpdisk => {
       return datastore.addPageToCache(cpdisk);
     })
@@ -90926,6 +90928,7 @@ exports.handleExternalMessage = function(message, sender, response) {
 exports.handleOpenRequest = function(message) {
   return new Promise(function(resolve, reject) {
     var cachedPage = message.params.page;
+    // TODO: chance to service name
     appc.saveMhtmlAndOpen(
       cachedPage.captureUrl,
       cachedPage.captureDate,

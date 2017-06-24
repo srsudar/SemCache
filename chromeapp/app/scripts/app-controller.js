@@ -414,18 +414,22 @@ exports.getListFromService = function(serviceName) {
 /**
  * Save the MHTML file at mhtmlUrl into the local cache and open the URL.
  *
+ * @param {string} serviceName the service name of the peer
  * @param {string} href the URL to fetch from the peer
- * @param {string} ipaddr IP address of the peer
- * @param {integer} port port of the peer
  *
  * @return {Promise.<number, Error>} a Promise that resolves with the total
  * time to save the MHTML and open the file.
  */
-exports.saveMhtmlAndOpen = function(href, ipaddr, port) {
+exports.saveMhtmlAndOpen = function(serviceName, href) {
   return new Promise(function(resolve, reject) {
     var start = evaluation.getNow();
     var streamName = 'open_' + href;
-    peerIfMgr.getPeerAccessor(ipaddr, port).getCachedPage(href)
+    exports.resolveCache(serviceName)
+    .then(cacheInfo => {
+      return peerIfMgr.getPeerAccessor(
+        cacheInfo.ipAddress, cacheInfo.port
+      ).getCachedPage(href);
+    })
     .then(cpdisk => {
       return datastore.addPageToCache(cpdisk);
     })

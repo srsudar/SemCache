@@ -132,6 +132,7 @@ exports.handleExternalMessage = function(message, sender, response) {
 exports.handleOpenRequest = function(message) {
   return new Promise(function(resolve, reject) {
     var cachedPage = message.params.page;
+    // TODO: chance to service name
     appc.saveMhtmlAndOpen(
       cachedPage.captureUrl,
       cachedPage.captureDate,

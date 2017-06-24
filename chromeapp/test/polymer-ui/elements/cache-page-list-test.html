@@ -98,9 +98,15 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
               // We expect one for each summary.
               assert.equal(repeatedEls.length, expectedPages.length);
               for (var i = 0; i < expectedPages.length; i++) {
-                var expected = expectedPages[i];
-                var actual = repeatedEls[i].cpsummaryJson;
-                assert.equal(actual, expected);
+                let repeatEl = repeatedEls[i];
+
+                let expectedJson = expectedPages[i];
+                let actualJson = repeatEl.cpsummaryJson;
+
+                assert.equal(actualJson, expectedJson);
+
+                // We also expect each to have serviceName set.
+                assert.equal(repeatEl.serviceName, serviceName);
               }
 
               done();

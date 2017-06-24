@@ -4,10 +4,13 @@ var test = require('tape');
 var proxyquire = require('proxyquire');
 var sinon = require('sinon');
 require('sinon-as-promised');
-var testUtil = require('./test-util');
 
-var appc = require('../../app/scripts/app-controller');
-var ifCommon = require('../../app/scripts/peer-interface/common');
+
+let appc = require('../../app/scripts/app-controller');
+
+const ifCommon = require('../../app/scripts/peer-interface/common');
+const putil = require('./persistence/persistence-util');
+const testUtil = require('./test-util');
 
 /**
  * Manipulating the object directly leads to polluting the require cache. Any
@@ -49,35 +52,40 @@ function rejectIfMissingSettingHelper(instanceName, port, dirId, host, t) {
 }
 
 test('saveMhtmlAndOpen persists and opens', function(t) {
-  let href = 'href/of/thepage/to/open';
-  let ipaddr = '7.6.5.4';
-  let port = 7777;
+  let cacheInfo = testUtil.genCacheInfos(1).next().value;
+  let serviceName = cacheInfo.instanceName;
+  let cpdisk = putil.genCPDisks(1).next().value;
+  let href = cpdisk.captureHref;
 
-  let fakeEntry = { fullPath: 'a full path' };
-  let fakeCpdisk = { iam: 'cpdisk' };
+  let entry = { fullPath: 'some/path' };
+  let absPathToBaseDir = '/some/absolute/path/semcachedir';
+  let fileUrl = 'file:///some path to the dir';
+
+  let resolveCacheStub = sinon.stub();
+  resolveCacheStub.withArgs(serviceName).resolves(cacheInfo);
 
   let getPeerAccessorStub = sinon.stub();
   let peerAccessorStub = sinon.stub();
-  getPeerAccessorStub.withArgs(ipaddr, port).returns(peerAccessorStub);
+  getPeerAccessorStub
+    .withArgs(cacheInfo.ipAddress, cacheInfo.port)
+    .returns(peerAccessorStub);
   let getCachedPageStub = sinon.stub();
-  getCachedPageStub.withArgs(href).resolves(fakeCpdisk);
+  getCachedPageStub.withArgs(href).resolves(cpdisk);
   peerAccessorStub.getCachedPage = getCachedPageStub;
 
   let addPageStub = sinon.stub();
-  addPageStub.withArgs(fakeCpdisk).resolves(fakeEntry);
+  addPageStub.withArgs(cpdisk).resolves(entry);
 
   let sendMessageToOpenSpy = sinon.spy();
 
-  let absPathToBaseDir = '/some/absolute/path/semcachedir';
-
-  let fileUrl = 'file:///some path to the dir';
-  let constructFileSchemeUrlSpy = sinon.stub().returns(fileUrl);
+  let constructFileSchemeUrlSpy = sinon.stub();
+  constructFileSchemeUrlSpy
+    .withArgs(absPathToBaseDir, entry.fullPath)
+    .returns(fileUrl);
 
   let getNowStub = sinon.stub().returns(1);
   let logTimeStub = sinon.stub();
 
-
-  // ADD THE ABSOLUTE PATH TO THE BASE DIRECTORY
   proxyquireAppc({
       './persistence/datastore': {
         addPageToCache: addPageStub
@@ -97,10 +105,10 @@ test('saveMhtmlAndOpen persists and opens', function(t) {
       }
     }
   );
-  
   appc.getAbsPathToBaseDir = sinon.stub().returns(absPathToBaseDir);
+  appc.resolveCache = resolveCacheStub;
 
-  appc.saveMhtmlAndOpen(href, ipaddr, port)
+  appc.saveMhtmlAndOpen(serviceName, href)
   .then(() => {
     t.equal(sendMessageToOpenSpy.args[0][0], fileUrl);
     t.end();
@@ -115,24 +123,14 @@ test('saveMhtmlAndOpen persists and opens', function(t) {
 
 test('saveMhtmlAndOpen rejects if error', function(t) {
   let expected = { error: 'went south' };
-  let href = 'g.co';
-  let ipaddr = '4.3.2.1';
-  let port = 1234;
-
-  let getPeerAccessorStub = sinon.stub();
-  getPeerAccessorStub.withArgs(ipaddr, port).throws(expected);
 
   proxyquireAppc({
     './evaluation': {
-      getNow: sinon.stub().returns(0),
-      logTime: sinon.stub().returns(0)
-    },
-    './peer-interface/manager': {
-      getPeerAccessor: getPeerAccessorStub
+      getNow: sinon.stub().throws(expected)
     }
   });
 
-  appc.saveMhtmlAndOpen(href, ipaddr, port)
+  appc.saveMhtmlAndOpen('hi', 'bye')
   .then(res => {
     t.fail(res);
     t.end();

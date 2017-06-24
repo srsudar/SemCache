@@ -25,6 +25,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
     <test-fixture id="my-fixture">
       <template is="dom-template">
         <cached-page-summary
+          service-name={{serviceName}}
           cpsummary-json={{cpsummaryJson}} >
           <h2>seed-element</h2>
         </cached-page-summary>
@@ -39,6 +40,8 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
         let isoDate = '2016-08-24T19:38:22.016Z';
         let fullDate = 'Wed Aug 24 2016 12:38:22 GMT-0700 (PDT)';
 
+        let serviceName = 'Sam._semcache._tcp';
+
         let cpsummaryJson = {
             captureHref: 'the capture url',
             captureDate: isoDate,
@@ -48,7 +51,8 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
           }
 
         let boundData = {
-          cpsummaryJson: cpsummaryJson
+          cpsummaryJson: cpsummaryJson,
+          serviceName: serviceName
         };
 
         setup(function() {
@@ -67,23 +71,27 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
           assert.equal(dateDiv.innerText, fullDate);
         });
 
-        test('open button calls saveMhtmlAndOpen', function() {
+        test('open button calls saveMhtmlAndOpen', function(done) {
+          let saveMhtmlAndOpenSpy = sinon.stub();
+          saveMhtmlAndOpenSpy
+            .withArgs(serviceName, cpsummaryJson.captureHref)
+            .returns(Promise.resolve());
           var appControllerSpy = {
-            saveMhtmlAndOpen: sinon.stub().returns(Promise.resolve())
+            saveMhtmlAndOpen: saveMhtmlAndOpenSpy
           };
           myEl.getAppController = sinon.stub().returns(appControllerSpy);
-          // myEl.$.open.click();
-          myEl.openUrl(boundData.accessPath)
+          myEl.openUrl()
           .then(() => {
-            var args = appControllerSpy.saveMhtmlAndOpen.args[0];
+            console.log('in then');
             assert.equal(appControllerSpy.saveMhtmlAndOpen.calledOnce, true);
-            assert.equal(args[0], boundData.captureUrl);
-            assert.equal(args[1], boundData.captureDate);
-            assert.equal(args[2], boundData.accessPath);
-            assert.equal(args[3], boundData.metadata);
+            assert.deepEqual(
+              saveMhtmlAndOpenSpy.args[0],
+              [serviceName, cpsummaryJson.captureHref]
+            );
             // We should have closed the toasts
             assert.equal(myEl.$.toastopening.opened, false);
             assert.equal(myEl.$.toasterror.opened, false);
+            done();
           });
         });
 
