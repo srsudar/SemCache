@@ -46,7 +46,7 @@ exports.getListResponseBuff = function() {
 };
 
 exports.getCachedPageResponseObj = function() {
-  return [...putil.genCPDisks(1)][0];
+  return putil.genCPDisks(1).next().value;
 };
 
 exports.getCachedPageResponseBuff = function() {

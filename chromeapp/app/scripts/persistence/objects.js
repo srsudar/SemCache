@@ -236,7 +236,8 @@ class CPDisk extends CPSummary {
     // We want an object literal.
     let result = super.asJSON();
     result.mhtml = this.mhtml;
-    return util.objToBuff(result);
+    result =  util.objToBuff(result);
+    return result;
   }
 
   /**

@@ -252,7 +252,7 @@ exports.from = function(buff) {
   return wrapper;
 };
 
-},{"bloomfilter":33,"buffer/":36,"to-arraybuffer":55}],4:[function(require,module,exports){
+},{"bloomfilter":33,"buffer/":36,"to-arraybuffer":54}],4:[function(require,module,exports){
 'use strict';
 
 var dnssdSem = require('../dnssd/dns-sd-semcache');
@@ -3191,7 +3191,7 @@ exports.createFileNameForPage = function(href, captureDate) {
   return result;
 };
 
-},{"../util":23,"./database":"db","./file-system":"fileSystem","./file-system-util":"fsUtil","sanitize-filename":53,"urijs":61}],20:[function(require,module,exports){
+},{"../util":23,"./database":"db","./file-system":"fileSystem","./file-system-util":"fsUtil","sanitize-filename":53,"urijs":60}],20:[function(require,module,exports){
 /* globals WSC, _, TextEncoder */
 'use strict';
 
@@ -3465,7 +3465,7 @@ _.extend(exports.WebRtcOfferHandler.prototype,
   WSC.BaseHandler.prototype
 );
 
-},{"../dnssd/binary-utils":"binaryUtils","../persistence/file-system":"fileSystem","../persistence/file-system-util":"fsUtil","../webrtc/connection-manager":"cmgr","../webrtc/responder":29,"./server-api":22,"underscore":58}],22:[function(require,module,exports){
+},{"../dnssd/binary-utils":"binaryUtils","../persistence/file-system":"fileSystem","../persistence/file-system-util":"fsUtil","../webrtc/connection-manager":"cmgr","../webrtc/responder":29,"./server-api":22,"underscore":57}],22:[function(require,module,exports){
 (function (Buffer){
 'use strict';
 
@@ -3708,12 +3708,9 @@ exports.getCachedFileNameFromPath = function(path) {
 },{"../app-controller":"appController","../persistence/datastore":19,"../persistence/objects":"persistenceObjs","buffer":34}],23:[function(require,module,exports){
 'use strict';
 
-const Buffer = require('buffer').Buffer;
+const Buffer = require('buffer/').Buffer;
 const blobToBufferLib = require('blob-to-buffer');
 const dataUrlToBlob = require('dataurl-to-blob');
-const SmartBuffer = require('smart-buffer').SmartBuffer;
-
-const DEFAULT_BUFFER_SIZE = 0;
 
 /**
  * Helper to fetch and parse JSON from a URL.
@@ -4056,29 +4053,65 @@ exports.objToBuff = function(obj) {
   // Get all the JSON-ifiable properties on their own and add them as a JSON
   // string.
   let json = {};
-  let buffSb = SmartBuffer.fromBuffer(new Buffer(DEFAULT_BUFFER_SIZE));
+
+  let buffs = [];
+
   for (let prop of Object.keys(obj)) {
     let value = obj[prop];
     if (Buffer.isBuffer(value)) {
-      // We will add Buffers as [string, buffer_length, Buffer].
-      buffSb.writeStringNT(prop);
-      buffSb.writeUInt32LE(value.length);
-      buffSb.writeBuffer(value);
+      // We will add Buffers as [string length, string, buffer_length, Buffer].
+      let strLength = prop.length;
+      let buffLength = value.length;
+
+      let newBuffLength = 4 + prop.length + 4 + buffLength;
+
+      let buff = new Buffer(newBuffLength);
+      let pos = 0;
+
+      buff.writeUInt32LE(strLength, pos);
+      pos += 4;
+
+      exports.writeString(buff, prop, pos);
+      pos += prop.length;
+
+      buff.writeUInt32LE(buffLength, pos);
+      pos += 4;
+
+      // Basically buff.writeBuffer(value, pos)
+      exports.writeBuffer(value, buff, pos);
+
+      buffs.push(buff);
     } else {
       json[prop] = value;
     }
   }
 
-  // Give a semi-reasonable starting value. It will expand as necessary.
-  let sb = SmartBuffer.fromBuffer(new Buffer(DEFAULT_BUFFER_SIZE));
-
   let jsonStr = JSON.stringify(json);
-  sb.writeUInt32LE(jsonStr.length);
-  sb.writeString(jsonStr);
 
-  sb.writeBuffer(buffSb.toBuffer());
+  let singleBuff = Buffer.concat(buffs);
+  let finalLength = 4 + jsonStr.length + singleBuff.length;
 
-  return sb.toBuffer();
+  let result = new Buffer(finalLength);
+
+  let pos = 0;
+
+  result.writeUInt32LE(jsonStr.length, pos);
+  pos += 4;
+
+  exports.writeString(result, jsonStr, pos);
+  pos += jsonStr.length;
+
+  exports.writeBuffer(singleBuff, result, pos);
+
+  return result;
+};
+
+exports.writeString = function(buff, str, pos) {
+  buff.write(str, pos, str.length);
+};
+
+exports.writeBuffer = function(src, target, pos) {
+  src.copy(target, pos, 0, src.size);
 };
 
 /**
@@ -4090,25 +4123,36 @@ exports.objToBuff = function(obj) {
  */
 exports.buffToObj = function(buff) {
   // We expect:
-  // [length, jsonString, (null-terminated string, buff length, buff) * n]
-  let sb = SmartBuffer.fromBuffer(buff);
-  let jsonLength = sb.readUInt32LE();
-  let jsonStr = sb.readString(jsonLength);
+  // [length, jsonString, (length, string, buff length, buff) * n]
+  let pos = 0;
+  let jsonLength = buff.readUInt32LE();
+  pos += 4;
+  let jsonStr = buff.toString('utf8', pos, pos + jsonLength);
+  pos += jsonLength;
 
   let result = JSON.parse(jsonStr);
 
   // No reclaim the buffers.
-  while (sb.remaining() > 0) {
-    let propName = sb.readStringNT();
-    let buffLength = sb.readUInt32LE();
-    let buff = sb.readBuffer(buffLength);
-    result[propName] = buff;
+  while (pos < buff.length) {
+    let strLength = buff.readUInt32LE(pos);
+    pos += 4;
+
+    let propName = buff.toString('utf8', pos, pos + strLength);
+    pos += strLength;
+
+    let buffLength = buff.readUInt32LE(pos);
+    pos += 4;
+
+    let reclaimedBuff = buff.slice(pos, pos + buffLength);
+    pos += buffLength;
+
+    result[propName] = reclaimedBuff;
   }
   
   return result;
 };
 
-},{"blob-to-buffer":32,"buffer":34,"dataurl-to-blob":38,"smart-buffer":54}],24:[function(require,module,exports){
+},{"blob-to-buffer":32,"buffer/":36,"dataurl-to-blob":38}],24:[function(require,module,exports){
 'use strict';
 
 var commonChannel = require('./common-channel');
@@ -4873,7 +4917,7 @@ exports.createClient = function(pc, msg) {
 
 exports.PeerConnection = PeerConnection;
 
-},{"../server/server-api":22,"./buffered-channel":24,"./message":26,"wolfy87-eventemitter":64}],28:[function(require,module,exports){
+},{"../server/server-api":22,"./buffered-channel":24,"./message":26,"wolfy87-eventemitter":63}],28:[function(require,module,exports){
 'use strict';
 
 var Buffer = require('buffer/').Buffer;
@@ -5449,22 +5493,22 @@ function placeHoldersCount (b64) {
 
 function byteLength (b64) {
   // base64 is 4/3 + up to two characters of the original data
-  return b64.length * 3 / 4 - placeHoldersCount(b64)
+  return (b64.length * 3 / 4) - placeHoldersCount(b64)
 }
 
 function toByteArray (b64) {
-  var i, j, l, tmp, placeHolders, arr
+  var i, l, tmp, placeHolders, arr
   var len = b64.length
   placeHolders = placeHoldersCount(b64)
 
-  arr = new Arr(len * 3 / 4 - placeHolders)
+  arr = new Arr((len * 3 / 4) - placeHolders)
 
   // if there are placeholders, only get up to the last complete 4 chars
   l = placeHolders > 0 ? len - 4 : len
 
   var L = 0
 
-  for (i = 0, j = 0; i < l; i += 4, j += 3) {
+  for (i = 0; i < l; i += 4) {
     tmp = (revLookup[b64.charCodeAt(i)] << 18) | (revLookup[b64.charCodeAt(i + 1)] << 12) | (revLookup[b64.charCodeAt(i + 2)] << 6) | revLookup[b64.charCodeAt(i + 3)]
     arr[L++] = (tmp >> 16) & 0xFF
     arr[L++] = (tmp >> 8) & 0xFF
@@ -7581,7 +7625,7 @@ function from (value, encodingOrOffset, length) {
     throw new TypeError('"value" argument must not be a number')
   }
 
-  if (typeof ArrayBuffer !== 'undefined' && value instanceof ArrayBuffer) {
+  if (value instanceof ArrayBuffer) {
     return fromArrayBuffer(value, encodingOrOffset, length)
   }
 
@@ -7693,8 +7737,6 @@ function fromArrayLike (array) {
 }
 
 function fromArrayBuffer (array, byteOffset, length) {
-  array.byteLength // this throws if `array` is not a valid ArrayBuffer
-
   if (byteOffset < 0 || array.byteLength < byteOffset) {
     throw new RangeError('\'offset\' is out of bounds')
   }
@@ -7731,9 +7773,8 @@ function fromObject (obj) {
   }
 
   if (obj) {
-    if ((typeof ArrayBuffer !== 'undefined' &&
-        obj.buffer instanceof ArrayBuffer) || 'length' in obj) {
-      if (typeof obj.length !== 'number' || isnan(obj.length)) {
+    if (isArrayBufferView(obj) || 'length' in obj) {
+      if (typeof obj.length !== 'number' || numberIsNaN(obj.length)) {
         return createBuffer(0)
       }
       return fromArrayLike(obj)
@@ -7765,7 +7806,7 @@ function SlowBuffer (length) {
 }
 
 Buffer.isBuffer = function isBuffer (b) {
-  return !!(b != null && b._isBuffer)
+  return b != null && b._isBuffer === true
 }
 
 Buffer.compare = function compare (a, b) {
@@ -7844,8 +7885,7 @@ function byteLength (string, encoding) {
   if (Buffer.isBuffer(string)) {
     return string.length
   }
-  if (typeof ArrayBuffer !== 'undefined' && typeof ArrayBuffer.isView === 'function' &&
-      (ArrayBuffer.isView(string) || string instanceof ArrayBuffer)) {
+  if (isArrayBufferView(string) || string instanceof ArrayBuffer) {
     return string.byteLength
   }
   if (typeof string !== 'string') {
@@ -7955,8 +7995,12 @@ function slowToString (encoding, start, end) {
   }
 }
 
-// The property is used by `Buffer.isBuffer` and `is-buffer` (in Safari 5-7) to detect
-// Buffer instances.
+// This property is used by `Buffer.isBuffer` (and the `is-buffer` npm package)
+// to detect a Buffer instance. It's not possible to use `instanceof Buffer`
+// reliably in a browserify context because there could be multiple different
+// copies of the 'buffer' package in use. This method works even for Buffer
+// instances that were created from another copy of the `buffer` package.
+// See: https://github.com/feross/buffer/issues/154
 Buffer.prototype._isBuffer = true
 
 function swap (b, n, m) {
@@ -8107,7 +8151,7 @@ function bidirectionalIndexOf (buffer, val, byteOffset, encoding, dir) {
     byteOffset = -0x80000000
   }
   byteOffset = +byteOffset  // Coerce to Number.
-  if (isNaN(byteOffset)) {
+  if (numberIsNaN(byteOffset)) {
     // byteOffset: it it's undefined, null, NaN, "foo", etc, search whole buffer
     byteOffset = dir ? 0 : (buffer.length - 1)
   }
@@ -8238,7 +8282,7 @@ function hexWrite (buf, string, offset, length) {
   }
   for (var i = 0; i < length; ++i) {
     var parsed = parseInt(string.substr(i * 2, 2), 16)
-    if (isNaN(parsed)) return i
+    if (numberIsNaN(parsed)) return i
     buf[offset + i] = parsed
   }
   return i
@@ -8483,7 +8527,7 @@ function utf16leSlice (buf, start, end) {
   var bytes = buf.slice(start, end)
   var res = ''
   for (var i = 0; i < bytes.length; i += 2) {
-    res += String.fromCharCode(bytes[i] + bytes[i + 1] * 256)
+    res += String.fromCharCode(bytes[i] + (bytes[i + 1] * 256))
   }
   return res
 }
@@ -8789,7 +8833,7 @@ Buffer.prototype.writeIntLE = function writeIntLE (value, offset, byteLength, no
   value = +value
   offset = offset >>> 0
   if (!noAssert) {
-    var limit = Math.pow(2, 8 * byteLength - 1)
+    var limit = Math.pow(2, (8 * byteLength) - 1)
 
     checkInt(this, value, offset, byteLength, limit - 1, -limit)
   }
@@ -8812,7 +8856,7 @@ Buffer.prototype.writeIntBE = function writeIntBE (value, offset, byteLength, no
   value = +value
   offset = offset >>> 0
   if (!noAssert) {
-    var limit = Math.pow(2, 8 * byteLength - 1)
+    var limit = Math.pow(2, (8 * byteLength) - 1)
 
     checkInt(this, value, offset, byteLength, limit - 1, -limit)
   }
@@ -9041,7 +9085,7 @@ var INVALID_BASE64_RE = /[^+/0-9A-Za-z-_]/g
 
 function base64clean (str) {
   // Node strips out invalid characters like \n and \t from the string, base64-js does not
-  str = stringtrim(str).replace(INVALID_BASE64_RE, '')
+  str = str.trim().replace(INVALID_BASE64_RE, '')
   // Node converts strings with length < 2 to ''
   if (str.length < 2) return ''
   // Node allows for non-padded base64 strings (missing trailing ===), base64-js does not
@@ -9049,11 +9093,6 @@ function base64clean (str) {
     str = str + '='
   }
   return str
-}
-
-function stringtrim (str) {
-  if (str.trim) return str.trim()
-  return str.replace(/^\s+|\s+$/g, '')
 }
 
 function toHex (n) {
@@ -9178,13 +9217,18 @@ function blitBuffer (src, dst, offset, length) {
   return i
 }
 
-function isnan (val) {
-  return val !== val // eslint-disable-line no-self-compare
+// Node 0.10 supports `ArrayBuffer` but lacks `ArrayBuffer.isView`
+function isArrayBufferView (obj) {
+  return (typeof ArrayBuffer.isView === 'function') && ArrayBuffer.isView(obj)
+}
+
+function numberIsNaN (obj) {
+  return obj !== obj // eslint-disable-line no-self-compare
 }
 
 },{"base64-js":31,"ieee754":42}],37:[function(require,module,exports){
 /*!
- * chrome-promise 2.0.2
+ * chrome-promise 2.0.3
  * https://github.com/tfoxy/chrome-promise
  *
  * Copyright 2015 Tomás Fox
@@ -36993,6 +37037,10 @@ process.off = noop;
 process.removeListener = noop;
 process.removeAllListeners = noop;
 process.emit = noop;
+process.prependListener = noop;
+process.prependOnceListener = noop;
+
+process.listeners = function (name) { return [] }
 
 process.binding = function (name) {
     throw new Error('process.binding is not supported');
@@ -37062,747 +37110,7 @@ module.exports = function (input, options) {
   return sanitize(output, '');
 };
 
-},{"truncate-utf8-bytes":56}],54:[function(require,module,exports){
-(function (Buffer){
-"use strict";
-// The default Buffer size if one is not provided.
-const DEFAULT_SMARTBUFFER_SIZE = 4096;
-// The default string encoding to use for reading/writing strings. 
-const DEFAULT_SMARTBUFFER_ENCODING = 'utf8';
-class SmartBuffer {
-    /**
-     * Creates a new SmartBuffer instance.
-     *
-     * @param arg1 { Number | BufferEncoding | Buffer | SmartBufferOptions }
-     * @param arg2 { BufferEncoding }
-     */
-    constructor(arg1, arg2) {
-        this.length = 0;
-        this.encoding = DEFAULT_SMARTBUFFER_ENCODING;
-        this.writeOffset = 0;
-        this.readOffset = 0;
-        // Initial buffer size provided
-        if (typeof arg1 === 'number') {
-            if (Number.isFinite(arg1) && Number.isInteger(arg1) && arg1 > 0) {
-                this.buff = Buffer.allocUnsafe(arg1);
-            }
-            else {
-                throw new Error('Invalid size provided. Size must be a valid integer greater than zero.');
-            }
-        }
-        else if (typeof arg1 === 'string') {
-            if (Buffer.isEncoding(arg1)) {
-                this.buff = Buffer.allocUnsafe(DEFAULT_SMARTBUFFER_SIZE);
-                this.encoding = arg1;
-            }
-            else {
-                throw new Error('Invalid encoding provided. Please specify a valid encoding the internal Node.js Buffer supports.');
-            }
-        }
-        else if (arg1 instanceof Buffer) {
-            this.buff = arg1;
-            this.length = arg1.length;
-        }
-        else if (SmartBuffer.isSmartBufferOptions(arg1)) {
-            // Checks for encoding
-            if (arg1.encoding) {
-                if (Buffer.isEncoding(arg1.encoding)) {
-                    this.encoding = arg1.encoding;
-                }
-                else {
-                    throw new Error('Invalid encoding provided. Please specify a valid encoding the internal Node.js Buffer supports.');
-                }
-            }
-            // Checks for initial size length
-            if (arg1.size) {
-                if (Number.isFinite(arg1.size) && Number.isInteger(arg1.size) && arg1.size > 0) {
-                    this.buff = Buffer.allocUnsafe(arg1.size);
-                }
-                else {
-                    throw new Error('Invalid size provided. Size must be a valid integer greater than zero.');
-                }
-            }
-            else if (arg1.buff) {
-                if (arg1.buff instanceof Buffer) {
-                    this.buff = arg1.buff;
-                    this.length = arg1.buff.length;
-                }
-                else {
-                    throw new Error('Invalid buffer provided in SmartBufferOptions.');
-                }
-            }
-            else {
-                this.buff = Buffer.allocUnsafe(DEFAULT_SMARTBUFFER_SIZE);
-            }
-        }
-        else if (typeof arg1 === 'object') {
-            throw new Error('Invalid object supplied to SmartBuffer constructor.');
-        }
-        else {
-            this.buff = Buffer.allocUnsafe(DEFAULT_SMARTBUFFER_SIZE);
-        }
-        // Check for encoding (Buffer, Encoding) constructor.
-        if (typeof arg2 === 'string') {
-            if (Buffer.isEncoding(arg2)) {
-                this.encoding = arg2;
-            }
-            else {
-                throw new Error('Invalid encoding provided. Please specify a valid encoding the internal Node.js Buffer supports.');
-            }
-        }
-    }
-    /**
-     * Creates a new SmartBuffer instance with the provided internal Buffer size and optional encoding.
-     *
-     * @param size { Number } The size of the internal Buffer.
-     * @param encoding { String } The BufferEncoding to use for strings.
-     *
-     * @return { SmartBuffer }
-     */
-    static fromSize(size, encoding) {
-        return new this({
-            size: size,
-            encoding: encoding
-        });
-    }
-    /**
-     * Creates a new SmartBuffer instance with the provided Buffer and optional encoding.
-     *
-     * @param buffer { Buffer } The Buffer to use as the internal Buffer value.
-     * @param encoding { String } The BufferEncoding to use for strings.
-     *
-     * @return { SmartBuffer }
-     */
-    static fromBuffer(buff, encoding) {
-        return new this({
-            buff: buff,
-            encoding: encoding
-        });
-    }
-    /**
-     * Creates a new SmartBuffer instance with the provided SmartBufferOptions options.
-     *
-     * @param options { SmartBufferOptions } The options to use when creating the SmartBuffer instance.
-     */
-    static fromOptions(options) {
-        return new this(options);
-    }
-    /**
-     * Type checking function that determines if an object is a SmartBufferOptions object.
-     */
-    static isSmartBufferOptions(options) {
-        const castOptions = options;
-        return castOptions && (castOptions.encoding !== undefined || castOptions.size !== undefined || castOptions.buff !== undefined);
-    }
-    // Signed integers
-    /**
-     * Reads an Int8 value from the current read position.
-     *
-     * @return { Number }
-     */
-    readInt8() {
-        return this.readNumberValue(Buffer.prototype.readInt8, 1);
-    }
-    /**
-     * Reads an Int16BE value from the current read position.
-     *
-     * @return { Number }
-     */
-    readInt16BE() {
-        return this.readNumberValue(Buffer.prototype.readInt16BE, 2);
-    }
-    /**
-     * Reads an Int16LE value from the current read position.
-     *
-     * @return { Number }
-     */
-    readInt16LE() {
-        return this.readNumberValue(Buffer.prototype.readInt16LE, 2);
-    }
-    /**
-     * Reads an Int32BE value from the current read position.
-     *
-     * @return { Number }
-     */
-    readInt32BE() {
-        return this.readNumberValue(Buffer.prototype.readInt32BE, 4);
-    }
-    /**
-     * Reads an Int32LE value from the current read position.
-     *
-     * @return { Number }
-     */
-    readInt32LE() {
-        return this.readNumberValue(Buffer.prototype.readInt32LE, 4);
-    }
-    /**
-     * Writes an Int8 value to the current write position (or at optional offset).
-     *
-     * @param value { Number } The value to write.
-     * @param offset { Number } The offset to write the value at.
-     *
-     * @return this
-     */
-    writeInt8(value, offset) {
-        this.writeNumberValue(Buffer.prototype.writeInt8, 1, value, offset);
-        return this;
-    }
-    /**
-     * Writes an Int16BE value to the current write position (or at optional offset).
-     *
-     * @param value { Number } The value to write.
-     * @param offset { Number } The offset to write the value at.
-     *
-     * @return this
-     */
-    writeInt16BE(value, offset) {
-        this.writeNumberValue(Buffer.prototype.writeInt16BE, 2, value, offset);
-        return this;
-    }
-    /**
-     * Writes an Int16LE value to the current write position (or at optional offset).
-     *
-     * @param value { Number } The value to write.
-     * @param offset { Number } The offset to write the value at.
-     *
-     * @return this
-     */
-    writeInt16LE(value, offset) {
-        this.writeNumberValue(Buffer.prototype.writeInt16LE, 2, value, offset);
-        return this;
-    }
-    /**
-     * Writes an Int32BE value to the current write position (or at optional offset).
-     *
-     * @param value { Number } The value to write.
-     * @param offset { Number } The offset to write the value at.
-     *
-     * @return this
-     */
-    writeInt32BE(value, offset) {
-        this.writeNumberValue(Buffer.prototype.writeInt32BE, 4, value, offset);
-        return this;
-    }
-    /**
-     * Writes an Int32LE value to the current write position (or at optional offset).
-     *
-     * @param value { Number } The value to write.
-     * @param offset { Number } The offset to write the value at.
-     *
-     * @return this
-     */
-    writeInt32LE(value, offset) {
-        this.writeNumberValue(Buffer.prototype.writeInt32LE, 4, value, offset);
-        return this;
-    }
-    // Unsigned Integers
-    /**
-     * Reads an UInt8 value from the current read position.
-     *
-     * @return { Number }
-     */
-    readUInt8() {
-        return this.readNumberValue(Buffer.prototype.readUInt8, 1);
-    }
-    /**
-     * Reads an UInt16BE value from the current read position.
-     *
-     * @return { Number }
-     */
-    readUInt16BE() {
-        return this.readNumberValue(Buffer.prototype.readUInt16BE, 2);
-    }
-    /**
-     * Reads an UInt16LE value from the current read position.
-     *
-     * @return { Number }
-     */
-    readUInt16LE() {
-        return this.readNumberValue(Buffer.prototype.readUInt16LE, 2);
-    }
-    /**
-     * Reads an UInt32BE value from the current read position.
-     *
-     * @return { Number }
-     */
-    readUInt32BE() {
-        return this.readNumberValue(Buffer.prototype.readUInt32BE, 4);
-    }
-    /**
-     * Reads an UInt32LE value from the current read position.
-     *
-     * @return { Number }
-     */
-    readUInt32LE() {
-        return this.readNumberValue(Buffer.prototype.readUInt32LE, 4);
-    }
-    /**
-     * Writes an UInt8 value to the current write position (or at optional offset).
-     *
-     * @param value { Number } The value to write.
-     * @param offset { Number } The offset to write the value at.
-     *
-     * @return this
-     */
-    writeUInt8(value, offset) {
-        this.writeNumberValue(Buffer.prototype.writeUInt8, 1, value, offset);
-        return this;
-    }
-    /**
-     * Writes an UInt16BE value to the current write position (or at optional offset).
-     *
-     * @param value { Number } The value to write.
-     * @param offset { Number } The offset to write the value at.
-     *
-     * @return this
-     */
-    writeUInt16BE(value, offset) {
-        this.writeNumberValue(Buffer.prototype.writeUInt16BE, 2, value, offset);
-        return this;
-    }
-    /**
-     * Writes an UInt16LE value to the current write position (or at optional offset).
-     *
-     * @param value { Number } The value to write.
-     * @param offset { Number } The offset to write the value at.
-     *
-     * @return this
-     */
-    writeUInt16LE(value, offset) {
-        this.writeNumberValue(Buffer.prototype.writeUInt16LE, 2, value, offset);
-        return this;
-    }
-    /**
-     * Writes an UInt32BE value to the current write position (or at optional offset).
-     *
-     * @param value { Number } The value to write.
-     * @param offset { Number } The offset to write the value at.
-     *
-     * @return this
-     */
-    writeUInt32BE(value, offset) {
-        this.writeNumberValue(Buffer.prototype.writeUInt32BE, 4, value, offset);
-        return this;
-    }
-    /**
-     * Writes an UInt32LE value to the current write position (or at optional offset).
-     *
-     * @param value { Number } The value to write.
-     * @param offset { Number } The offset to write the value at.
-     *
-     * @return this
-     */
-    writeUInt32LE(value, offset) {
-        this.writeNumberValue(Buffer.prototype.writeUInt32LE, 4, value, offset);
-        return this;
-    }
-    // Floating Point
-    /**
-     * Reads an FloatBE value from the current read position.
-     *
-     * @return { Number }
-     */
-    readFloatBE() {
-        return this.readNumberValue(Buffer.prototype.readFloatBE, 4);
-    }
-    /**
-     * Reads an FloatLE value from the current read position.
-     *
-     * @return { Number }
-     */
-    readFloatLE() {
-        return this.readNumberValue(Buffer.prototype.readFloatLE, 4);
-    }
-    /**
-     * Writes a FloatBE value to the current write position (or at optional offset).
-     *
-     * @param value { Number } The value to write.
-     * @param offset { Number } The offset to write the value at.
-     *
-     * @return this
-     */
-    writeFloatBE(value, offset) {
-        this.writeNumberValue(Buffer.prototype.writeFloatBE, 4, value, offset);
-        return this;
-    }
-    /**
-     * Writes a FloatLE value to the current write position (or at optional offset).
-     *
-     * @param value { Number } The value to write.
-     * @param offset { Number } The offset to write the value at.
-     *
-     * @return this
-     */
-    writeFloatLE(value, offset) {
-        this.writeNumberValue(Buffer.prototype.writeFloatLE, 4, value, offset);
-        return this;
-    }
-    // Double Floating Point
-    /**
-     * Reads an DoublEBE value from the current read position.
-     *
-     * @return { Number }
-     */
-    readDoubleBE() {
-        return this.readNumberValue(Buffer.prototype.readDoubleBE, 8);
-    }
-    /**
-     * Reads an DoubleLE value from the current read position.
-     *
-     * @return { Number }
-     */
-    readDoubleLE() {
-        return this.readNumberValue(Buffer.prototype.readDoubleLE, 8);
-    }
-    /**
-     * Writes a DoubleBE value to the current write position (or at optional offset).
-     *
-     * @param value { Number } The value to write.
-     * @param offset { Number } The offset to write the value at.
-     *
-     * @return this
-     */
-    writeDoubleBE(value, offset) {
-        this.writeNumberValue(Buffer.prototype.writeDoubleBE, 8, value, offset);
-        return this;
-    }
-    /**
-     * Writes a DoubleLE value to the current write position (or at optional offset).
-     *
-     * @param value { Number } The value to write.
-     * @param offset { Number } The offset to write the value at.
-     *
-     * @return this
-     */
-    writeDoubleLE(value, offset) {
-        this.writeNumberValue(Buffer.prototype.writeDoubleLE, 8, value, offset);
-        return this;
-    }
-    // Strings
-    /**
-     * Reads a String from the current read position.
-     *
-     * @param length { Number } The number of bytes to read as a String.
-     * @param encoding { String } The BufferEncoding to use for the string (Defaults to instance level encoding).
-     *
-     * @return { String }
-     */
-    readString(length, encoding) {
-        const lengthVal = (typeof length === 'number') ? Math.min(length, this.length - this.readOffset) : this.length - this.readOffset;
-        const value = this.buff.slice(this.readOffset, this.readOffset + lengthVal).toString(encoding || this.encoding);
-        this.readOffset += lengthVal;
-        return value;
-    }
-    /**
-     * Writes a String to the current write position.
-     *
-     * @param value { String } The String value to write.
-     * @param arg2 { Number | String } The offset to write the string to, or the BufferEncoding to use.
-     * @param encoding { String } The BufferEncoding to use for writing strings (defaults to instance encoding).
-     */
-    writeString(value, arg2, encoding) {
-        let offsetVal = this.writeOffset;
-        let encodingVal = this.encoding;
-        // Check for offset
-        if (typeof arg2 === 'number') {
-            offsetVal = arg2;
-        }
-        else if (typeof arg2 === 'string') {
-            if (Buffer.isEncoding(arg2)) {
-                encodingVal = arg2;
-            }
-            else {
-                throw new Error('Invalid encoding provided. Please specify a valid encoding the internal Node.js Buffer supports.');
-            }
-        }
-        // Check for encoding (third param)
-        if (typeof encoding === 'string') {
-            if (Buffer.isEncoding(encoding)) {
-                encodingVal = encoding;
-            }
-            else {
-                throw new Error('Invalid encoding provided. Please specify a valid encoding the internal Node.js Buffer supports.');
-            }
-        }
-        // Calculate bytelength of string.
-        const byteLength = Buffer.byteLength(value, encodingVal);
-        // Ensure there is enough internal Buffer capacity.
-        this.ensureWriteable(byteLength, offsetVal);
-        // Write value
-        this.buff.write(value, offsetVal, byteLength, encodingVal);
-        // Increment internal Buffer write offset;
-        this.writeOffset += byteLength;
-        return this;
-    }
-    /**
-     * Reads a null-terminated String from the current read position.
-     *
-     * @param encoding { String } The BufferEncoding to use for the string (Defaults to instance level encoding).
-     *
-     * @return { String }
-     */
-    readStringNT(encoding) {
-        // Set null character position to the end SmartBuffer instance.
-        let nullPos = this.length;
-        // Find next null character (if one is not found, default from above is used)
-        for (let i = this.readOffset; i < this.length; i++) {
-            if (this.buff[i] === 0x00) {
-                nullPos = i;
-                break;
-            }
-        }
-        // Read string value
-        const value = this.buff.slice(this.readOffset, nullPos);
-        // Increment internal Buffer read offset
-        this.readOffset = nullPos + 1;
-        return value.toString(encoding || this.encoding);
-    }
-    /**
-     * Writes a null-terminated String to the current write position.
-     *
-     * @param value { String } The String value to write.
-     * @param arg2 { Number | String } The offset to write the string to, or the BufferEncoding to use.
-     * @param encoding { String } The BufferEncoding to use for writing strings (defaults to instance encoding).
-     */
-    writeStringNT(value, offset, encoding) {
-        // Write Values
-        this.writeString(value, offset, encoding);
-        this.writeUInt8(0x00, (typeof offset === 'number' ? offset + value.length : this.writeOffset));
-    }
-    // Buffers
-    /**
-     * Reads a Buffer from the internal read position.
-     *
-     * @param length { Number } The length of data to read as a Buffer.
-     *
-     * @return { Buffer }
-     */
-    readBuffer(length) {
-        const lengthVal = typeof length === 'number' ? length : this.length;
-        const endPoint = Math.min(this.length, this.readOffset + lengthVal);
-        // Read buffer value
-        const value = this.buff.slice(this.readOffset, endPoint);
-        // Increment internal Buffer read offset
-        this.readOffset = endPoint;
-        return value;
-    }
-    /**
-     * Writes a Buffer to the current write position.
-     *
-     * @param value { Buffer } The Buffer to write.
-     * @param offset { Number } The offset to write the Buffer to.
-     */
-    writeBuffer(value, offset) {
-        const offsetVal = typeof offset === 'number' ? offset : this.writeOffset;
-        // Ensure there is enough internal Buffer capacity.
-        this.ensureWriteable(value.length, offsetVal);
-        // Write buffer value
-        value.copy(this.buff, offsetVal);
-        // Increment internal Buffer write offset
-        this.writeOffset += value.length;
-        return this;
-    }
-    /**
-     * Reads a null-terminated Buffer from the current read poisiton.
-     *
-     * @return { Buffer }
-     */
-    readBufferNT() {
-        // Set null character position to the end SmartBuffer instance.
-        let nullPos = this.length;
-        // Find next null character (if one is not found, default from above is used)
-        for (let i = this.readOffset; i < this.length; i++) {
-            if (this.buff[i] === 0x00) {
-                nullPos = i;
-                break;
-            }
-        }
-        // Read value
-        const value = this.buff.slice(this.readOffset, nullPos);
-        // Increment internal Buffer read offset
-        this.readOffset = nullPos + 1;
-        return value;
-    }
-    /**
-     * Writes a null-terminated Buffer to the current write position.
-     *
-     * @param value { Buffer } The Buffer to write.
-     * @param offset { Number } The offset to write the Buffer to.
-     */
-    writeBufferNT(value, offset) {
-        // Write Values
-        this.writeBuffer(value, offset);
-        this.writeUInt8(0, (typeof offset === 'number' ? offset + value.length : this.writeOffset));
-        return this;
-    }
-    /**
-     * Clears the SmartBuffer instance to its original empty state.
-     */
-    clear() {
-        this.writeOffset = 0;
-        this.readOffset = 0;
-        this.length = 0;
-    }
-    /**
-     * Gets the remaining data left to be read from the SmartBuffer instance.
-     *
-     * @return { Number }
-     */
-    remaining() {
-        return this.length - this.readOffset;
-    }
-    /**
-     * Moves the read offset forward.
-     *
-     * @param amount { Number } The amount to move the read offset forward by.
-     */
-    skip(amount) {
-        if (this.readOffset + amount > this.length) {
-            throw new Error('Target position is beyond the bounds of the SmartBuffer size.');
-        }
-        this.readOffset += amount;
-    }
-    /**
-     * Moves the read offset backwards.
-     *
-     * @param amount { Number } The amount to move the read offset backwards by.
-     */
-    rewind(amount) {
-        if (this.readOffset - amount < 0) {
-            throw new Error('Target position is beyond the bounds of the SmartBuffer size.');
-        }
-        this.readOffset -= amount;
-    }
-    /**
-     * Moves the read offset to a specific position.
-     *
-     * @param position { Number } The position to move the read offset to.
-     */
-    skipTo(position) {
-        this.moveTo(position);
-    }
-    /**
-     * Moves the read offset to a specific position.
-     *
-     * @param position { Number } The position to move the read offset to.
-     */
-    moveTo(position) {
-        if (position > this.length) {
-            throw new Error('Target position is beyond the bounds of the SmartBuffer size.');
-        }
-        this.readOffset = position;
-    }
-    /**
-     * Gets the value of the internal managed Buffer
-     *
-     * @param { Buffer }
-     */
-    toBuffer() {
-        return this.buff.slice(0, this.length);
-    }
-    /**
-     * Gets the String value of the internal managed Buffer
-     *
-     * @param encoding { String } The BufferEncoding to display the Buffer as (defaults to instance level encoding).
-     */
-    toString(encoding) {
-        const encodingVal = typeof encoding === 'string' ? encoding : this.encoding;
-        if (Buffer.isEncoding(encodingVal)) {
-            return this.buff.toString(encodingVal, 0, this.length);
-        }
-        else {
-            throw new Error('Invalid encoding provided. Please specify a valid encoding the internal Node.js Buffer supports.');
-        }
-    }
-    /**
-     * Destroys the SmartBuffer instance.
-     */
-    destroy() {
-        this.clear();
-    }
-    /**
-     * Ensures that the internal Buffer is large enough to read data.
-     *
-     * @param length { Number } The length of the data that needs to be read.
-     */
-    ensureReadable(length) {
-        if (this.remaining() < length) {
-            throw new Error('Reading beyond the bounds of the data.');
-        }
-    }
-    /**
-     * Ensures that the internal Buffer is large enough to write data.
-     *
-     * @param minLength { Number } The minimum length of the data that needs to be written.
-     * @param offset { Number } The offset of the data to be written.
-     */
-    ensureWriteable(minLength, offset) {
-        const offsetVal = typeof offset === 'number' ? offset : 0;
-        // Ensure there is enough internal Buffer capacity.
-        this.ensureCapacity(this.length + minLength + offsetVal);
-        // If offset is provided, copy data into appropriate location in regards to the offset.
-        if (typeof offset === 'number') {
-            this.buff.copy(this.buff, offsetVal + minLength, offsetVal, this.buff.length);
-        }
-        // Adjust instance length.
-        this.length = Math.max(this.length + minLength, offsetVal + minLength);
-    }
-    /**
-     * Ensures that the internal Buffer is large enough to write at least the given amount of data.
-     *
-     * @param minLength { Number } The minimum length of the data needs to be written.
-     */
-    ensureCapacity(minLength) {
-        const oldLength = this.buff.length;
-        if (minLength > oldLength) {
-            let data = this.buff;
-            let newLength = (oldLength * 3) / 2 + 1;
-            if (newLength < minLength) {
-                newLength = minLength;
-            }
-            this.buff = Buffer.allocUnsafe(newLength);
-            data.copy(this.buff, 0, 0, oldLength);
-        }
-    }
-    /**
-     * Reads a numeric number value using the provided function.
-     *
-     * @param func { Function(offset: number) => number } The function to read data on the internal Buffer with.
-     * @param byteSize { Number } The number of bytes read.
-     *
-     * @param { Number }
-     */
-    readNumberValue(func, byteSize) {
-        this.ensureReadable(byteSize);
-        // Call Buffer.readXXXX();
-        const value = func.call(this.buff, this.readOffset);
-        // Adjust internal read offset
-        this.readOffset += byteSize;
-        return value;
-    }
-    /**
-     * Writes a numeric number value using the provided function.
-     *
-     * @param func { Function(offset: number, offset?) => number} The function to write data on the internal Buffer with.
-     * @param byteSize { Number } The number of bytes written.
-     * @param value { Number } The number value to write.
-     * @param offset { Number } the offset to write the number at.
-     *
-     */
-    writeNumberValue(func, byteSize, value, offset) {
-        const offsetVal = typeof offset === 'number' ? offset : this.writeOffset;
-        // Ensure there is enough internal Buffer capacity. (raw offset is passed)
-        this.ensureWriteable(byteSize, offset);
-        // Call buffer.writeXXXX();
-        func.call(this.buff, value, offsetVal);
-        // Adjusts internal write offset
-        this.writeOffset += byteSize;
-    }
-}
-exports.SmartBuffer = SmartBuffer;
-
-}).call(this,require("buffer").Buffer)
-},{"buffer":34}],55:[function(require,module,exports){
+},{"truncate-utf8-bytes":55}],54:[function(require,module,exports){
 var Buffer = require('buffer').Buffer
 
 module.exports = function (buf) {
@@ -37831,14 +37139,14 @@ module.exports = function (buf) {
 	}
 }
 
-},{"buffer":34}],56:[function(require,module,exports){
+},{"buffer":34}],55:[function(require,module,exports){
 'use strict';
 
 var truncate = require("./lib/truncate");
 var getLength = require("utf8-byte-length/browser");
 module.exports = truncate.bind(null, getLength);
 
-},{"./lib/truncate":57,"utf8-byte-length/browser":63}],57:[function(require,module,exports){
+},{"./lib/truncate":56,"utf8-byte-length/browser":62}],56:[function(require,module,exports){
 'use strict';
 
 function isHighSurrogate(codePoint) {
@@ -37883,7 +37191,7 @@ module.exports = function truncate(getLength, string, byteLength) {
 };
 
 
-},{}],58:[function(require,module,exports){
+},{}],57:[function(require,module,exports){
 //     Underscore.js 1.8.3
 //     http://underscorejs.org
 //     (c) 2009-2015 Jeremy Ashkenas, DocumentCloud and Investigative Reporters & Editors
@@ -39433,7 +38741,7 @@ module.exports = function truncate(getLength, string, byteLength) {
   }
 }.call(this));
 
-},{}],59:[function(require,module,exports){
+},{}],58:[function(require,module,exports){
 /*!
  * URI.js - Mutating URLs
  * IPv6 Support
@@ -39620,7 +38928,7 @@ module.exports = function truncate(getLength, string, byteLength) {
   };
 }));
 
-},{}],60:[function(require,module,exports){
+},{}],59:[function(require,module,exports){
 /*!
  * URI.js - Mutating URLs
  * Second Level Domain (SLD) Support
@@ -39867,7 +39175,7 @@ module.exports = function truncate(getLength, string, byteLength) {
   return SLD;
 }));
 
-},{}],61:[function(require,module,exports){
+},{}],60:[function(require,module,exports){
 /*!
  * URI.js - Mutating URLs
  *
@@ -42123,7 +41431,7 @@ module.exports = function truncate(getLength, string, byteLength) {
   return URI;
 }));
 
-},{"./IPv6":59,"./SecondLevelDomains":60,"./punycode":62}],62:[function(require,module,exports){
+},{"./IPv6":58,"./SecondLevelDomains":59,"./punycode":61}],61:[function(require,module,exports){
 (function (global){
 /*! https://mths.be/punycode v1.4.0 by @mathias */
 ;(function(root) {
@@ -42660,7 +41968,7 @@ module.exports = function truncate(getLength, string, byteLength) {
 }(this));
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],63:[function(require,module,exports){
+},{}],62:[function(require,module,exports){
 'use strict';
 
 function isHighSurrogate(codePoint) {
@@ -42709,7 +42017,7 @@ module.exports = function getByteLength(string) {
   return byteLength;
 };
 
-},{}],64:[function(require,module,exports){
+},{}],63:[function(require,module,exports){
 /*!
  * EventEmitter v5.1.0 - git.io/ee
  * Unlicense - http://unlicense.org/
@@ -43197,7 +42505,7 @@ module.exports = function getByteLength(string) {
     }
 }(this || {}));
 
-},{}],65:[function(require,module,exports){
+},{}],64:[function(require,module,exports){
 'use strict';
 
 /**
@@ -48174,7 +47482,7 @@ exports.createFileReader = function() {
 
 },{"../util":23,"buffer/":36}],"moment":[function(require,module,exports){
 //! moment.js
-//! version : 2.17.1
+//! version : 2.18.1
 //! authors : Tim Wood, Iskren Chernev, Moment.js contributors
 //! license : MIT
 //! momentjs.com
@@ -48214,6 +47522,10 @@ function isObjectEmpty(obj) {
         return false;
     }
     return true;
+}
+
+function isUndefined(input) {
+    return input === void 0;
 }
 
 function isNumber(input) {
@@ -48272,7 +47584,9 @@ function defaultParsingFlags() {
         userInvalidated : false,
         iso             : false,
         parsedDateParts : [],
-        meridiem        : null
+        meridiem        : null,
+        rfc2822         : false,
+        weekdayMismatch : false
     };
 }
 
@@ -48348,10 +47662,6 @@ function createInvalid (flags) {
     return m;
 }
 
-function isUndefined(input) {
-    return input === void 0;
-}
-
 // Plugins that add properties should also add the key here (null value),
 // so we can properly clone ourselves.
 var momentProperties = hooks.momentProperties = [];
@@ -48391,7 +47701,7 @@ function copyConfig(to, from) {
     }
 
     if (momentProperties.length > 0) {
-        for (i in momentProperties) {
+        for (i = 0; i < momentProperties.length; i++) {
             prop = momentProperties[i];
             val = from[prop];
             if (!isUndefined(val)) {
@@ -48528,8 +47838,11 @@ function set (config) {
     }
     this._config = config;
     // Lenient ordinal parsing accepts just a number in addition to
-    // number + (possibly) stuff coming from _ordinalParseLenient.
-    this._ordinalParseLenient = new RegExp(this._ordinalParse.source + '|' + (/\d{1,2}/).source);
+    // number + (possibly) stuff coming from _dayOfMonthOrdinalParse.
+    // TODO: Remove "ordinalParse" fallback in next major release.
+    this._dayOfMonthOrdinalParseLenient = new RegExp(
+        (this._dayOfMonthOrdinalParse.source || this._ordinalParse.source) +
+            '|' + (/\d{1,2}/).source);
 }
 
 function mergeConfigs(parentConfig, childConfig) {
@@ -48627,7 +47940,7 @@ function invalidDate () {
 }
 
 var defaultOrdinal = '%d';
-var defaultOrdinalParse = /\d{1,2}/;
+var defaultDayOfMonthOrdinalParse = /\d{1,2}/;
 
 function ordinal (number) {
     return this._ordinal.replace('%d', number);
@@ -48637,6 +47950,7 @@ var defaultRelativeTime = {
     future : 'in %s',
     past   : '%s ago',
     s  : 'a few seconds',
+    ss : '%d seconds',
     m  : 'a minute',
     mm : '%d minutes',
     h  : 'an hour',
@@ -48819,7 +48133,7 @@ function makeFormatFunction(format) {
     return function (mom) {
         var output = '', i;
         for (i = 0; i < length; i++) {
-            output += array[i] instanceof Function ? array[i].call(mom, format) : array[i];
+            output += isFunction(array[i]) ? array[i].call(mom, format) : array[i];
         }
         return output;
     };
@@ -49022,7 +48336,8 @@ var MONTHS_IN_FORMAT = /D[oD]?(\[[^\[\]]*\]|\s)+MMMM?/;
 var defaultLocaleMonths = 'January_February_March_April_May_June_July_August_September_October_November_December'.split('_');
 function localeMonths (m, format) {
     if (!m) {
-        return this._months;
+        return isArray(this._months) ? this._months :
+            this._months['standalone'];
     }
     return isArray(this._months) ? this._months[m.month()] :
         this._months[(this._months.isFormat || MONTHS_IN_FORMAT).test(format) ? 'format' : 'standalone'][m.month()];
@@ -49031,7 +48346,8 @@ function localeMonths (m, format) {
 var defaultLocaleMonthsShort = 'Jan_Feb_Mar_Apr_May_Jun_Jul_Aug_Sep_Oct_Nov_Dec'.split('_');
 function localeMonthsShort (m, format) {
     if (!m) {
-        return this._monthsShort;
+        return isArray(this._monthsShort) ? this._monthsShort :
+            this._monthsShort['standalone'];
     }
     return isArray(this._monthsShort) ? this._monthsShort[m.month()] :
         this._monthsShort[MONTHS_IN_FORMAT.test(format) ? 'format' : 'standalone'][m.month()];
@@ -49298,11 +48614,11 @@ function getIsLeapYear () {
 }
 
 function createDate (y, m, d, h, M, s, ms) {
-    //can't just apply() to create a date:
-    //http://stackoverflow.com/questions/181348/instantiating-a-javascript-object-by-calling-prototype-constructor-apply
+    // can't just apply() to create a date:
+    // https://stackoverflow.com/q/181348
     var date = new Date(y, m, d, h, M, s, ms);
 
-    //the date constructor remaps years 0-99 to 1900-1999
+    // the date constructor remaps years 0-99 to 1900-1999
     if (y < 100 && y >= 0 && isFinite(date.getFullYear())) {
         date.setFullYear(y);
     }
@@ -49312,7 +48628,7 @@ function createDate (y, m, d, h, M, s, ms) {
 function createUTCDate (y) {
     var date = new Date(Date.UTC.apply(null, arguments));
 
-    //the Date.UTC function remaps years 0-99 to 1900-1999
+    // the Date.UTC function remaps years 0-99 to 1900-1999
     if (y < 100 && y >= 0 && isFinite(date.getUTCFullYear())) {
         date.setUTCFullYear(y);
     }
@@ -49329,7 +48645,7 @@ function firstWeekOffset(year, dow, doy) {
     return -fwdlw + fwd - 1;
 }
 
-//http://en.wikipedia.org/wiki/ISO_week_date#Calculating_a_date_given_the_year.2C_week_number_and_weekday
+// https://en.wikipedia.org/wiki/ISO_week_date#Calculating_a_date_given_the_year.2C_week_number_and_weekday
 function dayOfYearFromWeeks(year, week, weekday, dow, doy) {
     var localWeekday = (7 + weekday - dow) % 7,
         weekOffset = firstWeekOffset(year, dow, doy),
@@ -49530,7 +48846,8 @@ function parseIsoWeekday(input, locale) {
 var defaultLocaleWeekdays = 'Sunday_Monday_Tuesday_Wednesday_Thursday_Friday_Saturday'.split('_');
 function localeWeekdays (m, format) {
     if (!m) {
-        return this._weekdays;
+        return isArray(this._weekdays) ? this._weekdays :
+            this._weekdays['standalone'];
     }
     return isArray(this._weekdays) ? this._weekdays[m.day()] :
         this._weekdays[this._weekdays.isFormat.test(format) ? 'format' : 'standalone'][m.day()];
@@ -49850,8 +49167,10 @@ addRegexToken('a',  matchMeridiem);
 addRegexToken('A',  matchMeridiem);
 addRegexToken('H',  match1to2);
 addRegexToken('h',  match1to2);
+addRegexToken('k',  match1to2);
 addRegexToken('HH', match1to2, match2);
 addRegexToken('hh', match1to2, match2);
+addRegexToken('kk', match1to2, match2);
 
 addRegexToken('hmm', match3to4);
 addRegexToken('hmmss', match5to6);
@@ -49859,6 +49178,10 @@ addRegexToken('Hmm', match3to4);
 addRegexToken('Hmmss', match5to6);
 
 addParseToken(['H', 'HH'], HOUR);
+addParseToken(['k', 'kk'], function (input, array, config) {
+    var kInput = toInt(input);
+    array[HOUR] = kInput === 24 ? 0 : kInput;
+});
 addParseToken(['a', 'A'], function (input, array, config) {
     config._isPm = config._locale.isPM(input);
     config._meridiem = input;
@@ -49929,7 +49252,7 @@ var baseConfig = {
     longDateFormat: defaultLongDateFormat,
     invalidDate: defaultInvalidDate,
     ordinal: defaultOrdinal,
-    ordinalParse: defaultOrdinalParse,
+    dayOfMonthOrdinalParse: defaultDayOfMonthOrdinalParse,
     relativeTime: defaultRelativeTime,
 
     months: defaultLocaleMonths,
@@ -50240,6 +49563,77 @@ function configFromISO(config) {
     }
 }
 
+// RFC 2822 regex: For details see https://tools.ietf.org/html/rfc2822#section-3.3
+var basicRfcRegex = /^((?:Mon|Tue|Wed|Thu|Fri|Sat|Sun),?\s)?(\d?\d\s(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s(?:\d\d)?\d\d\s)(\d\d:\d\d)(\:\d\d)?(\s(?:UT|GMT|[ECMP][SD]T|[A-IK-Za-ik-z]|[+-]\d{4}))$/;
+
+// date and time from ref 2822 format
+function configFromRFC2822(config) {
+    var string, match, dayFormat,
+        dateFormat, timeFormat, tzFormat;
+    var timezones = {
+        ' GMT': ' +0000',
+        ' EDT': ' -0400',
+        ' EST': ' -0500',
+        ' CDT': ' -0500',
+        ' CST': ' -0600',
+        ' MDT': ' -0600',
+        ' MST': ' -0700',
+        ' PDT': ' -0700',
+        ' PST': ' -0800'
+    };
+    var military = 'YXWVUTSRQPONZABCDEFGHIKLM';
+    var timezone, timezoneIndex;
+
+    string = config._i
+        .replace(/\([^\)]*\)|[\n\t]/g, ' ') // Remove comments and folding whitespace
+        .replace(/(\s\s+)/g, ' ') // Replace multiple-spaces with a single space
+        .replace(/^\s|\s$/g, ''); // Remove leading and trailing spaces
+    match = basicRfcRegex.exec(string);
+
+    if (match) {
+        dayFormat = match[1] ? 'ddd' + ((match[1].length === 5) ? ', ' : ' ') : '';
+        dateFormat = 'D MMM ' + ((match[2].length > 10) ? 'YYYY ' : 'YY ');
+        timeFormat = 'HH:mm' + (match[4] ? ':ss' : '');
+
+        // TODO: Replace the vanilla JS Date object with an indepentent day-of-week check.
+        if (match[1]) { // day of week given
+            var momentDate = new Date(match[2]);
+            var momentDay = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][momentDate.getDay()];
+
+            if (match[1].substr(0,3) !== momentDay) {
+                getParsingFlags(config).weekdayMismatch = true;
+                config._isValid = false;
+                return;
+            }
+        }
+
+        switch (match[5].length) {
+            case 2: // military
+                if (timezoneIndex === 0) {
+                    timezone = ' +0000';
+                } else {
+                    timezoneIndex = military.indexOf(match[5][1].toUpperCase()) - 12;
+                    timezone = ((timezoneIndex < 0) ? ' -' : ' +') +
+                        (('' + timezoneIndex).replace(/^-?/, '0')).match(/..$/)[0] + '00';
+                }
+                break;
+            case 4: // Zone
+                timezone = timezones[match[5]];
+                break;
+            default: // UT or +/-9999
+                timezone = timezones[' GMT'];
+        }
+        match[5] = timezone;
+        config._i = match.splice(1).join('');
+        tzFormat = ' ZZ';
+        config._f = dayFormat + dateFormat + timeFormat + tzFormat;
+        configFromStringAndFormat(config);
+        getParsingFlags(config).rfc2822 = true;
+    } else {
+        config._isValid = false;
+    }
+}
+
 // date from iso format or fallback
 function configFromString(config) {
     var matched = aspNetJsonRegex.exec(config._i);
@@ -50252,13 +49646,24 @@ function configFromString(config) {
     configFromISO(config);
     if (config._isValid === false) {
         delete config._isValid;
-        hooks.createFromInputFallback(config);
+    } else {
+        return;
     }
+
+    configFromRFC2822(config);
+    if (config._isValid === false) {
+        delete config._isValid;
+    } else {
+        return;
+    }
+
+    // Final attempt, use Input Fallback
+    hooks.createFromInputFallback(config);
 }
 
 hooks.createFromInputFallback = deprecate(
-    'value provided is not in a recognized ISO format. moment construction falls back to js Date(), ' +
-    'which is not reliable across all browsers and versions. Non ISO date formats are ' +
+    'value provided is not in a recognized RFC2822 or ISO format. moment construction falls back to js Date(), ' +
+    'which is not reliable across all browsers and versions. Non RFC2822/ISO date formats are ' +
     'discouraged and will be removed in an upcoming major release. Please refer to ' +
     'http://momentjs.com/guides/#/warnings/js-date/ for more info.',
     function (config) {
@@ -50305,10 +49710,10 @@ function configFromArray (config) {
     }
 
     //if the day of the year is set, figure out what it is
-    if (config._dayOfYear) {
+    if (config._dayOfYear != null) {
         yearToUse = defaults(config._a[YEAR], currentDate[YEAR]);
 
-        if (config._dayOfYear > daysInYear(yearToUse)) {
+        if (config._dayOfYear > daysInYear(yearToUse) || config._dayOfYear === 0) {
             getParsingFlags(config)._overflowDayOfYear = true;
         }
 
@@ -50412,6 +49817,9 @@ function dayOfYearFromWeekInfo(config) {
 // constant that refers to the ISO standard
 hooks.ISO_8601 = function () {};
 
+// constant that refers to the RFC 2822 form
+hooks.RFC_2822 = function () {};
+
 // date from string and format string
 function configFromStringAndFormat(config) {
     // TODO: Move this to another part of the creation flow to prevent circular deps
@@ -50419,7 +49827,10 @@ function configFromStringAndFormat(config) {
         configFromISO(config);
         return;
     }
-
+    if (config._f === hooks.RFC_2822) {
+        configFromRFC2822(config);
+        return;
+    }
     config._a = [];
     getParsingFlags(config).empty = true;
 
@@ -50611,7 +50022,7 @@ function prepareConfig (config) {
 
 function configFromInput(config) {
     var input = config._i;
-    if (input === undefined) {
+    if (isUndefined(input)) {
         config._d = new Date(hooks.now());
     } else if (isDate(input)) {
         config._d = new Date(input.valueOf());
@@ -50622,7 +50033,7 @@ function configFromInput(config) {
             return parseInt(obj, 10);
         });
         configFromArray(config);
-    } else if (typeof(input) === 'object') {
+    } else if (isObject(input)) {
         configFromObject(config);
     } else if (isNumber(input)) {
         // from milliseconds
@@ -50723,6 +50134,38 @@ var now = function () {
     return Date.now ? Date.now() : +(new Date());
 };
 
+var ordering = ['year', 'quarter', 'month', 'week', 'day', 'hour', 'minute', 'second', 'millisecond'];
+
+function isDurationValid(m) {
+    for (var key in m) {
+        if (!(ordering.indexOf(key) !== -1 && (m[key] == null || !isNaN(m[key])))) {
+            return false;
+        }
+    }
+
+    var unitHasDecimal = false;
+    for (var i = 0; i < ordering.length; ++i) {
+        if (m[ordering[i]]) {
+            if (unitHasDecimal) {
+                return false; // only allow non-integers for smallest unit
+            }
+            if (parseFloat(m[ordering[i]]) !== toInt(m[ordering[i]])) {
+                unitHasDecimal = true;
+            }
+        }
+    }
+
+    return true;
+}
+
+function isValid$1() {
+    return this._isValid;
+}
+
+function createInvalid$1() {
+    return createDuration(NaN);
+}
+
 function Duration (duration) {
     var normalizedInput = normalizeObjectUnits(duration),
         years = normalizedInput.year || 0,
@@ -50734,6 +50177,8 @@ function Duration (duration) {
         minutes = normalizedInput.minute || 0,
         seconds = normalizedInput.second || 0,
         milliseconds = normalizedInput.millisecond || 0;
+
+    this._isValid = isDurationValid(normalizedInput);
 
     // representation for dateAddRemove
     this._milliseconds = +milliseconds +
@@ -50858,7 +50303,7 @@ hooks.updateOffset = function () {};
 // a second time. In case it wants us to change the offset again
 // _changeInProgress == true case, then we have to adjust, because
 // there is no such time in the given timezone.
-function getSetOffset (input, keepLocalTime) {
+function getSetOffset (input, keepLocalTime, keepMinutes) {
     var offset = this._offset || 0,
         localAdjust;
     if (!this.isValid()) {
@@ -50870,7 +50315,7 @@ function getSetOffset (input, keepLocalTime) {
             if (input === null) {
                 return this;
             }
-        } else if (Math.abs(input) < 16) {
+        } else if (Math.abs(input) < 16 && !keepMinutes) {
             input = input * 60;
         }
         if (!this._isUTC && keepLocalTime) {
@@ -50928,7 +50373,7 @@ function setOffsetToLocal (keepLocalTime) {
 
 function setOffsetToParsedOffset () {
     if (this._tzm != null) {
-        this.utcOffset(this._tzm);
+        this.utcOffset(this._tzm, false, true);
     } else if (typeof this._i === 'string') {
         var tZone = offsetFromString(matchOffset, this._i);
         if (tZone != null) {
@@ -51060,6 +50505,7 @@ function createDuration (input, key) {
 }
 
 createDuration.fn = Duration.prototype;
+createDuration.invalid = createInvalid$1;
 
 function parseIso (inp, sign) {
     // We'd normally use ~~inp for this, but unfortunately it also
@@ -51296,18 +50742,19 @@ function toString () {
     return this.clone().locale('en').format('ddd MMM DD YYYY HH:mm:ss [GMT]ZZ');
 }
 
-function toISOString () {
+function toISOString() {
+    if (!this.isValid()) {
+        return null;
+    }
     var m = this.clone().utc();
-    if (0 < m.year() && m.year() <= 9999) {
-        if (isFunction(Date.prototype.toISOString)) {
-            // native implementation is ~50x faster, use it when we can
-            return this.toDate().toISOString();
-        } else {
-            return formatMoment(m, 'YYYY-MM-DD[T]HH:mm:ss.SSS[Z]');
-        }
-    } else {
+    if (m.year() < 0 || m.year() > 9999) {
         return formatMoment(m, 'YYYYYY-MM-DD[T]HH:mm:ss.SSS[Z]');
     }
+    if (isFunction(Date.prototype.toISOString)) {
+        // native implementation is ~50x faster, use it when we can
+        return this.toDate().toISOString();
+    }
+    return formatMoment(m, 'YYYY-MM-DD[T]HH:mm:ss.SSS[Z]');
 }
 
 /**
@@ -51327,7 +50774,7 @@ function inspect () {
         zone = 'Z';
     }
     var prefix = '[' + func + '("]';
-    var year = (0 < this.year() && this.year() <= 9999) ? 'YYYY' : 'YYYYYY';
+    var year = (0 <= this.year() && this.year() <= 9999) ? 'YYYY' : 'YYYYYY';
     var datetime = '-MM-DD[T]HH:mm:ss.SSS';
     var suffix = zone + '[")]';
 
@@ -51495,7 +50942,7 @@ function toJSON () {
     return this.isValid() ? this.toISOString() : null;
 }
 
-function isValid$1 () {
+function isValid$2 () {
     return isValid(this);
 }
 
@@ -51655,7 +51102,10 @@ addUnitPriority('date', 9);
 addRegexToken('D',  match1to2);
 addRegexToken('DD', match1to2, match2);
 addRegexToken('Do', function (isStrict, locale) {
-    return isStrict ? locale._ordinalParse : locale._ordinalParseLenient;
+    // TODO: Remove "ordinalParse" fallback in next major release.
+    return isStrict ?
+      (locale._dayOfMonthOrdinalParse || locale._ordinalParse) :
+      locale._dayOfMonthOrdinalParseLenient;
 });
 
 addParseToken(['D', 'DD'], DATE);
@@ -51835,7 +51285,7 @@ proto.isBetween         = isBetween;
 proto.isSame            = isSame;
 proto.isSameOrAfter     = isSameOrAfter;
 proto.isSameOrBefore    = isSameOrBefore;
-proto.isValid           = isValid$1;
+proto.isValid           = isValid$2;
 proto.lang              = lang;
 proto.locale            = locale;
 proto.localeData        = localeData;
@@ -52060,7 +51510,7 @@ function listWeekdaysMin (localeSorted, format, index) {
 }
 
 getSetGlobalLocale('en', {
-    ordinalParse: /\d{1,2}(th|st|nd|rd)/,
+    dayOfMonthOrdinalParse: /\d{1,2}(th|st|nd|rd)/,
     ordinal : function (number) {
         var b = number % 10,
             output = (toInt(number % 100 / 10) === 1) ? 'th' :
@@ -52181,6 +51631,9 @@ function monthsToDays (months) {
 }
 
 function as (units) {
+    if (!this.isValid()) {
+        return NaN;
+    }
     var days;
     var months;
     var milliseconds = this._milliseconds;
@@ -52209,6 +51662,9 @@ function as (units) {
 
 // TODO: Use this.as('ms')?
 function valueOf$1 () {
+    if (!this.isValid()) {
+        return NaN;
+    }
     return (
         this._milliseconds +
         this._days * 864e5 +
@@ -52234,12 +51690,12 @@ var asYears        = makeAs('y');
 
 function get$2 (units) {
     units = normalizeUnits(units);
-    return this[units + 's']();
+    return this.isValid() ? this[units + 's']() : NaN;
 }
 
 function makeGetter(name) {
     return function () {
-        return this._data[name];
+        return this.isValid() ? this._data[name] : NaN;
     };
 }
 
@@ -52257,11 +51713,12 @@ function weeks () {
 
 var round = Math.round;
 var thresholds = {
-    s: 45,  // seconds to minute
-    m: 45,  // minutes to hour
-    h: 22,  // hours to day
-    d: 26,  // days to month
-    M: 11   // months to year
+    ss: 44,         // a few seconds to seconds
+    s : 45,         // seconds to minute
+    m : 45,         // minutes to hour
+    h : 22,         // hours to day
+    d : 26,         // days to month
+    M : 11          // months to year
 };
 
 // helper function for moment.fn.from, moment.fn.fromNow, and moment.duration.fn.humanize
@@ -52278,16 +51735,17 @@ function relativeTime$1 (posNegDuration, withoutSuffix, locale) {
     var months   = round(duration.as('M'));
     var years    = round(duration.as('y'));
 
-    var a = seconds < thresholds.s && ['s', seconds]  ||
-            minutes <= 1           && ['m']           ||
-            minutes < thresholds.m && ['mm', minutes] ||
-            hours   <= 1           && ['h']           ||
-            hours   < thresholds.h && ['hh', hours]   ||
-            days    <= 1           && ['d']           ||
-            days    < thresholds.d && ['dd', days]    ||
-            months  <= 1           && ['M']           ||
-            months  < thresholds.M && ['MM', months]  ||
-            years   <= 1           && ['y']           || ['yy', years];
+    var a = seconds <= thresholds.ss && ['s', seconds]  ||
+            seconds < thresholds.s   && ['ss', seconds] ||
+            minutes <= 1             && ['m']           ||
+            minutes < thresholds.m   && ['mm', minutes] ||
+            hours   <= 1             && ['h']           ||
+            hours   < thresholds.h   && ['hh', hours]   ||
+            days    <= 1             && ['d']           ||
+            days    < thresholds.d   && ['dd', days]    ||
+            months  <= 1             && ['M']           ||
+            months  < thresholds.M   && ['MM', months]  ||
+            years   <= 1             && ['y']           || ['yy', years];
 
     a[2] = withoutSuffix;
     a[3] = +posNegDuration > 0;
@@ -52316,10 +51774,17 @@ function getSetRelativeTimeThreshold (threshold, limit) {
         return thresholds[threshold];
     }
     thresholds[threshold] = limit;
+    if (threshold === 's') {
+        thresholds.ss = limit - 1;
+    }
     return true;
 }
 
 function humanize (withSuffix) {
+    if (!this.isValid()) {
+        return this.localeData().invalidDate();
+    }
+
     var locale = this.localeData();
     var output = relativeTime$1(this, !withSuffix, locale);
 
@@ -52340,6 +51805,10 @@ function toISOString$1() {
     // This is because there is no context-free conversion between hours and days
     // (think of clock changes)
     // and also not between days and months (28-31 days per month)
+    if (!this.isValid()) {
+        return this.localeData().invalidDate();
+    }
+
     var seconds = abs$1(this._milliseconds) / 1000;
     var days         = abs$1(this._days);
     var months       = abs$1(this._months);
@@ -52384,6 +51853,7 @@ function toISOString$1() {
 
 var proto$2 = Duration.prototype;
 
+proto$2.isValid        = isValid$1;
 proto$2.abs            = abs;
 proto$2.add            = add$1;
 proto$2.subtract       = subtract$1;
@@ -52439,7 +51909,7 @@ addParseToken('x', function (input, array, config) {
 // Side effect imports
 
 
-hooks.version = '2.17.1';
+hooks.version = '2.18.1';
 
 setHookCallback(createLocal);
 
@@ -53168,4 +52638,4 @@ exports.promptAndSetNewBaseDir = function() {
   });
 };
 
-},{"./chrome-apis/chromep":1,"./persistence/file-system":"fileSystem"}]},{},[65]);
+},{"./chrome-apis/chromep":1,"./persistence/file-system":"fileSystem"}]},{},[64]);

@@ -147,7 +147,7 @@ test('CPDisk.asBuffer and fromBuffer correct', function(t) {
   // about the Buffer itself.
   let expected = [...putil.genCPDisks(1)][0];
   
-  let buff = expected.asBuffer();
+  let buff = putil.genCPDisks(1).next().value.asBuffer();
   let actual = CPDisk.fromBuffer(buff);
 
   t.deepEqual(actual, expected);

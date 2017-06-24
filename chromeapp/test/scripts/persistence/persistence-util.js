@@ -1,5 +1,6 @@
 'use strict';
 
+const Buffer = require('buffer/').Buffer;
 const objects = require('../../../app/scripts/persistence/objects');
 
 const CPDisk = objects.CPDisk;

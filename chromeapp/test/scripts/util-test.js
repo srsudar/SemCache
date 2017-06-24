@@ -32,10 +32,11 @@ function end(t) {
 }
 
 function helperAssertCanReclaim(t, obj) {
+  let expected = Object.assign({}, obj);
   let buff = util.objToBuff(obj);
-  let reclaimed = util.buffToObj(buff);
+  let actual = util.buffToObj(buff);
 
-  t.deepEqual(reclaimed, obj);
+  t.deepEqual(actual, expected);
   end(t);
 }
 

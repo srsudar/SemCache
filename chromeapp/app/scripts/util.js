@@ -3,9 +3,6 @@
 const Buffer = require('buffer/').Buffer;
 const blobToBufferLib = require('blob-to-buffer');
 const dataUrlToBlob = require('dataurl-to-blob');
-const SmartBuffer = require('smart-buffer').SmartBuffer;
-
-const DEFAULT_BUFFER_SIZE = 0;
 
 /**
  * Helper to fetch and parse JSON from a URL.
@@ -348,29 +345,65 @@ exports.objToBuff = function(obj) {
   // Get all the JSON-ifiable properties on their own and add them as a JSON
   // string.
   let json = {};
-  let buffSb = SmartBuffer.fromBuffer(new Buffer(DEFAULT_BUFFER_SIZE));
+
+  let buffs = [];
+
   for (let prop of Object.keys(obj)) {
     let value = obj[prop];
     if (Buffer.isBuffer(value)) {
-      // We will add Buffers as [string, buffer_length, Buffer].
-      buffSb.writeStringNT(prop);
-      buffSb.writeUInt32LE(value.length);
-      buffSb.writeBuffer(value);
+      // We will add Buffers as [string length, string, buffer_length, Buffer].
+      let strLength = prop.length;
+      let buffLength = value.length;
+
+      let newBuffLength = 4 + prop.length + 4 + buffLength;
+
+      let buff = new Buffer(newBuffLength);
+      let pos = 0;
+
+      buff.writeUInt32LE(strLength, pos);
+      pos += 4;
+
+      exports.writeString(buff, prop, pos);
+      pos += prop.length;
+
+      buff.writeUInt32LE(buffLength, pos);
+      pos += 4;
+
+      // Basically buff.writeBuffer(value, pos)
+      exports.writeBuffer(value, buff, pos);
+
+      buffs.push(buff);
     } else {
       json[prop] = value;
     }
   }
 
-  // Give a semi-reasonable starting value. It will expand as necessary.
-  let sb = SmartBuffer.fromBuffer(new Buffer(DEFAULT_BUFFER_SIZE));
-
   let jsonStr = JSON.stringify(json);
-  sb.writeUInt32LE(jsonStr.length);
-  sb.writeString(jsonStr);
 
-  sb.writeBuffer(buffSb.toBuffer());
+  let singleBuff = Buffer.concat(buffs);
+  let finalLength = 4 + jsonStr.length + singleBuff.length;
 
-  return sb.toBuffer();
+  let result = new Buffer(finalLength);
+
+  let pos = 0;
+
+  result.writeUInt32LE(jsonStr.length, pos);
+  pos += 4;
+
+  exports.writeString(result, jsonStr, pos);
+  pos += jsonStr.length;
+
+  exports.writeBuffer(singleBuff, result, pos);
+
+  return result;
+};
+
+exports.writeString = function(buff, str, pos) {
+  buff.write(str, pos, str.length);
+};
+
+exports.writeBuffer = function(src, target, pos) {
+  src.copy(target, pos, 0, src.size);
 };
 
 /**
@@ -382,19 +415,30 @@ exports.objToBuff = function(obj) {
  */
 exports.buffToObj = function(buff) {
   // We expect:
-  // [length, jsonString, (null-terminated string, buff length, buff) * n]
-  let sb = SmartBuffer.fromBuffer(buff);
-  let jsonLength = sb.readUInt32LE();
-  let jsonStr = sb.readString(jsonLength);
+  // [length, jsonString, (length, string, buff length, buff) * n]
+  let pos = 0;
+  let jsonLength = buff.readUInt32LE();
+  pos += 4;
+  let jsonStr = buff.toString('utf8', pos, pos + jsonLength);
+  pos += jsonLength;
 
   let result = JSON.parse(jsonStr);
 
   // No reclaim the buffers.
-  while (sb.remaining() > 0) {
-    let propName = sb.readStringNT();
-    let buffLength = sb.readUInt32LE();
-    let buff = sb.readBuffer(buffLength);
-    result[propName] = buff;
+  while (pos < buff.length) {
+    let strLength = buff.readUInt32LE(pos);
+    pos += 4;
+
+    let propName = buff.toString('utf8', pos, pos + strLength);
+    pos += strLength;
+
+    let buffLength = buff.readUInt32LE(pos);
+    pos += 4;
+
+    let reclaimedBuff = buff.slice(pos, pos + buffLength);
+    pos += buffLength;
+
+    result[propName] = reclaimedBuff;
   }
   
   return result;
