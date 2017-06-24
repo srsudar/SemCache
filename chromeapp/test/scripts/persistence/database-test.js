@@ -1,6 +1,5 @@
 'use strict';
 let test = require('tape');
-let sinon = require('sinon');
 let proxyquire = require('proxyquire');
 require('sinon-as-promised');
 
@@ -41,11 +40,11 @@ function end(t) {
 function* genPagesummaryItems(num) {
   for (let i = 0; i < num; i++) {
     let id = i;
-    let href = `http://page.com/${id}`;
+    let captureHref = `http://page.com/${id}`;
     let captureDate = `2017-06-01_${id}`;
     let filePath = `path/to/file_${id}`;
     let title = `Title: ${id}`;
-    yield { id, href, captureDate, filePath, title };
+    yield { id, captureHref, captureDate, filePath, title };
   }
 }
 

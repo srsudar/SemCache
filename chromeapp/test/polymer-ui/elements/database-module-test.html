@@ -51,6 +51,14 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
           });
         });
 
+        test('addPagesOverwrites', function(done) {
+          databaseTests.addPagesOverwrites()
+          .then(result => {
+            assert.deepEqual(result.actual, result.expected);
+            done();
+          });
+        });
+
         test('addAndGetCPSummaries', function(done) {
           databaseTests.addAndGetCPSummaries()
           .then(result => {

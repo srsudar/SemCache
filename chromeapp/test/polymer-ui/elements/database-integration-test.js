@@ -95,6 +95,27 @@ function addAndGetAllCPInfos() {
   });
 }
 
+function addPagesOverwrites () {
+  return new Promise(function(resolve) {
+    // We want to make sure that we can overwrite pages by adding them again.
+    let num = 3;
+    let expected = [...genCPDisks(num)].map(disk => disk.asCPInfo());
+    clearDatabase()
+    .then(() => {
+      return addCachedPagesToDb(num);
+    })
+    .then(() => {
+      return addCachedPagesToDb(num);
+    })
+    .then(() => {
+      return database.getAllCPInfos();
+    })
+    .then(actual => {
+      resolve({ actual, expected });
+    });
+  });
+}
+
 function addAndGetCPSummaries() {
   return new Promise(function(resolve) {
     // We want to have to page twice to make sure the offest works like we
@@ -168,5 +189,6 @@ window.databaseTests = {
   clearDatabase: clearDatabase,
   addAndGetCPSummaries: addAndGetCPSummaries,
   addAndGetSingleCPSummary: addAndGetSingleCPSummary,
-  addAndGetMultipleCPSummaries: addAndGetMultipleCPSummaries
+  addAndGetMultipleCPSummaries: addAndGetMultipleCPSummaries,
+  addPagesOverwrites: addPagesOverwrites
 };

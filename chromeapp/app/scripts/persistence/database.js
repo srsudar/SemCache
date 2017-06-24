@@ -21,11 +21,12 @@ exports.getDb = function() {
   if (!db) {
     db = new Dexie(exports.DB_NAME);
     db.version(1).stores({
-      // Holds the top lite version of the page
-      // &filePath because that is the only value that must be unique.
-      pagesummary: `++id, captureHref, captureDate, &filePath, title`,
+      // Holds the top lite version of the page.
+      // captureHref is the primary key.
+      // &filePath because it must be unique.
+      pagesummary: `captureHref, captureDate, &filePath, title`,
       // Holds the heavier information, bigger objects
-      pageblobs: `pagesummaryId, captureHref, captureDate`
+      pageblobs: `captureHref, captureDate`
     });
   }
   return db;
@@ -43,15 +44,15 @@ exports.addPageToDb = function(cp) {
     }
     const db = exports.getDb();
     db.transaction('rw', db.pagesummary, db.pageblobs, function() {
-      return db.pagesummary.add({
-        captureHref: cp.captureHref,
-        captureDate: cp.captureDate,
-        title: cp.title,
-        filePath: cp.filePath
+      return db.pagesummary.put({
+          captureHref: cp.captureHref,
+          captureDate: cp.captureDate,
+          title: cp.title,
+          filePath: cp.filePath
       })
-      .then(id => {
-        return db.pageblobs.add({
-          pagesummaryId: id,
+      .then(captureHref => {
+        return db.pageblobs.put({
+          captureHref: captureHref,
           favicon: cp.favicon,
           screenshot: cp.screenshot
         });
@@ -93,12 +94,12 @@ exports.getAsCPInfos = function(items) {
  */
 exports.getAsCPSummaryArr = function(summaryItems, blobItems) {
   let idToBlob = blobItems.reduce(function(partial, blobItem) {
-    partial[blobItem.pagesummaryId] = blobItem;
+    partial[blobItem.captureHref] = blobItem;
     return partial;
   }, {});
   
   let result = summaryItems.map(item => {
-    let blob = idToBlob[item.id] || {};
+    let blob = idToBlob[item.captureHref] || {};
     let params = {
       captureHref: item.captureHref,
       captureDate: item.captureDate,
@@ -153,10 +154,10 @@ exports.getCPSummariesForHrefs = function(hrefs) {
       .then(summariesArr => {
         summaryItems = summariesArr;
         CPInfo.sort(summaryItems);
-        let summaryIds = summaryItems.map(item => item.id);
+        let captureHrefs = summaryItems.map(item => item.captureHref);
         return db.pageblobs
-          .where('pagesummaryId')
-          .anyOf(summaryIds)
+          .where('captureHref')
+          .anyOf(captureHrefs)
           .toArray();
       })
       .then(pageblobArr => {
@@ -199,8 +200,8 @@ exports.getCachedPageSummaries = function(offset, numDesired) {
         .toArray()
       .then(summariesArr => {
         summaryItems = summariesArr;
-        let summaryIds = summaryItems.map(item => item.id);
-        return db.pageblobs.where('pagesummaryId').anyOf(summaryIds).toArray();
+        let summaryHrefs = summaryItems.map(item => item.captureHref);
+        return db.pageblobs.where('captureHref').anyOf(summaryHrefs).toArray();
       })
       .then(pageblobArr => {
         result = exports.getAsCPSummaryArr(summaryItems, pageblobArr);
