@@ -1,7 +1,5 @@
 'use strict';
 
-var Buffer = require('buffer/').Buffer;
-
 /**
  * Protocol for transmitting data via WebRTC data channel.
  *

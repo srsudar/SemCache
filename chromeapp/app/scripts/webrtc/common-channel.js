@@ -1,6 +1,5 @@
 'use strict';
 
-const Buffer = require('buffer/').Buffer;
 const EventEmitter = require('events').EventEmitter;
 
 const protocol = require('./protocol');

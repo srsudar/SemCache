@@ -12,8 +12,6 @@
  * The library we are wrapping.
  */
 var lib = require('bloomfilter');
-// The trailing slash is required here to get the browser-compatible library
-var Buffer = require('buffer/').Buffer;
 var toArrayBuffer = require('to-arraybuffer');
 
 /**

@@ -1,5 +1,5 @@
 'use strict';
-var Buffer = require('buffer/').Buffer;
+
 var test = require('tape');
 var proxyquire = require('proxyquire');
 var sinon = require('sinon');
@@ -426,42 +426,6 @@ test('getFileContents resolves with full contents', function(t) {
   })
   .catch(err => {
     t.fail(err);
-    t.end();
-    resetUtil();
-  });
-});
-
-test('getFileContents rejects if Buffer.concat fails', function(t) {
-  var fileReaderStub = sinon.stub();
-  var expected = { error: 'nope' };
-
-  var file = { stubType: 'file' };
-  var fileEntry = { stubType: 'fileEntry' };
-
-  util = proxyquire('../../../app/scripts/persistence/file-system-util', {
-    'buffer/': {
-      Buffer: {
-        concat: sinon.stub().throws(expected)
-      }
-    }
-  });
-  util.createFileReader = sinon.stub().returns(fileReaderStub);
-  util.getFileFromEntry = sinon.stub().withArgs(fileEntry).resolves(file);
-
-  fileReaderStub.readAsArrayBuffer = function(actualFile) {
-    t.equal(actualFile, file);
-    // And now issue our calls to the events.
-    fileReaderStub.onloadend();
-  };
-
-  util.getFileContents(fileEntry)
-  .then(res => {
-    t.fail(res);
-    t.end();
-    resetUtil();
-  })
-  .catch(actual => {
-    t.equal(actual, expected);
     t.end();
     resetUtil();
   });

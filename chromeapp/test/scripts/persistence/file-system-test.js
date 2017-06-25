@@ -1,8 +1,6 @@
 /*jshint esnext:true*/
 'use strict';
 
-var Buffer = require('buffer/').Buffer;
-
 var test = require('tape');
 var proxyquire = require('proxyquire');
 var sinon = require('sinon');

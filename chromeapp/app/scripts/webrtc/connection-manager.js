@@ -1,8 +1,6 @@
 /* globals RTCPeerConnection, RTCSessionDescription, RTCIceCandidate */
 'use strict';
 
-var Buffer = require('buffer/').Buffer;
-
 var util = require('../util');
 var peerConn = require('../../../app/scripts/webrtc/peer-connection');
 var serverApi = require('../server/server-api');

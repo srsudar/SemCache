@@ -1,8 +1,6 @@
 /* globals Promise */
 'use strict';
 
-const Buffer = require('buffer/').Buffer;
-
 const util = require('../util');
 
 /**

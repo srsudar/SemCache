@@ -1,6 +1,5 @@
 'use strict';
 
-const Buffer = require('buffer/').Buffer;
 const test = require('tape');
 const sinon = require('sinon');
 const proxyquire = require('proxyquire');
