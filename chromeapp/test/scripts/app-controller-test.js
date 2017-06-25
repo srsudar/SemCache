@@ -395,18 +395,15 @@ test('getListUrlForSelf is sensible', function(t) {
 });
 
 test('getOwnCache returns correct info', function(t) {
-  var hostName = 'myself.local';
-  var serverPort = 4444;
-  var friendlyName = 'My Cache';
-  var ipAddress = '4.3.2.1';
-
-  var listUrl = 'list url';
+  let listUrl = 'list url';
+  let expected = testUtil.genCacheInfos(1).next().value;
+  expected.listUrl = listUrl;
   
-  var getInstanceNameSpy = sinon.stub().returns(friendlyName);
-  var getServerPortSpy = sinon.stub().returns(serverPort);
-  var getHostNameSpy = sinon.stub().returns(hostName);
-  var getHttpIfaceSpy = sinon.stub().returns({ address: ipAddress });
-  var getListUrlSpy = sinon.stub().returns(listUrl);
+  var getInstanceNameSpy = sinon.stub().returns(expected.friendlyName);
+  var getServerPortSpy = sinon.stub().returns(expected.port);
+  var getHostNameSpy = sinon.stub().returns(expected.domainName);
+  var getHttpIfaceSpy = sinon.stub().returns({ address: expected.ipAddress });
+  var getListUrlSpy = sinon.stub().returns(expected.listUrl);
 
   proxyquireAppc({
     './settings': {
@@ -419,10 +416,6 @@ test('getOwnCache returns correct info', function(t) {
     }
   });
   appc.getListeningHttpInterface = getHttpIfaceSpy;
-
-  var expected = testUtil.createCacheObj(
-    hostName, friendlyName, ipAddress, serverPort, listUrl
-  );
   var actual = appc.getOwnCache();
 
   t.deepEqual(actual, expected);

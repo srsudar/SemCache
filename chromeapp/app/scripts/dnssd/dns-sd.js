@@ -431,6 +431,7 @@ exports.issueProbe = function(queryName, queryType, queryClass) {
  * cannot complete (e.g. if a SRV or A records is not found) or if an error
  * occurs.
  * {
+ *   serviceType: '_semcache._tcp',
  *   friendlyName: 'Sam Cache',
  *   instanceName: 'Sam Cache._semcache._tcp.local',
  *   domainName: 'laptop.local',
@@ -480,6 +481,7 @@ exports.resolveService = function(serviceName) {
       var friendlyName = exports.getUserFriendlyName(serviceName);
 
       var result = {
+        serviceType: srvRec.instanceTypeDomain,
         friendlyName: friendlyName,
         instanceName: serviceName,
         domainName: srvRec.domain,
@@ -538,10 +540,11 @@ exports.resolveService = function(serviceName) {
  * the following:
  * {
  *   serviceType: '_semcache._tcp',
- *   instanceName: 'Sam Cache',
+ *   friendlyName: 'Sam Cache',
  *   domainName: 'laptop.local',
  *   ipAddress: '123.4.5.6',
- *   port: 8888
+ *   port: 8888,
+ *   instanceName: 'Sam Cache._semcache._tcp.local'
  * }
  */
 exports.browseServiceInstances = function(serviceType) {
@@ -647,18 +650,20 @@ exports.browseServiceInstances = function(serviceType) {
         throw new Error('Different numbers of PTR, SRV, and A records!');
       }
       
-      var result = [];
-      for (var i = 0; i < aResponses.length; i++) {
-        var ptr = ptrsWithAs[i];
-        var instanceName = exports.getUserFriendlyName(ptr.serviceName);
-        var srv = srvsWithAs[i];
-        var aRec = aResponses[i];
+      let result = [];
+      for (let i = 0; i < aResponses.length; i++) {
+        let ptr = ptrsWithAs[i];
+        let instanceName = ptr.serviceName;
+        let friendlyName = exports.getUserFriendlyName(ptr.serviceName);
+        let srv = srvsWithAs[i];
+        let aRec = aResponses[i];
         result.push({
           serviceType: serviceType,
+          friendlyName: friendlyName,
           instanceName: instanceName,
           domainName: srv.domain,
           ipAddress: aRec.ipAddress,
-          port: srv.port
+          port: srv.port,
         });
       }
 

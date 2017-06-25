@@ -363,10 +363,11 @@ function generateFakeRecords(serviceType, numServices) {
 
     var expected = {
       serviceType: serviceType,
-      instanceName: friendlyName,
+      friendlyName: friendlyName,
       domainName: domainName,
       ipAddress: ipAddress,
-      port: port
+      port: port,
+      instanceName: fullyResolvedName
     };
 
     var element = {
@@ -1538,7 +1539,8 @@ test('resolveService resolves if all correct', function(t) {
     instanceName: records[0].ptr.serviceName,
     domainName: records[0].srv.domain,
     ipAddress: records[0].aRec.ipAddress,
-    port: records[0].srv.port
+    port: records[0].srv.port,
+    serviceType: records[0].srv.instanceTypeDomain
   };
 
   dnssd.resolveService(serviceName)

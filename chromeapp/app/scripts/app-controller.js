@@ -79,14 +79,16 @@ exports.getListUrlForSelf = function() {
  * @return {Object} the cache object that represents this machine's own cache.
  */
 exports.getOwnCache = function() {
-  var friendlyName = settings.getInstanceName();
-  var instanceName = dnssdSem.getFullName(friendlyName);
-  var serverPort = settings.getServerPort();
-  var hostName = settings.getHostName();
-  var ipAddress = exports.getListeningHttpInterface().address;
-  var listUrl = serverApi.getListPageUrlForCache(ipAddress, serverPort);
+  let friendlyName = settings.getInstanceName();
+  let instanceName = dnssdSem.getFullName(friendlyName);
+  let serverPort = settings.getServerPort();
+  let hostName = settings.getHostName();
+  let ipAddress = exports.getListeningHttpInterface().address;
+  let listUrl = serverApi.getListPageUrlForCache(ipAddress, serverPort);
+  let serviceType = dnssdSem.getSemCacheServiceString();
 
-  var result = {
+  let result = {
+    serviceType: serviceType,
     domainName: hostName,
     instanceName: instanceName,
     friendlyName: friendlyName,
@@ -144,6 +146,7 @@ exports.getOwnCacheName = function() {
  *   instanceName: 'My Cache._semcache._tcp.local',
  *   ipAddress: '1.2.3.4',
  *   port: 1111,
+ *   serviceType: '_semcache._tcp',
  *   listUrl: 'http://1.2.3.4:1111/list_pages'
  * }
  */

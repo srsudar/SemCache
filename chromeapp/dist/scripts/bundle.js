@@ -358,22 +358,22 @@ exports.BloomStrategy.prototype.initialize = function() {
 
   return new Promise(function(resolve, reject) {
     // Changing this for evaluation.
-    console.warn('COALESCENCE IS IN EVALUATION MODE');
+    // console.warn('COALESCENCE IS IN EVALUATION MODE');
     // This code is for the real mode.
-    // dnssdSem.browseForSemCacheInstances()
-    // .then(peerInfos => {
-    //   return util.removeOwnInfo(peerInfos);
-    // }).then(peerInfos => {
-    //   var peerAccessor = peerIfMgr.getPeerAccessor();
-    //   return that.getAndProcessDigests(peerAccessor, peerInfos);
-    // })
-    // This code is for evaluation mode.
-    Promise.resolve()
-    .then(() => {
-      return evaluation.generateDummyPeerBloomFilters(
-        EVAL_NUM_DIGESTS, EVAL_NUM_PAGES_IN_DIGEST
-      );
+    dnssdSem.browseForSemCacheInstances()
+    .then(peerInfos => {
+      return util.removeOwnInfo(peerInfos);
+    }).then(peerInfos => {
+      var peerAccessor = peerIfMgr.getPeerAccessor();
+      return that.getAndProcessDigests(peerAccessor, peerInfos);
     })
+    // This code is for evaluation mode.
+    // Promise.resolve()
+    // .then(() => {
+    //   return evaluation.generateDummyPeerBloomFilters(
+    //     EVAL_NUM_DIGESTS, EVAL_NUM_PAGES_IN_DIGEST
+    //   );
+    // })
     .then(bloomFilters => {
       that.setBloomFilters(bloomFilters);
       IS_INITIALIZING = false;
@@ -460,7 +460,6 @@ exports.BloomStrategy.prototype.performQuery = function(urls) {
   if (!this.isInitialized()) {
     console.warn('digest-strategy was queried but is not initialized');
   }
-  var a = getNow();
   return new Promise(function(resolve, reject) {
     Promise.resolve()
     .then(() => {
@@ -468,7 +467,6 @@ exports.BloomStrategy.prototype.performQuery = function(urls) {
       urls.forEach(url => {
         var copiesForUrl = [];
         BLOOM_FILTERS.forEach(bloomFilter => {
-          var x = getNow();
           var captureDate = bloomFilter.performQueryForPage(url);
           if (captureDate) {
             var NetworkCachedPage = new objects.NetworkCachedPage(
@@ -480,7 +478,6 @@ exports.BloomStrategy.prototype.performQuery = function(urls) {
             );
             copiesForUrl.push(NetworkCachedPage);
           }
-          var y = getNow();
         });
         if (copiesForUrl.length > 0) {
           result[url] = copiesForUrl;
@@ -41614,14 +41611,16 @@ exports.getListUrlForSelf = function() {
  * @return {Object} the cache object that represents this machine's own cache.
  */
 exports.getOwnCache = function() {
-  var friendlyName = settings.getInstanceName();
-  var instanceName = dnssdSem.getFullName(friendlyName);
-  var serverPort = settings.getServerPort();
-  var hostName = settings.getHostName();
-  var ipAddress = exports.getListeningHttpInterface().address;
-  var listUrl = serverApi.getListPageUrlForCache(ipAddress, serverPort);
+  let friendlyName = settings.getInstanceName();
+  let instanceName = dnssdSem.getFullName(friendlyName);
+  let serverPort = settings.getServerPort();
+  let hostName = settings.getHostName();
+  let ipAddress = exports.getListeningHttpInterface().address;
+  let listUrl = serverApi.getListPageUrlForCache(ipAddress, serverPort);
+  let serviceType = dnssdSem.getSemCacheServiceString();
 
-  var result = {
+  let result = {
+    serviceType: serviceType,
     domainName: hostName,
     instanceName: instanceName,
     friendlyName: friendlyName,
@@ -41679,6 +41678,7 @@ exports.getOwnCacheName = function() {
  *   instanceName: 'My Cache._semcache._tcp.local',
  *   ipAddress: '1.2.3.4',
  *   port: 1111,
+ *   serviceType: '_semcache._tcp',
  *   listUrl: 'http://1.2.3.4:1111/list_pages'
  * }
  */
@@ -42604,7 +42604,7 @@ exports.STRATEGIES = {
 /**
  * The current startegy for resolving coalescence requests.
  */
-exports.CURRENT_STRATEGY = exports.STRATEGIES.bloom;
+exports.CURRENT_STRATEGY = exports.STRATEGIES.digest;
 
 /**
  * Obtain access information for the given array of URLs. The result will be an
@@ -44112,6 +44112,7 @@ exports.issueProbe = function(queryName, queryType, queryClass) {
  * cannot complete (e.g. if a SRV or A records is not found) or if an error
  * occurs.
  * {
+ *   serviceType: '_semcache._tcp',
  *   friendlyName: 'Sam Cache',
  *   instanceName: 'Sam Cache._semcache._tcp.local',
  *   domainName: 'laptop.local',
@@ -44161,6 +44162,7 @@ exports.resolveService = function(serviceName) {
       var friendlyName = exports.getUserFriendlyName(serviceName);
 
       var result = {
+        serviceType: srvRec.instanceTypeDomain,
         friendlyName: friendlyName,
         instanceName: serviceName,
         domainName: srvRec.domain,
@@ -44219,10 +44221,11 @@ exports.resolveService = function(serviceName) {
  * the following:
  * {
  *   serviceType: '_semcache._tcp',
- *   instanceName: 'Sam Cache',
+ *   friendlyName: 'Sam Cache',
  *   domainName: 'laptop.local',
  *   ipAddress: '123.4.5.6',
- *   port: 8888
+ *   port: 8888,
+ *   instanceName: 'Sam Cache._semcache._tcp.local'
  * }
  */
 exports.browseServiceInstances = function(serviceType) {
@@ -44328,18 +44331,20 @@ exports.browseServiceInstances = function(serviceType) {
         throw new Error('Different numbers of PTR, SRV, and A records!');
       }
       
-      var result = [];
-      for (var i = 0; i < aResponses.length; i++) {
-        var ptr = ptrsWithAs[i];
-        var instanceName = exports.getUserFriendlyName(ptr.serviceName);
-        var srv = srvsWithAs[i];
-        var aRec = aResponses[i];
+      let result = [];
+      for (let i = 0; i < aResponses.length; i++) {
+        let ptr = ptrsWithAs[i];
+        let instanceName = ptr.serviceName;
+        let friendlyName = exports.getUserFriendlyName(ptr.serviceName);
+        let srv = srvsWithAs[i];
+        let aRec = aResponses[i];
         result.push({
           serviceType: serviceType,
+          friendlyName: friendlyName,
           instanceName: instanceName,
           domainName: srv.domain,
           ipAddress: aRec.ipAddress,
-          port: srv.port
+          port: srv.port,
         });
       }
 

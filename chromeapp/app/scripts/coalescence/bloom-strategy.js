@@ -103,22 +103,22 @@ exports.BloomStrategy.prototype.initialize = function() {
 
   return new Promise(function(resolve, reject) {
     // Changing this for evaluation.
-    console.warn('COALESCENCE IS IN EVALUATION MODE');
+    // console.warn('COALESCENCE IS IN EVALUATION MODE');
     // This code is for the real mode.
-    // dnssdSem.browseForSemCacheInstances()
-    // .then(peerInfos => {
-    //   return util.removeOwnInfo(peerInfos);
-    // }).then(peerInfos => {
-    //   var peerAccessor = peerIfMgr.getPeerAccessor();
-    //   return that.getAndProcessDigests(peerAccessor, peerInfos);
-    // })
-    // This code is for evaluation mode.
-    Promise.resolve()
-    .then(() => {
-      return evaluation.generateDummyPeerBloomFilters(
-        EVAL_NUM_DIGESTS, EVAL_NUM_PAGES_IN_DIGEST
-      );
+    dnssdSem.browseForSemCacheInstances()
+    .then(peerInfos => {
+      return util.removeOwnInfo(peerInfos);
+    }).then(peerInfos => {
+      var peerAccessor = peerIfMgr.getPeerAccessor();
+      return that.getAndProcessDigests(peerAccessor, peerInfos);
     })
+    // This code is for evaluation mode.
+    // Promise.resolve()
+    // .then(() => {
+    //   return evaluation.generateDummyPeerBloomFilters(
+    //     EVAL_NUM_DIGESTS, EVAL_NUM_PAGES_IN_DIGEST
+    //   );
+    // })
     .then(bloomFilters => {
       that.setBloomFilters(bloomFilters);
       IS_INITIALIZING = false;
@@ -205,7 +205,6 @@ exports.BloomStrategy.prototype.performQuery = function(urls) {
   if (!this.isInitialized()) {
     console.warn('digest-strategy was queried but is not initialized');
   }
-  var a = getNow();
   return new Promise(function(resolve, reject) {
     Promise.resolve()
     .then(() => {
@@ -213,7 +212,6 @@ exports.BloomStrategy.prototype.performQuery = function(urls) {
       urls.forEach(url => {
         var copiesForUrl = [];
         BLOOM_FILTERS.forEach(bloomFilter => {
-          var x = getNow();
           var captureDate = bloomFilter.performQueryForPage(url);
           if (captureDate) {
             var NetworkCachedPage = new objects.NetworkCachedPage(
@@ -225,7 +223,6 @@ exports.BloomStrategy.prototype.performQuery = function(urls) {
             );
             copiesForUrl.push(NetworkCachedPage);
           }
-          var y = getNow();
         });
         if (copiesForUrl.length > 0) {
           result[url] = copiesForUrl;

@@ -24,7 +24,7 @@ exports.STRATEGIES = {
 /**
  * The current startegy for resolving coalescence requests.
  */
-exports.CURRENT_STRATEGY = exports.STRATEGIES.bloom;
+exports.CURRENT_STRATEGY = exports.STRATEGIES.digest;
 
 /**
  * Obtain access information for the given array of URLs. The result will be an

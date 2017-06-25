@@ -30,10 +30,23 @@ exports.createCacheNames = function(serviceType, numCaches) {
 };
 
 exports.genCacheInfos = function*(num) {
-  let names = exports.createCacheNames('_foo._bar', num);
-  let cacheInfos = exports.createCacheObjsFromNames(names);
+  for (let i = 0; i < num; i++) {
+    let serviceType = '_semcache._tcp';
+    let friendlyName = `Sam Cache ${i}`;
+    let domainName = `laptop_${i}.local`;
+    let ipAddress = `${i}.${i}.${i}.${i}`;
+    let port = i;
+    let instanceName = `${friendlyName}.${serviceType}.local`;
 
-  yield* cacheInfos;
+    yield {
+      serviceType,
+      friendlyName,
+      domainName,
+      ipAddress,
+      port,
+      instanceName
+    };
+  }
 };
 
 /**
@@ -45,14 +58,15 @@ exports.genCacheInfos = function*(num) {
 exports.createCacheObjsFromNames = function(cacheNames) {
   var result = [];
   for (var i = 0; i < cacheNames.length; i++) {
-    var cacheName = cacheNames[i];
-    var domain = 'domain' + i + '.local';
-    var ipAddress = [i, i, i, i].join('.');
-    var port = port + 'i';
-    var listUrl = 'listUrl_' + i + '.json';
+    let cacheName = cacheNames[i];
+    let domain = 'domain' + i + '.local';
+    let ipAddress = [i, i, i, i].join('.');
+    let port = 'port ' + 'i';
+    let listUrl = 'listUrl_' + i + '.json';
+    let fullServiceName = cacheName.serviceName;
     
-    var cache = exports.createCacheObj(
-      domain, cacheName.friendlyName, ipAddress, port, listUrl
+    let cache = exports.createCacheObj(
+      domain, cacheName.friendlyName, ipAddress, port, listUrl, fullServiceName
     );
     result.push(cache);
   }
@@ -67,7 +81,8 @@ exports.createCacheObj = function(
   friendlyName,
   ipAddress,
   port,
-  listUrl
+  listUrl,
+  fullServiceName
 ) {
   var instanceName = friendlyName + '._semcache._tcp.local';
   var result = {
@@ -76,7 +91,8 @@ exports.createCacheObj = function(
     instanceName: instanceName,
     ipAddress: ipAddress,
     port: port,
-    listUrl: listUrl
+    listUrl: listUrl,
+    fullServiceName: fullServiceName
   };
   return result;
 };
