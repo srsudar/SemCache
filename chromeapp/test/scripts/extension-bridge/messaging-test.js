@@ -1,11 +1,13 @@
 'use strict';
-var test = require('tape');
-var sinon = require('sinon');
-var proxyquire = require('proxyquire');
+
+const test = require('tape');
+const sinon = require('sinon');
+const proxyquire = require('proxyquire');
 require('sinon-as-promised');
 
 let messaging = require('../../../app/scripts/extension-bridge/messaging');
 const common = require('../../../app/scripts/extension-bridge/common-messaging');
+const constants = require('../../../app/scripts/constants');
 
 let mutil = require('./test-util');
 let putil = require('../persistence/persistence-util');
@@ -70,58 +72,6 @@ test('handleExternalMessage returns false if response undefined', function(t) {
   t.end();
   resetMessaging();
 });
-
-// test.only('handleExternalMessage invokes response on success', function(t) {
-//   let { initiator: i, responder: r } = mutil.getAddPageMsgs();
-//   let cpdisk = putil.genCPDisks(1).next().value;
-//   let sender = getSender();
-//
-//   proxyquireMessaging({
-//     '../persistence/datastore': {
-//       addPageToCache: sinon.stub().resolves()
-//     }
-//   });
-//
-//   var returnValue;
-//
-//   var callbackFromExtension = function(actual) {
-//     t.deepEqual(actual, expected);
-//     t.true(returnValue);
-//     t.end();
-//     resetMessaging();
-//   };
-//
-//   returnValue = messaging.handleExternalMessage(
-//     message, sender, callbackFromExtension
-//   );
-// });
-//
-// test('handleExternalMessage invokes response on error', function(t) {
-//   var message = getDummyWriteMessage();
-//   var sender = getSender();
-//   var errFromDatastore = { msg: 'much wrong' };
-//
-//   proxyquireMessaging({
-//     '../persistence/datastore': {
-//       addPageToCache: sinon.stub().rejects(errFromDatastore)
-//     }
-//   });
-//   let expected = messaging.createResponseError(message, errFromDatastore);
-//
-//   // This will be set below but not checked until our callback is invoked.
-//   var returnValue;
-//
-//   var callbackFromExtension = function(actual) {
-//     t.deepEqual(actual, expected);
-//     t.true(returnValue);
-//     t.end();
-//     resetMessaging();
-//   };
-//
-//   returnValue = messaging.handleExternalMessage(
-//     message, sender, callbackFromExtension
-//   );
-// });
 
 test('handleExternalMessage adds page to cache for write', function(t) {
   let { i: initiator, r: responder } = mutil.getAddPageMsgs();
@@ -365,11 +315,18 @@ test('queryLocalMachineForUrls returns all matches', function(t) {
   // We'll say that 5 pages are saved locally. We'll query for two of those.
   let num = 5;
   let cpinfos = [...putil.genCPInfos(num)];
+  cpinfos = cpinfos.map(info => info.asJSON());
 
   // We expect { url: [ cachedpage, ... ] } to keep the API the same with local
   // network queries.
-  let foundCPInfo1 = cpinfos[0];
-  let foundCPInfo2 = cpinfos[3];
+  let foundCPInfo1 = Object.assign({}, cpinfos[0]);
+  let foundCPInfo2 = Object.assign({}, cpinfos[3]);
+
+  // Now add our service name shortcut to each of these.
+  let serviceName = constants.SELF_SERVICE_SHORTCUT;
+  foundCPInfo1.serviceName = serviceName;
+  foundCPInfo2.serviceName = serviceName;
+
   let foundUrl1 = foundCPInfo1.captureHref;
   let foundUrl2 = foundCPInfo2.captureHref;
 

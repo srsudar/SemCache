@@ -4,6 +4,7 @@
  * The main controlling piece of the app. It composes the other modules.
  */
 
+const constants = require('./constants');
 const datastore = require('./persistence/datastore');
 const dnsController = require('./dnssd/dns-controller');
 const dnssdSem = require('./dnssd/dns-sd-semcache');
@@ -149,6 +150,10 @@ exports.getOwnCacheName = function() {
 exports.resolveCache = function(fullName) {
   return new Promise(function(resolve, reject) {
     var ownCache = exports.getOwnCache();
+    if (fullName === constants.SELF_SERVICE_SHORTCUT) {
+      resolve(ownCache);
+      return;
+    }
     if (fullName === ownCache.instanceName) {
       // We're looking for ourselves--don't both querying the network.
       resolve(ownCache);

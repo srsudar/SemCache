@@ -8,6 +8,7 @@ require('sinon-as-promised');
 
 let appc = require('../../app/scripts/app-controller');
 
+const constants = require('../../app/scripts/constants');
 const ifCommon = require('../../app/scripts/peer-interface/common');
 const putil = require('./persistence/persistence-util');
 const testUtil = require('./test-util');
@@ -26,6 +27,12 @@ function resetAppController() {
 
 function proxyquireAppc(proxies) {
   appc = proxyquire('../../app/scripts/app-controller', proxies);
+}
+
+function end(t) {
+  if (!t) { throw new Error('You forgot to pass tape'); }
+  t.end();
+  resetAppController();
 }
 
 function rejectIfMissingSettingHelper(instanceName, port, dirId, host, t) {
@@ -706,6 +713,22 @@ test('stopServers restores state', function(t) {
   t.false(appc.networkIsActive());
   t.end();
   resetAppController();
+});
+
+test('resolveCache respects SELF_SERVICE_SHORTCUT', function(t) {
+  let expected = testUtil.genCacheInfos(1).next().value;
+
+  appc.getOwnCache = sinon.stub().returns(expected);
+
+  appc.resolveCache(constants.SELF_SERVICE_SHORTCUT)
+  .then(actual => {
+    t.deepEqual(actual, expected);
+    end(t);
+  })
+  .catch(err => {
+    t.fail(err);
+    end(t);
+  });
 });
 
 test('resolveCache does not use network for self', function(t) {

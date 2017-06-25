@@ -44294,7 +44294,7 @@ exports.getRuntimeBare = function() {
   return chrome.runtime;
 };
 
-},{"chrome-promise":37}],3:[function(require,module,exports){
+},{"chrome-promise":38}],3:[function(require,module,exports){
 /* globals chrome */
 'use strict';
 
@@ -44482,7 +44482,7 @@ exports.from = function(buff) {
 };
 
 }).call(this,require("buffer").Buffer)
-},{"bloomfilter":34,"buffer":35,"to-arraybuffer":55}],5:[function(require,module,exports){
+},{"bloomfilter":35,"buffer":36,"to-arraybuffer":56}],5:[function(require,module,exports){
 'use strict';
 
 var dnssdSem = require('../dnssd/dns-sd-semcache');
@@ -44724,7 +44724,7 @@ exports.BloomStrategy.prototype.performQuery = function(urls) {
   });
 };
 
-},{"../dnssd/dns-sd-semcache":"dnsSem","../evaluation":"eval","../peer-interface/common":16,"../peer-interface/manager":18,"./objects":7,"./util":8}],6:[function(require,module,exports){
+},{"../dnssd/dns-sd-semcache":"dnsSem","../evaluation":"eval","../peer-interface/common":17,"../peer-interface/manager":19,"./objects":7,"./util":8}],6:[function(require,module,exports){
 'use strict';
 
 var dnssdSem = require('../dnssd/dns-sd-semcache');
@@ -44950,7 +44950,7 @@ exports.DigestStrategy.prototype.performQuery = function(urls) {
   });
 };
 
-},{"../dnssd/dns-sd-semcache":"dnsSem","../evaluation":"eval","../peer-interface/common":16,"../peer-interface/manager":18,"./objects":7,"./util":8}],7:[function(require,module,exports){
+},{"../dnssd/dns-sd-semcache":"dnsSem","../evaluation":"eval","../peer-interface/common":17,"../peer-interface/manager":19,"./objects":7,"./util":8}],7:[function(require,module,exports){
 'use strict';
 
 var bloomFilter = require('./bloom-filter');
@@ -45118,6 +45118,20 @@ exports.removeOwnInfo = function(peerInfos) {
 
 
 },{"../settings":"settings"}],9:[function(require,module,exports){
+'use strict';
+
+const SELF_SERVICE_SHORTCUT = '_SELF_INSTANCE_NAME_';
+
+/**
+ * This is used to represent our own cache's service name. When fully
+ * registered via mDNS, an instance name is something like
+ * 'sam cache._semcache._tcp.local'. This string is an alias that allows us to
+ * refer to our own cache without needing to interact with the network
+ * machinery in any way.
+ */
+exports.SELF_SERVICE_SHORTCUT = SELF_SERVICE_SHORTCUT;
+
+},{}],10:[function(require,module,exports){
 /*jshint esnext:true, bitwise: false */
 'use strict';
 
@@ -45334,7 +45348,7 @@ exports.getByteArrayAsUint8Array = function(byteArr) {
   return new Uint8Array(byteArr._buffer, 0, byteArr._cursor);
 };
 
-},{"./binary-utils":"binaryUtils"}],10:[function(require,module,exports){
+},{"./binary-utils":"binaryUtils"}],11:[function(require,module,exports){
 /*jshint esnext:true*/
 /*
  * https://github.com/justindarc/dns-sd.js
@@ -45523,7 +45537,7 @@ function defineType(values) {
   return T;
 }
 
-},{}],11:[function(require,module,exports){
+},{}],12:[function(require,module,exports){
 /*jshint esnext:true, bitwise:false */
 
 /**
@@ -45952,7 +45966,7 @@ exports.getFlagsAsValue = function(qr, opcode, aa, tc, rd, ra, rcode) {
   return value;
 };
 
-},{"./byte-array":9,"./dns-codes":10,"./question-section":13,"./resource-record":14}],12:[function(require,module,exports){
+},{"./byte-array":10,"./dns-codes":11,"./question-section":14,"./resource-record":15}],13:[function(require,module,exports){
 'use strict';
 
 var byteArray = require('./byte-array');
@@ -46162,7 +46176,7 @@ exports.getIpStringFromByteArrayReader = function(reader) {
   return result;
 };
 
-},{"./byte-array":9}],13:[function(require,module,exports){
+},{"./byte-array":10}],14:[function(require,module,exports){
 /* global exports, require */
 'use strict';
 
@@ -46274,7 +46288,7 @@ exports.createQuestionFromReader = function(reader) {
   return result;
 };
 
-},{"./byte-array":9,"./dns-util":12}],14:[function(require,module,exports){
+},{"./byte-array":10,"./dns-util":13}],15:[function(require,module,exports){
 /* global exports, require */
 'use strict';
 
@@ -46806,7 +46820,7 @@ exports.peekTypeInReader = function(reader) {
   return result;
 };
 
-},{"./byte-array":9,"./dns-codes":10,"./dns-util":12}],15:[function(require,module,exports){
+},{"./byte-array":10,"./dns-codes":11,"./dns-util":13}],16:[function(require,module,exports){
 'use strict';
 
 /**
@@ -46967,7 +46981,7 @@ exports.createNetworkQueryResponse = function(params, body) {
   );
 };
 
-},{}],16:[function(require,module,exports){
+},{}],17:[function(require,module,exports){
 'use strict';
 
 var util = require('../util');
@@ -47070,7 +47084,7 @@ exports.createFileParams = function(ipaddr, port, fileUrl) {
   };
 };
 
-},{"../util":24}],17:[function(require,module,exports){
+},{"../util":25}],18:[function(require,module,exports){
 'use strict';
 
 var util = require('../util');
@@ -47152,7 +47166,7 @@ exports.HttpPeerAccessor.prototype.getCacheDigest = function(params) {
   });
 };
 
-},{"../util":24}],18:[function(require,module,exports){
+},{"../util":25}],19:[function(require,module,exports){
 'use strict';
 
 var settings = require('../settings');
@@ -47180,7 +47194,7 @@ exports.getPeerAccessor = function(ipaddr, port) {
   }
 };
 
-},{"../settings":"settings","./http-impl":17,"./webrtc-impl":19}],19:[function(require,module,exports){
+},{"../settings":"settings","./http-impl":18,"./webrtc-impl":20}],20:[function(require,module,exports){
 'use strict';
 
 var cmgr = require('../webrtc/connection-manager');
@@ -47287,7 +47301,7 @@ class WebrtcPeerAccessor {
 
 exports.WebrtcPeerAccessor = WebrtcPeerAccessor;
 
-},{"../util":24,"../webrtc/connection-manager":"cmgr"}],20:[function(require,module,exports){
+},{"../util":25,"../webrtc/connection-manager":"cmgr"}],21:[function(require,module,exports){
 'use strict';
 
 /**
@@ -47421,7 +47435,7 @@ exports.createFileNameForPage = function(href, captureDate) {
   return result;
 };
 
-},{"../util":24,"./database":"db","./file-system":"fileSystem","./file-system-util":"fsUtil","sanitize-filename":53,"urijs":61}],21:[function(require,module,exports){
+},{"../util":25,"./database":"db","./file-system":"fileSystem","./file-system-util":"fsUtil","sanitize-filename":54,"urijs":62}],22:[function(require,module,exports){
 /* globals WSC, _, TextEncoder */
 'use strict';
 
@@ -47451,7 +47465,7 @@ _.extend(exports.EvaluationHandler.prototype, {
   }
 }, WSC.BaseHandler.prototype);
 
-},{"../evaluation":"eval"}],22:[function(require,module,exports){
+},{"../evaluation":"eval"}],23:[function(require,module,exports){
 /* globals WSC, RTCPeerConnection, RTCSessionDescription, RTCIceCandidate */
 'use strict';
 
@@ -47695,7 +47709,7 @@ _.extend(exports.WebRtcOfferHandler.prototype,
   WSC.BaseHandler.prototype
 );
 
-},{"../dnssd/binary-utils":"binaryUtils","../persistence/file-system":"fileSystem","../persistence/file-system-util":"fsUtil","../webrtc/connection-manager":"cmgr","../webrtc/responder":30,"./server-api":23,"underscore":58}],23:[function(require,module,exports){
+},{"../dnssd/binary-utils":"binaryUtils","../persistence/file-system":"fileSystem","../persistence/file-system-util":"fsUtil","../webrtc/connection-manager":"cmgr","../webrtc/responder":31,"./server-api":24,"underscore":59}],24:[function(require,module,exports){
 (function (Buffer){
 'use strict';
 
@@ -47935,7 +47949,7 @@ exports.getCachedFileNameFromPath = function(path) {
 };
 
 }).call(this,require("buffer").Buffer)
-},{"../app-controller":"appController","../persistence/datastore":20,"../persistence/objects":"persistenceObjs","buffer":35}],24:[function(require,module,exports){
+},{"../app-controller":"appController","../persistence/datastore":21,"../persistence/objects":"persistenceObjs","buffer":36}],25:[function(require,module,exports){
 (function (Buffer){
 'use strict';
 
@@ -48338,7 +48352,7 @@ exports.buffToObj = function(buff) {
 };
 
 }).call(this,require("buffer").Buffer)
-},{"blob-to-buffer":33,"buffer":35,"dataurl-to-blob":38,"smart-buffer":54}],25:[function(require,module,exports){
+},{"blob-to-buffer":34,"buffer":36,"dataurl-to-blob":39,"smart-buffer":55}],26:[function(require,module,exports){
 'use strict';
 
 var commonChannel = require('./common-channel');
@@ -48471,7 +48485,7 @@ class BufferedChannelServer extends commonChannel.BaseServer {
 exports.BufferedChannelClient = BufferedChannelClient;
 exports.BufferedChannelServer = BufferedChannelServer;
 
-},{"./common-channel":26,"./protocol":29}],26:[function(require,module,exports){
+},{"./common-channel":27,"./protocol":30}],27:[function(require,module,exports){
 (function (Buffer){
 'use strict';
 
@@ -48766,7 +48780,7 @@ exports.BaseClient = BaseClient;
 exports.BaseServer = BaseServer;
 
 }).call(this,require("buffer").Buffer)
-},{"./protocol":29,"buffer":35,"events":40}],27:[function(require,module,exports){
+},{"./protocol":30,"buffer":36,"events":41}],28:[function(require,module,exports){
 'use strict';
 
 /**
@@ -48914,7 +48928,7 @@ exports.isCachedPage = function(msg) {
   return msg.type && msg.type === exports.TYPE_CACHED_PAGE;
 };
 
-},{}],28:[function(require,module,exports){
+},{}],29:[function(require,module,exports){
 'use strict';
 
 const EventEmitter = require('wolfy87-eventemitter');
@@ -49104,7 +49118,7 @@ exports.createClient = function(pc, msg) {
 
 exports.PeerConnection = PeerConnection;
 
-},{"../server/server-api":23,"./buffered-channel":25,"./message":27,"wolfy87-eventemitter":64}],29:[function(require,module,exports){
+},{"../server/server-api":24,"./buffered-channel":26,"./message":28,"wolfy87-eventemitter":65}],30:[function(require,module,exports){
 (function (Buffer){
 'use strict';
 
@@ -49297,7 +49311,7 @@ exports.createErrorMessage = function(reason) {
 };
 
 }).call(this,require("buffer").Buffer)
-},{"buffer":35}],30:[function(require,module,exports){
+},{"buffer":36}],31:[function(require,module,exports){
 'use strict';
 
 var api = require('../server/server-api');
@@ -49475,7 +49489,7 @@ exports.createChannelServer = function(channel) {
   return new bufferedChannel.BufferedChannelServer(channel);
 };
 
-},{"../dnssd/binary-utils":"binaryUtils","../persistence/file-system":"fileSystem","../server/server-api":23,"./buffered-channel":25,"./message":27}],31:[function(require,module,exports){
+},{"../dnssd/binary-utils":"binaryUtils","../persistence/file-system":"fileSystem","../server/server-api":24,"./buffered-channel":26,"./message":28}],32:[function(require,module,exports){
 (function (global){
 /*! http://mths.be/base64 v0.1.0 by @mathias | MIT license */
 ;(function(root) {
@@ -49644,7 +49658,7 @@ exports.createChannelServer = function(channel) {
 }(this));
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],32:[function(require,module,exports){
+},{}],33:[function(require,module,exports){
 'use strict'
 
 exports.byteLength = byteLength
@@ -49760,7 +49774,7 @@ function fromByteArray (uint8) {
   return parts.join('')
 }
 
-},{}],33:[function(require,module,exports){
+},{}],34:[function(require,module,exports){
 (function (Buffer){
 /* global Blob, FileReader */
 
@@ -49785,7 +49799,7 @@ module.exports = function blobToBuffer (blob, cb) {
 }
 
 }).call(this,require("buffer").Buffer)
-},{"buffer":35}],34:[function(require,module,exports){
+},{"buffer":36}],35:[function(require,module,exports){
 (function(exports) {
   exports.BloomFilter = BloomFilter;
   exports.fnv_1a = fnv_1a;
@@ -49905,7 +49919,7 @@ module.exports = function blobToBuffer (blob, cb) {
   }
 })(typeof exports !== "undefined" ? exports : this);
 
-},{}],35:[function(require,module,exports){
+},{}],36:[function(require,module,exports){
 (function (global){
 /*!
  * The buffer module from node.js, for the browser.
@@ -51698,14 +51712,14 @@ function isnan (val) {
 }
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"base64-js":32,"ieee754":42,"isarray":36}],36:[function(require,module,exports){
+},{"base64-js":33,"ieee754":43,"isarray":37}],37:[function(require,module,exports){
 var toString = {}.toString;
 
 module.exports = Array.isArray || function (arr) {
   return toString.call(arr) == '[object Array]';
 };
 
-},{}],37:[function(require,module,exports){
+},{}],38:[function(require,module,exports){
 /*!
  * chrome-promise 2.0.3
  * https://github.com/tfoxy/chrome-promise
@@ -51800,7 +51814,7 @@ module.exports = Array.isArray || function (arr) {
   }
 }));
 
-},{}],38:[function(require,module,exports){
+},{}],39:[function(require,module,exports){
 module.exports = function (dataURL) {
 
     'use strict';
@@ -51844,7 +51858,7 @@ module.exports = function (dataURL) {
 };
 
 
-},{}],39:[function(require,module,exports){
+},{}],40:[function(require,module,exports){
 (function (global){
 (function (global, factory) {
    typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory() :
@@ -56452,7 +56466,7 @@ return Dexie;
 
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],40:[function(require,module,exports){
+},{}],41:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -56756,7 +56770,7 @@ function isUndefined(arg) {
   return arg === void 0;
 }
 
-},{}],41:[function(require,module,exports){
+},{}],42:[function(require,module,exports){
 var isBuffer = require('is-buffer')
 
 var flat = module.exports = flatten
@@ -56863,7 +56877,7 @@ function unflatten(target, opts) {
   return result
 }
 
-},{"is-buffer":43}],42:[function(require,module,exports){
+},{"is-buffer":44}],43:[function(require,module,exports){
 exports.read = function (buffer, offset, isLE, mLen, nBytes) {
   var e, m
   var eLen = nBytes * 8 - mLen - 1
@@ -56949,7 +56963,7 @@ exports.write = function (buffer, value, offset, isLE, mLen, nBytes) {
   buffer[offset + i - d] |= s * 128
 }
 
-},{}],43:[function(require,module,exports){
+},{}],44:[function(require,module,exports){
 /*!
  * Determine if an object is a Buffer
  *
@@ -56972,7 +56986,7 @@ function isSlowBuffer (obj) {
   return typeof obj.readFloatLE === 'function' && typeof obj.slice === 'function' && isBuffer(obj.slice(0, 0))
 }
 
-},{}],44:[function(require,module,exports){
+},{}],45:[function(require,module,exports){
 (function (process){
 /**
  * Module dependencies.
@@ -57276,7 +57290,7 @@ function createDataRows(params) {
 }
 
 }).call(this,require('_process'))
-},{"_process":52,"flat":41,"lodash.clonedeep":45,"lodash.flatten":46,"lodash.get":47,"lodash.set":48,"lodash.uniq":49,"os":51}],45:[function(require,module,exports){
+},{"_process":53,"flat":42,"lodash.clonedeep":46,"lodash.flatten":47,"lodash.get":48,"lodash.set":49,"lodash.uniq":50,"os":52}],46:[function(require,module,exports){
 (function (global){
 /**
  * lodash (Custom Build) <https://lodash.com/>
@@ -59028,7 +59042,7 @@ function stubFalse() {
 module.exports = cloneDeep;
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],46:[function(require,module,exports){
+},{}],47:[function(require,module,exports){
 (function (global){
 /**
  * lodash (Custom Build) <https://lodash.com/>
@@ -59381,7 +59395,7 @@ function isObjectLike(value) {
 module.exports = flatten;
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],47:[function(require,module,exports){
+},{}],48:[function(require,module,exports){
 (function (global){
 /**
  * lodash (Custom Build) <https://lodash.com/>
@@ -60316,7 +60330,7 @@ function get(object, path, defaultValue) {
 module.exports = get;
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],48:[function(require,module,exports){
+},{}],49:[function(require,module,exports){
 (function (global){
 /**
  * lodash (Custom Build) <https://lodash.com/>
@@ -61310,7 +61324,7 @@ function set(object, path, value) {
 module.exports = set;
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],49:[function(require,module,exports){
+},{}],50:[function(require,module,exports){
 (function (global){
 /**
  * lodash (Custom Build) <https://lodash.com/>
@@ -62210,7 +62224,7 @@ function noop() {
 module.exports = uniq;
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],50:[function(require,module,exports){
+},{}],51:[function(require,module,exports){
 (function (global){
 /**
  * @license
@@ -79298,7 +79312,7 @@ module.exports = uniq;
 }.call(this));
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],51:[function(require,module,exports){
+},{}],52:[function(require,module,exports){
 exports.endianness = function () { return 'LE' };
 
 exports.hostname = function () {
@@ -79345,7 +79359,7 @@ exports.tmpdir = exports.tmpDir = function () {
 
 exports.EOL = '\n';
 
-},{}],52:[function(require,module,exports){
+},{}],53:[function(require,module,exports){
 // shim for using process in browser
 var process = module.exports = {};
 
@@ -79531,7 +79545,7 @@ process.chdir = function (dir) {
 };
 process.umask = function() { return 0; };
 
-},{}],53:[function(require,module,exports){
+},{}],54:[function(require,module,exports){
 /*jshint node:true*/
 'use strict';
 
@@ -79589,7 +79603,7 @@ module.exports = function (input, options) {
   return sanitize(output, '');
 };
 
-},{"truncate-utf8-bytes":56}],54:[function(require,module,exports){
+},{"truncate-utf8-bytes":57}],55:[function(require,module,exports){
 (function (Buffer){
 "use strict";
 // The default Buffer size if one is not provided.
@@ -80329,7 +80343,7 @@ class SmartBuffer {
 exports.SmartBuffer = SmartBuffer;
 
 }).call(this,require("buffer").Buffer)
-},{"buffer":35}],55:[function(require,module,exports){
+},{"buffer":36}],56:[function(require,module,exports){
 var Buffer = require('buffer').Buffer
 
 module.exports = function (buf) {
@@ -80358,14 +80372,14 @@ module.exports = function (buf) {
 	}
 }
 
-},{"buffer":35}],56:[function(require,module,exports){
+},{"buffer":36}],57:[function(require,module,exports){
 'use strict';
 
 var truncate = require("./lib/truncate");
 var getLength = require("utf8-byte-length/browser");
 module.exports = truncate.bind(null, getLength);
 
-},{"./lib/truncate":57,"utf8-byte-length/browser":63}],57:[function(require,module,exports){
+},{"./lib/truncate":58,"utf8-byte-length/browser":64}],58:[function(require,module,exports){
 'use strict';
 
 function isHighSurrogate(codePoint) {
@@ -80410,7 +80424,7 @@ module.exports = function truncate(getLength, string, byteLength) {
 };
 
 
-},{}],58:[function(require,module,exports){
+},{}],59:[function(require,module,exports){
 //     Underscore.js 1.8.3
 //     http://underscorejs.org
 //     (c) 2009-2015 Jeremy Ashkenas, DocumentCloud and Investigative Reporters & Editors
@@ -81960,7 +81974,7 @@ module.exports = function truncate(getLength, string, byteLength) {
   }
 }.call(this));
 
-},{}],59:[function(require,module,exports){
+},{}],60:[function(require,module,exports){
 /*!
  * URI.js - Mutating URLs
  * IPv6 Support
@@ -82147,7 +82161,7 @@ module.exports = function truncate(getLength, string, byteLength) {
   };
 }));
 
-},{}],60:[function(require,module,exports){
+},{}],61:[function(require,module,exports){
 /*!
  * URI.js - Mutating URLs
  * Second Level Domain (SLD) Support
@@ -82394,7 +82408,7 @@ module.exports = function truncate(getLength, string, byteLength) {
   return SLD;
 }));
 
-},{}],61:[function(require,module,exports){
+},{}],62:[function(require,module,exports){
 /*!
  * URI.js - Mutating URLs
  *
@@ -84650,7 +84664,7 @@ module.exports = function truncate(getLength, string, byteLength) {
   return URI;
 }));
 
-},{"./IPv6":59,"./SecondLevelDomains":60,"./punycode":62}],62:[function(require,module,exports){
+},{"./IPv6":60,"./SecondLevelDomains":61,"./punycode":63}],63:[function(require,module,exports){
 (function (global){
 /*! https://mths.be/punycode v1.4.0 by @mathias */
 ;(function(root) {
@@ -85187,7 +85201,7 @@ module.exports = function truncate(getLength, string, byteLength) {
 }(this));
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],63:[function(require,module,exports){
+},{}],64:[function(require,module,exports){
 'use strict';
 
 function isHighSurrogate(codePoint) {
@@ -85236,7 +85250,7 @@ module.exports = function getByteLength(string) {
   return byteLength;
 };
 
-},{}],64:[function(require,module,exports){
+},{}],65:[function(require,module,exports){
 /*!
  * EventEmitter v5.1.0 - git.io/ee
  * Unlicense - http://unlicense.org/
@@ -85731,6 +85745,7 @@ module.exports = function getByteLength(string) {
  * The main controlling piece of the app. It composes the other modules.
  */
 
+const constants = require('./constants');
 const datastore = require('./persistence/datastore');
 const dnsController = require('./dnssd/dns-controller');
 const dnssdSem = require('./dnssd/dns-sd-semcache');
@@ -85876,6 +85891,10 @@ exports.getOwnCacheName = function() {
 exports.resolveCache = function(fullName) {
   return new Promise(function(resolve, reject) {
     var ownCache = exports.getOwnCache();
+    if (fullName === constants.SELF_SERVICE_SHORTCUT) {
+      resolve(ownCache);
+      return;
+    }
     if (fullName === ownCache.instanceName) {
       // We're looking for ourselves--don't both querying the network.
       resolve(ownCache);
@@ -86178,7 +86197,7 @@ exports.saveMhtmlAndOpen = function(serviceName, href) {
   });
 };
 
-},{"./dnssd/dns-controller":"dnsc","./dnssd/dns-sd-semcache":"dnsSem","./evaluation":"eval","./extension-bridge/messaging":"extBridge","./peer-interface/common":16,"./peer-interface/manager":18,"./persistence/datastore":20,"./persistence/file-system":"fileSystem","./server/server-api":23,"./server/server-controller":"serverController","./settings":"settings"}],"binaryUtils":[function(require,module,exports){
+},{"./constants":9,"./dnssd/dns-controller":"dnsc","./dnssd/dns-sd-semcache":"dnsSem","./evaluation":"eval","./extension-bridge/messaging":"extBridge","./peer-interface/common":17,"./peer-interface/manager":19,"./persistence/datastore":21,"./persistence/file-system":"fileSystem","./server/server-api":24,"./server/server-controller":"serverController","./settings":"settings"}],"binaryUtils":[function(require,module,exports){
 /*jshint esnext:true*/
 /*
  * https://github.com/justindarc/dns-sd.js
@@ -86764,7 +86783,7 @@ exports.createRTCSessionDescription = function(descJson) {
 };
 
 }).call(this,require("buffer").Buffer)
-},{"../../../app/scripts/webrtc/peer-connection":28,"../server/server-api":23,"../util":24,"buffer":35}],"coalMgr":[function(require,module,exports){
+},{"../../../app/scripts/webrtc/peer-connection":29,"../server/server-api":24,"../util":25,"buffer":36}],"coalMgr":[function(require,module,exports){
 'use strict';
 
 var stratBloom = require('./bloom-strategy');
@@ -87050,7 +87069,7 @@ exports.getCachedPageSummaries = function(offset, numDesired) {
   });
 };
 
-},{"./objects":"persistenceObjs","dexie":39}],"dnsSem":[function(require,module,exports){
+},{"./objects":"persistenceObjs","dexie":40}],"dnsSem":[function(require,module,exports){
 /*jshint esnext:true*/
 'use strict';
 
@@ -87188,7 +87207,7 @@ exports.browseForSemCacheInstances = function() {
   return result;
 };
 
-},{"../server/server-api":23,"./dns-sd":"dnssd"}],"dnsc":[function(require,module,exports){
+},{"../server/server-api":24,"./dns-sd":"dnssd"}],"dnsc":[function(require,module,exports){
 /*jshint esnext:true*/
 /* globals Promise */
 'use strict';
@@ -87865,7 +87884,7 @@ exports.addRecord = function(name, record) {
   existingRecords.push(record);
 };
 
-},{"../chrome-apis/udp":"chromeUdp","../util":24,"./byte-array":9,"./dns-codes":10,"./dns-packet":11,"./dns-util":12,"./question-section":13}],"dnssd":[function(require,module,exports){
+},{"../chrome-apis/udp":"chromeUdp","../util":25,"./byte-array":10,"./dns-codes":11,"./dns-packet":12,"./dns-util":13,"./question-section":14}],"dnssd":[function(require,module,exports){
 /*jshint esnext:true*/
 /* globals Promise */
 'use strict';
@@ -88852,7 +88871,7 @@ exports.queryForResponses = function(
   });
 };
 
-},{"../util":24,"./dns-codes":10,"./dns-controller":"dnsc","./dns-packet":11,"./dns-util":12,"./resource-record":14,"lodash":50}],"eval":[function(require,module,exports){
+},{"../util":25,"./dns-codes":11,"./dns-controller":"dnsc","./dns-packet":12,"./dns-util":13,"./resource-record":15,"lodash":51}],"eval":[function(require,module,exports){
 'use strict';
 
 /**
@@ -89811,7 +89830,7 @@ exports.generateDummyPageInfos = function(numPages, peerNumber) {
   return result;
 };
 
-},{"./app-controller":"appController","./chrome-apis/chromep":2,"./coalescence/bloom-filter":4,"./coalescence/objects":7,"./peer-interface/common":16,"./peer-interface/manager":18,"./persistence/objects":"persistenceObjs","./server/server-api":23,"./util":24,"json2csv":44}],"extBridge":[function(require,module,exports){
+},{"./app-controller":"appController","./chrome-apis/chromep":2,"./coalescence/bloom-filter":4,"./coalescence/objects":7,"./peer-interface/common":17,"./peer-interface/manager":19,"./persistence/objects":"persistenceObjs","./server/server-api":24,"./util":25,"json2csv":45}],"extBridge":[function(require,module,exports){
 'use strict';
 
 const base64 = require('base-64');
@@ -89820,6 +89839,7 @@ const appc = require('../app-controller');
 const chromep = require('../chrome-apis/chromep');
 const coalMgr = require('../coalescence/manager');
 const common = require('./common-messaging');
+const constants = require('../constants');
 const datastore = require('../persistence/datastore');
 const persObjs = require('../persistence/objects');
 
@@ -89986,6 +90006,8 @@ exports.queryLocalMachineForUrls = function(message) {
               copies = [];
               result[url] = copies;
             }
+            // Add a serviceName that says we are referring to our own machine
+            cpinfo.serviceName = constants.SELF_SERVICE_SHORTCUT;
             copies.push(cpinfo);
           }
         });
@@ -90100,7 +90122,7 @@ exports.sendMessageToOpenUrl = function(url) {
   exports.sendMessageToExtension(message);
 };
 
-},{"../app-controller":"appController","../chrome-apis/chromep":2,"../coalescence/manager":"coalMgr","../persistence/datastore":20,"../persistence/objects":"persistenceObjs","./common-messaging":15,"base-64":31}],"fileSystem":[function(require,module,exports){
+},{"../app-controller":"appController","../chrome-apis/chromep":2,"../coalescence/manager":"coalMgr","../constants":9,"../persistence/datastore":21,"../persistence/objects":"persistenceObjs","./common-messaging":16,"base-64":32}],"fileSystem":[function(require,module,exports){
 'use strict';
 
 /**
@@ -90521,7 +90543,7 @@ exports.createFileReader = function() {
 };
 
 }).call(this,require("buffer").Buffer)
-},{"../util":24,"buffer":35}],"moment":[function(require,module,exports){
+},{"../util":25,"buffer":36}],"moment":[function(require,module,exports){
 //! moment.js
 //! version : 2.18.1
 //! authors : Tim Wood, Iskren Chernev, Moment.js contributors
@@ -95258,7 +95280,7 @@ exports.CPInfo = CPInfo;
 exports.CPSummary = CPSummary;
 exports.CPDisk = CPDisk;
 
-},{"../util":24}],"serverController":[function(require,module,exports){
+},{"../util":25}],"serverController":[function(require,module,exports){
 /* global WSC, DummyHandler */
 'use strict';
 
@@ -95330,7 +95352,7 @@ exports.start = function(host, port) {
   startServer(host, port, endpointHandlers);
 };
 
-},{"./evaluation-handler":21,"./handlers":22,"./server-api":23}],"settings":[function(require,module,exports){
+},{"./evaluation-handler":22,"./handlers":23,"./server-api":24}],"settings":[function(require,module,exports){
 /* global Promise */
 'use strict';
 

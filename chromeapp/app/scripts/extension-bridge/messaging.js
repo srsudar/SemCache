@@ -6,6 +6,7 @@ const appc = require('../app-controller');
 const chromep = require('../chrome-apis/chromep');
 const coalMgr = require('../coalescence/manager');
 const common = require('./common-messaging');
+const constants = require('../constants');
 const datastore = require('../persistence/datastore');
 const persObjs = require('../persistence/objects');
 
@@ -172,6 +173,8 @@ exports.queryLocalMachineForUrls = function(message) {
               copies = [];
               result[url] = copies;
             }
+            // Add a serviceName that says we are referring to our own machine
+            cpinfo.serviceName = constants.SELF_SERVICE_SHORTCUT;
             copies.push(cpinfo);
           }
         });
