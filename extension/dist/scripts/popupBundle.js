@@ -6284,9 +6284,9 @@ exports.createAddPageResponse = function() {
   );
 };
 
-exports.createOpenMessage = function(from, href) {
+exports.createOpenMessage = function(from, serviceName, href) {
   return exports.createInitiatorMessage(
-    from, exports.initiatorTypes.openPage, { href: href }
+    from, exports.initiatorTypes.openPage, { serviceName, href }
   );
 };
 
@@ -6454,19 +6454,14 @@ exports.handleExternalMessage = function(message, sender, response) {
  */
 exports.handleOpenRequest = function(message) {
   return new Promise(function(resolve, reject) {
-    var cachedPage = message.params.page;
-    // TODO: chance to service name
     appc.saveMhtmlAndOpen(
-      cachedPage.captureUrl,
-      cachedPage.captureDate,
-      cachedPage.accessPath,
-      cachedPage.metadata
+      message.params.serviceName,
+      message.params.href
     )
     .then(result => {
       resolve(result);
     })
     .catch(err => {
-      console.err('Error in handleOpenRequest: ', err);
       reject(err);
     });
   });
@@ -44547,8 +44542,8 @@ exports.sendMessageForResponse = function(message, timeout) {
  * @param {number} timeout number of milliseconds to wait. If falsey, uses
  * default.
  *
- * @return {Promise.<Object, Error>} Promise that resolves with the result of
- * the query.
+ * @return {Promise.<Array.<CPInfo>, Error>} Promise that resolves with the
+ * result of the query.
  */
 exports.queryForPagesLocally = function(from, urls, timeout) {
   return Promise.resolve()
@@ -44583,14 +44578,15 @@ exports.queryForPagesOnNetwork = function(from, urls, timeout) {
 
 /**
  * @param {string} from
+ * @param {string} serviceName
  * @param {href} href
  *
  * @return {Promise.<Object, Error>}
  */
-exports.sendMessageToOpenPage = function(from, href, timeout) {
+exports.sendMessageToOpenPage = function(from, serviceName, href, timeout) {
   return Promise.resolve()
   .then(() => {
-    let message = commonMsg.createOpenMessage(from, href);
+    let message = commonMsg.createOpenMessage(from, serviceName, href);
     return exports.sendMessageForResponse(message, timeout);
   })
   .then(response => {
@@ -45501,18 +45497,15 @@ exports.waitForCurrentPageToLoad = function() {
 /**
  * Open the CachedPage in the current tab.
  *
- * @param {CachedPage} page
+ * @param {string} serviceName
+ * @param {string} href
  *
- * @return {Promise.<undefined, Error>}
+ * @return {Promise.<Object, Error>}
  */
-exports.openCachedPage = function(page) {
-  // Safety check to keep the popup from crashing.
-  if (!page) {
-    return;
-  }
+exports.openCachedPage = function(serviceName, href) {
   return new Promise(function(resolve, reject) {
     // Note that we are assuming the page is available locally.
-    messaging.sendMessageToOpenPage(page)
+    messaging.sendMessageToOpenPage('popup', serviceName, href)
     .then(response => {
       resolve(response);
     })
@@ -45525,7 +45518,7 @@ exports.openCachedPage = function(page) {
 /**
  * Ask the content script if the current page is saved.
  *
- * @return {Promise.<CachedPage, Error>}
+ * @return {Promise.<Array.<CPInfo>, Error>}
  */
 exports.getLocalPageInfo = function() {
   return Promise.resolve()
@@ -45653,7 +45646,7 @@ function onSaveClickHandler() {
 }
 
 function onViewClickHandler() {
-  api.openCachedPage(cachedPage);
+  api.openCachedPage(cachedPage.serviceName, cachedPage.captureHref);
 }
 
 btnSave.onclick = onSaveClickHandler;
@@ -45662,10 +45655,10 @@ btnView.onclick = onViewClickHandler;
 // Update the view button
 api.getLocalPageInfo()
 .then(page => {
-  if (!page) {
+  if (!page || page.length === 0) {
     return;
   }
-  cachedPage = page;
+  cachedPage = page[0];
   btnView.disabled = false;
   btnView.classList.add('btn-success');
 })

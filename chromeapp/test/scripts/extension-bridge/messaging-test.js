@@ -292,7 +292,54 @@ test('handleExternalMessage rejects on error for open', function(t) {
   );
 });
 
-test('queryLocalNetworkForUrls returns empty if no match', function(t) {
+test('handleOpenRequest correct', function(t) {
+  let { i: initiator } = mutil.getOpenMsgs();
+  let expected = 'result from appc';
+
+  let saveStub = sinon.stub();
+  saveStub
+    .withArgs(initiator.params.serviceName, initiator.params.href)
+    .resolves(expected);
+
+  proxyquireMessaging({
+    '../app-controller': {
+      saveMhtmlAndOpen: saveStub
+    }
+  });
+
+  messaging.handleOpenRequest(initiator)
+  .then(actual => {
+    t.deepEqual(actual, expected);
+    end(t);
+  })
+  .catch(err => {
+    t.fail(err);
+    end(t);
+  });
+});
+
+test('handleOpenRequest rejects on error', function(t) {
+  let { i: initiator } = mutil.getOpenMsgs();
+  let expected = { err: 'trouble' };
+
+  proxyquireMessaging({
+    '../app-controller': {
+      saveMhtmlAndOpen: sinon.stub().rejects(expected)
+    }
+  });
+
+  messaging.handleOpenRequest(initiator)
+  .then(result => {
+    t.fail(result);
+    end(t);
+  })
+  .catch(actual => {
+    t.deepEqual(actual, expected);
+    end(t);
+  });
+});
+
+test('queryLocalMachineForUrls returns empty if no match', function(t) {
   let cpinfos = [...putil.genCPInfos(10)];
 
   proxyquireMessaging({

@@ -33,9 +33,9 @@ exports.getLocalQueryMsgs = function() {
   let urls = cpinfos.map(info => info.captureHref);
 
   let body = {
-    [cpinfos[0].captureHref]: cpinfos[0],
-    [cpinfos[1].captureHref]: cpinfos[1],
-    [cpinfos[2].captureHref]: cpinfos[2],
+    [cpinfos[0].captureHref]: [cpinfos[0]],
+    [cpinfos[1].captureHref]: [cpinfos[1]],
+    [cpinfos[2].captureHref]: [cpinfos[2]],
   };
 
   let initiator = common.createLocalQueryMessage('popup', urls);
@@ -71,7 +71,8 @@ exports.getNetworkQueryMsgs = function() {
  */
 exports.getOpenMsgs = function() {
   let href = 'http://foo.com';
-  let initiator = common.createOpenMessage('popup', href);
+  let serviceName = 'sam cache._semcache._tcp';
+  let initiator = common.createOpenMessage('popup', serviceName, href);
   let responder = common.createOpenResponse({}, {});
 
   return {

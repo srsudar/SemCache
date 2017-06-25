@@ -105,7 +105,7 @@ function onSaveClickHandler() {
 }
 
 function onViewClickHandler() {
-  api.openCachedPage(cachedPage);
+  api.openCachedPage(cachedPage.serviceName, cachedPage.captureHref);
 }
 
 btnSave.onclick = onSaveClickHandler;
@@ -114,10 +114,10 @@ btnView.onclick = onViewClickHandler;
 // Update the view button
 api.getLocalPageInfo()
 .then(page => {
-  if (!page) {
+  if (!page || page.length === 0) {
     return;
   }
-  cachedPage = page;
+  cachedPage = page[0];
   btnView.disabled = false;
   btnView.classList.add('btn-success');
 })

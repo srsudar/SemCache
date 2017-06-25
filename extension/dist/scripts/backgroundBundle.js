@@ -6284,9 +6284,9 @@ exports.createAddPageResponse = function() {
   );
 };
 
-exports.createOpenMessage = function(from, href) {
+exports.createOpenMessage = function(from, serviceName, href) {
   return exports.createInitiatorMessage(
-    from, exports.initiatorTypes.openPage, { href: href }
+    from, exports.initiatorTypes.openPage, { serviceName, href }
   );
 };
 
@@ -6454,19 +6454,14 @@ exports.handleExternalMessage = function(message, sender, response) {
  */
 exports.handleOpenRequest = function(message) {
   return new Promise(function(resolve, reject) {
-    var cachedPage = message.params.page;
-    // TODO: chance to service name
     appc.saveMhtmlAndOpen(
-      cachedPage.captureUrl,
-      cachedPage.captureDate,
-      cachedPage.accessPath,
-      cachedPage.metadata
+      message.params.serviceName,
+      message.params.href
     )
     .then(result => {
       resolve(result);
     })
     .catch(err => {
-      console.err('Error in handleOpenRequest: ', err);
       reject(err);
     });
   });
@@ -44547,8 +44542,8 @@ exports.sendMessageForResponse = function(message, timeout) {
  * @param {number} timeout number of milliseconds to wait. If falsey, uses
  * default.
  *
- * @return {Promise.<Object, Error>} Promise that resolves with the result of
- * the query.
+ * @return {Promise.<Array.<CPInfo>, Error>} Promise that resolves with the
+ * result of the query.
  */
 exports.queryForPagesLocally = function(from, urls, timeout) {
   return Promise.resolve()
@@ -44583,14 +44578,15 @@ exports.queryForPagesOnNetwork = function(from, urls, timeout) {
 
 /**
  * @param {string} from
+ * @param {string} serviceName
  * @param {href} href
  *
  * @return {Promise.<Object, Error>}
  */
-exports.sendMessageToOpenPage = function(from, href, timeout) {
+exports.sendMessageToOpenPage = function(from, serviceName, href, timeout) {
   return Promise.resolve()
   .then(() => {
-    let message = commonMsg.createOpenMessage(from, href);
+    let message = commonMsg.createOpenMessage(from, serviceName, href);
     return exports.sendMessageForResponse(message, timeout);
   })
   .then(response => {
@@ -44712,7 +44708,6 @@ webNavigation.onCommitted.addListener(details => {
 var browserAction = require('../chrome-apis/browser-action');
 var appMessaging = require('../app-bridge/messaging');
 var popupApi = require('../popup/popup-api');
-var tabs = require('../chrome-apis/tabs');
 
 // Directly requiring a script from the Chrome App. This seems risky, but I
 // feel it's better than code duplication.
@@ -44764,39 +44759,28 @@ exports.savePageForContentScript = function(tab) {
  * @param {integer} tabId the tabId t
  * @param {string} url the URL to query for
  *
- * @return {Promise.<CachedPage, Error>} Promise that resolves when complete or
- * rejects with an error.
+ * @return {Promise.<Array.<CPInfo>, Error>} Promise that resolves when
+ * complete or rejects with an error.
  */
 exports.queryForPage = function(tabId, url) {
   return new Promise(function(resolve, reject) {
     console.log(url);
-    appMessaging.queryForPagesLocally([url])
+    appMessaging.queryForPagesLocally('background', [url])
     .then(result => {
-      if (!result.response || Object.keys(result.response).length === 0) {
+      // We expect { url: [ CPInfo.asJSON(), ... ] }
+      if (Object.keys(result).length === 0) {
         // No page saved.
         console.log('did not find saved copy of page: ', url);
         resolve(null);
       } else {
+        // We found a saved copy.
         console.log('setting icon for tabId: ', tabId);
         console.log('query result: ', result);
         browserAction.setIcon({
           path: 'images/cloud-off-24.png',
           tabId: tabId
         });
-        // Send the message to the saved tab. However, the contentscript for
-        // the given tab isn't guaranteed to be loaded at this point, so it's
-        // possible that this won't be persisted. The icon update always seems
-        // to work, however.
-        tabs.sendMessage(
-          tabId,
-          {
-            type: 'queryResult',
-            from: 'background',
-            tabId: tabId,
-            page: result.response
-          }
-        );
-        resolve(result.response);
+        resolve(result);
       }
     })
     .catch(err => {
@@ -44896,7 +44880,7 @@ exports.onMessageCallback = function(message, sender, sendResponse) {
   return true;
 };
 
-},{"../../../../chromeapp/app/scripts/evaluation":21,"../app-bridge/messaging":73,"../chrome-apis/browser-action":76,"../chrome-apis/tabs":80,"../popup/popup-api":85}],76:[function(require,module,exports){
+},{"../../../../chromeapp/app/scripts/evaluation":21,"../app-bridge/messaging":73,"../chrome-apis/browser-action":76,"../popup/popup-api":85}],76:[function(require,module,exports){
 /* globals chrome */
 'use strict';
 
@@ -45763,18 +45747,15 @@ exports.waitForCurrentPageToLoad = function() {
 /**
  * Open the CachedPage in the current tab.
  *
- * @param {CachedPage} page
+ * @param {string} serviceName
+ * @param {string} href
  *
- * @return {Promise.<undefined, Error>}
+ * @return {Promise.<Object, Error>}
  */
-exports.openCachedPage = function(page) {
-  // Safety check to keep the popup from crashing.
-  if (!page) {
-    return;
-  }
+exports.openCachedPage = function(serviceName, href) {
   return new Promise(function(resolve, reject) {
     // Note that we are assuming the page is available locally.
-    messaging.sendMessageToOpenPage(page)
+    messaging.sendMessageToOpenPage('popup', serviceName, href)
     .then(response => {
       resolve(response);
     })
@@ -45787,7 +45768,7 @@ exports.openCachedPage = function(page) {
 /**
  * Ask the content script if the current page is saved.
  *
- * @return {Promise.<CachedPage, Error>}
+ * @return {Promise.<Array.<CPInfo>, Error>}
  */
 exports.getLocalPageInfo = function() {
   return Promise.resolve()

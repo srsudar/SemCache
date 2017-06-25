@@ -3,7 +3,6 @@
 var browserAction = require('../chrome-apis/browser-action');
 var appMessaging = require('../app-bridge/messaging');
 var popupApi = require('../popup/popup-api');
-var tabs = require('../chrome-apis/tabs');
 
 // Directly requiring a script from the Chrome App. This seems risky, but I
 // feel it's better than code duplication.
@@ -55,39 +54,28 @@ exports.savePageForContentScript = function(tab) {
  * @param {integer} tabId the tabId t
  * @param {string} url the URL to query for
  *
- * @return {Promise.<CachedPage, Error>} Promise that resolves when complete or
- * rejects with an error.
+ * @return {Promise.<Array.<CPInfo>, Error>} Promise that resolves when
+ * complete or rejects with an error.
  */
 exports.queryForPage = function(tabId, url) {
   return new Promise(function(resolve, reject) {
     console.log(url);
-    appMessaging.queryForPagesLocally([url])
+    appMessaging.queryForPagesLocally('background', [url])
     .then(result => {
-      if (!result.response || Object.keys(result.response).length === 0) {
+      // We expect { url: [ CPInfo.asJSON(), ... ] }
+      if (Object.keys(result).length === 0) {
         // No page saved.
         console.log('did not find saved copy of page: ', url);
         resolve(null);
       } else {
+        // We found a saved copy.
         console.log('setting icon for tabId: ', tabId);
         console.log('query result: ', result);
         browserAction.setIcon({
           path: 'images/cloud-off-24.png',
           tabId: tabId
         });
-        // Send the message to the saved tab. However, the contentscript for
-        // the given tab isn't guaranteed to be loaded at this point, so it's
-        // possible that this won't be persisted. The icon update always seems
-        // to work, however.
-        tabs.sendMessage(
-          tabId,
-          {
-            type: 'queryResult',
-            from: 'background',
-            tabId: tabId,
-            page: result.response
-          }
-        );
-        resolve(result.response);
+        resolve(result);
       }
     })
     .catch(err => {

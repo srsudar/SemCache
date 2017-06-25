@@ -1,11 +1,13 @@
 /*jshint esnext:true*/
 'use strict';
-var test = require('tape');
-var proxyquire = require('proxyquire');
-var sinon = require('sinon');
+const test = require('tape');
+const proxyquire = require('proxyquire');
+const sinon = require('sinon');
 require('sinon-as-promised');
 
-var api = require('../../../app/scripts/background/background-api');
+let api = require('../../../app/scripts/background/background-api');
+
+const tutil = require('../../../../chromeapp/test/scripts/extension-bridge/test-util');
 
 /**
  * Proxyquire the api object with proxies passed as the proxied modules.
@@ -101,11 +103,9 @@ test('savePageForContentScript rejects if saveTab rejects', function(t) {
 test('queryForPage resolves if not present', function(t) {
   var tabId = 4;
   var url = 'www.nyt.com';
-  var queryLocallySpy = sinon.stub().withArgs([url]).resolves(
-    {
-      response: {}
-    }
-  );
+
+  var queryLocallySpy = sinon.stub();
+  queryLocallySpy.withArgs('background', [url]).resolves({});
 
   proxyquireApi({
     '../app-bridge/messaging': {
@@ -116,7 +116,6 @@ test('queryForPage resolves if not present', function(t) {
   api.queryForPage(tabId, url)
   .then(actual => {
     t.equal(actual, null);
-    t.deepEqual(queryLocallySpy.args[0][0], [url]);
     end(t);
   })
   .catch(err => {
@@ -127,14 +126,20 @@ test('queryForPage resolves if not present', function(t) {
 
 test('queryForPage resolves if page present', function(t) {
   var tabId = 4;
-  var url = 'www.foo.com';
-  var queryResponse = {
-    response: 'I am the page'
-  };
+
+  let { r: responder } = tutil.getLocalQueryMsgs();
+  // Body is url: [ cpinfo ]
+
+  let url = Object.keys(responder.body)[0];
+  let appMsgResult = responder.body[url];
+
+  let expected = responder.body[url];
+
+  var queryLocallySpy = sinon.stub();
+  queryLocallySpy.withArgs('background', [url]).resolves(appMsgResult);
 
   var setIconSpy = sinon.stub();
   var sendMessageSpy = sinon.stub();
-  var queryLocallySpy = sinon.stub().withArgs([url]).resolves(queryResponse);
 
   proxyquireApi({
     '../app-bridge/messaging': {
@@ -150,26 +155,13 @@ test('queryForPage resolves if page present', function(t) {
 
   api.queryForPage(tabId, url)
   .then(actual => {
-    t.deepEqual(actual, queryResponse.response);
-    t.deepEqual(queryLocallySpy.args[0][0], [url]);
+    t.deepEqual(actual, expected);
     t.deepEqual(
       setIconSpy.args[0],
       [{
         path: 'images/cloud-off-24.png',
         tabId: tabId
       }]
-    );
-    t.deepEqual(
-      sendMessageSpy.args[0],
-      [
-        tabId,
-        {
-          type: 'queryResult',
-          from: 'background',
-          tabId: tabId,
-          page: queryResponse.response
-        }
-      ]
     );
     end(t);
   })

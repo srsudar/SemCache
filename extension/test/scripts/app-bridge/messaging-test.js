@@ -316,12 +316,14 @@ test('sendMessageToOpenPage resolves', function(t) {
   let timeout = 100;
   let { i: initiator, r: responder } = mutil.getOpenMsgs();
 
+  let serviceName = initiator.params.serviceName;
+  let href = initiator.params.href;
+
   var sendMessageForResponseSpy = sinon.stub();
   sendMessageForResponseSpy.withArgs(initiator, timeout).resolves(responder);
   messaging.sendMessageForResponse = sendMessageForResponseSpy;
 
-  let href = initiator.params.href;
-  messaging.sendMessageToOpenPage('popup', href, timeout)
+  messaging.sendMessageToOpenPage('popup', serviceName, href, timeout)
   .then(actual => {
     t.deepEqual(actual, responder.body);
     end(t);

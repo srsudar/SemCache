@@ -210,11 +210,14 @@ test('getLocalPageInfo resolves with null if no page', function(t) {
 });
 
 test('openCachedPage calls open and resolves', function(t) {
-  var cachedPage = {
-    accessPath: 'getMeHere'
-  };
+  let serviceName = 'heyo';
+  let href = 'foobar.com';
+
   var expected = { msg: 'hello from app' };
-  var sendMessageSpy = sinon.stub().withArgs(cachedPage).resolves(expected);
+  var sendMessageSpy = sinon.stub();
+  sendMessageSpy
+    .withArgs('popup', serviceName, href)
+    .resolves(expected);
 
   proxyquireApi({
     '../app-bridge/messaging': {
@@ -222,10 +225,9 @@ test('openCachedPage calls open and resolves', function(t) {
     }
   });
 
-  api.openCachedPage(cachedPage)
+  api.openCachedPage(serviceName, href)
   .then(actual => {
     t.equal(actual, expected);
-    t.deepEqual(sendMessageSpy.args[0], [cachedPage]);
     end(t);
   })
   .catch(err => {

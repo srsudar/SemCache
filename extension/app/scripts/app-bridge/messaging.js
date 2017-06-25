@@ -93,8 +93,8 @@ exports.sendMessageForResponse = function(message, timeout) {
  * @param {number} timeout number of milliseconds to wait. If falsey, uses
  * default.
  *
- * @return {Promise.<Object, Error>} Promise that resolves with the result of
- * the query.
+ * @return {Promise.<Array.<CPInfo>, Error>} Promise that resolves with the
+ * result of the query.
  */
 exports.queryForPagesLocally = function(from, urls, timeout) {
   return Promise.resolve()
@@ -129,14 +129,15 @@ exports.queryForPagesOnNetwork = function(from, urls, timeout) {
 
 /**
  * @param {string} from
+ * @param {string} serviceName
  * @param {href} href
  *
  * @return {Promise.<Object, Error>}
  */
-exports.sendMessageToOpenPage = function(from, href, timeout) {
+exports.sendMessageToOpenPage = function(from, serviceName, href, timeout) {
   return Promise.resolve()
   .then(() => {
-    let message = commonMsg.createOpenMessage(from, href);
+    let message = commonMsg.createOpenMessage(from, serviceName, href);
     return exports.sendMessageForResponse(message, timeout);
   })
   .then(response => {

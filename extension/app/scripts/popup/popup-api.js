@@ -92,18 +92,15 @@ exports.waitForCurrentPageToLoad = function() {
 /**
  * Open the CachedPage in the current tab.
  *
- * @param {CachedPage} page
+ * @param {string} serviceName
+ * @param {string} href
  *
- * @return {Promise.<undefined, Error>}
+ * @return {Promise.<Object, Error>}
  */
-exports.openCachedPage = function(page) {
-  // Safety check to keep the popup from crashing.
-  if (!page) {
-    return;
-  }
+exports.openCachedPage = function(serviceName, href) {
   return new Promise(function(resolve, reject) {
     // Note that we are assuming the page is available locally.
-    messaging.sendMessageToOpenPage(page)
+    messaging.sendMessageToOpenPage('popup', serviceName, href)
     .then(response => {
       resolve(response);
     })
@@ -116,7 +113,7 @@ exports.openCachedPage = function(page) {
 /**
  * Ask the content script if the current page is saved.
  *
- * @return {Promise.<CachedPage, Error>}
+ * @return {Promise.<Array.<CPInfo>, Error>}
  */
 exports.getLocalPageInfo = function() {
   return Promise.resolve()

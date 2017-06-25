@@ -122,9 +122,9 @@ exports.createAddPageResponse = function() {
   );
 };
 
-exports.createOpenMessage = function(from, href) {
+exports.createOpenMessage = function(from, serviceName, href) {
   return exports.createInitiatorMessage(
-    from, exports.initiatorTypes.openPage, { href: href }
+    from, exports.initiatorTypes.openPage, { serviceName, href }
   );
 };
 

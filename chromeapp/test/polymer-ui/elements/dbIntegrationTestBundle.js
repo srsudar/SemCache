@@ -2701,9 +2701,9 @@ exports.createAddPageResponse = function() {
   );
 };
 
-exports.createOpenMessage = function(from, href) {
+exports.createOpenMessage = function(from, serviceName, href) {
   return exports.createInitiatorMessage(
-    from, exports.initiatorTypes.openPage, { href: href }
+    from, exports.initiatorTypes.openPage, { serviceName, href }
   );
 };
 
@@ -45911,19 +45911,14 @@ exports.handleExternalMessage = function(message, sender, response) {
  */
 exports.handleOpenRequest = function(message) {
   return new Promise(function(resolve, reject) {
-    var cachedPage = message.params.page;
-    // TODO: chance to service name
     appc.saveMhtmlAndOpen(
-      cachedPage.captureUrl,
-      cachedPage.captureDate,
-      cachedPage.accessPath,
-      cachedPage.metadata
+      message.params.serviceName,
+      message.params.href
     )
     .then(result => {
       resolve(result);
     })
     .catch(err => {
-      console.err('Error in handleOpenRequest: ', err);
       reject(err);
     });
   });
