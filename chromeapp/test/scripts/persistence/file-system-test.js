@@ -379,9 +379,10 @@ test('getFileForWritingCachedPage resolves on success', function(t) {
   const dirEntry = { name: 'directory entry' };
 
   const expected = { hello: 'I am the file entry' };
-  const getFileStub = sinon.stub().withArgs(
+  const getFileStub = sinon.stub();
+  getFileStub.withArgs(
     dirEntry,
-    { create: true, exclusive: true },
+    { create: true, exclusive: false },
     filePath
   )
   .resolves(expected);

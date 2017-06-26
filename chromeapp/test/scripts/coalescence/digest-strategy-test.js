@@ -121,8 +121,12 @@ test('initialize resolves on success', function(t) {
 
   var digest = new digestStrategy.DigestStrategy();
 
-  digest.getAndProcessDigests = sinon.stub().withArgs(peerAccessor, peerInfos)
+  let getAndProcessDigestsStub = sinon.stub();
+  getAndProcessDigestsStub
+    .withArgs(peerAccessor, peerInfos)
     .resolves(processedDigests);
+
+  digest.getAndProcessDigests = getAndProcessDigestsStub;
   // Rather than use a stub to monitor whether or not the digests have been
   // set, we're going to use a function so that we can also assert that the
   // isInitializing() function is set correctly.

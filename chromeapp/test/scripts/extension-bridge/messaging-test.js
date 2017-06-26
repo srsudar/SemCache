@@ -414,9 +414,12 @@ test('queryLocalNetworkForUrls rejects on error', function(t) {
   var expectedErr = { msg: 'query failed' };
   var urls = ['a', 'b'];
   let message = common.createNetworkQueryMessage('popup', urls);
+
+  let queryForUrlsStub = sinon.stub();
+  queryForUrlsStub.withArgs(urls).rejects(expectedErr);
   proxyquireMessaging({
     '../coalescence/manager': {
-      queryForUrls: sinon.stub().withArgs(urls).rejects(expectedErr)
+      queryForUrls: queryForUrlsStub
     }
   });
 
@@ -436,9 +439,12 @@ test('queryLocalNetworkForUrls resolves with result', function(t) {
 
   var message = common.createNetworkQueryMessage('cs', urls);
   var expected = [ 'hooray', 'woohoo' ];
+
+  let queryForUrlsStub = sinon.stub();
+  queryForUrlsStub.withArgs(urls).resolves(expected);
   proxyquireMessaging({
     '../coalescence/manager': {
-      queryForUrls: sinon.stub().withArgs(urls).resolves(expected)
+      queryForUrls: queryForUrlsStub
     }
   });
 

@@ -163,10 +163,13 @@ test('getListFromService resolves with json', function(t) {
   );
 
   var peerAccessorStub = sinon.stub();
-  peerAccessorStub.getList = sinon.stub().withArgs(listParams)
-    .resolves(expected);
-  var resolveCacheStub = sinon.stub().withArgs(serviceName)
-    .resolves(cacheInfo);
+
+  let getListStub = sinon.stub();
+  getListStub.withArgs(listParams).resolves(expected);
+  peerAccessorStub.getList = getListStub;
+
+  let resolveCacheStub = sinon.stub();
+  resolveCacheStub.withArgs(serviceName).resolves(cacheInfo);
 
   proxyquireAppc({
     './peer-interface/manager': {
@@ -772,7 +775,9 @@ test('resolveCache queries network if needed and resolves', function(t) {
   );
   var fullName = expected.instanceName;
 
-  var resolveCacheSpy = sinon.stub().withArgs(fullName).resolves(expected);
+  let resolveCacheSpy = sinon.stub();
+  resolveCacheSpy.withArgs(fullName).resolves(expected);
+
   var getOwnCacheSpy = sinon.stub().returns(ownCache);
 
   proxyquireAppc({
@@ -802,7 +807,9 @@ test('resolveCache rejects if query fails', function(t) {
   var fullName = 'missingRecords';
   var expected = { msg: 'something went wrong '};
 
-  var resolveCacheSpy = sinon.stub().withArgs(fullName).rejects(expected);
+  let resolveCacheSpy = sinon.stub();
+  resolveCacheSpy.withArgs(fullName).rejects(expected);
+
   var getOwnCacheSpy = sinon.stub().returns(ownCache);
 
   proxyquireAppc({

@@ -46,7 +46,12 @@ test('getFileBlob resolves with blob', function(t) {
   var response = sinon.stub();
   var expected = { testType: 'I am the blob, coo coo cuchoo' };
   response.blob = sinon.stub().resolves(expected);
-  var fetchSpy = sinon.stub().withArgs(mhtmlUrl).resolves(response);
+
+  let params = common.createFileParams('foo', 1234);
+  params.fileUrl = mhtmlUrl;
+
+  var fetchSpy = sinon.stub();
+  fetchSpy.withArgs(mhtmlUrl).resolves(response);
 
   proxyquireHttpImpl({
     '../util': {
@@ -55,7 +60,7 @@ test('getFileBlob resolves with blob', function(t) {
   });
 
   var pa = new httpImpl.HttpPeerAccessor();
-  pa.getFileBlob(mhtmlUrl)
+  pa.getFileBlob(params)
   .then(actual => {
     t.equal(actual, expected);
     end(t);
@@ -69,7 +74,7 @@ test('getFileBlob resolves with blob', function(t) {
 test('getFileBlob rejects with error', function(t) {
   var url = 'url';
   var expected = { error: 'fetch went south' };
-  var fetchSpy = sinon.stub().withArgs(url).rejects(expected);
+  var fetchSpy = sinon.stub().rejects(expected);
 
   proxyquireHttpImpl({
     '../util': {
@@ -95,7 +100,8 @@ test('getList resolves with json', function(t) {
   var response = sinon.stub();
   response.json = sinon.stub().resolves(expected);
 
-  var fetchSpy = sinon.stub().withArgs(listUrl).resolves(response);
+  var fetchSpy = sinon.stub();
+  fetchSpy.withArgs(listUrl).resolves(response);
   
   proxyquireHttpImpl({
     '../util': {
@@ -145,7 +151,8 @@ test('getCacheDigest resolves with json', function(t) {
   response.json = sinon.stub().resolves(expected);
 
   var params = { digestUrl: digestUrl };
-  var fetchSpy = sinon.stub().withArgs(digestUrl).resolves(response);
+  var fetchSpy = sinon.stub();
+  fetchSpy.withArgs(digestUrl).resolves(response);
   
   proxyquireHttpImpl({
     '../util': {

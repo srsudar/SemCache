@@ -59,11 +59,13 @@ test('getFileBlob resolves with peerConnection.getFile', function(t) {
   var buffer = { tesType: 'I am the result of PeerConnection.getFile' };
   var expected = 'I am a blob';
   
-  var getBufferAsBlobSpy = sinon.stub().withArgs(buffer).returns(expected);
+  var getBufferAsBlobSpy = sinon.stub();
+  getBufferAsBlobSpy.withArgs(buffer).returns(expected);
   var peerConn = sinon.stub();
-  peerConn.getFile = sinon.stub().withArgs(fileUrl).resolves(buffer);
-  var getOrCreateConnectionSpy = sinon.stub().withArgs(ipaddr, port)
-    .resolves(peerConn);
+  peerConn.getFile = sinon.stub();
+  peerConn.getFile.withArgs(fileUrl).resolves(buffer);
+  var getOrCreateConnectionSpy = sinon.stub();
+  getOrCreateConnectionSpy.withArgs(ipaddr, port).resolves(peerConn);
   
   proxyquireWebrtcImpl({
     '../webrtc/connection-manager': {
@@ -117,8 +119,8 @@ test('getList resolves with json', function(t) {
   var peerConn = sinon.stub();
   peerConn.getList = sinon.stub().resolves(expected);
 
-  var getOrCreateConnectionSpy = sinon.stub().withArgs(ipaddr, port)
-    .resolves(peerConn);
+  var getOrCreateConnectionSpy = sinon.stub();
+  getOrCreateConnectionSpy.withArgs(ipaddr, port).resolves(peerConn);
   
   proxyquireWebrtcImpl({
     '../webrtc/connection-manager': {
@@ -171,8 +173,8 @@ test('getCacheDigest resolves with json', function(t) {
   var peerConn = sinon.stub();
   peerConn.getCacheDigest = sinon.stub().resolves(expected);
 
-  var getOrCreateConnectionSpy = sinon.stub().withArgs(ipaddr, port)
-    .resolves(peerConn);
+  var getOrCreateConnectionSpy = sinon.stub();
+  getOrCreateConnectionSpy.withArgs(ipaddr, port).resolves(peerConn);
   
   proxyquireWebrtcImpl({
     '../webrtc/connection-manager': {

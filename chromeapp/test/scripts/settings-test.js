@@ -287,7 +287,8 @@ test('custom getters call internals', function(t) {
 
 test('getTransportMethod defaults to http', function(t) {
   var key = 'transportMethod';
-  var getSpy = sinon.stub().withArgs(key).returns(null);
+  var getSpy = sinon.stub();
+  getSpy.withArgs(key).returns(null);
   settings.get = getSpy;
 
   var actual = settings.getTransportMethod();

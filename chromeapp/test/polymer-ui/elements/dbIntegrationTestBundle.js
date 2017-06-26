@@ -46179,6 +46179,9 @@ exports.getFileForWritingCachedPage = function(filePath) {
       create: true,     // create if it doesn't exist
       exclusive: false  // OK if it already exists--will overwrite
     };
+    console.log(cacheDir);
+    console.log(createOptions);
+    console.log(filePath);
     return fsUtil.getFile(cacheDir, createOptions, filePath);
   });
 };

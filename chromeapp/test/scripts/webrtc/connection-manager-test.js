@@ -115,7 +115,9 @@ function createConnectionAssertionHelper(
     };
   }
   
-  cmgr.getPathForWebrtcNegotiation = sinon.stub().withArgs(ipaddr, port)
+  cmgr.getPathForWebrtcNegotiation = sinon.stub();
+  cmgr.getPathForWebrtcNegotiation
+    .withArgs(ipaddr, port)
     .returns(peerEndpoint);
   cmgr.createRTCPeerConnection = sinon.stub().returns(peerConnection);
 
@@ -225,8 +227,10 @@ function sendOfferAssertionHelper(fetchError, createDescError, t) {
   if (createDescError) {
     cmgr.createRTCSessionDescription = sinon.stub().throws(createDescError);
   } else {
-    cmgr.createRTCSessionDescription = sinon.stub()
-      .withArgs(remoteDescriptionJson).returns(remoteDescriptionObj);
+    cmgr.createRTCSessionDescription = sinon.stub();
+    cmgr.createRTCSessionDescription
+      .withArgs(remoteDescriptionJson)
+      .returns(remoteDescriptionObj);
   }
 
   var numCallsToCreateIce = 0;
@@ -238,8 +242,8 @@ function sendOfferAssertionHelper(fetchError, createDescError, t) {
     return result;
   };
   cmgr.addConnection = sinon.stub();
-  cmgr.createPeerConnection = sinon.stub().withArgs(rawConnection)
-    .returns(peerConnection);
+  cmgr.createPeerConnection = sinon.stub();
+  cmgr.createPeerConnection.withArgs(rawConnection).returns(peerConnection);
 
   if (fetchError || createDescError) {
     // Allow the caller to do the catch()'ing.

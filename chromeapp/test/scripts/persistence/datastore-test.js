@@ -88,8 +88,8 @@ test('addPageToCache rejects if getFile rejects', function(t) {
 
   const cpdisk = new CPDisk({ captureHref: href, captureDate: date });
   
-  const getFileForWritingCachedPageStub = sinon.stub().withArgs(fileName)
-    .rejects(expected);
+  const getFileForWritingCachedPageStub = sinon.stub();
+  getFileForWritingCachedPageStub.withArgs(fileName).rejects(expected);
 
   proxyquireDatastore({
     './file-system': {
@@ -99,8 +99,8 @@ test('addPageToCache rejects if getFile rejects', function(t) {
       addPageToDb: sinon.stub().resolves()
     }
   });
-  datastore.createFileNameForPage = sinon.stub().withArgs(href, date)
-    .returns(fileName);
+  datastore.createFileNameForPage = sinon.stub();
+  datastore.createFileNameForPage.withArgs(href, date).returns(fileName);
 
   datastore.addPageToCache(cpdisk)
   .then(res => {
@@ -135,10 +135,10 @@ test('addPageToCache resolves if all others succeed', function(t) {
     filePath: fileName
   });
   
-  const getFileForWritingCachedPageStub = sinon.stub().withArgs(fileName)
-    .resolves(expected);
-  const writeToFileStub = sinon.stub().withArgs(expected, mhtml)
-    .resolves();
+  const getFileForWritingCachedPageStub = sinon.stub();
+  getFileForWritingCachedPageStub.withArgs(fileName).resolves(expected);
+  const writeToFileStub = sinon.stub();
+  writeToFileStub.withArgs(expected,mhtml) .resolves();
 
   const addPageToDbStub = sinon.stub().resolves();
   proxyquireDatastore({
@@ -152,8 +152,8 @@ test('addPageToCache resolves if all others succeed', function(t) {
       addPageToDb: addPageToDbStub
     }
   });
-  datastore.createFileNameForPage = sinon.stub().withArgs(href, date)
-    .returns(fileName);
+  datastore.createFileNameForPage = sinon.stub();
+  datastore.createFileNameForPage.withArgs(href, date).returns(fileName);
 
   datastore.addPageToCache(page)
   .then(actual => {

@@ -75,8 +75,8 @@ test('getList issues call to peer', function(t) {
   });
 
   var pc = new peerConn.PeerConnection(rawConnection);
-  pc.sendAndGetResponse = sinon.stub().withArgs(msg)
-    .resolves(sutil.getListResponseBuff());
+  pc.sendAndGetResponse = sinon.stub();
+  pc.sendAndGetResponse.withArgs(msg).resolves(sutil.getListResponseBuff());
   
 
   pc.getList()
@@ -129,8 +129,8 @@ test('getCacheDigest issues call to peer', function(t) {
   });
 
   var pc = new peerConn.PeerConnection(rawConnection);
-  pc.sendAndGetResponse = sinon.stub().withArgs(rawConnection, msg)
-    .resolves(buffer);
+  pc.sendAndGetResponse = sinon.stub();
+  pc.sendAndGetResponse.withArgs(msg).resolves(buffer);
   
 
   pc.getCacheDigest()
@@ -182,8 +182,8 @@ test('getFile resolves with response from server', function(t) {
   });
 
   var pc = new peerConn.PeerConnection(rawConnection);
-  pc.sendAndGetResponse = sinon.stub().withArgs(msg)
-    .resolves(expected);
+  pc.sendAndGetResponse = sinon.stub();
+  pc.sendAndGetResponse.withArgs(msg).resolves(expected);
   
 
   pc.getFile()
@@ -229,12 +229,18 @@ test('getCachedPage resolves with CPDisk', function(t) {
   let href = 'http://www.foobar.org';
   let msg = message.createCachedPageMessage(href);
 
+  proxyquirePeerConn({
+    './message': {
+      createCachedPageMessage: sinon.stub().returns(msg)
+    }
+  });
+
   let expected = sutil.getCachedPageResponseObj();
   let buffer = sutil.getCachedPageResponseBuff();
 
   var pc = new peerConn.PeerConnection(rawConnection);
-  pc.sendAndGetResponse = sinon.stub().withArgs(msg)
-    .resolves(buffer);
+  pc.sendAndGetResponse = sinon.stub();
+  pc.sendAndGetResponse.withArgs(msg).resolves(buffer);
 
   pc.getCachedPage(href)
   .then(actual => {

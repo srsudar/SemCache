@@ -86,16 +86,16 @@ test('onFile calls sendBuffer with file contents', function(t) {
   var channel = { testType: 'channel' };
 
   var ccServerSpy = sinon.stub();
-  var createChannelServerSpy = sinon.stub().withArgs(channel)
-    .returns(ccServerSpy);
+  var createChannelServerSpy = sinon.stub();
+  createChannelServerSpy.withArgs(channel).returns(ccServerSpy);
 
   var sendBufferSpy = sinon.stub();
   ccServerSpy.sendBuffer = sendBufferSpy;
 
-  var getCachedFileNameFromPathSpy = sinon.stub().withArgs(accessPath)
-    .returns(fileName);
-  var getFileContentsFromNameSpy = sinon.stub().withArgs(fileName)
-    .resolves(buff);
+  var getCachedFileNameFromPathSpy = sinon.stub();
+  getCachedFileNameFromPathSpy.withArgs(accessPath).returns(fileName);
+  var getFileContentsFromNameSpy = sinon.stub();
+  getFileContentsFromNameSpy.withArgs(fileName).resolves(buff);
 
   proxyquireResponder({
     '../persistence/file-system': {
@@ -131,8 +131,8 @@ test('onFile rejects with error', function(t) {
   var expected = { error: 'trouble' };
 
   var getCachedFileNameFromPathSpy = sinon.stub().returns(fileName);
-  var getFileContentsFromNameSpy = sinon.stub().withArgs(fileName)
-    .rejects(expected);
+  var getFileContentsFromNameSpy = sinon.stub();
+  getFileContentsFromNameSpy.withArgs(fileName).rejects(expected);
 
   proxyquireResponder({
     '../persistence/file-system': {
@@ -142,8 +142,8 @@ test('onFile rejects with error', function(t) {
       getCachedFileNameFromPath: getCachedFileNameFromPathSpy
     }
   });
-  responder.createChannelServer = sinon.stub().withArgs(channel)
-    .returns(serverMock);
+  responder.createChannelServer = sinon.stub();
+responder.createChannelServer.withArgs(channel).returns(serverMock);
 
   responder.onFile(channel, msg)
   .then(res => {

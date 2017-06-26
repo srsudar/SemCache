@@ -407,7 +407,8 @@ test('getFileContents resolves with full contents', function(t) {
   var file = { stubType: 'file' };
   var fileEntry = { stubType: 'fileEntry' };
 
-  util.getFileFromEntry = sinon.stub().withArgs(fileEntry).resolves(file);
+  util.getFileFromEntry = sinon.stub();
+  util.getFileFromEntry.withArgs(fileEntry).resolves(file);
 
   fileReaderStub.readAsArrayBuffer = function(actualFile) {
     t.equal(actualFile, file);
@@ -440,7 +441,8 @@ test('getFileContents rejects when onerror called', function(t) {
   var file = { stubType: 'file' };
   var fileEntry = { stubType: 'fileEntry' };
 
-  util.getFileFromEntry = sinon.stub().withArgs(fileEntry).resolves(file);
+  util.getFileFromEntry = sinon.stub();
+  util.getFileFromEntry.withArgs(fileEntry).resolves(file);
 
   fileReaderStub.readAsArrayBuffer = function(actualFile) {
     t.equal(actualFile, file);

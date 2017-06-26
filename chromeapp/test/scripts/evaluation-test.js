@@ -750,7 +750,8 @@ test('runLoadPageTrialForCache correct', function(t) {
     cachedPages: [page1, page2]
   };
 
-  var fetchJsonSpy = sinon.stub().withArgs(listPagesUrl).resolves(caches);
+  let fetchJsonSpy = sinon.stub();
+  fetchJsonSpy.withArgs(listPagesUrl).resolves(caches);
 
   var pageResults = [
     'result for page 1',
@@ -840,7 +841,8 @@ test('resolvePeers correct', function(t) {
     cacheNames[1].serviceName
   ];
 
-  var waitSpy = sinon.stub().withArgs(resolveDelay).resolves();
+  let waitSpy = sinon.stub();
+  waitSpy.withArgs(resolveDelay).resolves();
 
   var expected = [
     { resolved: caches[0] },
@@ -890,10 +892,13 @@ test('runFetchFileIteration correct on success', function(t) {
   var mhtmlUrl = 'whyme.mhtml';
 
   var params = { iam: 'aparam' };
-  var createFileParamsSpy = sinon.stub().withArgs(ipAddr, port, mhtmlUrl)
-    .returns(params);
+  var createFileParamsSpy = sinon.stub();
+  createFileParamsSpy.withArgs(ipAddr, port, mhtmlUrl).returns(params);
+
+  let getFileBlobStub = sinon.stub();
+  getFileBlobStub.withArgs(params).resolves(blob);
   var peerAccessor = {
-    getFileBlob: sinon.stub().withArgs(params).resolves(blob)
+    getFileBlob: getFileBlobStub
   };
   var getPeerAccessorSpy = sinon.stub().returns(peerAccessor);
 
