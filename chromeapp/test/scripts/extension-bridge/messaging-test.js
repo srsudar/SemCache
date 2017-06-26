@@ -378,53 +378,6 @@ test('queryLocalMachineForUrls rejects if something goes wrong', function(t) {
   });
 });
 
-test('urlsMatch returns true if same lacking scheme', function(t) {
-  var actual = messaging.urlsMatch(
-    'http://www.nytimes.com/story',
-    'www.nytimes.com/story'
-  );
-  t.true(actual);
-  end(t);
-});
-
-test('urlsMatch true for http vs https', function(t) {
-  var actual = messaging.urlsMatch(
-    'http://www.nytimes.com/story',
-    'https://www.nytimes.com/story'
-  );
-  t.true(actual);
-  end(t);
-});
-
-test('urlsMatch returns false if different resource', function(t) {
-  var actual = messaging.urlsMatch(
-    'www.nytimes.com/foo',
-    'www.nytimes.com/bar'
-  );
-  t.false(actual);
-  end(t);
-});
-
-test('urlsMatch return false for different domains', function(t) {
-  var actual = messaging.urlsMatch('foo.com', 'bar.com');
-  t.false(actual);
-  end(t);
-});
-
-test('urlsMatch ignores trailing slash on a', function(t) {
-  var a = 'www.tyrion.com/';
-  var b = 'www.tyrion.com';
-  t.true(messaging.urlsMatch(a, b));
-  end(t);
-});
-
-test('urlsMatch ignores trailing slash on b', function(t) {
-  var a = 'www.tyrion.com';
-  var b = 'www.tyrion.com/';
-  t.true(messaging.urlsMatch(a, b));
-  end(t);
-});
-
 test('sendMessageToExtension calls sendMessage', function(t) {
   var sendMessageSpy = sinon.spy();
   proxyquireMessaging({}, { sendMessage: sendMessageSpy });

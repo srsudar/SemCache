@@ -129,12 +129,11 @@ exports.annotateNetworkLocalLinks = function() {
     var links = exports.getLinksOnPage();
     var urls = Object.keys(links);
     
-    appMsg.queryForPagesOnNetwork(urls)
-    .then(appMsg => {
+    appMsg.queryForPagesOnNetwork('contentscript', urls)
+    .then(urlToInfoArr => {
       // localUrls will be an Object mapping URLs to arrays of locally
       // available pages.
-      var localUrls = appMsg.response;
-      Object.keys(localUrls).forEach(url => {
+      Object.keys(urlToInfoArr).forEach(url => {
         var anchors = links[url];
         anchors.forEach(anchor => {
           exports.annotateAnchorIsOnNetwork(anchor);

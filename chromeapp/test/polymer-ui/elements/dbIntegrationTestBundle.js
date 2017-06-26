@@ -45987,7 +45987,7 @@ exports.queryLocalMachineForUrls = function(message) {
     .then(cpinfos => {
       cpinfos.forEach(cpinfo => {
         urls.forEach(url => {
-          if (exports.urlsMatch(url, cpinfo.captureHref)) {
+          if (url === cpinfo.captureHref) {
             var copies = result[url];
             if (!copies) {
               copies = [];
@@ -46024,43 +46024,6 @@ exports.queryLocalNetworkForUrls = function(message) {
       reject(err);
     });
   });
-};
-
-/**
- * Determine if two URLs refer to the same page.
- *
- * This method is required only because we might not be saving the URL exactly
- * with the cached page and thus a straight string comparison does not apply.
- * E.g. we might only associated the cached page with "www.nytimes.com", not
- * "http://www.nytimes.com".
- *
- * @param {string} url the url passed from the extension. It is expected that
- * this can contain the full schema, eg "http://www.nytimes.com".
- * @param {string} savedUrl the url of the saved page
- *
- * @return {boolean} true if the URLs refer to the same page, else false
- */
-exports.urlsMatch = function(url, savedUrl) {
-  function cleanupForComparison(url) {
-    // First strip a trailing slash.
-    if (url.endsWith('/')) {
-      url = url.substring(0, url.length - 1);
-    }
-    // Then remove schemes
-    if (url.startsWith('http://')) {
-      url = url.substring('http://'.length);
-    }
-    if (url.startsWith('https://')) {
-      url = url.substring('https://'.length);
-    }
-    return url;
-  }
-
-  url = cleanupForComparison(url);
-  savedUrl = cleanupForComparison(savedUrl);
-
-  // This isn't a perfect way to do this, but it will work in most usual cases.
-  return url.endsWith(savedUrl);
 };
 
 /**
