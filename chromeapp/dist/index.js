@@ -44496,17 +44496,6 @@ var util = require('./util');
  */
 
 /**
- * This is the data structure in which we're storing the Bloom filters from
- * peers.
- *
- * Contains objects 
- */
-var BLOOM_FILTERS = [];
-
-var IS_INITIALIZED = false;
-var IS_INITIALIZING = false;
-
-/**
  * An implementation of the coalescence strategy API.
  *
  * The Bloom filter strategy is to check a Bloom filter for URLs.
@@ -44520,6 +44509,17 @@ exports.BloomStrategy = function BloomStrategy() {
   // tied to this object, but going to leave it for now. This is basically
   // giving an object-based API onto the global state, which is a bit ugly but
   // I'm going to allow it for the near-term.
+
+  /**
+   * This is the data structure in which we're storing the Bloom filters from
+   * peers.
+   *
+   * Contains objects 
+   */
+  this.BLOOM_FILTERS = [];
+
+  this.IS_INITIALIZED = false;
+  this.IS_INITIALIZING = false;
 };
 
 /**
@@ -44527,9 +44527,9 @@ exports.BloomStrategy = function BloomStrategy() {
  */
 exports.BloomStrategy.prototype.reset = function() {
   this.setBloomFilters([]);
-  IS_INITIALIZED = false;
+  this.IS_INITIALIZED = false;
   // If an initialization is in progress, this could not be a complete reset.
-  IS_INITIALIZING = false;
+  this.IS_INITIALIZING = false;
 };
 
 /**
@@ -44538,7 +44538,7 @@ exports.BloomStrategy.prototype.reset = function() {
  * @param {Array.<PeerBloomFilter>} digests
  */
 exports.BloomStrategy.prototype.setBloomFilters = function(filters) {
-  BLOOM_FILTERS = filters;
+  this.BLOOM_FILTERS = filters;
 };
 
 /**
@@ -44547,7 +44547,7 @@ exports.BloomStrategy.prototype.setBloomFilters = function(filters) {
  * @return {boolean} true if queries can be performed
  */
 exports.BloomStrategy.prototype.isInitialized = function() {
-  return IS_INITIALIZED;
+  return this.IS_INITIALIZED;
 };
 
 /**
@@ -44556,7 +44556,7 @@ exports.BloomStrategy.prototype.isInitialized = function() {
  * @return {boolean}
  */
 exports.BloomStrategy.prototype.isInitializing = function() {
-  return IS_INITIALIZING;
+  return this.IS_INITIALIZING;
 };
 
 /**
@@ -44580,8 +44580,8 @@ exports.BloomStrategy.prototype.initialize = function() {
   // 3) Process the digests
   // 4) Update our module data structures with this information
   // 5) Declare that we are initialized
-  IS_INITIALIZING = true;
-  var that = this;
+  this.IS_INITIALIZING = true;
+  let self = this;
 
   return new Promise(function(resolve, reject) {
     // Changing this for evaluation.
@@ -44592,7 +44592,7 @@ exports.BloomStrategy.prototype.initialize = function() {
       return util.removeOwnInfo(peerInfos);
     }).then(peerInfos => {
       var peerAccessor = peerIfMgr.getPeerAccessor();
-      return that.getAndProcessBloomFilters(peerAccessor, peerInfos);
+      return self.getAndProcessBloomFilters(peerAccessor, peerInfos);
     })
     // This code is for evaluation mode.
     // Promise.resolve()
@@ -44602,13 +44602,13 @@ exports.BloomStrategy.prototype.initialize = function() {
     //   );
     // })
     .then(bloomFilters => {
-      that.setBloomFilters(bloomFilters);
-      IS_INITIALIZING = false;
-      IS_INITIALIZED = true;
+      self.setBloomFilters(bloomFilters);
+      self.IS_INITIALIZING = false;
+      self.IS_INITIALIZED = true;
       resolve();
     })
     .catch(err => {
-      IS_INITIALIZING = false;
+      self.IS_INITIALIZING = false;
       reject(err);
     });
   });
@@ -44690,13 +44690,14 @@ exports.BloomStrategy.prototype.performQuery = function(urls) {
   if (!this.isInitialized()) {
     console.warn('digest-strategy was queried but is not initialized');
   }
+  let self = this;
   return new Promise(function(resolve, reject) {
     Promise.resolve()
     .then(() => {
       var result = {};
       urls.forEach(url => {
         var copiesForUrl = [];
-        BLOOM_FILTERS.forEach(bloomFilter => {
+        self.BLOOM_FILTERS.forEach(bloomFilter => {
           var isPresent = bloomFilter.performQueryForPage(url);
           if (isPresent) {
             let info = {
@@ -44733,16 +44734,6 @@ var util = require('./util');
  */
 
 /**
- * This is the data structure in which we're storing the digests from peers.
- *
- * Contains objects 
- */
-var DIGESTS = [];
-
-var IS_INITIALIZED = false;
-var IS_INITIALIZING = false;
-
-/**
  * An implementation of the coalescence strategy API.
  *
  * The digest strategy is to obtain a list of all the available pages from
@@ -44757,6 +44748,16 @@ exports.DigestStrategy = function DigestStrategy() {
   // tied to this object, but going to leave it for now. This is basically
   // giving an object-based API onto the global state, which is a bit ugly but
   // I'm going to allow it for the near-term.
+
+  /**
+   * This is the data structure in which we're storing the digests from peers.
+   *
+   * Contains objects 
+   */
+  this.DIGESTS = [];
+
+  this.IS_INITIALIZED = false;
+  this.IS_INITIALIZING = false;
 };
 
 /**
@@ -44764,9 +44765,9 @@ exports.DigestStrategy = function DigestStrategy() {
  */
 exports.DigestStrategy.prototype.reset = function() {
   this.setDigests([]);
-  IS_INITIALIZED = false;
+  this.IS_INITIALIZED = false;
   // If an initialization is in progress, this could not be a complete reset.
-  IS_INITIALIZING = false;
+  this.IS_INITIALIZING = false;
 };
 
 /**
@@ -44775,7 +44776,7 @@ exports.DigestStrategy.prototype.reset = function() {
  * @param {Array.<Digest>} digests
  */
 exports.DigestStrategy.prototype.setDigests = function(digests) {
-  DIGESTS = digests;
+  this.DIGESTS = digests;
 };
 
 /**
@@ -44784,7 +44785,7 @@ exports.DigestStrategy.prototype.setDigests = function(digests) {
  * @return {boolean} true if queries can be performed
  */
 exports.DigestStrategy.prototype.isInitialized = function() {
-  return IS_INITIALIZED;
+  return this.IS_INITIALIZED;
 };
 
 /**
@@ -44793,7 +44794,7 @@ exports.DigestStrategy.prototype.isInitialized = function() {
  * @return {boolean}
  */
 exports.DigestStrategy.prototype.isInitializing = function() {
-  return IS_INITIALIZING;
+  return this.IS_INITIALIZING;
 };
 
 /**
@@ -44817,8 +44818,8 @@ exports.DigestStrategy.prototype.initialize = function() {
   // 3) Process the digests
   // 4) Update our module data structures with this information
   // 5) Declare that we are initialized
-  IS_INITIALIZING = true;
-  var that = this;
+  this.IS_INITIALIZING = true;
+  let self = this;
 
   return new Promise(function(resolve, reject) {
     dnssdSem.browseForSemCacheInstances()
@@ -44826,16 +44827,16 @@ exports.DigestStrategy.prototype.initialize = function() {
       return util.removeOwnInfo(peerInfos);
     }).then(peerInfos => {
       var peerAccessor = peerIfMgr.getPeerAccessor();
-      return that.getAndProcessDigests(peerAccessor, peerInfos);
+      return self.getAndProcessDigests(peerAccessor, peerInfos);
     })
     .then(digests => {
-      that.setDigests(digests);
-      IS_INITIALIZING = false;
-      IS_INITIALIZED = true;
+      self.setDigests(digests);
+      self.IS_INITIALIZING = false;
+      self.IS_INITIALIZED = true;
       resolve();
     })
     .catch(err => {
-      IS_INITIALIZING = false;
+      self.IS_INITIALIZING = false;
       reject(err);
     });
   });
@@ -44921,6 +44922,7 @@ exports.DigestStrategy.prototype.getAndProcessDigests = function(
  * }
  */
 exports.DigestStrategy.prototype.performQuery = function(urls) {
+  let self = this;
   if (!this.isInitialized()) {
     console.warn('digest-strategy was queried but is not initialized');
   }
@@ -44930,7 +44932,7 @@ exports.DigestStrategy.prototype.performQuery = function(urls) {
       var result = {};
       urls.forEach(url => {
         var copiesForUrl = [];
-        DIGESTS.forEach(digest => {
+        self.DIGESTS.forEach(digest => {
           var captureDate = digest.performQueryForPage(url);
           if (captureDate) {
             let page = {
