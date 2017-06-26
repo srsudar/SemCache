@@ -4,6 +4,7 @@
  * The main controlling piece of the app. It composes the other modules.
  */
 
+const coalMgr = require('./coalescence/manager');
 const constants = require('./constants');
 const datastore = require('./persistence/datastore');
 const dnsController = require('./dnssd/dns-controller');
@@ -340,6 +341,7 @@ exports.startServersAndRegister = function() {
  * The counterpart method to startServersAndRegister().
  */
 exports.stopServers = function() {
+  coalMgr.reset();
   exports.getServerController().stop();
   dnsController.stop();
   exports.LISTENING_HTTP_INTERFACE = null;

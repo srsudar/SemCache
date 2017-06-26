@@ -33,6 +33,15 @@ test('getStrategy returns digest strategy', function(t) {
   end(t);
 });
 
+test('getStrategy returns existing object if active', function(t) {
+  let stratStub = sinon.stub();
+  mgr.ACTIVE_SRAT_OBJECT = stratStub;
+
+  let actual = mgr.getStrategy();
+  t.equal(actual, stratStub);
+  end(t);
+});
+
 test('queryForUrls rejects on error', function(t) {
   var expectedErr = { msg: 'initialize went wrong' };
   var strategy = {
@@ -58,9 +67,12 @@ test('queryForUrls resolves with information', function(t) {
     wut: 'ohai'
   };
 
+  let performQueryStub = sinon.stub();
+  performQueryStub.withArgs(urls).resolves(expected);
+
   let strategy = {
     initialize: sinon.stub().resolves(),
-    performQuery: sinon.stub().withArgs(urls).resolves(expected)
+    performQuery: performQueryStub
   };
 
   mgr.getStrategy = sinon.stub().returns(strategy);
@@ -76,3 +88,15 @@ test('queryForUrls resolves with information', function(t) {
   });
 });
 
+test('reset calls reset on device', function(t) {
+  let resetStub = sinon.stub();
+  let strategyStub = {
+    reset: resetStub
+  };
+
+  mgr.ACTIVE_SRAT_OBJECT = strategyStub;
+
+  mgr.reset();
+  t.equal(mgr.ACTIVE_SRAT_OBJECT, null);
+  end(t);
+});

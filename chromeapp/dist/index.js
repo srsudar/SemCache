@@ -85758,6 +85758,7 @@ module.exports = function getByteLength(string) {
  * The main controlling piece of the app. It composes the other modules.
  */
 
+const coalMgr = require('./coalescence/manager');
 const constants = require('./constants');
 const datastore = require('./persistence/datastore');
 const dnsController = require('./dnssd/dns-controller');
@@ -86094,6 +86095,7 @@ exports.startServersAndRegister = function() {
  * The counterpart method to startServersAndRegister().
  */
 exports.stopServers = function() {
+  coalMgr.reset();
   exports.getServerController().stop();
   dnsController.stop();
   exports.LISTENING_HTTP_INTERFACE = null;
@@ -86213,7 +86215,7 @@ exports.saveMhtmlAndOpen = function(serviceName, href) {
   });
 };
 
-},{"./constants":9,"./dnssd/dns-controller":"dnsc","./dnssd/dns-sd-semcache":"dnsSem","./evaluation":"eval","./extension-bridge/messaging":"extBridge","./peer-interface/common":17,"./peer-interface/manager":19,"./persistence/datastore":21,"./persistence/file-system":"fileSystem","./server/server-api":24,"./server/server-controller":"serverController","./settings":"settings"}],"binaryUtils":[function(require,module,exports){
+},{"./coalescence/manager":"coalMgr","./constants":9,"./dnssd/dns-controller":"dnsc","./dnssd/dns-sd-semcache":"dnsSem","./evaluation":"eval","./extension-bridge/messaging":"extBridge","./peer-interface/common":17,"./peer-interface/manager":19,"./persistence/datastore":21,"./persistence/file-system":"fileSystem","./server/server-api":24,"./server/server-controller":"serverController","./settings":"settings"}],"binaryUtils":[function(require,module,exports){
 /*jshint esnext:true*/
 /*
  * https://github.com/justindarc/dns-sd.js
@@ -86828,6 +86830,15 @@ exports.STRATEGIES = {
  */
 exports.CURRENT_STRATEGY = exports.STRATEGIES.digest;
 
+exports.ACTIVE_SRAT_OBJECT = null;
+
+/**
+ * Restore state for the coalescence module.
+ */
+exports.reset = function() {
+  exports.ACTIVE_SRAT_OBJECT = null;
+};
+
 /**
  * Obtain access information for the given array of URLs. The result will be an
  * array of length <= urls.length. Only those that are available will be
@@ -86860,13 +86871,19 @@ exports.queryForUrls = function(urls) {
  * @return {DigestStrategy|BloomStrategy}
  */ 
 exports.getStrategy = function() {
+  if (exports.ACTIVE_SRAT_OBJECT) {
+    return exports.ACTIVE_SRAT_OBJECT;
+  }
+  let result = null;
   if (exports.CURRENT_STRATEGY === exports.STRATEGIES.digest) {
-    return new stratDig.DigestStrategy();
+    result = new stratDig.DigestStrategy();
   } else if (exports.CURRENT_STRATEGY === exports.STRATEGIES.bloom) {
-    return new stratBloom.BloomStrategy();
+    result = new stratBloom.BloomStrategy();
   } else {
     throw new Error('Unrecognized strategy: ' + exports.CURRENT_STRATEGY);
   }
+  exports.ACTIVE_SRAT_OBJECT = result;
+  return result;
 };
 
 },{"./bloom-strategy":5,"./digest-strategy":6}],"db":[function(require,module,exports){

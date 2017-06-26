@@ -683,10 +683,14 @@ test('networkIsActive false if not started', function(t) {
 test('stopServers restores state', function(t) {
   var stopSpy = sinon.spy();
   var stopDnsControllerSpy = sinon.spy();
+  let resetCoalStub = sinon.stub();
 
   proxyquireAppc({
     './dnssd/dns-controller': {
       stop: stopDnsControllerSpy
+    },
+    './coalescence/manager': {
+      reset: resetCoalStub
     }
   });
   appc.getServerController = sinon.stub().returns({
@@ -697,6 +701,8 @@ test('stopServers restores state', function(t) {
   appc.stopServers();
   t.true(stopSpy.calledOnce);
   t.deepEqual(stopSpy.args[0], []);
+
+  t.true(resetCoalStub.calledOnce);
 
   t.equal(appc.LISTENING_HTTP_INTERFACE, null);
 

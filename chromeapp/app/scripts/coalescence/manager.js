@@ -26,6 +26,15 @@ exports.STRATEGIES = {
  */
 exports.CURRENT_STRATEGY = exports.STRATEGIES.digest;
 
+exports.ACTIVE_SRAT_OBJECT = null;
+
+/**
+ * Restore state for the coalescence module.
+ */
+exports.reset = function() {
+  exports.ACTIVE_SRAT_OBJECT = null;
+};
+
 /**
  * Obtain access information for the given array of URLs. The result will be an
  * array of length <= urls.length. Only those that are available will be
@@ -58,11 +67,17 @@ exports.queryForUrls = function(urls) {
  * @return {DigestStrategy|BloomStrategy}
  */ 
 exports.getStrategy = function() {
+  if (exports.ACTIVE_SRAT_OBJECT) {
+    return exports.ACTIVE_SRAT_OBJECT;
+  }
+  let result = null;
   if (exports.CURRENT_STRATEGY === exports.STRATEGIES.digest) {
-    return new stratDig.DigestStrategy();
+    result = new stratDig.DigestStrategy();
   } else if (exports.CURRENT_STRATEGY === exports.STRATEGIES.bloom) {
-    return new stratBloom.BloomStrategy();
+    result = new stratBloom.BloomStrategy();
   } else {
     throw new Error('Unrecognized strategy: ' + exports.CURRENT_STRATEGY);
   }
+  exports.ACTIVE_SRAT_OBJECT = result;
+  return result;
 };
