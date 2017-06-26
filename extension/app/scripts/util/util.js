@@ -3,6 +3,7 @@
 
 const tabs = require('../chrome-apis/tabs');
 
+
 /**
  * Very thin wrapper around the global fetch API to enable mocks during test.
  *

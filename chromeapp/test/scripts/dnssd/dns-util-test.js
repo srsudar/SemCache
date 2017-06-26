@@ -1,8 +1,10 @@
 'use strict';
 
 const test = require('tape');
-const dnsUtil = require('../../../app/scripts/dnssd/dns-util');
+
 const byteArray = require('../../../app/scripts/dnssd/byte-array');
+const dnsUtil = require('../../../app/scripts/dnssd/dns-util');
+
 
 const EXAMPLE_URL = 'gemini.tuc.noao.edu';
 

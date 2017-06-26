@@ -1,15 +1,14 @@
 'use strict';
 
 const test = require('tape');
-const proxyquire = require('proxyquire');
-require('sinon-as-promised');
 
 const objects = require('../../../app/scripts/persistence/objects');
 
-let database = require('../../../app/scripts/persistence/database');
-
 const CPInfo = objects.CPInfo;
 const CPSummary = objects.CPSummary;
+
+let database = require('../../../app/scripts/persistence/database');
+
 
 /**
  * Manipulating the object directly leads to polluting the require cache. Any
@@ -21,12 +20,6 @@ function reset() {
     require.resolve('../../../app/scripts/persistence/database')
   ];
   database = require('../../../app/scripts/persistence/database');
-}
-
-function proxyquireDatabase(proxies) {
-  database = proxyquire(
-    '../../../app/scripts/persistence/database', proxies
-  );
 }
 
 function end(t) {

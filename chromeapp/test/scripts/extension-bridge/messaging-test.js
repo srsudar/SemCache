@@ -1,16 +1,16 @@
 'use strict';
 
-const test = require('tape');
-const sinon = require('sinon');
 const proxyquire = require('proxyquire');
-require('sinon-as-promised');
-
-let messaging = require('../../../app/scripts/extension-bridge/messaging');
+const sinon = require('sinon');
+const test = require('tape');
 
 const common = require('../../../app/scripts/extension-bridge/common-messaging');
 const constants = require('../../../app/scripts/constants');
 const mutil = require('./test-util');
 const putil = require('../persistence/persistence-util');
+
+let messaging = require('../../../app/scripts/extension-bridge/messaging');
+
 
 /**
  * Manipulating the object directly leads to polluting the require cache. Any
@@ -96,7 +96,7 @@ test('handleExternalMessage adds page to cache for write', function(t) {
 test('handleExternalMessage rejects with error on write', function(t) {
   let { i: initiator } = mutil.getAddPageMsgs();
   let sender = getSender();
-  let error = 'went wrong';
+  let error = new Error('bad write');
   let expected = common.createResponseError(
     common.responderTypes.addPageToCache, {}, error
   );
@@ -138,12 +138,14 @@ test('handleExternalMessage returns result of local query', function(t) {
 
 test('handleExternalMessage rejects on local query error', function(t) {
   let { i: initiator } = mutil.getLocalQueryMsgs();
-  let error = 'uhoh';
+  let error = new Error('bad local query');
   let expected = common.createResponseError(
     common.responderTypes.localQuery, {}, error
   );
   
-  messaging.queryLocalMachineForUrls = sinon.stub().rejects(error);
+  let queryLocalStub = sinon.stub();
+  queryLocalStub.withArgs(initiator).rejects(error);
+  messaging.queryLocalMachineForUrls = queryLocalStub;
 
   let returnValue;
 
@@ -180,12 +182,14 @@ test('handleExternalMessage returns result of network query', function(t) {
 
 test('handleExternalMessage rejects on network query error', function(t) {
   let { i: initiator } = mutil.getNetworkQueryMsgs();
-  let error = 'uhoh';
+  let error = new Error('uhoh');
   let expected = common.createResponseError(
     common.responderTypes.networkQuery, {}, error
   );
   
-  messaging.queryLocalNetworkForUrls = sinon.stub().rejects(error);
+  let queryStub = sinon.stub();
+  queryStub.withArgs(initiator).rejects(error);
+  messaging.queryLocalNetworkForUrls = queryStub;
 
   let returnValue;
 
@@ -222,12 +226,14 @@ test('handleExternalMessage correct for open', function(t) {
 
 test('handleExternalMessage rejects on error for open', function(t) {
   let { i: initiator } = mutil.getOpenMsgs();
-  let error = 'could not find page';
+  let error = new Error('could not find page');
   let expected = common.createResponseError(
     common.responderTypes.openPage, {}, error
   );
   
-  messaging.handleOpenRequest = sinon.stub().rejects(error);
+  let handleOpenStub = sinon.stub();
+  handleOpenStub.withArgs(initiator).rejects(error);
+  messaging.handleOpenRequest = handleOpenStub;
 
   let returnValue;
 

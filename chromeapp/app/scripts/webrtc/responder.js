@@ -7,6 +7,7 @@ const fileSystem = require('../persistence/file-system');
 const message = require('./message');
 const serverApi = require('../server/server-api');
 
+
 /**
  * This module is responsible for responding to incoming requests via WebRTC.
  */

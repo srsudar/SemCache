@@ -2,13 +2,14 @@
 /* globals Promise */
 'use strict';
 
-const util = require('../util');
-const chromeUdp = require('../chrome-apis/udp');
-const dnsUtil = require('./dns-util');
-const dnsPacket = require('./dns-packet');
 const byteArray = require('./byte-array');
+const chromeUdp = require('../chrome-apis/udp');
 const dnsCodes = require('./dns-codes');
+const dnsPacket = require('./dns-packet');
+const dnsUtil = require('./dns-util');
 const qSection = require('./question-section');
+const util = require('../util');
+
 
 /**
  * This module maintains DNS state and serves as the DNS server. It is

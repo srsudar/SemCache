@@ -17,6 +17,7 @@ const peerIfMgr = require('./peer-interface/manager');
 const settings = require('./settings');
 const serverApi = require('./server/server-api');
 
+
 let ABS_PATH_TO_BASE_DIR = null;
 
 exports.LISTENING_HTTP_INTERFACE = null;

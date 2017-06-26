@@ -1,16 +1,16 @@
 'use strict';
 
-const test = require('tape');
 const proxyquire = require('proxyquire');
 const sinon = require('sinon');
-require('sinon-as-promised');
-
-let bloomStrat = require('../../../app/scripts/coalescence/bloom-strategy');
+const test = require('tape');
 
 const BloomFilter = require('../../../app/scripts/coalescence/bloom-filter').BloomFilter;
 const coalObjects = require('../../../app/scripts/coalescence/objects');
 const pifCommon = require('../../../app/scripts/peer-interface/common');
 const tutil = require('../test-util');
+
+let bloomStrat = require('../../../app/scripts/coalescence/bloom-strategy');
+
 
 function reset() {
   delete require.cache[

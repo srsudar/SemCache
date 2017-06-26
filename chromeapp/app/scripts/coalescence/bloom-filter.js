@@ -14,6 +14,7 @@
 const lib = require('bloomfilter');
 const toArrayBuffer = require('to-arraybuffer');
 
+
 /**
  * Both the number of bits and the number of hash functions are constants that
  * we are using solely to facilitate serialization. The numbers are taken from

@@ -1,12 +1,12 @@
 /*jshint esnext:true*/
 'use strict';
 
-const test = require('tape');
 const proxyquire = require('proxyquire');
 const sinon = require('sinon');
-require('sinon-as-promised');
+const test = require('tape');
 
 let evaluation = require('../../../app/scripts/content-script/cs-evaluation');
+
 
 /**
  * Proxyquire the object with proxies passed as the proxied modules.

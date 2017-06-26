@@ -2,12 +2,14 @@
 
 console.log('in SemCache contentscriptBundle.js');
 
+const api = require('./cs-api');
+const evaluation = require('./cs-evaluation');
+const runtime = require('../chrome-apis/runtime');
+const util = require('../util/util');
+
 // Kind of ugly importing this, but I don't want to duplicate the file yet.
 const appEval = require('../../../../chromeapp/app/scripts/evaluation.js');
-const api = require('./cs-api');
-const runtime = require('../chrome-apis/runtime');
-const evaluation = require('./cs-evaluation');
-const util = require('../util/util');
+
 
 window.evaluation = evaluation;
 

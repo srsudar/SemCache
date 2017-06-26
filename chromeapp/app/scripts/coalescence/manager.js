@@ -3,6 +3,7 @@
 const stratBloom = require('./bloom-strategy');
 const stratDig = require('./digest-strategy');
 
+
 /**
  * The coalescence/manager module is the API callers should use to interact
  * with all content in a local network of collaborators. A single client might

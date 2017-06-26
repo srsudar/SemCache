@@ -1,11 +1,11 @@
 'use strict';
 
-const test = require('tape');
 const proxyquire = require('proxyquire');
 const sinon = require('sinon');
-require('sinon-as-promised');
+const test = require('tape');
 
 let udp = require('../../../app/scripts/chrome-apis/udp');
+
 
 function resetUdp() {
   delete require.cache[

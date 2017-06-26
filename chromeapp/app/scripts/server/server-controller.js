@@ -2,8 +2,9 @@
 'use strict';
 
 const api = require('./server-api');
-const handlers = require('./handlers');
 const evalHandlers = require('./evaluation-handler');
+const handlers = require('./handlers');
+
 
 function startServer(host, port, endpointHandlers) {
   window.httpServer = new WSC.WebApplication({

@@ -1,12 +1,12 @@
 /*jshint esnext:true*/
 'use strict';
 
-const test = require('tape');
 const proxyquire = require('proxyquire');
 const sinon = require('sinon');
-require('sinon-as-promised');
+const test = require('tape');
 
 let fileSystem = require('../../../app/scripts/persistence/file-system');
+
 
 /**
  * Manipulating the object directly leads to polluting the require cache. Any

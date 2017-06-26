@@ -2,6 +2,7 @@
 
 const bloomFilter = require('./bloom-filter');
 
+
 /**
  * Objects relevant to coalescence between instances on the local network.
  */

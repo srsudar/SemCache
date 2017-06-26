@@ -2,6 +2,7 @@
 
 const settings = require('../settings');
 
+
 /**
  * Remove the peerInfo object that represents our own machine.
  *

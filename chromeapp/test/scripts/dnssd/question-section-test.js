@@ -4,6 +4,7 @@ const test = require('tape');
 
 let qRec = require('../../../app/scripts/dnssd/question-section');
 
+
 test('can create a QuestionSection', function(t) {
   let queryName = 'blackhawk.local';
   let queryType = 33;

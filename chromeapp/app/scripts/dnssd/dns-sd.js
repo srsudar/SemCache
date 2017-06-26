@@ -23,12 +23,13 @@
 
 const _ = require('lodash');
 
-const util = require('../util');
-const dnsUtil = require('./dns-util');
-const dnsController = require('./dns-controller');
 const dnsCodes = require('./dns-codes');
-const resRec = require('./resource-record');
+const dnsController = require('./dns-controller');
 const dnsPacket = require('./dns-packet');
+const dnsUtil = require('./dns-util');
+const resRec = require('./resource-record');
+const util = require('../util');
+
 
 /**
  * In Section 8.1, RFC 6762 uses 250ms as the length of time clients should

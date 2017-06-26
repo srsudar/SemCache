@@ -2,11 +2,12 @@
 
 const test = require('tape');
 
-let dnsPacket = require('../../../app/scripts/dnssd/dns-packet');
-
+const dnsCodes = require('../../../app/scripts/dnssd/dns-codes');
 const resRec = require('../../../app/scripts/dnssd/resource-record');
 const qSection = require('../../../app/scripts/dnssd/question-section');
-const dnsCodes = require('../../../app/scripts/dnssd/dns-codes');
+
+let dnsPacket = require('../../../app/scripts/dnssd/dns-packet');
+
 
 /**
  * Create an ARecord for use in testing. This is the same object on every call

@@ -1,8 +1,9 @@
 'use strict';
 
-const settings = require('../settings');
 const ifHttp = require('./http-impl');
 const ifWebrtc = require('./webrtc-impl');
+const settings = require('../settings');
+
 
 /**
  * Manages peer interfaces for the application.

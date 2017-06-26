@@ -12,6 +12,7 @@ const messaging = require('../app-bridge/messaging');
 const tabs = require('../chrome-apis/tabs');
 const util = require('../util/util');
 
+
 /**
  * Save the currently active page.
  *

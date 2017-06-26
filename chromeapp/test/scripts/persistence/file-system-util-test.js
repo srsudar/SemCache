@@ -1,13 +1,13 @@
 'use strict';
 
-const test = require('tape');
 const proxyquire = require('proxyquire');
 const sinon = require('sinon');
-require('sinon-as-promised');
+const test = require('tape');
 
 const binUtil = require('../../../app/scripts/dnssd/binary-utils').BinaryUtils;
 
 let util = require('../../../app/scripts/persistence/file-system-util');
+
 
 /**
  * Manipulating the object directly leads to polluting the require cache. Any

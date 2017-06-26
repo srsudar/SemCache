@@ -1,10 +1,10 @@
 'use strict';
 
-const test = require('tape');
 const sinon = require('sinon');
-require('sinon-as-promised');
+const test = require('tape');
 
 let util = require('../../../app/scripts/chrome-apis/util');
+
 
 function resetUtil() {
   delete require.cache[

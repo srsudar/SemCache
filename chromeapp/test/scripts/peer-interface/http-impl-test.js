@@ -1,13 +1,13 @@
 'use strict';
 
-const test = require('tape');
-const sinon = require('sinon');
 const proxyquire = require('proxyquire');
-require('sinon-as-promised');
+const sinon = require('sinon');
+const test = require('tape');
 
 const common = require('../../../app/scripts/peer-interface/common');
 
 let httpImpl = require('../../../app/scripts/peer-interface/http-impl');
+
 
 /**
  * Proxyquire the messaging module with proxies set as the proxied modules.

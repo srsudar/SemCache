@@ -13,6 +13,7 @@
 const byteArray = require('./byte-array');
 const dnsUtil = require('./dns-util');
 
+
 const OCTETS_QUERY_TYPE = 2;
 const OCTETS_QUERY_CLASS = 2;
 

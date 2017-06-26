@@ -1,10 +1,10 @@
 /* globals alert */
 'use strict';
 
-console.log('In SemCache options.js');
-
 const evaluation = require('./content-script/cs-evaluation');
+
 const appEval = require('../../../chromeapp/app/scripts/evaluation');
+
 
 let uiUrlList = document.querySelector('#urls');
 let uiNumIterations = document.querySelector('#numIterations');

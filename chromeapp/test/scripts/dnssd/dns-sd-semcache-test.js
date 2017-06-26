@@ -1,11 +1,11 @@
 'use strict';
 
-const test = require('tape');
 const proxyquire = require('proxyquire');
 const sinon = require('sinon');
-require('sinon-as-promised');
+const test = require('tape');
 
 const dnssd = require('../../../app/scripts/dnssd/dns-sd');
+
 
 test('registerSemCache calls dnssd.register with correct args', function(t) {
   // This function should just call through to dns-sd.

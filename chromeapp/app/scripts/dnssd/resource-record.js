@@ -2,8 +2,9 @@
 'use strict';
 
 const byteArray = require('./byte-array');
-const dnsUtil = require('./dns-util');
 const dnsCodes = require('./dns-codes');
+const dnsUtil = require('./dns-util');
+
 
 const NUM_OCTETS_TYPE = 2;
 const NUM_OCTETS_CLASS = 2;

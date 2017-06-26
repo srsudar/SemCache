@@ -1,9 +1,9 @@
 'use strict';
 
 const test = require('tape');
-require('sinon-as-promised');
 
 let common = require('../../../app/scripts/peer-interface/common');
+
 
 function createExpectedList(ipaddr, port, listUrl, digestUrl, bloomUrl) {
   return {

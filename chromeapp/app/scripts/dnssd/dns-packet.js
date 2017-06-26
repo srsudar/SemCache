@@ -8,10 +8,11 @@
  */
 'use strict';
 
-const resRec = require('./resource-record');
-const dnsCodes = require('./dns-codes');
 const byteArray = require('./byte-array');
+const dnsCodes = require('./dns-codes');
 const qSection = require('./question-section');
+const resRec = require('./resource-record');
+
 
 // These constants are defined by the number of bits allowed for each value in
 // the DNS spec. Section 4.1.1 of RFC 1035 has a good summary.

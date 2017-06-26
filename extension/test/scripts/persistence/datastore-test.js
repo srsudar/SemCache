@@ -2,15 +2,15 @@
 /* globals Promise */
 'use strict';
 
-const test = require('tape');
 const proxyquire = require('proxyquire');
 const sinon = require('sinon');
-require('sinon-as-promised');
+const test = require('tape');
 
-const util = require('../test-util');
 const putil = require('../../../../chromeapp/test/scripts/persistence/persistence-util');
+const util = require('../test-util');
 
 let datastore = require('../../../app/scripts/persistence/datastore');
+
 
 /**
  * Proxyquire the datastore object with proxies passed as the proxied modules.

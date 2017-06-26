@@ -7,6 +7,7 @@ const objects = require('./objects');
 const CPInfo = objects.CPInfo;
 const CPSummary = objects.CPSummary;
 
+
 exports.DB_NAME = 'semcache-database';
 
 let db = null;

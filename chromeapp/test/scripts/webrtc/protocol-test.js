@@ -1,9 +1,9 @@
 'use strict';
 
 const test = require('tape');
-require('sinon-as-promised');
 
 let protocol = require('../../../app/scripts/webrtc/protocol');
+
 
 /**
  * Manipulating the object directly leads to polluting the require cache. Any

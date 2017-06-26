@@ -1,15 +1,15 @@
 'use strict';
 
-const test = require('tape');
-const sinon = require('sinon');
 const proxyquire = require('proxyquire');
-require('sinon-as-promised');
+const sinon = require('sinon');
+const test = require('tape');
 
 const BloomFilter = require('../../../app/scripts/coalescence/bloom-filter').BloomFilter;
 const putil = require('../persistence/persistence-util');
 const sutil = require('./util');
 
 let api = require('../../../app/scripts/server/server-api');
+
 
 function proxyquireApi(proxies) {
   api = proxyquire('../../../app/scripts/server/server-api', proxies);

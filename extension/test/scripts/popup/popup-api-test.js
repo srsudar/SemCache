@@ -1,16 +1,16 @@
 /*jshint esnext:true*/
 'use strict';
 
-const test = require('tape');
 const proxyquire = require('proxyquire');
 const sinon = require('sinon');
-require('sinon-as-promised');
+const test = require('tape');
 
-const util = require('../test-util');
 // Get this from the app to generate objects like the app expects.
 const mutil = require('../../../../chromeapp/test/scripts/extension-bridge/test-util');
+const util = require('../test-util');
 
 let api = require('../../../app/scripts/popup/popup-api');
+
 
 /**
  * Proxyquire the api object with proxies passed as the proxied modules.

@@ -1,9 +1,10 @@
 /* globals RTCPeerConnection, RTCSessionDescription, RTCIceCandidate */
 'use strict';
 
-const util = require('../util');
 const peerConn = require('../../../app/scripts/webrtc/peer-connection');
 const serverApi = require('../server/server-api');
+const util = require('../util');
+
 
 let globalPc;
 

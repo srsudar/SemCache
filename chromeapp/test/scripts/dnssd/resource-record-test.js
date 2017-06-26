@@ -2,10 +2,10 @@
 
 const test = require('tape');
 
-let resRec = require('../../../app/scripts/dnssd/resource-record');
-
-const dnsCodes = require('../../../app/scripts/dnssd/dns-codes');
 const byteArray = require('../../../app/scripts/dnssd/byte-array');
+const dnsCodes = require('../../../app/scripts/dnssd/dns-codes');
+
+let resRec = require('../../../app/scripts/dnssd/resource-record');
 
 
 test('create an ARecord', function(t) {

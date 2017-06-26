@@ -3,6 +3,7 @@
 const appMsg = require('../app-bridge/messaging');
 const util = require('../util/util');
 
+
 let localPageInfo = null;
 
 /**

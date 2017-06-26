@@ -1,12 +1,12 @@
 'use strict';
 
-const test = require('tape');
 const sinon = require('sinon');
-require('sinon-as-promised');
+const test = require('tape');
 
 const protocol = require('../../../app/scripts/webrtc/protocol');
 
 let commonChannel = require('../../../app/scripts/webrtc/common-channel');
+
 let Client = commonChannel.BaseClient;
 let Server = commonChannel.BaseServer;
 

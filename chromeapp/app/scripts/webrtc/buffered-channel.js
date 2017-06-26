@@ -3,6 +3,7 @@
 const commonChannel = require('./common-channel');
 const protocol = require('./protocol');
 
+
 /**
  * This object communicates binary data over a data channel using the buffered
  * amount low event to throttle on the sending side. Tests showed this to be

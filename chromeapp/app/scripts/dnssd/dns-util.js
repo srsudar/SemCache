@@ -2,6 +2,7 @@
 
 const byteArray = require('./byte-array');
 
+
 /**
  * Various methods for common DNS-related operations.
  */

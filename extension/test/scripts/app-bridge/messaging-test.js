@@ -1,14 +1,14 @@
 /*jshint esnext:true*/
 'use strict';
 
-const test = require('tape');
 const proxyquire = require('proxyquire');
 const sinon = require('sinon');
-require('sinon-as-promised');
+const test = require('tape');
 
 const mutil = require('../../../../chromeapp/test/scripts/extension-bridge/test-util');
 
 let messaging = require('../../../app/scripts/app-bridge/messaging');
+
 
 /**
  * Manipulating the object directly leads to polluting the require cache. Any

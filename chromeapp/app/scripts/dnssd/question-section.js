@@ -4,6 +4,7 @@
 const byteArray = require('./byte-array');
 const dnsUtil = require('./dns-util');
 
+
 const NUM_OCTETS_QUERY_TYPE = 2;
 const NUM_OCTETS_QUERY_CLASS = 2;
 

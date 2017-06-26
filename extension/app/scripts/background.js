@@ -1,10 +1,11 @@
 /* global chrome */
 'use strict';
 
+const chromeRuntime = require('./chrome-apis/runtime');
 const backgroundApi = require('./background/background-api');
 const messaging = require('./app-bridge/messaging');
-const chromeRuntime = require('./chrome-apis/runtime');
 const webNavigation = require('./chrome-apis/web-navigation');
+
 
 let numNavs = 0;
 let loadStart = Date.now();

@@ -5,6 +5,7 @@ const chromeTabs = require('../chrome-apis/tabs');
 
 const commonMsg = require('../../../../chromeapp/app/scripts/extension-bridge/common-messaging');
 
+
 exports.DEBUG = false;
 
 /** Message indicating that a timeout occurred waiting for the app. */

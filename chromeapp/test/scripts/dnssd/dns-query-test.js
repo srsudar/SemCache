@@ -2,9 +2,10 @@
 
 const test = require('tape');
 
+const byteArray = require('../../../app/scripts/dnssd/byte-array');
+
 let dnsQuery = require('../../../app/scripts/dnssd/dns-query');
 
-const byteArray = require('../../../app/scripts/dnssd/byte-array');
 
 test('create a query', function(t) {
   let name = 'www.example.com';

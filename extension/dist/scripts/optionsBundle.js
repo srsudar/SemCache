@@ -18,6 +18,7 @@ const peerIfMgr = require('./peer-interface/manager');
 const settings = require('./settings');
 const serverApi = require('./server/server-api');
 
+
 let ABS_PATH_TO_BASE_DIR = null;
 
 exports.LISTENING_HTTP_INTERFACE = null;
@@ -474,6 +475,7 @@ exports.saveMhtmlAndOpen = function(serviceName, href) {
 
 const ChromePromise = require('chrome-promise');
 
+
 let CHROMEP_SINGLETON = null;
 
 /**
@@ -533,6 +535,7 @@ exports.getRuntimeBare = function() {
 'use strict';
 
 const util = require('./util');
+
 
 let DEBUG = false;
 
@@ -868,6 +871,7 @@ exports.applyArgsCheckLastError = function(fn, callArgs) {
 const lib = require('bloomfilter');
 const toArrayBuffer = require('to-arraybuffer');
 
+
 /**
  * Both the number of bits and the number of hash functions are constants that
  * we are using solely to facilitate serialization. The numbers are taken from
@@ -942,6 +946,7 @@ const objects = require('./objects');
 const peerIf = require('../peer-interface/common');
 const peerIfMgr = require('../peer-interface/manager');
 const util = require('./util');
+
 
 /**
  * This module is responsible for the digest strategy of cache coalescence.
@@ -1181,6 +1186,7 @@ const peerIf = require('../peer-interface/common');
 const peerIfMgr = require('../peer-interface/manager');
 const util = require('./util');
 
+
 /**
  * This module is responsible for the digest strategy of cache coalescence.
  */
@@ -1414,6 +1420,7 @@ exports.DigestStrategy.prototype.performQuery = function(urls) {
 const stratBloom = require('./bloom-strategy');
 const stratDig = require('./digest-strategy');
 
+
 /**
  * The coalescence/manager module is the API callers should use to interact
  * with all content in a local network of collaborators. A single client might
@@ -1498,6 +1505,7 @@ exports.getStrategy = function() {
 'use strict';
 
 const bloomFilter = require('./bloom-filter');
+
 
 /**
  * Objects relevant to coalescence between instances on the local network.
@@ -1643,6 +1651,7 @@ exports.PeerBloomFilter.prototype.performQueryForPage = function(url) {
 'use strict';
 
 const settings = require('../settings');
+
 
 /**
  * Remove the peerInfo object that represents our own machine.
@@ -2173,13 +2182,14 @@ function defineType(values) {
 /* globals Promise */
 'use strict';
 
-const util = require('../util');
-const chromeUdp = require('../chrome-apis/udp');
-const dnsUtil = require('./dns-util');
-const dnsPacket = require('./dns-packet');
 const byteArray = require('./byte-array');
+const chromeUdp = require('../chrome-apis/udp');
 const dnsCodes = require('./dns-codes');
+const dnsPacket = require('./dns-packet');
+const dnsUtil = require('./dns-util');
 const qSection = require('./question-section');
+const util = require('../util');
+
 
 /**
  * This module maintains DNS state and serves as the DNS server. It is
@@ -2856,10 +2866,11 @@ exports.addRecord = function(name, record) {
  */
 'use strict';
 
-const resRec = require('./resource-record');
-const dnsCodes = require('./dns-codes');
 const byteArray = require('./byte-array');
+const dnsCodes = require('./dns-codes');
 const qSection = require('./question-section');
+const resRec = require('./resource-record');
+
 
 // These constants are defined by the number of bits allowed for each value in
 // the DNS spec. Section 4.1.1 of RFC 1035 has a good summary.
@@ -3288,6 +3299,7 @@ exports.getFlagsAsValue = function(qr, opcode, aa, tc, rd, ra, rcode) {
 const dnssd = require('./dns-sd');
 const serverApi = require('../server/server-api');
 
+
 const SEMCACHE_SERVICE_STRING = '_semcache._tcp';
 
 /**
@@ -3438,12 +3450,13 @@ exports.browseForSemCacheInstances = function() {
 
 const _ = require('lodash');
 
-const util = require('../util');
-const dnsUtil = require('./dns-util');
-const dnsController = require('./dns-controller');
 const dnsCodes = require('./dns-codes');
-const resRec = require('./resource-record');
+const dnsController = require('./dns-controller');
 const dnsPacket = require('./dns-packet');
+const dnsUtil = require('./dns-util');
+const resRec = require('./resource-record');
+const util = require('../util');
+
 
 /**
  * In Section 8.1, RFC 6762 uses 250ms as the length of time clients should
@@ -4409,6 +4422,7 @@ exports.queryForResponses = function(
 
 const byteArray = require('./byte-array');
 
+
 /**
  * Various methods for common DNS-related operations.
  */
@@ -4621,6 +4635,7 @@ exports.getIpStringFromByteArrayReader = function(reader) {
 const byteArray = require('./byte-array');
 const dnsUtil = require('./dns-util');
 
+
 const NUM_OCTETS_QUERY_TYPE = 2;
 const NUM_OCTETS_QUERY_CLASS = 2;
 
@@ -4731,8 +4746,9 @@ exports.createQuestionFromReader = function(reader) {
 'use strict';
 
 const byteArray = require('./byte-array');
-const dnsUtil = require('./dns-util');
 const dnsCodes = require('./dns-codes');
+const dnsUtil = require('./dns-util');
+
 
 const NUM_OCTETS_TYPE = 2;
 const NUM_OCTETS_CLASS = 2;
@@ -5278,6 +5294,7 @@ const perObjs = require('./persistence/objects');
 const util = require('./util');
 
 const CPInfo = perObjs.CPInfo;
+
 
 /** The prefix value for timing keys we will use for local storage. */
 const TIMING_KEY_PREFIX = 'timing_';
@@ -6646,6 +6663,7 @@ exports.sendMessageToOpenUrl = function(url) {
 
 const util = require('../util');
 
+
 /**
  * Code shared across the peer-interface implementations.
  */
@@ -6764,6 +6782,7 @@ exports.createFileParams = function(ipaddr, port, fileUrl) {
 const serverApi = require('../server/server-api');
 const util = require('../util');
 
+
 /**
  * @constructor
  */
@@ -6862,9 +6881,10 @@ exports.HttpPeerAccessor.prototype.getCacheBloomFilter = function(params) {
 },{"../server/server-api":36,"../util":39,"buffer":83}],27:[function(require,module,exports){
 'use strict';
 
-const settings = require('../settings');
 const ifHttp = require('./http-impl');
 const ifWebrtc = require('./webrtc-impl');
+const settings = require('../settings');
+
 
 /**
  * Manages peer interfaces for the application.
@@ -6892,6 +6912,7 @@ exports.getPeerAccessor = function(ipaddr, port) {
 
 const cmgr = require('../webrtc/connection-manager');
 const util = require('../util');
+
 
 class WebrtcPeerAccessor {
   /**
@@ -7015,6 +7036,7 @@ const objects = require('./objects');
 
 const CPInfo = objects.CPInfo;
 const CPSummary = objects.CPSummary;
+
 
 exports.DB_NAME = 'semcache-database';
 
@@ -7240,6 +7262,7 @@ const sanitize = require('sanitize-filename');
 const URI = require('urijs');
 const util = require('../util');
 
+
 const URL_DATE_DELIMITER = '_';
 
 exports.MHTML_EXTENSION = '.mhtml';
@@ -7362,6 +7385,7 @@ exports.createFileNameForPage = function(href, captureDate) {
 'use strict';
 
 const util = require('../util');
+
 
 /**
  * General file system operations on top of the web APIs.
@@ -7581,6 +7605,7 @@ exports.createFileReader = function() {
 const chromep = require('../chrome-apis/chromep');
 const fsUtil = require('./file-system-util');
 
+
 /** The local storage key for the entry ID of the base directory. */
 exports.KEY_BASE_DIR = 'baseDir';
 
@@ -7784,6 +7809,7 @@ exports.getFileContentsFromName = function(fileName) {
 'use strict';
 
 const util = require('../util');
+
 
 /**
  * Objects having to do with our persistence layer. CP stands for 'Cached
@@ -8058,6 +8084,7 @@ exports.CPDisk = CPDisk;
 
 const evaluation = require('../evaluation');
 
+
 /**
  * A handler to generate responses to a mock list_pages endpoint.
  */
@@ -8087,12 +8114,14 @@ _.extend(exports.EvaluationHandler.prototype, {
 'use strict';
 
 const _ = require('underscore');
+
 const api = require('./server-api');
+const binUtil = require('../dnssd/binary-utils').BinaryUtils;
 const fileSystem = require('../persistence/file-system');
 const fsUtil = require('../persistence/file-system-util');
-const binUtil = require('../dnssd/binary-utils').BinaryUtils;
 const rtcConnMgr = require('../webrtc/connection-manager');
 const wrtcResponder = require('../webrtc/responder');
+
 
 /**
  * Handlers for the webserver backing SemCache. The idea for handlers is based
@@ -8341,6 +8370,7 @@ const appController = require('../app-controller');
 const BloomFilter = require('../coalescence/bloom-filter').BloomFilter;
 const datastore = require('../persistence/datastore');
 const objects = require('../persistence/objects');
+
 
 const HTTP_SCHEME = 'http://';
 
@@ -8593,8 +8623,9 @@ exports.getCachedFileNameFromPath = function(path) {
 'use strict';
 
 const api = require('./server-api');
-const handlers = require('./handlers');
 const evalHandlers = require('./evaluation-handler');
+const handlers = require('./handlers');
+
 
 function startServer(host, port, endpointHandlers) {
   window.httpServer = new WSC.WebApplication({
@@ -8666,6 +8697,7 @@ exports.start = function(host, port) {
 
 const chromep = require('./chrome-apis/chromep');
 const fileSystem = require('./persistence/file-system');
+
 
 /**
  * Settings for the application as a whole.
@@ -9017,6 +9049,7 @@ exports.promptAndSetNewBaseDir = function() {
 const blobToBufferLib = require('blob-to-buffer');
 const dataUrlToBlob = require('dataurl-to-blob');
 const SmartBuffer = require('smart-buffer').SmartBuffer;
+
 
 const DEFAULT_BUFFER_SIZE = 0;
 
@@ -9419,6 +9452,7 @@ exports.buffToObj = function(buff) {
 const commonChannel = require('./common-channel');
 const protocol = require('./protocol');
 
+
 /**
  * This object communicates binary data over a data channel using the buffered
  * amount low event to throttle on the sending side. Tests showed this to be
@@ -9553,6 +9587,7 @@ exports.BufferedChannelServer = BufferedChannelServer;
 const EventEmitter = require('events').EventEmitter;
 
 const protocol = require('./protocol');
+
 
 const EV_CHUNK = 'chunk';
 const EV_COMPLETE = 'complete';
@@ -9846,9 +9881,10 @@ exports.BaseServer = BaseServer;
 /* globals RTCPeerConnection, RTCSessionDescription, RTCIceCandidate */
 'use strict';
 
-const util = require('../util');
 const peerConn = require('../../../app/scripts/webrtc/peer-connection');
 const serverApi = require('../server/server-api');
+const util = require('../util');
+
 
 let globalPc;
 
@@ -10300,9 +10336,10 @@ exports.isCachedPage = function(msg) {
 
 const EventEmitter = require('wolfy87-eventemitter');
 
-const serverApi = require('../server/server-api');
 const bufferedChannel = require('./buffered-channel');
 const message = require('./message');
+const serverApi = require('../server/server-api');
+
 
 const EV_CLOSE = 'close';
 
@@ -10708,6 +10745,7 @@ const bufferedChannel = require('./buffered-channel');
 const fileSystem = require('../persistence/file-system');
 const message = require('./message');
 const serverApi = require('../server/server-api');
+
 
 /**
  * This module is responsible for responding to incoming requests via WebRTC.
@@ -44119,7 +44157,7 @@ module.exports = function getByteLength(string) {
 
 },{}],73:[function(require,module,exports){
 /*!
- * EventEmitter v5.1.0 - git.io/ee
+ * EventEmitter v5.2.0 - git.io/ee
  * Unlicense - http://unlicense.org/
  * Oliver Caldwell - http://oli.me.uk/
  * @preserve
@@ -44362,7 +44400,7 @@ module.exports = function getByteLength(string) {
 
     /**
      * Adds listeners in bulk using the manipulateListeners method.
-     * If you pass an object as the second argument you can add to multiple events at once. The object should contain key value pairs of events and listeners or listener arrays. You can also pass it an event name and an array of listeners to be added.
+     * If you pass an object as the first argument you can add to multiple events at once. The object should contain key value pairs of events and listeners or listener arrays. You can also pass it an event name and an array of listeners to be added.
      * You can also pass it a regular expression to add the array of listeners to all events that match it.
      * Yeah, this function does quite a bit. That's probably a bad thing.
      *
@@ -44377,7 +44415,7 @@ module.exports = function getByteLength(string) {
 
     /**
      * Removes listeners in bulk using the manipulateListeners method.
-     * If you pass an object as the second argument you can remove from multiple events at once. The object should contain key value pairs of events and listeners or listener arrays.
+     * If you pass an object as the first argument you can remove from multiple events at once. The object should contain key value pairs of events and listeners or listener arrays.
      * You can also pass it an event name and an array of listeners to be removed.
      * You can also pass it a regular expression to remove the listeners from all events that match it.
      *
@@ -44612,6 +44650,7 @@ const chromeRuntime = require('../chrome-apis/runtime');
 const chromeTabs = require('../chrome-apis/tabs');
 
 const commonMsg = require('../../../../chromeapp/app/scripts/extension-bridge/common-messaging');
+
 
 exports.DEBUG = false;
 
@@ -44863,6 +44902,7 @@ exports.addOnMessageListener = function(fn) {
 'use strict';
 
 const util = require('./util');
+
 
 /**
  * This module provides a wrapper around the chrome.storage.local API and
@@ -45136,6 +45176,7 @@ exports.applyArgsCheckLastError = function(fn, callArgs) {
 const appMsg = require('../app-bridge/messaging');
 const util = require('../util/util');
 
+
 let localPageInfo = null;
 
 /**
@@ -45362,10 +45403,10 @@ exports.annotateAnchorIsOnNetwork = function(anchor) {
 /* globals alert */
 'use strict';
 
-console.log('In SemCache options.js');
-
 const evaluation = require('./content-script/cs-evaluation');
+
 const appEval = require('../../../chromeapp/app/scripts/evaluation');
+
 
 let uiUrlList = document.querySelector('#urls');
 let uiNumIterations = document.querySelector('#numIterations');
@@ -45413,6 +45454,7 @@ btnGet.addEventListener('click', retrieveKey);
 'use strict';
 
 const tabs = require('../chrome-apis/tabs');
+
 
 /**
  * Very thin wrapper around the global fetch API to enable mocks during test.
@@ -45533,22 +45575,22 @@ function placeHoldersCount (b64) {
 
 function byteLength (b64) {
   // base64 is 4/3 + up to two characters of the original data
-  return b64.length * 3 / 4 - placeHoldersCount(b64)
+  return (b64.length * 3 / 4) - placeHoldersCount(b64)
 }
 
 function toByteArray (b64) {
-  var i, j, l, tmp, placeHolders, arr
+  var i, l, tmp, placeHolders, arr
   var len = b64.length
   placeHolders = placeHoldersCount(b64)
 
-  arr = new Arr(len * 3 / 4 - placeHolders)
+  arr = new Arr((len * 3 / 4) - placeHolders)
 
   // if there are placeholders, only get up to the last complete 4 chars
   l = placeHolders > 0 ? len - 4 : len
 
   var L = 0
 
-  for (i = 0, j = 0; i < l; i += 4, j += 3) {
+  for (i = 0; i < l; i += 4) {
     tmp = (revLookup[b64.charCodeAt(i)] << 18) | (revLookup[b64.charCodeAt(i + 1)] << 12) | (revLookup[b64.charCodeAt(i + 2)] << 6) | revLookup[b64.charCodeAt(i + 3)]
     arr[L++] = (tmp >> 16) & 0xFF
     arr[L++] = (tmp >> 8) & 0xFF
@@ -48023,6 +48065,10 @@ process.off = noop;
 process.removeListener = noop;
 process.removeAllListeners = noop;
 process.emit = noop;
+process.prependListener = noop;
+process.prependOnceListener = noop;
+
+process.listeners = function (name) { return [] }
 
 process.binding = function (name) {
     throw new Error('process.binding is not supported');
@@ -48037,11 +48083,13 @@ process.umask = function() { return 0; };
 },{}],"cs-eval":[function(require,module,exports){
 'use strict';
 
-const util = require('../util/util');
-const runtime = require('../chrome-apis/runtime');
 const csApi = require('./cs-api');
+const runtime = require('../chrome-apis/runtime');
 const storage = require('../chrome-apis/storage');
+const util = require('../util/util');
+
 const appEval = require('../../../../chromeapp/app/scripts/evaluation');
+
 
 /**
  * Functionality for evaluating the framework. Note that unlike in the App,

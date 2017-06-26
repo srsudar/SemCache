@@ -5,6 +5,7 @@ const test = require('tape');
 const bloomFilter = require('../../../app/scripts/coalescence/bloom-filter');
 const objects = require('../../../app/scripts/coalescence/objects');
 
+
 function end(t) {
   if (!t) { throw new Error('You forgot to pass t'); }
   t.end();

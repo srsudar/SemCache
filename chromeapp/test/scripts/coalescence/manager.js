@@ -1,12 +1,13 @@
 'use strict';
 
-const test = require('tape');
 const sinon = require('sinon');
-require('sinon-as-promised');
+const test = require('tape');
+
+const stratBloom = require('../../../app/scripts/coalescence/bloom-strategy');
+const stratDig = require('../../../app/scripts/coalescence/digest-strategy');
 
 let mgr = require('../../../app/scripts/coalescence/manager');
-const stratDig = require('../../../app/scripts/coalescence/digest-strategy');
-const stratBloom = require('../../../app/scripts/coalescence/bloom-strategy');
+
 
 /**
  * Manipulating the object directly leads to polluting the require cache. Any

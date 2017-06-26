@@ -4,6 +4,7 @@ const objects = require('../../../app/scripts/persistence/objects');
 
 const CPDisk = objects.CPDisk;
 
+
 exports.genAllParams = function*(num) {
   for (let i = 0; i < num; i++) {
     let href = `http://page.com/${i}`;

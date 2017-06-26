@@ -2,12 +2,14 @@
 'use strict';
 
 const _ = require('underscore');
+
 const api = require('./server-api');
+const binUtil = require('../dnssd/binary-utils').BinaryUtils;
 const fileSystem = require('../persistence/file-system');
 const fsUtil = require('../persistence/file-system-util');
-const binUtil = require('../dnssd/binary-utils').BinaryUtils;
 const rtcConnMgr = require('../webrtc/connection-manager');
 const wrtcResponder = require('../webrtc/responder');
+
 
 /**
  * Handlers for the webserver backing SemCache. The idea for handlers is based

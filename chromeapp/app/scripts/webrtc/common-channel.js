@@ -4,6 +4,7 @@ const EventEmitter = require('events').EventEmitter;
 
 const protocol = require('./protocol');
 
+
 const EV_CHUNK = 'chunk';
 const EV_COMPLETE = 'complete';
 const EV_ERR = 'error';

@@ -18,6 +18,7 @@ const util = require('./util');
 
 const CPInfo = perObjs.CPInfo;
 
+
 /** The prefix value for timing keys we will use for local storage. */
 const TIMING_KEY_PREFIX = 'timing_';
 

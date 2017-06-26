@@ -1,19 +1,19 @@
 /*jshint esnext:true*/
 'use strict';
 
-const test = require('tape');
 const proxyquire = require('proxyquire');
 const sinon = require('sinon');
-require('sinon-as-promised');
+const test = require('tape');
 
-const dnsPacket = require('../../../app/scripts/dnssd/dns-packet');
-const resRec = require('../../../app/scripts/dnssd/resource-record');
-const dnsUtil = require('../../../app/scripts/dnssd/dns-util');
 const dnsCodes = require('../../../app/scripts/dnssd/dns-codes');
-const qSection = require('../../../app/scripts/dnssd/question-section');
 const dnsController = require('../../../app/scripts/dnssd/dns-controller');
+const dnsPacket = require('../../../app/scripts/dnssd/dns-packet');
+const dnsUtil = require('../../../app/scripts/dnssd/dns-util');
+const qSection = require('../../../app/scripts/dnssd/question-section');
+const resRec = require('../../../app/scripts/dnssd/resource-record');
 
 let dnssd = require('../../../app/scripts/dnssd/dns-sd');
+
 
 /**
  * Manipulating the object directly leads to polluting the require cache. Any

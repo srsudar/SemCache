@@ -3,6 +3,7 @@
 const api = require('./popup-api');
 const messaging = require('../app-bridge/messaging');
 
+
 const btnSave = document.getElementById('btn-save');
 const btnView = document.getElementById('btn-view');
 const spinner = document.getElementById('spinner');

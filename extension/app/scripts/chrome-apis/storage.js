@@ -2,6 +2,7 @@
 
 const util = require('./util');
 
+
 /**
  * This module provides a wrapper around the chrome.storage.local API and
  * provides an alternative based on Promises.

@@ -6,6 +6,7 @@ const peerIf = require('../peer-interface/common');
 const peerIfMgr = require('../peer-interface/manager');
 const util = require('./util');
 
+
 /**
  * This module is responsible for the digest strategy of cache coalescence.
  */

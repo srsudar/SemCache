@@ -4,6 +4,7 @@ const test = require('tape');
 
 let common = require('../../../app/scripts/extension-bridge/common-messaging');
 
+
 function reset() {
   delete require.cache[
     require.resolve('../../../app/scripts/extension-bridge/common-messaging')

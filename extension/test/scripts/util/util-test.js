@@ -1,12 +1,12 @@
 /*jshint esnext:true*/
 'use strict';
 
-const test = require('tape');
 const proxyquire = require('proxyquire');
 const sinon = require('sinon');
-require('sinon-as-promised');
+const test = require('tape');
 
 let util = require('../../../app/scripts/util/util.js');
+
 
 function proxyquireUtil(proxies) {
   util = proxyquire('../../../app/scripts/util/util.js', proxies);

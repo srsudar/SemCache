@@ -9,6 +9,7 @@
 
 const ChromePromise = require('chrome-promise');
 
+
 let CHROMEP_SINGLETON = null;
 
 /**

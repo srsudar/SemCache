@@ -4,6 +4,7 @@
 const chromep = require('./chrome-apis/chromep');
 const fileSystem = require('./persistence/file-system');
 
+
 /**
  * Settings for the application as a whole.
  */

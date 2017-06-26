@@ -4,6 +4,7 @@ const blobToBufferLib = require('blob-to-buffer');
 const dataUrlToBlob = require('dataurl-to-blob');
 const SmartBuffer = require('smart-buffer').SmartBuffer;
 
+
 const DEFAULT_BUFFER_SIZE = 0;
 
 /**

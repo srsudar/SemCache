@@ -1,12 +1,13 @@
 'use strict';
 
-const browserAction = require('../chrome-apis/browser-action');
 const appMessaging = require('../app-bridge/messaging');
+const browserAction = require('../chrome-apis/browser-action');
 const popupApi = require('../popup/popup-api');
 
 // Directly requiring a script from the Chrome App. This seems risky, but I
 // feel it's better than code duplication.
 const evaluation = require('../../../../chromeapp/app/scripts/evaluation');
+
 
 const forbiddenTransitionTypes = [
   'generated',        // search results from the omnibox, eg

@@ -1,13 +1,13 @@
 'use strict';
 
-const test = require('tape');
-const sinon = require('sinon');
 const proxyquire = require('proxyquire');
-require('sinon-as-promised');
+const sinon = require('sinon');
+const test = require('tape');
 
 const sutil = require('../server/util');
 
 let responder = require('../../../app/scripts/webrtc/responder');
+
 
 /**
  * Manipulating the object directly leads to polluting the require cache. Any

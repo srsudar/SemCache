@@ -1,16 +1,16 @@
 'use strict';
 
-const test = require('tape');
 const proxyquire = require('proxyquire');
 const sinon = require('sinon');
-require('sinon-as-promised');
-
-let digestStrategy = require('../../../app/scripts/coalescence/digest-strategy');
+const test = require('tape');
 
 const coalObjects = require('../../../app/scripts/coalescence/objects');
 const objects = require('../../../app/scripts/coalescence/objects');
 const pifCommon = require('../../../app/scripts/peer-interface/common');
 const tutil = require('../test-util');
+
+let digestStrategy = require('../../../app/scripts/coalescence/digest-strategy');
+
 
 /**
  * Manipulating the object directly leads to polluting the require cache. Any

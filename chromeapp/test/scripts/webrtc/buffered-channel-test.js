@@ -1,15 +1,16 @@
 'use strict';
 
-const test = require('tape');
 const sinon = require('sinon');
-require('sinon-as-promised');
+const test = require('tape');
 
 const commonChannel = require('../../../app/scripts/webrtc/common-channel');
+const protocol = require('../../../app/scripts/webrtc/protocol');
 
 let bufferedChannel = require('../../../app/scripts/webrtc/buffered-channel');
-let protocol = require('../../../app/scripts/webrtc/protocol');
+
 let Client = bufferedChannel.BufferedChannelClient;
 let Server = bufferedChannel.BufferedChannelServer;
+
 
 /**
  * Manipulating the object directly leads to polluting the require cache. Any

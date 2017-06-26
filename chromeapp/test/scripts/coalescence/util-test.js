@@ -1,11 +1,11 @@
 'use strict';
 
-const test = require('tape');
 const proxyquire = require('proxyquire');
 const sinon = require('sinon');
-require('sinon-as-promised');
+const test = require('tape');
 
 let util = require('../../../app/scripts/coalescence/util');
+
 
 /**
  * Manipulating the object directly leads to polluting the require cache. Any

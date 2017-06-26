@@ -1,10 +1,12 @@
 'use strict';
 
-const util = require('../util/util');
-const runtime = require('../chrome-apis/runtime');
 const csApi = require('./cs-api');
+const runtime = require('../chrome-apis/runtime');
 const storage = require('../chrome-apis/storage');
+const util = require('../util/util');
+
 const appEval = require('../../../../chromeapp/app/scripts/evaluation');
+
 
 /**
  * Functionality for evaluating the framework. Note that unlike in the App,

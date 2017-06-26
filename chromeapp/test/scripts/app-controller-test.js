@@ -1,18 +1,17 @@
 /*jshint esnext:true*/
 'use strict';
 
-const test = require('tape');
 const proxyquire = require('proxyquire');
 const sinon = require('sinon');
-require('sinon-as-promised');
-
-
-let appc = require('../../app/scripts/app-controller');
+const test = require('tape');
 
 const constants = require('../../app/scripts/constants');
 const ifCommon = require('../../app/scripts/peer-interface/common');
 const putil = require('./persistence/persistence-util');
 const testUtil = require('./test-util');
+
+let appc = require('../../app/scripts/app-controller');
+
 
 /**
  * Manipulating the object directly leads to polluting the require cache. Any

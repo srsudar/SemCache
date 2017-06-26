@@ -7,7 +7,9 @@ const tabs = require('../chrome-apis/tabs');
 const util = require('../util/util');
 
 const appUtil = require('../../../../chromeapp/app/scripts/util');
+
 const CPDisk = require('../../../../chromeapp/app/scripts/persistence/objects').CPDisk;
+
 
 /**
  * Handles persisting data for the extension. For the time being we are relying

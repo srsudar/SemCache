@@ -10,6 +10,7 @@
 const chromep = require('../chrome-apis/chromep');
 const fsUtil = require('./file-system-util');
 
+
 /** The local storage key for the entry ID of the base directory. */
 exports.KEY_BASE_DIR = 'baseDir';
 

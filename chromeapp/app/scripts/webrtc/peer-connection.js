@@ -2,9 +2,10 @@
 
 const EventEmitter = require('wolfy87-eventemitter');
 
-const serverApi = require('../server/server-api');
 const bufferedChannel = require('./buffered-channel');
 const message = require('./message');
+const serverApi = require('../server/server-api');
+
 
 const EV_CLOSE = 'close';
 

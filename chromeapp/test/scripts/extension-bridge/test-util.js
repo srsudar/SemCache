@@ -3,6 +3,7 @@
 const common = require('../../../app/scripts/extension-bridge/common-messaging');
 const putil = require('../persistence/persistence-util');
 
+
 exports.getAddPageMessage = function(from) {
   from = from || 'popup';
   let cpdiskJson = putil.genCPDisks(1).next().value.asJSON();

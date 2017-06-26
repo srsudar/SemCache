@@ -12,6 +12,7 @@ const BloomFilter = require('../coalescence/bloom-filter').BloomFilter;
 const datastore = require('../persistence/datastore');
 const objects = require('../persistence/objects');
 
+
 const HTTP_SCHEME = 'http://';
 
 const VERSION = 0.0;
