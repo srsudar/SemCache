@@ -234,16 +234,15 @@ test('annotateLocalLinks annotates on success', function(t) {
   var queryResponse = {};
   queryResponse[anchors[0].href] = 'whatever';
   queryResponse[anchors[1].href] = 'yawn';
-  var appMsg = {
-    result: 'success',
-    response: queryResponse
-  };
 
   var annotateAnchorSpy = sinon.stub();
 
+  let queryLocallyStub = sinon.stub();
+  queryLocallyStub.withArgs('contentscript', urls).resolves(queryResponse);
+
   proxyquireApi({
     '../app-bridge/messaging': {
-      queryForPagesLocally: sinon.stub().withArgs(urls).resolves(appMsg)
+      queryForPagesLocally: queryLocallyStub
     }
   });
   api.getLinksOnPage = sinon.stub().returns(links);

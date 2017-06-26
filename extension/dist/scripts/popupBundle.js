@@ -80,14 +80,16 @@ exports.getListUrlForSelf = function() {
  * @return {Object} the cache object that represents this machine's own cache.
  */
 exports.getOwnCache = function() {
-  var friendlyName = settings.getInstanceName();
-  var instanceName = dnssdSem.getFullName(friendlyName);
-  var serverPort = settings.getServerPort();
-  var hostName = settings.getHostName();
-  var ipAddress = exports.getListeningHttpInterface().address;
-  var listUrl = serverApi.getListPageUrlForCache(ipAddress, serverPort);
+  let friendlyName = settings.getInstanceName();
+  let instanceName = dnssdSem.getFullName(friendlyName);
+  let serverPort = settings.getServerPort();
+  let hostName = settings.getHostName();
+  let ipAddress = exports.getListeningHttpInterface().address;
+  let listUrl = serverApi.getListPageUrlForCache(ipAddress, serverPort);
+  let serviceType = dnssdSem.getSemCacheServiceString();
 
-  var result = {
+  let result = {
+    serviceType: serviceType,
     domainName: hostName,
     instanceName: instanceName,
     friendlyName: friendlyName,
@@ -145,6 +147,7 @@ exports.getOwnCacheName = function() {
  *   instanceName: 'My Cache._semcache._tcp.local',
  *   ipAddress: '1.2.3.4',
  *   port: 1111,
+ *   serviceType: '_semcache._tcp',
  *   listUrl: 'http://1.2.3.4:1111/list_pages'
  * }
  */
@@ -941,17 +944,14 @@ var objects = require('./objects');
 var peerIf = require('../peer-interface/common');
 var peerIfMgr = require('../peer-interface/manager');
 var util = require('./util');
-var evaluation = require('../evaluation');
-
-var EVAL_NUM_DIGESTS = 30;
-var EVAL_NUM_PAGES_IN_DIGEST = 1000;
 
 /**
  * This module is responsible for the digest strategy of cache coalescence.
  */
 
 /**
- * This is the data structure in which we're storing the digests from peers.
+ * This is the data structure in which we're storing the Bloom filters from
+ * peers.
  *
  * Contains objects 
  */
@@ -989,7 +989,7 @@ exports.BloomStrategy.prototype.reset = function() {
 /**
  * Replace the saved Digest state with this new information.
  *
- * @param {Array.<BloomFilter>} digests
+ * @param {Array.<PeerBloomFilter>} digests
  */
 exports.BloomStrategy.prototype.setBloomFilters = function(filters) {
   BLOOM_FILTERS = filters;
@@ -1039,22 +1039,22 @@ exports.BloomStrategy.prototype.initialize = function() {
 
   return new Promise(function(resolve, reject) {
     // Changing this for evaluation.
-    console.warn('COALESCENCE IS IN EVALUATION MODE');
+    // console.warn('COALESCENCE IS IN EVALUATION MODE');
     // This code is for the real mode.
-    // dnssdSem.browseForSemCacheInstances()
-    // .then(peerInfos => {
-    //   return util.removeOwnInfo(peerInfos);
-    // }).then(peerInfos => {
-    //   var peerAccessor = peerIfMgr.getPeerAccessor();
-    //   return that.getAndProcessDigests(peerAccessor, peerInfos);
-    // })
-    // This code is for evaluation mode.
-    Promise.resolve()
-    .then(() => {
-      return evaluation.generateDummyPeerBloomFilters(
-        EVAL_NUM_DIGESTS, EVAL_NUM_PAGES_IN_DIGEST
-      );
+    dnssdSem.browseForSemCacheInstances()
+    .then(peerInfos => {
+      return util.removeOwnInfo(peerInfos);
+    }).then(peerInfos => {
+      var peerAccessor = peerIfMgr.getPeerAccessor();
+      return that.getAndProcessBloomFilters(peerAccessor, peerInfos);
     })
+    // This code is for evaluation mode.
+    // Promise.resolve()
+    // .then(() => {
+    //   return evaluation.generateDummyPeerBloomFilters(
+    //     EVAL_NUM_DIGESTS, EVAL_NUM_PAGES_IN_DIGEST
+    //   );
+    // })
     .then(bloomFilters => {
       that.setBloomFilters(bloomFilters);
       IS_INITIALIZING = false;
@@ -1078,9 +1078,9 @@ exports.BloomStrategy.prototype.initialize = function() {
  * @param {Array.<Object>} peerInfos the objects containing information to
  * connect to peers as returned from the browse service functions
  *
- * @return {Promise.<Array<Digest>>}
+ * @return {Promise.<Array<PeerBloomFilter>>}
  */
-exports.BloomStrategy.prototype.getAndProcessDigests = function(
+exports.BloomStrategy.prototype.getAndProcessBloomFilters = function(
   peerInterface, peerInfos
 ) {
   // Query them, create digests for those that succeed.
@@ -1093,18 +1093,21 @@ exports.BloomStrategy.prototype.getAndProcessDigests = function(
   //
   // For now we are just going to countdown waiting for the promises to settle.
   return new Promise(function(resolve) {
+    if (peerInfos.length === 0) {
+      resolve([]);
+      return;
+    }
     var pendingResponses = peerInfos.length;
     var result = [];
     peerInfos.forEach(peerInfo => {
       var params = peerIf.createListParams(
         peerInfo.ipAddress, peerInfo.port, null
       );
-      peerInterface.getCacheDigest(params)
-      .then(digestResponse => {
-        var rawDigest = digestResponse.digest;
+      peerInterface.getCacheBloomFilter(params)
+      .then(bloomFilter => {
         pendingResponses--;
-        var digest = new objects.Digest(peerInfo, rawDigest);
-        result.push(digest);
+        var peerBf = new objects.PeerBloomFilter(peerInfo, bloomFilter);
+        result.push(peerBf);
         if (pendingResponses === 0) {
           resolve(result);
         }
@@ -1141,7 +1144,6 @@ exports.BloomStrategy.prototype.performQuery = function(urls) {
   if (!this.isInitialized()) {
     console.warn('digest-strategy was queried but is not initialized');
   }
-  var a = getNow();
   return new Promise(function(resolve, reject) {
     Promise.resolve()
     .then(() => {
@@ -1149,19 +1151,15 @@ exports.BloomStrategy.prototype.performQuery = function(urls) {
       urls.forEach(url => {
         var copiesForUrl = [];
         BLOOM_FILTERS.forEach(bloomFilter => {
-          var x = getNow();
-          var captureDate = bloomFilter.performQueryForPage(url);
-          if (captureDate) {
-            var NetworkCachedPage = new objects.NetworkCachedPage(
-              'probable',
-              {
-                url: url,
-              },
-              bloomFilter.peerInfo
-            );
-            copiesForUrl.push(NetworkCachedPage);
+          var isPresent = bloomFilter.performQueryForPage(url);
+          if (isPresent) {
+            let info = {
+              friendlyName: bloomFilter.peerInfo.friendlyName,
+              serviceName: bloomFilter.peerInfo.instanceName,
+              href: url
+            };
+            copiesForUrl.push(info);
           }
-          var y = getNow();
         });
         if (copiesForUrl.length > 0) {
           result[url] = copiesForUrl;
@@ -1175,7 +1173,7 @@ exports.BloomStrategy.prototype.performQuery = function(urls) {
   });
 };
 
-},{"../dnssd/dns-sd-semcache":17,"../evaluation":22,"../peer-interface/common":25,"../peer-interface/manager":27,"./objects":9,"./util":10}],7:[function(require,module,exports){
+},{"../dnssd/dns-sd-semcache":17,"../peer-interface/common":25,"../peer-interface/manager":27,"./objects":9,"./util":10}],7:[function(require,module,exports){
 'use strict';
 
 var dnssdSem = require('../dnssd/dns-sd-semcache');
@@ -1183,7 +1181,6 @@ var objects = require('./objects');
 var peerIf = require('../peer-interface/common');
 var peerIfMgr = require('../peer-interface/manager');
 var util = require('./util');
-var evaluation = require('../evaluation');
 
 /**
  * This module is responsible for the digest strategy of cache coalescence.
@@ -1323,6 +1320,10 @@ exports.DigestStrategy.prototype.getAndProcessDigests = function(
   //
   // For now we are just going to countdown waiting for the promises to settle.
   return new Promise(function(resolve) {
+    if (peerInfos.length === 0) {
+      resolve([]);
+      return;
+    }
     var pendingResponses = peerInfos.length;
     var result = [];
     peerInfos.forEach(peerInfo => {
@@ -1362,8 +1363,16 @@ exports.DigestStrategy.prototype.getAndProcessDigests = function(
  * information about the urls or rejects with an Error. The Object is like the
  * following:
  *   {
- *     url: [NetworkCachedPage, NetworkCachedPage],
+ *     url: [ Object, ... ]
  *   }
+ *
+ * The Object is like:
+ * {
+ *   friendlyName: 'Sam Cache',
+ *   serviceName: 'Sam Cache._semcache._tcp.local',
+ *   href: 'http://foo.org',
+ *   captureDate: iso date string
+ * }
  */
 exports.DigestStrategy.prototype.performQuery = function(urls) {
   if (!this.isInitialized()) {
@@ -1378,15 +1387,13 @@ exports.DigestStrategy.prototype.performQuery = function(urls) {
         DIGESTS.forEach(digest => {
           var captureDate = digest.performQueryForPage(url);
           if (captureDate) {
-            var NetworkCachedPage = new objects.NetworkCachedPage(
-              'probable',
-              {
-                url: url,
-                captureDate: captureDate
-              },
-              digest.peerInfo
-            );
-            copiesForUrl.push(NetworkCachedPage);
+            let page = {
+              friendlyName: digest.peerInfo.friendlyName,
+              serviceName: digest.peerInfo.instanceName,
+              href: url,
+              captureDate: captureDate
+            };
+            copiesForUrl.push(page);
           }
         });
         if (copiesForUrl.length > 0) {
@@ -1401,7 +1408,7 @@ exports.DigestStrategy.prototype.performQuery = function(urls) {
   });
 };
 
-},{"../dnssd/dns-sd-semcache":17,"../evaluation":22,"../peer-interface/common":25,"../peer-interface/manager":27,"./objects":9,"./util":10}],8:[function(require,module,exports){
+},{"../dnssd/dns-sd-semcache":17,"../peer-interface/common":25,"../peer-interface/manager":27,"./objects":9,"./util":10}],8:[function(require,module,exports){
 'use strict';
 
 var stratBloom = require('./bloom-strategy');
@@ -1428,7 +1435,7 @@ exports.STRATEGIES = {
 /**
  * The current startegy for resolving coalescence requests.
  */
-exports.CURRENT_STRATEGY = exports.STRATEGIES.bloom;
+exports.CURRENT_STRATEGY = exports.STRATEGIES.digest;
 
 /**
  * Obtain access information for the given array of URLs. The result will be an
@@ -3812,6 +3819,7 @@ exports.issueProbe = function(queryName, queryType, queryClass) {
  * cannot complete (e.g. if a SRV or A records is not found) or if an error
  * occurs.
  * {
+ *   serviceType: '_semcache._tcp',
  *   friendlyName: 'Sam Cache',
  *   instanceName: 'Sam Cache._semcache._tcp.local',
  *   domainName: 'laptop.local',
@@ -3861,6 +3869,7 @@ exports.resolveService = function(serviceName) {
       var friendlyName = exports.getUserFriendlyName(serviceName);
 
       var result = {
+        serviceType: srvRec.instanceTypeDomain,
         friendlyName: friendlyName,
         instanceName: serviceName,
         domainName: srvRec.domain,
@@ -3919,10 +3928,11 @@ exports.resolveService = function(serviceName) {
  * the following:
  * {
  *   serviceType: '_semcache._tcp',
- *   instanceName: 'Sam Cache',
+ *   friendlyName: 'Sam Cache',
  *   domainName: 'laptop.local',
  *   ipAddress: '123.4.5.6',
- *   port: 8888
+ *   port: 8888,
+ *   instanceName: 'Sam Cache._semcache._tcp.local'
  * }
  */
 exports.browseServiceInstances = function(serviceType) {
@@ -4028,18 +4038,20 @@ exports.browseServiceInstances = function(serviceType) {
         throw new Error('Different numbers of PTR, SRV, and A records!');
       }
       
-      var result = [];
-      for (var i = 0; i < aResponses.length; i++) {
-        var ptr = ptrsWithAs[i];
-        var instanceName = exports.getUserFriendlyName(ptr.serviceName);
-        var srv = srvsWithAs[i];
-        var aRec = aResponses[i];
+      let result = [];
+      for (let i = 0; i < aResponses.length; i++) {
+        let ptr = ptrsWithAs[i];
+        let instanceName = ptr.serviceName;
+        let friendlyName = exports.getUserFriendlyName(ptr.serviceName);
+        let srv = srvsWithAs[i];
+        let aRec = aResponses[i];
         result.push({
           serviceType: serviceType,
+          friendlyName: friendlyName,
           instanceName: instanceName,
           domainName: srv.domain,
           ipAddress: aRec.ipAddress,
-          port: srv.port
+          port: srv.port,
         });
       }
 
@@ -6946,6 +6958,15 @@ class WebrtcPeerAccessor {
         reject(err);
       });
     });
+  }
+
+  /**
+   * @param {Object} params
+   *
+   * @return {Promise.<BloomFilter, Error>}
+   */
+  getCacheBloomFilter(params) {
+    throw new Error('unimplemented');
   }
 }
 
@@ -45120,12 +45141,11 @@ exports.annotateLocalLinks = function() {
     var links = exports.getLinksOnPage();
     var urls = Object.keys(links);
     
-    appMsg.queryForPagesLocally(urls)
-    .then(appMsg => {
+    appMsg.queryForPagesLocally('contentscript', urls)
+    .then(urlToPageArr => {
       // localUrls will be an Object mapping URLs to arrays of locally
       // available pages.
-      var localUrls = appMsg.response;
-      Object.keys(localUrls).forEach(url => {
+      Object.keys(urlToPageArr).forEach(url => {
         var anchors = links[url];
         anchors.forEach(anchor => {
           exports.annotateAnchorIsLocal(anchor);

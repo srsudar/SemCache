@@ -5,7 +5,6 @@ var objects = require('./objects');
 var peerIf = require('../peer-interface/common');
 var peerIfMgr = require('../peer-interface/manager');
 var util = require('./util');
-var evaluation = require('../evaluation');
 
 /**
  * This module is responsible for the digest strategy of cache coalescence.
@@ -145,6 +144,10 @@ exports.DigestStrategy.prototype.getAndProcessDigests = function(
   //
   // For now we are just going to countdown waiting for the promises to settle.
   return new Promise(function(resolve) {
+    if (peerInfos.length === 0) {
+      resolve([]);
+      return;
+    }
     var pendingResponses = peerInfos.length;
     var result = [];
     peerInfos.forEach(peerInfo => {
@@ -184,8 +187,16 @@ exports.DigestStrategy.prototype.getAndProcessDigests = function(
  * information about the urls or rejects with an Error. The Object is like the
  * following:
  *   {
- *     url: [NetworkCachedPage, NetworkCachedPage],
+ *     url: [ Object, ... ]
  *   }
+ *
+ * The Object is like:
+ * {
+ *   friendlyName: 'Sam Cache',
+ *   serviceName: 'Sam Cache._semcache._tcp.local',
+ *   href: 'http://foo.org',
+ *   captureDate: iso date string
+ * }
  */
 exports.DigestStrategy.prototype.performQuery = function(urls) {
   if (!this.isInitialized()) {
@@ -200,15 +211,13 @@ exports.DigestStrategy.prototype.performQuery = function(urls) {
         DIGESTS.forEach(digest => {
           var captureDate = digest.performQueryForPage(url);
           if (captureDate) {
-            var NetworkCachedPage = new objects.NetworkCachedPage(
-              'probable',
-              {
-                url: url,
-                captureDate: captureDate
-              },
-              digest.peerInfo
-            );
-            copiesForUrl.push(NetworkCachedPage);
+            let page = {
+              friendlyName: digest.peerInfo.friendlyName,
+              serviceName: digest.peerInfo.instanceName,
+              href: url,
+              captureDate: captureDate
+            };
+            copiesForUrl.push(page);
           }
         });
         if (copiesForUrl.length > 0) {

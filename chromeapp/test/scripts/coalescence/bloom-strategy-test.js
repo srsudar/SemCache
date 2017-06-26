@@ -1,0 +1,382 @@
+'use strict';
+
+const test = require('tape');
+const proxyquire = require('proxyquire');
+const sinon = require('sinon');
+require('sinon-as-promised');
+
+let bloomStrat = require('../../../app/scripts/coalescence/bloom-strategy');
+
+const BloomFilter = require('../../../app/scripts/coalescence/bloom-filter').BloomFilter;
+const coalObjects = require('../../../app/scripts/coalescence/objects');
+const pifCommon = require('../../../app/scripts/peer-interface/common');
+const tutil = require('../test-util');
+
+function reset() {
+  delete require.cache[
+    require.resolve('../../../app/scripts/coalescence/bloom-strategy')
+  ];
+  bloomStrat = require('../../../app/scripts/coalescence/bloom-strategy');
+}
+
+function proxyquireBloom(proxies) {
+  bloomStrat= proxyquire(
+    '../../../app/scripts/coalescence/bloom-strategy', proxies
+  );
+}
+
+function end(t) {
+  if (!t) { throw new Error('You forgot to pass t'); }
+  reset();
+  t.end();
+}
+
+function createPeerInfos() {
+  return [...tutil.genCacheInfos(2)];
+}
+
+function createBloomFilters() {
+  let a = new BloomFilter();
+  a.add('foo');
+  let b = new BloomFilter();
+  return [a, b];
+}
+
+function createProcessedBlooms() {
+  let peerInfos = createPeerInfos();
+  let bloomFilters = createBloomFilters();
+
+  return [
+    new coalObjects.PeerBloomFilter(peerInfos[0], bloomFilters[0].serialize()),
+    new coalObjects.PeerBloomFilter(peerInfos[1], bloomFilters[1].serialize()),
+  ];
+}
+
+test('initialize rejects if something goes wrong', function(t) {
+  var expectedErr = { msg: 'browse rejected' };
+  proxyquireBloom({
+    '../dnssd/dns-sd-semcache': {
+      browseForSemCacheInstances: sinon.stub().rejects(expectedErr)
+    }
+  });
+
+  var bloom = new bloomStrat.BloomStrategy();
+
+  t.false(bloom.isInitializing());
+  t.false(bloom.isInitialized());
+
+  bloom.initialize()
+  .then(actual => {
+    t.fail(actual);
+    end(t);
+  })
+  .catch(actual => {
+    t.equal(actual, expectedErr);
+    t.false(bloom.isInitializing());
+    t.false(bloom.isInitialized());
+    end(t);
+  });
+});
+
+test('initialize resolves on success', function(t) {
+  let peerInfos = createPeerInfos();
+  var processedBlooms = createProcessedBlooms();
+
+  var peerAccessor = 'I am a fake peer accessor';
+  var removeOwnInfoStub = sinon.stub().resolves(peerInfos);
+
+  proxyquireBloom({
+    '../dnssd/dns-sd-semcache': {
+      browseForSemCacheInstances: sinon.stub().resolves(peerInfos)
+    },
+    '../peer-interface/manager': {
+      getPeerAccessor: sinon.stub().returns(peerAccessor)
+    },
+    './util': {
+      removeOwnInfo: removeOwnInfoStub
+    }
+  });
+
+  var bloom = new bloomStrat.BloomStrategy();
+
+  let getAndProcessStub = sinon.stub();
+  getAndProcessStub
+    .withArgs(peerAccessor, peerInfos)
+    .resolves(processedBlooms);
+  bloom.getAndProcessBloomFilters = getAndProcessStub;
+
+  // Rather than use a stub to monitor whether or not the blooms have been
+  // set, we're going to use a function so that we can also assert that the
+  // isInitializing() function is set correctly.
+  var moduleBlooms = null;
+  bloom.setBloomFilters = function(passedBlooms) {
+    moduleBlooms = passedBlooms;
+    t.true(bloom.isInitializing());
+  };
+
+  t.false(bloom.isInitializing());
+  t.false(bloom.isInitialized());
+
+  bloom.initialize()
+  .then(actual => {
+    t.deepEqual(actual, undefined);
+    t.false(bloom.isInitializing());
+    t.true(bloom.isInitialized());
+    // And the blooms should have been set
+    t.deepEqual(moduleBlooms, processedBlooms);
+    t.deepEqual(removeOwnInfoStub.args[0], [ peerInfos ]);
+    t.true(removeOwnInfoStub.calledOnce);
+    end(t);
+  })
+  .catch(err => {
+    t.fail(err);
+    end(t);
+  });
+});
+
+test('getAndProcessBloomFilters returns empty array if no peers', function(t) {
+  let digest = new bloomStrat.BloomStrategy();
+  let expected = [];
+
+  digest.getAndProcessBloomFilters({}, [])
+  .then(actual => {
+    t.deepEqual(actual, expected);
+    end(t);
+  })
+  .catch(err => {
+    t.fail(err);
+    end(t);
+  });
+});
+
+
+test('getAndProcessBloomFilters resolves all success', function(t) {
+  var peerInfos = createPeerInfos();
+  var bloomFilters = createBloomFilters();
+  bloomFilters = bloomFilters.map(bf => bf.serialize());
+
+  var getCacheBloomStub = sinon.stub();
+  getCacheBloomStub.withArgs(
+    pifCommon.createListParams(
+      peerInfos[0].ipAddress, peerInfos[0].port, null
+    )
+  ).resolves(bloomFilters[0]);
+  getCacheBloomStub.withArgs(
+    pifCommon.createListParams(
+      peerInfos[1].ipAddress, peerInfos[1].port, null
+    )
+  ).resolves(bloomFilters[1]);
+  
+  var peerInterface = {
+    getCacheBloomFilter: getCacheBloomStub
+  };
+
+  var expected = createProcessedBlooms();
+  var bloom = new bloomStrat.BloomStrategy();
+
+  bloom.getAndProcessBloomFilters(peerInterface, peerInfos)
+  .then(actual => {
+    t.deepEqual(actual, expected);
+    end(t);
+  })
+  .catch(err => {
+    t.fail(err);
+    end(t);
+  });
+});
+
+test('getAndProcessBloomFilters resolves last rejects', function(t) {
+  let peerInfos = createPeerInfos();
+  let bloomFilters = createBloomFilters();
+  bloomFilters = bloomFilters.map(bf => bf.serialize());
+
+  var getCacheBloomStub = sinon.stub();
+  getCacheBloomStub.withArgs(
+    pifCommon.createListParams(
+      peerInfos[0].ipAddress, peerInfos[0].port, null
+    )
+  ).resolves(bloomFilters[0]);
+  getCacheBloomStub.withArgs(
+    pifCommon.createListParams(
+      peerInfos[1].ipAddress, peerInfos[1].port, null
+    )
+  ).rejects({ msg: 'an error that will be swallowed' });
+  
+  var peerInterface = {
+    getCacheBloomFilter: getCacheBloomStub
+  };
+
+  var expected = [
+    new coalObjects.PeerBloomFilter(peerInfos[0], bloomFilters[0])
+  ];
+  var bloom = new bloomStrat.BloomStrategy();
+
+  bloom.getAndProcessBloomFilters(peerInterface, peerInfos)
+  .then(actual => {
+    t.deepEqual(actual, expected);
+    end(t);
+  })
+  .catch(err => {
+    t.fail(err);
+    end(t);
+  });
+});
+
+test('performQuery returns empty array if no matches', function(t) {
+  var bloom1 = sinon.stub();
+  bloom1.performQueryForPage = sinon.stub().returns(false);
+  var bloom2 = sinon.stub();
+  bloom2.performQueryForPage = sinon.stub().returns(false);
+
+  var blooms = [bloom1, bloom2];
+  var bloom = new bloomStrat.BloomStrategy();
+  bloom.setBloomFilters(blooms);
+  bloom.isInitialized = sinon.stub().returns(true);
+
+  bloom.performQuery(['http://foo.com', 'http://bar.com'])
+  .then(actual => {
+    t.deepEqual(actual, []);
+    end(t);
+  })
+  .catch(err => {
+    t.fail(err);
+    end(t);
+  });
+});
+
+test('performQuery correct with extant pages', function(t) {
+  var peerInfos = createPeerInfos();
+
+  let peer1 = peerInfos[0];
+  let peer2 = peerInfos[1];
+
+  // We want to handle duplicates as well as single results.
+  var urlOnly1 = 'http://onbloom1.com';
+  var urlOnly2 = 'http://onbloom2.com';
+  var urlNeither = 'http://inNoblooms.com';
+  var urlBoth = 'http://inBothblooms.com';
+
+  var urls = [ urlOnly1, urlOnly2, urlNeither, urlBoth ];
+
+  var urlOnly1Result = [
+    {
+      serviceName: peer1.instanceName,
+      friendlyName: peer1.friendlyName,
+      href: urlOnly1,
+    },
+  ];
+
+  var urlOnly2Result = [
+    {
+      serviceName: peer2.instanceName,
+      friendlyName: peer2.friendlyName,
+      href: urlOnly2,
+    }
+  ];
+
+  var urlBothResult = [
+    {
+      serviceName: peer1.instanceName,
+      friendlyName: peer1.friendlyName,
+      href: urlBoth,
+    },
+    {
+      serviceName: peer2.instanceName,
+      friendlyName: peer2.friendlyName,
+      href: urlBoth,
+    }
+  ];
+
+  var expected = {};
+  expected[urlOnly1] = urlOnly1Result;
+  expected[urlOnly2] = urlOnly2Result;
+  expected[urlBoth] = urlBothResult;
+
+  let performQueryOneStub = sinon.stub();
+  performQueryOneStub.withArgs(urlOnly1).returns(true);
+  performQueryOneStub.withArgs(urlBoth).returns(true);
+
+  let performQueryTwoStub = sinon.stub();
+  performQueryTwoStub.withArgs(urlOnly2).returns(true);
+  performQueryTwoStub.withArgs(urlBoth).returns(true);
+
+  let blooms = [
+    {
+      peerInfo: peer1,
+      performQueryForPage: performQueryOneStub
+    },
+    {
+      peerInfo: peer2,
+      performQueryForPage: performQueryTwoStub
+    }
+  ];
+  var bloom = new bloomStrat.BloomStrategy();
+  bloom.setBloomFilters(blooms);
+  bloom.isInitialized = sinon.stub().returns(true);
+
+  bloom.performQuery(urls)
+  .then(actual => {
+    t.deepEqual(actual, expected);
+    end(t);
+  })
+  .catch(err => {
+    t.fail(err);
+    end(t);
+  });
+});
+
+test('performQuery rejects with Error', function(t) {
+  var expected = { msg: 'I am an error' };
+
+  var bloomStub = { 
+    performQueryForPage: sinon.stub().throws(expected)
+  };
+
+  var bloom = new bloomStrat.BloomStrategy();
+  bloom.setBloomFilters([ bloomStub ]);
+
+  bloom.performQuery([ 'http://woot.com' ])
+  .then(actual => {
+    t.fail(actual);
+    end(t);
+  })
+  .catch(actual => {
+    t.deepEqual(actual, expected);
+    end(t);
+  });
+});
+
+test('reset restores state', function(t) {
+  proxyquireBloom({
+    '../dnssd/dns-sd-semcache': {
+      browseForSemCacheInstances: sinon.stub().resolves()
+    },
+    '../peer-interface/manager': {
+      getPeerAccessor: sinon.stub().returns()
+    },
+    './util': {
+      removeOwnInfo: sinon.stub().resolves()
+    }
+  });
+  var bloom = new bloomStrat.BloomStrategy();
+  bloom.getAndProcessBloomFilters = sinon.stub().resolves(['a']);
+  bloom.setBloomFilters = sinon.stub();
+
+  bloom.initialize()
+  .then(() => {
+    t.false(bloom.isInitializing());
+    t.true(bloom.isInitialized());
+
+    bloom.reset();
+    t.false(bloom.isInitializing());
+    t.false(bloom.isInitialized());
+    // The second call will have been the reset one
+    t.deepEqual(bloom.setBloomFilters.args[1][0], []);
+    end(t);
+  })
+  .catch(err => {
+    t.fail(err);
+    end(t);
+  });
+});
+

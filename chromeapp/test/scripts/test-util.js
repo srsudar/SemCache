@@ -35,7 +35,7 @@ exports.genCacheInfos = function*(num) {
     let friendlyName = `Sam Cache ${i}`;
     let domainName = `laptop_${i}.local`;
     let ipAddress = `${i}.${i}.${i}.${i}`;
-    let port = i;
+    let port = i + 100;  // +100 so that we dont get into 0 falsey trouble
     let instanceName = `${friendlyName}.${serviceType}.local`;
 
     yield {

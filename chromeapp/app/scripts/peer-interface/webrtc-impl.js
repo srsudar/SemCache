@@ -100,6 +100,15 @@ class WebrtcPeerAccessor {
       });
     });
   }
+
+  /**
+   * @param {Object} params
+   *
+   * @return {Promise.<BloomFilter, Error>}
+   */
+  getCacheBloomFilter(params) {
+    throw new Error('unimplemented');
+  }
 }
 
 exports.WebrtcPeerAccessor = WebrtcPeerAccessor;

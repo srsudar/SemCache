@@ -101,12 +101,11 @@ exports.annotateLocalLinks = function() {
     var links = exports.getLinksOnPage();
     var urls = Object.keys(links);
     
-    appMsg.queryForPagesLocally(urls)
-    .then(appMsg => {
+    appMsg.queryForPagesLocally('contentscript', urls)
+    .then(urlToPageArr => {
       // localUrls will be an Object mapping URLs to arrays of locally
       // available pages.
-      var localUrls = appMsg.response;
-      Object.keys(localUrls).forEach(url => {
+      Object.keys(urlToPageArr).forEach(url => {
         var anchors = links[url];
         anchors.forEach(anchor => {
           exports.annotateAnchorIsLocal(anchor);

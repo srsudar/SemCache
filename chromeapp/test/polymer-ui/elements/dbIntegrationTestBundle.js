@@ -260,17 +260,14 @@ var objects = require('./objects');
 var peerIf = require('../peer-interface/common');
 var peerIfMgr = require('../peer-interface/manager');
 var util = require('./util');
-var evaluation = require('../evaluation');
-
-var EVAL_NUM_DIGESTS = 30;
-var EVAL_NUM_PAGES_IN_DIGEST = 1000;
 
 /**
  * This module is responsible for the digest strategy of cache coalescence.
  */
 
 /**
- * This is the data structure in which we're storing the digests from peers.
+ * This is the data structure in which we're storing the Bloom filters from
+ * peers.
  *
  * Contains objects 
  */
@@ -308,7 +305,7 @@ exports.BloomStrategy.prototype.reset = function() {
 /**
  * Replace the saved Digest state with this new information.
  *
- * @param {Array.<BloomFilter>} digests
+ * @param {Array.<PeerBloomFilter>} digests
  */
 exports.BloomStrategy.prototype.setBloomFilters = function(filters) {
   BLOOM_FILTERS = filters;
@@ -365,7 +362,7 @@ exports.BloomStrategy.prototype.initialize = function() {
       return util.removeOwnInfo(peerInfos);
     }).then(peerInfos => {
       var peerAccessor = peerIfMgr.getPeerAccessor();
-      return that.getAndProcessDigests(peerAccessor, peerInfos);
+      return that.getAndProcessBloomFilters(peerAccessor, peerInfos);
     })
     // This code is for evaluation mode.
     // Promise.resolve()
@@ -397,9 +394,9 @@ exports.BloomStrategy.prototype.initialize = function() {
  * @param {Array.<Object>} peerInfos the objects containing information to
  * connect to peers as returned from the browse service functions
  *
- * @return {Promise.<Array<Digest>>}
+ * @return {Promise.<Array<PeerBloomFilter>>}
  */
-exports.BloomStrategy.prototype.getAndProcessDigests = function(
+exports.BloomStrategy.prototype.getAndProcessBloomFilters = function(
   peerInterface, peerInfos
 ) {
   // Query them, create digests for those that succeed.
@@ -412,18 +409,21 @@ exports.BloomStrategy.prototype.getAndProcessDigests = function(
   //
   // For now we are just going to countdown waiting for the promises to settle.
   return new Promise(function(resolve) {
+    if (peerInfos.length === 0) {
+      resolve([]);
+      return;
+    }
     var pendingResponses = peerInfos.length;
     var result = [];
     peerInfos.forEach(peerInfo => {
       var params = peerIf.createListParams(
         peerInfo.ipAddress, peerInfo.port, null
       );
-      peerInterface.getCacheDigest(params)
-      .then(digestResponse => {
-        var rawDigest = digestResponse.digest;
+      peerInterface.getCacheBloomFilter(params)
+      .then(bloomFilter => {
         pendingResponses--;
-        var digest = new objects.Digest(peerInfo, rawDigest);
-        result.push(digest);
+        var peerBf = new objects.PeerBloomFilter(peerInfo, bloomFilter);
+        result.push(peerBf);
         if (pendingResponses === 0) {
           resolve(result);
         }
@@ -467,16 +467,14 @@ exports.BloomStrategy.prototype.performQuery = function(urls) {
       urls.forEach(url => {
         var copiesForUrl = [];
         BLOOM_FILTERS.forEach(bloomFilter => {
-          var captureDate = bloomFilter.performQueryForPage(url);
-          if (captureDate) {
-            var NetworkCachedPage = new objects.NetworkCachedPage(
-              'probable',
-              {
-                url: url,
-              },
-              bloomFilter.peerInfo
-            );
-            copiesForUrl.push(NetworkCachedPage);
+          var isPresent = bloomFilter.performQueryForPage(url);
+          if (isPresent) {
+            let info = {
+              friendlyName: bloomFilter.peerInfo.friendlyName,
+              serviceName: bloomFilter.peerInfo.instanceName,
+              href: url
+            };
+            copiesForUrl.push(info);
           }
         });
         if (copiesForUrl.length > 0) {
@@ -491,7 +489,7 @@ exports.BloomStrategy.prototype.performQuery = function(urls) {
   });
 };
 
-},{"../dnssd/dns-sd-semcache":"dnsSem","../evaluation":"eval","../peer-interface/common":16,"../peer-interface/manager":18,"./objects":6,"./util":7}],5:[function(require,module,exports){
+},{"../dnssd/dns-sd-semcache":"dnsSem","../peer-interface/common":16,"../peer-interface/manager":18,"./objects":6,"./util":7}],5:[function(require,module,exports){
 'use strict';
 
 var dnssdSem = require('../dnssd/dns-sd-semcache');
@@ -499,7 +497,6 @@ var objects = require('./objects');
 var peerIf = require('../peer-interface/common');
 var peerIfMgr = require('../peer-interface/manager');
 var util = require('./util');
-var evaluation = require('../evaluation');
 
 /**
  * This module is responsible for the digest strategy of cache coalescence.
@@ -639,6 +636,10 @@ exports.DigestStrategy.prototype.getAndProcessDigests = function(
   //
   // For now we are just going to countdown waiting for the promises to settle.
   return new Promise(function(resolve) {
+    if (peerInfos.length === 0) {
+      resolve([]);
+      return;
+    }
     var pendingResponses = peerInfos.length;
     var result = [];
     peerInfos.forEach(peerInfo => {
@@ -678,8 +679,16 @@ exports.DigestStrategy.prototype.getAndProcessDigests = function(
  * information about the urls or rejects with an Error. The Object is like the
  * following:
  *   {
- *     url: [NetworkCachedPage, NetworkCachedPage],
+ *     url: [ Object, ... ]
  *   }
+ *
+ * The Object is like:
+ * {
+ *   friendlyName: 'Sam Cache',
+ *   serviceName: 'Sam Cache._semcache._tcp.local',
+ *   href: 'http://foo.org',
+ *   captureDate: iso date string
+ * }
  */
 exports.DigestStrategy.prototype.performQuery = function(urls) {
   if (!this.isInitialized()) {
@@ -694,15 +703,13 @@ exports.DigestStrategy.prototype.performQuery = function(urls) {
         DIGESTS.forEach(digest => {
           var captureDate = digest.performQueryForPage(url);
           if (captureDate) {
-            var NetworkCachedPage = new objects.NetworkCachedPage(
-              'probable',
-              {
-                url: url,
-                captureDate: captureDate
-              },
-              digest.peerInfo
-            );
-            copiesForUrl.push(NetworkCachedPage);
+            let page = {
+              friendlyName: digest.peerInfo.friendlyName,
+              serviceName: digest.peerInfo.instanceName,
+              href: url,
+              captureDate: captureDate
+            };
+            copiesForUrl.push(page);
           }
         });
         if (copiesForUrl.length > 0) {
@@ -717,7 +724,7 @@ exports.DigestStrategy.prototype.performQuery = function(urls) {
   });
 };
 
-},{"../dnssd/dns-sd-semcache":"dnsSem","../evaluation":"eval","../peer-interface/common":16,"../peer-interface/manager":18,"./objects":6,"./util":7}],6:[function(require,module,exports){
+},{"../dnssd/dns-sd-semcache":"dnsSem","../peer-interface/common":16,"../peer-interface/manager":18,"./objects":6,"./util":7}],6:[function(require,module,exports){
 'use strict';
 
 var bloomFilter = require('./bloom-filter');
@@ -3063,6 +3070,15 @@ class WebrtcPeerAccessor {
         reject(err);
       });
     });
+  }
+
+  /**
+   * @param {Object} params
+   *
+   * @return {Promise.<BloomFilter, Error>}
+   */
+  getCacheBloomFilter(params) {
+    throw new Error('unimplemented');
   }
 }
 

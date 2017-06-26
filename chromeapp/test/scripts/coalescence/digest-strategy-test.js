@@ -1,16 +1,16 @@
 'use strict';
 
-var test = require('tape');
-var proxyquire = require('proxyquire');
-var sinon = require('sinon');
+const test = require('tape');
+const proxyquire = require('proxyquire');
+const sinon = require('sinon');
 require('sinon-as-promised');
 
-var digestStrategy = require(
-  '../../../app/scripts/coalescence/digest-strategy'
-);
-var coalObjects = require('../../../app/scripts/coalescence/objects');
-var objects = require('../../../app/scripts/coalescence/objects');
-var pifCommon = require('../../../app/scripts/peer-interface/common');
+let digestStrategy = require('../../../app/scripts/coalescence/digest-strategy');
+
+const coalObjects = require('../../../app/scripts/coalescence/objects');
+const objects = require('../../../app/scripts/coalescence/objects');
+const pifCommon = require('../../../app/scripts/peer-interface/common');
+const tutil = require('../test-util');
 
 /**
  * Manipulating the object directly leads to polluting the require cache. Any
@@ -37,16 +37,7 @@ function end(t) {
 }
 
 function createPeerInfos() {
-  var peerInfo1 = {
-    ipAddress: '1.2.3.4',
-    port: 1111
-  };
-  var peerInfo2 = {
-    ipAddress: '9.8.7.6',
-    port: 2222
-  };
-
-  return [peerInfo1, peerInfo2];
+  return [...tutil.genCacheInfos(2)];
 }
 
 function createRawDigests() {
@@ -204,6 +195,21 @@ test('getAndProcessDigests resolves all success', function(t) {
   });
 });
 
+test('getAndProcessDigests returns empty array if no peers', function(t) {
+  let digest = new digestStrategy.DigestStrategy();
+  let expected = [];
+
+  digest.getAndProcessDigests({}, [])
+  .then(actual => {
+    t.deepEqual(actual, expected);
+    end(t);
+  })
+  .catch(err => {
+    t.fail(err);
+    end(t);
+  });
+});
+
 test('getAndProcessDigests resolves last rejects', function(t) {
   var peerInfos = createPeerInfos();
   var rawDigests = createRawDigests();
@@ -301,6 +307,9 @@ test('performQuery returns empty array if no matches', function(t) {
 test('performQuery correct with extant pages', function(t) {
   var peerInfos = createPeerInfos();
 
+  let peer1 = peerInfos[0];
+  let peer2 = peerInfos[1];
+
   var urlOnly1CaptureDate = '2014-05-01';
   var urlOnly2CaptureDate = '2014-06-01';
   var urlBothCaptureDatePeer1 = '2014-07-01';
@@ -315,43 +324,36 @@ test('performQuery correct with extant pages', function(t) {
   var urls = [ urlOnly1, urlOnly2, urlNeither, urlBoth ];
 
   var urlOnly1Result = [
-    new objects.NetworkCachedPage(
-      'probable',
-      {
-        url: urlOnly1,
-        captureDate: urlOnly1CaptureDate
-      },
-      peerInfos[0]
-    )
+    {
+      serviceName: peer1.instanceName,
+      friendlyName: peer1.friendlyName,
+      href: urlOnly1,
+      captureDate: urlOnly1CaptureDate
+    },
   ];
 
   var urlOnly2Result = [
-    new objects.NetworkCachedPage(
-      'probable',
-      {
-        url: urlOnly2,
-        captureDate: urlOnly2CaptureDate
-      },
-      peerInfos[1]
-    )
+    {
+      serviceName: peer2.instanceName,
+      friendlyName: peer2.friendlyName,
+      href: urlOnly2,
+      captureDate: urlOnly2CaptureDate
+    }
   ];
 
   var urlBothResult = [
-    new objects.NetworkCachedPage(
-      'probable', {
-        url: urlBoth,
-        captureDate: urlBothCaptureDatePeer1
-      },
-      peerInfos[0]
-    ),
-    new objects.NetworkCachedPage(
-      'probable',
-      {
-        url: urlBoth,
-        captureDate: urlBothCaptureDatePeer2
-      },
-      peerInfos[1]
-    )
+    {
+      serviceName: peer1.instanceName,
+      friendlyName: peer1.friendlyName,
+      href: urlBoth,
+      captureDate: urlBothCaptureDatePeer1
+    },
+    {
+      serviceName: peer2.instanceName,
+      friendlyName: peer2.friendlyName,
+      href: urlBoth,
+      captureDate: urlBothCaptureDatePeer2
+    }
   ];
 
   var expected = {};
