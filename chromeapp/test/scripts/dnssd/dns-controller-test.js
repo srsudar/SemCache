@@ -1,17 +1,19 @@
 /*jshint esnext:true*/
 'use strict';
-var test = require('tape');
-var proxyquire = require('proxyquire');
-var sinon = require('sinon');
+
+const test = require('tape');
+const proxyquire = require('proxyquire');
+const sinon = require('sinon');
 require('sinon-as-promised');
 
-var dnsController = require('../../../app/scripts/dnssd/dns-controller');
-var chromeUdp = require('../../../app/scripts/chrome-apis/udp');
-var dnsCodes = require('../../../app/scripts/dnssd/dns-codes');
-var dnsPacket = require('../../../app/scripts/dnssd/dns-packet');
-var qSection = require('../../../app/scripts/dnssd/question-section');
-var byteArray = require('../../../app/scripts/dnssd/byte-array');
-var resRec = require('../../../app/scripts/dnssd/resource-record');
+let dnsController = require('../../../app/scripts/dnssd/dns-controller');
+
+const chromeUdp = require('../../../app/scripts/chrome-apis/udp');
+const dnsCodes = require('../../../app/scripts/dnssd/dns-codes');
+const dnsPacket = require('../../../app/scripts/dnssd/dns-packet');
+const qSection = require('../../../app/scripts/dnssd/question-section');
+const byteArray = require('../../../app/scripts/dnssd/byte-array');
+const resRec = require('../../../app/scripts/dnssd/resource-record');
 
 /**
  * Manipulating the object directly leads to polluting the require cache. Any
@@ -35,7 +37,7 @@ function proxyquireDnsController(proxies) {
  * Helper function to test for multicast/unicast sending.
  */
 function helperTestForSendAddress(t, isUnicast, address, port) {
-  var queryPacket = new dnsPacket.DnsPacket(
+  let queryPacket = new dnsPacket.DnsPacket(
     0,
     true,
     0,
@@ -48,14 +50,14 @@ function helperTestForSendAddress(t, isUnicast, address, port) {
   // We want to include a question to make sure we don't not send a response
   // just because there are no questions rather than due to the fact that it
   // isn't a query.
-  var q1name = 'domain';
-  var q1type = 2;
-  var q1class = 1;
+  let q1name = 'domain';
+  let q1type = 2;
+  let q1class = 1;
 
-  var question1 = new qSection.QuestionSection(q1name, q1type, q1class);
+  let question1 = new qSection.QuestionSection(q1name, q1type, q1class);
   queryPacket.addQuestion(question1);
 
-  var responsePacket = new dnsPacket.DnsPacket(
+  let responsePacket = new dnsPacket.DnsPacket(
     0,
     false,
     0,
@@ -66,7 +68,7 @@ function helperTestForSendAddress(t, isUnicast, address, port) {
     0
   );
 
-  var waitInRangeSpy = sinon.stub().resolves();
+  let waitInRangeSpy = sinon.stub().resolves();
   proxyquireDnsController({
     '../util': {
       waitInRange: waitInRangeSpy
@@ -78,7 +80,7 @@ function helperTestForSendAddress(t, isUnicast, address, port) {
   dnsController.createResponsePacket = sinon.stub().returns(responsePacket);
 
   // Return a single item to indicate that we should respond to the query.
-  var aRecord = new resRec.ARecord('domainname', 10, '123.42.61.123', 2);
+  let aRecord = new resRec.ARecord('domainname', 10, '123.42.61.123', 2);
   dnsController.getResourcesForQuery = sinon.stub().returns([aRecord]);
 
   dnsController.sendPacket = function(packetArg, addrArg, portArg) {
@@ -102,12 +104,12 @@ function helperTestForSendAddress(t, isUnicast, address, port) {
 }
 
 function helperQueryForType(t, name, type, clazz, controller, fn, argsArray) {
-  var returnArg = 'foo';
-  var querySpy = sinon.stub().returns(returnArg);
+  let returnArg = 'foo';
+  let querySpy = sinon.stub().returns(returnArg);
 
   controller.getResourcesForQuery = querySpy;
 
-  var actual = fn.apply(null, argsArray);
+  let actual = fn.apply(null, argsArray);
 
   t.deepEqual(querySpy.args[0], [name, type, clazz]);
   t.equal(actual, returnArg);
@@ -118,10 +120,10 @@ function helperQueryForType(t, name, type, clazz, controller, fn, argsArray) {
 
 test('getSocket resolves immediately if socket is present', function(t) {
   // Make the module think it has started.
-  var dummySocket = {};
+  let dummySocket = {};
   dnsController.socket = dummySocket;
 
-  var result = dnsController.getSocket();
+  let result = dnsController.getSocket();
   result.then(function success(socket) {
     // It should return null by default, as we don't have the socket set yet.
     t.equal(socket, dummySocket);
@@ -136,11 +138,11 @@ test('getSocket resolves immediately if socket is present', function(t) {
 });
 
 test('getSocket follows success chain and resolves with socket', function(t) {
-  var fakeInfo = {
+  let fakeInfo = {
     socketId: 12,
     localPort: 8887
   };
-  var expected = new chromeUdp.ChromeUdpSocket(fakeInfo);
+  let expected = new chromeUdp.ChromeUdpSocket(fakeInfo);
 
   proxyquireDnsController({
     '../chrome-apis/udp': {
@@ -166,16 +168,16 @@ test('getSocket follows success chain and resolves with socket', function(t) {
 });
 
 test('getSocket fails if bind fails', function(t) {
-  var chromeUdpStub = {};
+  let chromeUdpStub = {};
 
-  var fakeInfo = {
+  let fakeInfo = {
     socketId: 12,
     localPort: 8887
   };
 
-  var closeAllSocketsSpy = sinon.spy();
+  let closeAllSocketsSpy = sinon.spy();
 
-  var expected = { msg: 'went wrong during bind' };
+  let expected = { msg: 'went wrong during bind' };
 
   chromeUdpStub.addOnReceiveListener = sinon.stub();
   chromeUdpStub.closeAllSockets = closeAllSocketsSpy;
@@ -186,7 +188,7 @@ test('getSocket fails if bind fails', function(t) {
     '../chrome-apis/udp': chromeUdpStub
   });
 
-  var result = dnsController.getSocket();
+  let result = dnsController.getSocket();
   result.then(res => {
     t.fail(res);
     t.end();
@@ -202,13 +204,13 @@ test('getSocket fails if bind fails', function(t) {
 });
 
 test('getSocket fails if join group fails', function(t) {
-  var fakeInfo = {
+  let fakeInfo = {
     socketId: 12,
     localPort: 8887
   };
-  var closeAllSocketsSpy = sinon.spy();
+  let closeAllSocketsSpy = sinon.spy();
 
-  var expected = { msg: 'error doing joinGroup' };
+  let expected = { msg: 'error doing joinGroup' };
 
   proxyquireDnsController({
     '../chrome-apis/udp': {
@@ -236,11 +238,11 @@ test('getSocket fails if join group fails', function(t) {
 });
 
 test('queryForARecord calls query with correct args', function(t) {
-  var controller = require(
+  let controller = require(
     '../../../app/scripts/dnssd/dns-controller'
   );
 
-  var domainName = 'www.example.com';
+  let domainName = 'www.example.com';
   helperQueryForType(
     t,
     domainName,
@@ -253,11 +255,11 @@ test('queryForARecord calls query with correct args', function(t) {
 });
 
 test('queryForPtrRecord calls query with correct args', function(t) {
-  var controller = require(
+  let controller = require(
     '../../../app/scripts/dnssd/dns-controller'
   );
 
-  var serviceName = '_semcache._tcp';
+  let serviceName = '_semcache._tcp';
   helperQueryForType(
     t,
     serviceName,
@@ -270,11 +272,11 @@ test('queryForPtrRecord calls query with correct args', function(t) {
 });
 
 test('queryForSrvRecord calls query with correct args', function(t) {
-  var controller = require(
+  let controller = require(
     '../../../app/scripts/dnssd/dns-controller'
   );
 
-  var instanceName = 'Fancy Cache._semcache._tcp';
+  let instanceName = 'Fancy Cache._semcache._tcp';
 
   helperQueryForType(
     t,
@@ -288,15 +290,15 @@ test('queryForSrvRecord calls query with correct args', function(t) {
 });
 
 test('query calls sendPacket with correct args', function(t) {
-  var mockedController = require(
+  let mockedController = require(
     '../../../app/scripts/dnssd/dns-controller'
   );
   
-  var qName = 'www.foo.com';
-  var qType = 3;
-  var qClass = 12;
+  let qName = 'www.foo.com';
+  let qType = 3;
+  let qClass = 12;
 
-  var targetPacket = new dnsPacket.DnsPacket(
+  let targetPacket = new dnsPacket.DnsPacket(
     0,
     true,
     0,
@@ -306,15 +308,15 @@ test('query calls sendPacket with correct args', function(t) {
     0,
     0
   );
-  var targetQuestion = new qSection.QuestionSection(qName, qType, qClass);
+  let targetQuestion = new qSection.QuestionSection(qName, qType, qClass);
   targetPacket.addQuestion(targetQuestion);
 
-  var sendPacketSpy = sinon.spy();
+  let sendPacketSpy = sinon.spy();
 
   mockedController.sendPacket = sendPacketSpy;
   mockedController.query(qName, qType, qClass);
 
-  var args = sendPacketSpy.args[0];
+  let args = sendPacketSpy.args[0];
 
   t.true(sendPacketSpy.calledOnce);
   t.deepEqual(args[0], targetPacket);
@@ -326,18 +328,18 @@ test('query calls sendPacket with correct args', function(t) {
 });
 
 test('addRecord updates data structures', function(t) {
-  var aName = 'www.example.com';
-  var aRecord1 = new resRec.ARecord(aName, 10, '123.42.61.123', 2);
-  var aRecord2 = new resRec.ARecord(aName, 10, '124.42.61.123', 2);
+  let aName = 'www.example.com';
+  let aRecord1 = new resRec.ARecord(aName, 10, '123.42.61.123', 2);
+  let aRecord2 = new resRec.ARecord(aName, 10, '124.42.61.123', 2);
 
-  var ptrName = '_print._tcp';
-  var ptrRecord1 = new resRec.PtrRecord(ptrName, 108, 'PrintsALot', 4);
+  let ptrName = '_print._tcp';
+  let ptrRecord1 = new resRec.PtrRecord(ptrName, 108, 'PrintsALot', 4);
 
-  var srvName = 'Sam Cache._semcache._tcp';
-  var srvRecord1 = new resRec.SrvRecord(srvName, 99, 0, 10, 8888, 'sam.local');
+  let srvName = 'Sam Cache._semcache._tcp';
+  let srvRecord1 = new resRec.SrvRecord(srvName, 99, 0, 10, 8888, 'sam.local');
 
   // We should start with an empty object.
-  var expectedRecords = {};
+  let expectedRecords = {};
   t.deepEqual(dnsController.getRecords(), expectedRecords);
 
   expectedRecords[aName] = [aRecord1];
@@ -362,10 +364,10 @@ test('addRecord updates data structures', function(t) {
 });
 
 test('addOnReceiveCallback adds function', function(t) {
-  var fn1 = function() {};
-  var fn2 = function() {};
-  var startingCallbacks = dnsController.getOnReceiveCallbacks();
-  var expected = null;
+  let fn1 = function() {};
+  let fn2 = function() {};
+  let startingCallbacks = dnsController.getOnReceiveCallbacks();
+  let expected = null;
 
   expected = new Set();
   t.deepEqual(startingCallbacks, expected);
@@ -384,11 +386,11 @@ test('addOnReceiveCallback adds function', function(t) {
 });
 
 test('removeOnReceiveCallback removes function', function(t) {
-  var fn1 = function() {};
-  var fn2 = function() {};
-  var fn3 = function() {};
+  let fn1 = function() {};
+  let fn2 = function() {};
+  let fn3 = function() {};
 
-  var expected = new Set();
+  let expected = new Set();
   t.deepEqual(dnsController.getOnReceiveCallbacks(), expected);
 
   // Does not error with zero functions
@@ -422,7 +424,7 @@ test('removeOnReceiveCallback removes function', function(t) {
 });
 
 test('sendPacket gets socket and sends', function(t) {
-  var packet = new dnsPacket.DnsPacket(
+  let packet = new dnsPacket.DnsPacket(
     0,
     true,
     0,
@@ -433,14 +435,14 @@ test('sendPacket gets socket and sends', function(t) {
     0
   );
 
-  var byteArr = packet.convertToByteArray();
-  var expectedBuffer = byteArray.getByteArrayAsUint8Array(byteArr).buffer;
-  var address = 'hello';
-  var port = '6789';
+  let byteArr = packet.convertToByteArray();
+  let expectedBuffer = byteArray.getByteArrayAsUint8Array(byteArr).buffer;
+  let address = 'hello';
+  let port = '6789';
 
   // getSocket() should resolve with an object that exposes the 'send'
   // function.
-  var sendSpy = {
+  let sendSpy = {
     send: function(bufferParam, addressParam, portParam) {
       t.deepEqual(bufferParam, expectedBuffer);
       t.deepEqual(addressParam, address);
@@ -449,7 +451,7 @@ test('sendPacket gets socket and sends', function(t) {
       t.end();
     }
   };
-  var getSocketSpy = sinon.stub().resolves(sendSpy);
+  let getSocketSpy = sinon.stub().resolves(sendSpy);
   dnsController.getSocket = getSocketSpy;
 
   dnsController.sendPacket(packet, address, port);
@@ -458,8 +460,8 @@ test('sendPacket gets socket and sends', function(t) {
 test('start initializes correctly', function(t) {
   // getSocket() should resolve and initializeNetworkInetfaceCache() should
   // resolve
-  var getSocketStub = sinon.stub().resolves();
-  var initializeCacheStub = sinon.stub().resolves();
+  let getSocketStub = sinon.stub().resolves();
+  let initializeCacheStub = sinon.stub().resolves();
 
   dnsController.getSocket = getSocketStub;
   dnsController.initializeNetworkInterfaceCache = initializeCacheStub;
@@ -479,7 +481,7 @@ test('start initializes correctly', function(t) {
 });
 
 test('getIPv4Interfaces throws if not started', function(t) {
-  var controller = require('../../../app/scripts/dnssd/dns-controller.js');
+  let controller = require('../../../app/scripts/dnssd/dns-controller.js');
   controller.isStarted = sinon.stub().returns(false);
 
   t.throws(controller.getIPv4Interfaces, Error);
@@ -492,27 +494,27 @@ test('initializeNetworkInterfaceCache initializes cache', function(t) {
 
   // We want the br0 interface to be returned first, because we expect it to be
   // moved to the back of the list.
-  var brIface = {
+  let brIface = {
     name: 'br0',
     address: '9.8.7.6',
     prefixLength: 0
   };
 
-  var wantedIface = {
+  let wantedIface = {
     name: 'eth0',
     address: '123.456.789.91',
     prefixLength: 0
   };
 
-  var ipv6iface = {
+  let ipv6iface = {
     name: 'ignoreMe',
     address: 'a:b:c:d:e:f',
     prefixLength: 0
   };
 
-  var ifaces = [brIface, wantedIface, ipv6iface];
+  let ifaces = [brIface, wantedIface, ipv6iface];
 
-  var getInterfacesStub = sinon.stub().resolves(ifaces);
+  let getInterfacesStub = sinon.stub().resolves(ifaces);
 
   proxyquireDnsController({
     '../chrome-apis/udp': {
@@ -525,7 +527,7 @@ test('initializeNetworkInterfaceCache initializes cache', function(t) {
 
   dnsController.initializeNetworkInterfaceCache()
   .then(function addedInterfaces() {
-    var expectedInterfaces = [wantedIface];
+    let expectedInterfaces = [wantedIface];
     t.deepEqual(dnsController.getIPv4Interfaces(), expectedInterfaces);
     t.end();
     resetDnsController();
@@ -538,7 +540,7 @@ test('initializeNetworkInterfaceCache initializes cache', function(t) {
 });
 
 test('initializeNetworkInterfaceCache rejects if error', function(t) {
-  var expected = { error: 'trouble town' };
+  let expected = { error: 'trouble town' };
   proxyquireDnsController({
     '../chrome-apis/udp': {
       getNetworkInterfaces: sinon.stub().rejects(expected)
@@ -560,7 +562,7 @@ test('initializeNetworkInterfaceCache rejects if error', function(t) {
 
 test('handleIncomingPacket invokes all callbacks', function(t) {
   // All the registered callbacks should be given a chance at the packets
-  var responsePacket = new dnsPacket.DnsPacket(
+  let responsePacket = new dnsPacket.DnsPacket(
     0,
     false,
     0,
@@ -571,8 +573,8 @@ test('handleIncomingPacket invokes all callbacks', function(t) {
     0
   );
   
-  var callback1 = sinon.spy();
-  var callback2 = sinon.spy();
+  let callback1 = sinon.spy();
+  let callback2 = sinon.spy();
   dnsController.addOnReceiveCallback(callback1);
   dnsController.addOnReceiveCallback(callback2);
 
@@ -588,7 +590,7 @@ test('handleIncomingPacket invokes all callbacks', function(t) {
 });
 
 test('handleIncomingPacket does not send packets if not query', function(t) {
-  var responsePacket = new dnsPacket.DnsPacket(
+  let responsePacket = new dnsPacket.DnsPacket(
     0,
     false,
     0,
@@ -601,10 +603,10 @@ test('handleIncomingPacket does not send packets if not query', function(t) {
   // We want to include a question to make sure we don't not send a response
   // just because there are no questions rather than due to the fact that it
   // isn't a query.
-  var question = new qSection.QuestionSection('hiname', 'hitype', 'hiclass');
+  let question = new qSection.QuestionSection('hiname', 'hitype', 'hiclass');
   responsePacket.addQuestion(question);
 
-  var sendSpy = sinon.spy();
+  let sendSpy = sinon.spy();
   dnsController.sendPacket = sendSpy;
 
   dnsController.handleIncomingPacket(responsePacket, 'addr', 4444);
@@ -616,7 +618,7 @@ test('handleIncomingPacket does not send packets if not query', function(t) {
 });
 
 test('handleIncomingPacket sends packet for each question', function(t) {
-  var queryPacket = new dnsPacket.DnsPacket(
+  let queryPacket = new dnsPacket.DnsPacket(
     0,
     true,
     0,
@@ -629,22 +631,22 @@ test('handleIncomingPacket sends packet for each question', function(t) {
   // We want to include a question to make sure we don't not send a response
   // just because there are no questions rather than due to the fact that it
   // isn't a query.
-  var q1name = 'domain';
-  var q1type = 2;
-  var q1class = 1;
-  var q2name = 'domain2';
-  var q2type = 3;
-  var q2class = 2;
+  let q1name = 'domain';
+  let q1type = 2;
+  let q1class = 1;
+  let q2name = 'domain2';
+  let q2type = 3;
+  let q2class = 2;
 
-  var question1 = new qSection.QuestionSection(q1name, q1type, q1class);
-  var question2 = new qSection.QuestionSection(q2name, q2type, q2class);
+  let question1 = new qSection.QuestionSection(q1name, q1type, q1class);
+  let question2 = new qSection.QuestionSection(q2name, q2type, q2class);
   queryPacket.addQuestion(question1);
   queryPacket.addQuestion(question2);
 
   // The response packets we are going to generate. Note that we should NOT
   // include questions in these responses, as according to section 6 of the RFC
   // we don't put questions in responses.
-  var responsePacket1 = new dnsPacket.DnsPacket(
+  let responsePacket1 = new dnsPacket.DnsPacket(
     0,
     false,
     0,
@@ -654,7 +656,7 @@ test('handleIncomingPacket sends packet for each question', function(t) {
     0,
     0
   );
-  var responsePacket2 = new dnsPacket.DnsPacket(
+  let responsePacket2 = new dnsPacket.DnsPacket(
     0,
     false,
     0,
@@ -665,11 +667,11 @@ test('handleIncomingPacket sends packet for each question', function(t) {
     0
   );
 
-  var address = '9.8.7.6';
-  var port = 1111;
+  let address = '9.8.7.6';
+  let port = 1111;
 
-  var callCount = 0;
-  var sendPacketSpy = function(packetArg, addrArg, portArg) {
+  let callCount = 0;
+  let sendPacketSpy = function(packetArg, addrArg, portArg) {
     if (callCount === 0) {
       t.deepEqual(packetArg, responsePacket1);
       t.deepEqual(addrArg, address);
@@ -683,7 +685,7 @@ test('handleIncomingPacket sends packet for each question', function(t) {
     }
     callCount += 1;
   };
-  var waitInRangeSpy = sinon.stub().resolves();
+  let waitInRangeSpy = sinon.stub().resolves();
 
   proxyquireDnsController({
     '../util': {
@@ -692,18 +694,18 @@ test('handleIncomingPacket sends packet for each question', function(t) {
   });
   dnsController.sendPacket = sendPacketSpy;
 
-  var createResponsePacketSpy = sinon.stub();
+  let createResponsePacketSpy = sinon.stub();
   createResponsePacketSpy.onCall(0).returns(responsePacket1);
   createResponsePacketSpy.onCall(1).returns(responsePacket2);
   dnsController.createResponsePacket = createResponsePacketSpy;
 
   // Now we need to make sure we add the correct records to the response.
-  var q1record1 = new resRec.ARecord('domain', 1, '1.1.1.1', 2);
-  var q2record1 = new resRec.ARecord('domain2', 4, '1.1.1.1', 2);
-  var q2record2 = new resRec.PtrRecord('service', 5, 'instance', 1);
+  let q1record1 = new resRec.ARecord('domain', 1, '1.1.1.1', 2);
+  let q2record1 = new resRec.ARecord('domain2', 4, '1.1.1.1', 2);
+  let q2record2 = new resRec.PtrRecord('service', 5, 'instance', 1);
 
   // We will maintain the arguments we expect.
-  var getResourcesForQuerySpy = sinon.stub();
+  let getResourcesForQuerySpy = sinon.stub();
   getResourcesForQuerySpy.onCall(0).returns([q1record1]);
   getResourcesForQuerySpy.onCall(1).returns([q2record1, q2record2]);
   dnsController.getResourcesForQuery = getResourcesForQuerySpy;
@@ -732,7 +734,7 @@ test('handleIncomingPacket sends packet for each question', function(t) {
 });
 
 test('handleIncomingPacket does not send if no records found', function(t) {
-  var queryPacket = new dnsPacket.DnsPacket(
+  let queryPacket = new dnsPacket.DnsPacket(
     0,
     true,
     0,
@@ -745,17 +747,17 @@ test('handleIncomingPacket does not send if no records found', function(t) {
   // We want to include a question to make sure we don't not send a response
   // just because there are no questions rather than due to the fact that it
   // isn't a query.
-  var q1name = 'domain';
-  var q1type = 2;
-  var q1class = 1;
+  let q1name = 'domain';
+  let q1type = 2;
+  let q1class = 1;
 
-  var question1 = new qSection.QuestionSection(q1name, q1type, q1class);
+  let question1 = new qSection.QuestionSection(q1name, q1type, q1class);
   queryPacket.addQuestion(question1);
 
   // Return an empty array to indicate no records found.
   dnsController.getResourcesForQuery = () => [];
 
-  var sendSpy = sinon.spy();
+  let sendSpy = sinon.spy();
   dnsController.sendPacket = sendSpy;
 
   dnsController.handleIncomingPacket(queryPacket);
@@ -782,7 +784,7 @@ test('handleIncomingPacket sends to unicast address', function(t) {
 
 test('createResponsePacket correct', function(t) {
   // We should create a response that is not a query.
-  var expected = new dnsPacket.DnsPacket(
+  let expected = new dnsPacket.DnsPacket(
     0,
     false,  // not a query.
     0,
@@ -792,20 +794,20 @@ test('createResponsePacket correct', function(t) {
     0,
     0
   );
-  var actual = dnsController.createResponsePacket(expected);
+  let actual = dnsController.createResponsePacket(expected);
   t.deepEqual(actual, expected);
   t.end();
 });
 
 test('getResourcesForQuery respects ANY in type', function(t) {
-  var qName = 'www.example.com';
-  var qType = dnsCodes.RECORD_TYPES.ANY;
-  var qClass = dnsCodes.CLASS_CODES.IN;
+  let qName = 'www.example.com';
+  let qType = dnsCodes.RECORD_TYPES.ANY;
+  let qClass = dnsCodes.CLASS_CODES.IN;
 
   // First make some records for this class with a matching name.
-  var aRecord1 = new resRec.ARecord(qName, 10, '1.2.3.4', qClass);
-  var aRecord2 = new resRec.ARecord(qName, 10, '9.8.7.6', qClass);
-  var srvRecord = new resRec.SrvRecord(qName, 11, 0, 0, 8888, 'domain.local');
+  let aRecord1 = new resRec.ARecord(qName, 10, '1.2.3.4', qClass);
+  let aRecord2 = new resRec.ARecord(qName, 10, '9.8.7.6', qClass);
+  let srvRecord = new resRec.SrvRecord(qName, 11, 0, 0, 8888, 'domain.local');
 
   dnsController.addRecord(qName, aRecord1);
   dnsController.addRecord(qName, aRecord2);
@@ -814,8 +816,8 @@ test('getResourcesForQuery respects ANY in type', function(t) {
   // We don't strictly care about the order of returned responses, but we'll
   // expect the order we put them in just to use deepEqual as a single
   // assertion.
-  var expected = [aRecord1, aRecord2, srvRecord];
-  var actual = dnsController.getResourcesForQuery(qName, qType, qClass);
+  let expected = [aRecord1, aRecord2, srvRecord];
+  let actual = dnsController.getResourcesForQuery(qName, qType, qClass);
 
   t.deepEqual(actual, expected);
   t.end();
@@ -823,15 +825,15 @@ test('getResourcesForQuery respects ANY in type', function(t) {
 });
 
 test('getResourcesForQuery respects class', function(t) {
-  var qName = 'www.example.com';
-  var qType = dnsCodes.RECORD_TYPES.A;
-  var qClass = dnsCodes.CLASS_CODES.IN;
+  let qName = 'www.example.com';
+  let qType = dnsCodes.RECORD_TYPES.A;
+  let qClass = dnsCodes.CLASS_CODES.IN;
 
-  var unwantedClass = dnsCodes.CLASS_CODES.CS;
+  let unwantedClass = dnsCodes.CLASS_CODES.CS;
 
   // First make some records for this class with a matching name.
-  var unwantedRecord = new resRec.ARecord(qName, 10, '1.2.3.4', unwantedClass);
-  var wantedRecord = new resRec.ARecord(qName, 10, '9.8.7.6', qClass);
+  let unwantedRecord = new resRec.ARecord(qName, 10, '1.2.3.4', unwantedClass);
+  let wantedRecord = new resRec.ARecord(qName, 10, '9.8.7.6', qClass);
 
   dnsController.addRecord(qName, unwantedRecord);
   dnsController.addRecord(qName, wantedRecord);
@@ -839,8 +841,8 @@ test('getResourcesForQuery respects class', function(t) {
   // We don't strictly care about the order of returned responses, but we'll
   // expect the order we put them in just to use deepEqual as a single
   // assertion.
-  var expected = [wantedRecord];
-  var actual = dnsController.getResourcesForQuery(qName, qType, qClass);
+  let expected = [wantedRecord];
+  let actual = dnsController.getResourcesForQuery(qName, qType, qClass);
 
   t.deepEqual(actual, expected);
   t.end();
@@ -848,15 +850,15 @@ test('getResourcesForQuery respects class', function(t) {
 });
 
 test('getResourcesForQuery respects type', function(t) {
-  var qName = 'www.example.com';
+  let qName = 'www.example.com';
   // We'll query for a SRV record
-  var qType = dnsCodes.RECORD_TYPES.SRV;
-  var qClass = dnsCodes.CLASS_CODES.IN;
+  let qType = dnsCodes.RECORD_TYPES.SRV;
+  let qClass = dnsCodes.CLASS_CODES.IN;
 
   // First make some records for this class with a matching name.
-  var aRecord1 = new resRec.ARecord(qName, 10, '1.2.3.4', qClass);
-  var aRecord2 = new resRec.ARecord(qName, 10, '9.8.7.6', qClass);
-  var srvRecord = new resRec.SrvRecord(qName, 11, 0, 0, 8888, 'domain.local');
+  let aRecord1 = new resRec.ARecord(qName, 10, '1.2.3.4', qClass);
+  let aRecord2 = new resRec.ARecord(qName, 10, '9.8.7.6', qClass);
+  let srvRecord = new resRec.SrvRecord(qName, 11, 0, 0, 8888, 'domain.local');
 
   dnsController.addRecord(qName, aRecord1);
   dnsController.addRecord(qName, aRecord2);
@@ -865,8 +867,8 @@ test('getResourcesForQuery respects type', function(t) {
   // We don't strictly care about the order of returned responses, but we'll
   // expect the order we put them in just to use deepEqual as a single
   // assertion.
-  var expected = [srvRecord];
-  var actual = dnsController.getResourcesForQuery(qName, qType, qClass);
+  let expected = [srvRecord];
+  let actual = dnsController.getResourcesForQuery(qName, qType, qClass);
 
   t.deepEqual(actual, expected);
   t.end();
@@ -874,13 +876,13 @@ test('getResourcesForQuery respects type', function(t) {
 });
 
 test('getResourcesForQuery returns empty array if no records', function(t) {
-  var qName = 'www.example.com';
+  let qName = 'www.example.com';
   // We'll query for a SRV record
-  var qType = dnsCodes.RECORD_TYPES.SRV;
-  var qClass = dnsCodes.CLASS_CODES.IN;
+  let qType = dnsCodes.RECORD_TYPES.SRV;
+  let qClass = dnsCodes.CLASS_CODES.IN;
 
-  var expected = [];
-  var actual = dnsController.getResourcesForQuery(qName, qType, qClass);
+  let expected = [];
+  let actual = dnsController.getResourcesForQuery(qName, qType, qClass);
 
   t.deepEqual(actual, expected);
   t.end();
@@ -892,16 +894,16 @@ test('getResourcesForQuery performs service type enumeration', function(t) {
   // RFC 6763, section 9. We should return ALL ptr records.
 
   // Create PTR records across multiple names.
-  var name1 = 'name1';
-  var name2 = 'name2';
-  var record1 = new resRec.PtrRecord(
+  let name1 = 'name1';
+  let name2 = 'name2';
+  let record1 = new resRec.PtrRecord(
     name1,
     10,
     'instance1',
     dnsCodes.CLASS_CODES.IN
   );
-  var record1Srv = new resRec.SrvRecord(name1, 10, 0, 0, 8866, 'me.local');
-  var record2 = new resRec.PtrRecord(
+  let record1Srv = new resRec.SrvRecord(name1, 10, 0, 0, 8866, 'me.local');
+  let record2 = new resRec.PtrRecord(
     name2,
     10,
     'instance2',
@@ -913,15 +915,15 @@ test('getResourcesForQuery performs service type enumeration', function(t) {
   dnsController.addRecord(name2, record2);
 
   // We can't assume anything about order here.
-  var actual = dnsController.getResourcesForQuery(
+  let actual = dnsController.getResourcesForQuery(
     dnsController.DNSSD_SERVICE_NAME,
     dnsCodes.RECORD_TYPES.PTR,
     dnsCodes.CLASS_CODES.IN
   );
 
   t.equal(actual.length, 2);
-  var record1Index = actual.indexOf(record1);
-  var record2Index = actual.indexOf(record2);
+  let record1Index = actual.indexOf(record1);
+  let record2Index = actual.indexOf(record2);
   t.deepEqual(actual[record1Index], record1);
   t.deepEqual(actual[record2Index], record2);
   t.end();
@@ -929,14 +931,14 @@ test('getResourcesForQuery performs service type enumeration', function(t) {
 });
 
 test('onReceiveListener calls to send', function(t) {
-  var handleIncomingPacketSpy = sinon.spy();
-  var byteArrayConstructorStub = sinon.stub().returns(
+  let handleIncomingPacketSpy = sinon.spy();
+  let byteArrayConstructorStub = sinon.stub().returns(
     {
       getReader: sinon.stub()
     }
   );
-  var packetMock = 'fake packet';
-  var createPacketStub = sinon.stub().returns(packetMock);
+  let packetMock = 'fake packet';
+  let createPacketStub = sinon.stub().returns(packetMock);
 
   proxyquireDnsController({
     './byte-array': {
@@ -947,7 +949,7 @@ test('onReceiveListener calls to send', function(t) {
     }
   });
 
-  var incomingInfo = {
+  let incomingInfo = {
     remoteAddress: 'remote addr',
     remotePort: 4433
   };
@@ -967,21 +969,21 @@ test('onReceiveListener calls to send', function(t) {
 });
 
 test('filterResourcesForQuery respects ANY in type', function(t) {
-  var qName = 'www.example.com';
-  var qType = dnsCodes.RECORD_TYPES.ANY;
-  var qClass = dnsCodes.CLASS_CODES.IN;
+  let qName = 'www.example.com';
+  let qType = dnsCodes.RECORD_TYPES.ANY;
+  let qClass = dnsCodes.CLASS_CODES.IN;
 
   // First make some records for this class with a matching name.
-  var aRecord1 = new resRec.ARecord(qName, 10, '1.2.3.4', qClass);
-  var aRecord2 = new resRec.ARecord(qName, 10, '9.8.7.6', qClass);
-  var srvRecord = new resRec.SrvRecord(qName, 11, 0, 0, 8888, 'domain.local');
-  var resources = [aRecord1, aRecord2, srvRecord];
+  let aRecord1 = new resRec.ARecord(qName, 10, '1.2.3.4', qClass);
+  let aRecord2 = new resRec.ARecord(qName, 10, '9.8.7.6', qClass);
+  let srvRecord = new resRec.SrvRecord(qName, 11, 0, 0, 8888, 'domain.local');
+  let resources = [aRecord1, aRecord2, srvRecord];
 
   // We don't strictly care about the order of returned responses, but we'll
   // expect the order we put them in just to use deepEqual as a single
   // assertion.
-  var expected = [aRecord1, aRecord2, srvRecord];
-  var actual = dnsController.filterResourcesForQuery(
+  let expected = [aRecord1, aRecord2, srvRecord];
+  let actual = dnsController.filterResourcesForQuery(
     resources, qName, qType, qClass
   );
 
@@ -991,22 +993,22 @@ test('filterResourcesForQuery respects ANY in type', function(t) {
 });
 
 test('filterResourcesForQuery respects class', function(t) {
-  var qName = 'www.example.com';
-  var qType = dnsCodes.RECORD_TYPES.A;
-  var qClass = dnsCodes.CLASS_CODES.IN;
+  let qName = 'www.example.com';
+  let qType = dnsCodes.RECORD_TYPES.A;
+  let qClass = dnsCodes.CLASS_CODES.IN;
 
-  var unwantedClass = dnsCodes.CLASS_CODES.CS;
+  let unwantedClass = dnsCodes.CLASS_CODES.CS;
 
   // First make some records for this class with a matching name.
-  var unwantedRecord = new resRec.ARecord(qName, 10, '1.2.3.4', unwantedClass);
-  var wantedRecord = new resRec.ARecord(qName, 10, '9.8.7.6', qClass);
-  var resources = [unwantedRecord, wantedRecord];
+  let unwantedRecord = new resRec.ARecord(qName, 10, '1.2.3.4', unwantedClass);
+  let wantedRecord = new resRec.ARecord(qName, 10, '9.8.7.6', qClass);
+  let resources = [unwantedRecord, wantedRecord];
 
   // We don't strictly care about the order of returned responses, but we'll
   // expect the order we put them in just to use deepEqual as a single
   // assertion.
-  var expected = [wantedRecord];
-  var actual = dnsController.filterResourcesForQuery(
+  let expected = [wantedRecord];
+  let actual = dnsController.filterResourcesForQuery(
     resources, qName, qType, qClass
   );
 
@@ -1016,22 +1018,22 @@ test('filterResourcesForQuery respects class', function(t) {
 });
 
 test('filterResourcesForQuery respects type', function(t) {
-  var qName = 'www.example.com';
+  let qName = 'www.example.com';
   // We'll query for a SRV record
-  var qType = dnsCodes.RECORD_TYPES.SRV;
-  var qClass = dnsCodes.CLASS_CODES.IN;
+  let qType = dnsCodes.RECORD_TYPES.SRV;
+  let qClass = dnsCodes.CLASS_CODES.IN;
 
   // First make some records for this class with a matching name.
-  var aRecord1 = new resRec.ARecord(qName, 10, '1.2.3.4', qClass);
-  var aRecord2 = new resRec.ARecord(qName, 10, '9.8.7.6', qClass);
-  var srvRecord = new resRec.SrvRecord(qName, 11, 0, 0, 8888, 'domain.local');
-  var resources = [aRecord1, aRecord2, srvRecord];
+  let aRecord1 = new resRec.ARecord(qName, 10, '1.2.3.4', qClass);
+  let aRecord2 = new resRec.ARecord(qName, 10, '9.8.7.6', qClass);
+  let srvRecord = new resRec.SrvRecord(qName, 11, 0, 0, 8888, 'domain.local');
+  let resources = [aRecord1, aRecord2, srvRecord];
 
   // We don't strictly care about the order of returned responses, but we'll
   // expect the order we put them in just to use deepEqual as a single
   // assertion.
-  var expected = [srvRecord];
-  var actual = dnsController.filterResourcesForQuery(
+  let expected = [srvRecord];
+  let actual = dnsController.filterResourcesForQuery(
     resources, qName, qType, qClass
   );
 
@@ -1041,13 +1043,13 @@ test('filterResourcesForQuery respects type', function(t) {
 });
 
 test('filterResourcesForQuery returns empty array if no records', function(t) {
-  var qName = 'www.example.com';
+  let qName = 'www.example.com';
   // We'll query for a SRV record
-  var qType = dnsCodes.RECORD_TYPES.SRV;
-  var qClass = dnsCodes.CLASS_CODES.IN;
+  let qType = dnsCodes.RECORD_TYPES.SRV;
+  let qClass = dnsCodes.CLASS_CODES.IN;
 
-  var expected = [];
-  var actual = dnsController.filterResourcesForQuery([], qName, qType, qClass);
+  let expected = [];
+  let actual = dnsController.filterResourcesForQuery([], qName, qType, qClass);
 
   t.deepEqual(actual, expected);
   t.end();
@@ -1057,10 +1059,10 @@ test('filterResourcesForQuery returns empty array if no records', function(t) {
 test('clearAllRecords removes all records', function(t) {
   t.deepEqual(dnsController.getRecords(), {});
 
-  var aName = 'www.example.com';
-  var aRecord1 = new resRec.ARecord(aName, 10, '123.42.61.123', 2);
+  let aName = 'www.example.com';
+  let aRecord1 = new resRec.ARecord(aName, 10, '123.42.61.123', 2);
 
-  var expectedRecords = {};
+  let expectedRecords = {};
   expectedRecords[aName] = [aRecord1];
   dnsController.addRecord(aName, aRecord1);
 
@@ -1073,8 +1075,8 @@ test('clearAllRecords removes all records', function(t) {
 });
 
 test('stop clears state', function(t) {
-  var closeAllSocketsSpy = sinon.stub();
-  var clearAllRecordsSpy = sinon.stub();
+  let closeAllSocketsSpy = sinon.stub();
+  let clearAllRecordsSpy = sinon.stub();
 
   proxyquireDnsController({
     '../chrome-apis/udp': {

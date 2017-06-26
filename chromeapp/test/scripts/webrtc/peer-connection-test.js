@@ -40,18 +40,18 @@ function end(t) {
 }
 
 test('getRawConnection returns constructor arg', function(t) {
-  var expected = { foo: 'bar' };
-  var pc = new peerConn.PeerConnection(expected);
+  let expected = { foo: 'bar' };
+  let pc = new peerConn.PeerConnection(expected);
 
-  var actual  = pc.getRawConnection();
+  let actual  = pc.getRawConnection();
 
   t.equal(expected, actual);
   t.end();
 });
 
 test('emits close event when rawConnection onclose invoked', function(t) {
-  var rawConnection = sinon.stub();
-  var pc = new peerConn.PeerConnection(rawConnection);
+  let rawConnection = sinon.stub();
+  let pc = new peerConn.PeerConnection(rawConnection);
 
   pc.on('close', actual => {
     t.equal(actual, undefined);
@@ -74,7 +74,7 @@ test('getList issues call to peer', function(t) {
     }
   });
 
-  var pc = new peerConn.PeerConnection(rawConnection);
+  let pc = new peerConn.PeerConnection(rawConnection);
   pc.sendAndGetResponse = sinon.stub();
   pc.sendAndGetResponse.withArgs(msg).resolves(sutil.getListResponseBuff());
   
@@ -91,17 +91,17 @@ test('getList issues call to peer', function(t) {
 });
 
 test('getList rejects if sendAndGetResponse rejects', function(t) {
-  var expected = { error: 'went wrong' };
+  let expected = { error: 'went wrong' };
   proxyquirePeerConn({
     './message': {
       createListMessage: sinon.stub().throws(expected)
     }
   });
 
-  var rawConnection = sinon.stub();
+  let rawConnection = sinon.stub();
   rawConnection.on = sinon.stub();
 
-  var pc = new peerConn.PeerConnection(rawConnection);
+  let pc = new peerConn.PeerConnection(rawConnection);
 
   pc.getList()
   .then(res => {
@@ -115,12 +115,12 @@ test('getList rejects if sendAndGetResponse rejects', function(t) {
 });
 
 test('getCacheDigest issues call to peer', function(t) {
-  var rawConnection = sinon.stub();
+  let rawConnection = sinon.stub();
   rawConnection.on = sinon.stub();
-  var msg = 'digest message';
+  let msg = 'digest message';
 
-  var expected = sutil.getDigestResponseJson();
-  var buffer = sutil.getDigestResponseBuff();
+  let expected = sutil.getDigestResponseJson();
+  let buffer = sutil.getDigestResponseBuff();
 
   proxyquirePeerConn({
     './message': {
@@ -128,7 +128,7 @@ test('getCacheDigest issues call to peer', function(t) {
     }
   });
 
-  var pc = new peerConn.PeerConnection(rawConnection);
+  let pc = new peerConn.PeerConnection(rawConnection);
   pc.sendAndGetResponse = sinon.stub();
   pc.sendAndGetResponse.withArgs(msg).resolves(buffer);
   
@@ -145,17 +145,17 @@ test('getCacheDigest issues call to peer', function(t) {
 });
 
 test('getCacheDigest rejects if sendAndGetResponse rejects', function(t) {
-  var expected = { error: 'went wrong' };
+  let expected = { error: 'went wrong' };
   proxyquirePeerConn({
     './message': {
       createDigestMessage: sinon.stub().throws(expected)
     }
   });
 
-  var rawConnection = sinon.stub();
+  let rawConnection = sinon.stub();
   rawConnection.on = sinon.stub();
 
-  var pc = new peerConn.PeerConnection(rawConnection);
+  let pc = new peerConn.PeerConnection(rawConnection);
 
   pc.getCacheDigest()
   .then(res => {
@@ -225,11 +225,11 @@ test('getCacheBloomFilter rejects', function(t) {
 });
 
 test('getFile resolves with response from server', function(t) {
-  var rawConnection = sinon.stub();
+  let rawConnection = sinon.stub();
   rawConnection.on = sinon.stub();
-  var msg = 'file message';
+  let msg = 'file message';
 
-  var expected = Buffer.from('response from server');
+  let expected = Buffer.from('response from server');
 
   proxyquirePeerConn({
     './message': {
@@ -237,7 +237,7 @@ test('getFile resolves with response from server', function(t) {
     }
   });
 
-  var pc = new peerConn.PeerConnection(rawConnection);
+  let pc = new peerConn.PeerConnection(rawConnection);
   pc.sendAndGetResponse = sinon.stub();
   pc.sendAndGetResponse.withArgs(msg).resolves(expected);
   
@@ -254,10 +254,10 @@ test('getFile resolves with response from server', function(t) {
 });
 
 test('getFile rejects if error', function(t) {
-  var rawConnection = sinon.stub();
+  let rawConnection = sinon.stub();
   rawConnection.on = sinon.stub();
 
-  var expected = { error: 'error during getFile' };
+  let expected = { error: 'error during getFile' };
 
   proxyquirePeerConn({
     './message': {
@@ -265,7 +265,7 @@ test('getFile rejects if error', function(t) {
     }
   });
   
-  var pc = new peerConn.PeerConnection(rawConnection);
+  let pc = new peerConn.PeerConnection(rawConnection);
 
   pc.getFile()
   .then(res => {
@@ -294,7 +294,7 @@ test('getCachedPage resolves with CPDisk', function(t) {
   let expected = sutil.getCachedPageResponseObj();
   let buffer = sutil.getCachedPageResponseBuff();
 
-  var pc = new peerConn.PeerConnection(rawConnection);
+  let pc = new peerConn.PeerConnection(rawConnection);
   pc.sendAndGetResponse = sinon.stub();
   pc.sendAndGetResponse.withArgs(msg).resolves(buffer);
 
@@ -310,10 +310,10 @@ test('getCachedPage resolves with CPDisk', function(t) {
 });
 
 test('getCachedPage rejects on error', function(t) {
-  var rawConnection = sinon.stub();
+  let rawConnection = sinon.stub();
   rawConnection.on = sinon.stub();
 
-  var expected = { error: 'error during getCachedPage' };
+  let expected = { error: 'error during getCachedPage' };
 
   proxyquirePeerConn({
     './message': {
@@ -321,7 +321,7 @@ test('getCachedPage rejects on error', function(t) {
     }
   });
   
-  var pc = new peerConn.PeerConnection(rawConnection);
+  let pc = new peerConn.PeerConnection(rawConnection);
 
   pc.getCachedPage()
   .then(res => {

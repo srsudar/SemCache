@@ -21,14 +21,14 @@
  */
 
 
-var _ = require('lodash');
+const _ = require('lodash');
 
-var util = require('../util');
-var dnsUtil = require('./dns-util');
-var dnsController = require('./dns-controller');
-var dnsCodes = require('./dns-codes');
-var resRec = require('./resource-record');
-var dnsPacket = require('./dns-packet');
+const util = require('../util');
+const dnsUtil = require('./dns-util');
+const dnsController = require('./dns-controller');
+const dnsCodes = require('./dns-codes');
+const resRec = require('./resource-record');
+const dnsPacket = require('./dns-packet');
 
 /**
  * In Section 8.1, RFC 6762 uses 250ms as the length of time clients should
@@ -36,7 +36,7 @@ var dnsPacket = require('./dns-packet');
  * records (e.g. host names) are already claimed by other devices. In order to
  * remain compliant with the RFC, It should not be changed.
  */
-var MAX_PROBE_WAIT = 250;
+const MAX_PROBE_WAIT = 250;
 
 /**
  * This is the default time we will wait for a response to a DNS query before
@@ -44,7 +44,7 @@ var MAX_PROBE_WAIT = 250;
  *
  * This is a best effort value and may be tuned.
  */
-var DEFAULT_QUERY_WAIT_TIME = 3000;
+const DEFAULT_QUERY_WAIT_TIME = 3000;
 
 exports.DEFAULT_QUERY_WAIT_TIME = DEFAULT_QUERY_WAIT_TIME;
 
@@ -96,7 +96,7 @@ exports.waitForProbeTime = function() {
  * @return {boolean}
  */
 exports.packetIsForQuery = function(packet, qName, qType, qClass) {
-  var filteredRecords = dnsController.filterResourcesForQuery(
+  let filteredRecords = dnsController.filterResourcesForQuery(
     packet.answers, qName, qType, qClass
   );
   return filteredRecords.length !== 0;
@@ -109,10 +109,10 @@ exports.packetIsForQuery = function(packet, qName, qType, qClass) {
  * @param {string}
  */
 exports.createHostName = function() {
-  var start = 'host';
+  let start = 'host';
   // We'll return within the range 0, 1000.
-  var randomInt = dnsUtil.randomInt(0, 1001);
-  var result = start + randomInt + dnsUtil.getLocalSuffix();
+  let randomInt = dnsUtil.randomInt(0, 1001);
+  let result = start + randomInt + dnsUtil.getLocalSuffix();
   return result;
 };
 
@@ -123,7 +123,7 @@ exports.createHostName = function() {
  * advertise
  */
 exports.advertiseService = function(resourceRecords) {
-  var advertisePacket = new dnsPacket.DnsPacket(
+  let advertisePacket = new dnsPacket.DnsPacket(
     0,      // id 0 for mDNS
     false,  // not a query
     0,      // opCode must be 0 on transmit (18.3)
@@ -184,8 +184,8 @@ exports.register = function(host, name, type, port) {
   // the newly created resource records in the Answer Section. This must be
   // performed twice, one second apart.
 
-  var result = new Promise(function(resolve, reject) {
-    var foundHostFree = null;
+  let result = new Promise(function(resolve, reject) {
+    let foundHostFree = null;
     // We start by probing for messages of type ANY with the hostname.
     exports.issueProbe(
       host,
@@ -196,7 +196,7 @@ exports.register = function(host, name, type, port) {
       foundHostFree = true;
       // We need to probe for the name under which a SRV record would be, which
       // is name.type.local
-      var srvName = exports.createSrvName(name, type, 'local');
+      let srvName = exports.createSrvName(name, type, 'local');
       return exports.issueProbe(
         srvName,
         dnsCodes.RECORD_TYPES.ANY,
@@ -208,14 +208,14 @@ exports.register = function(host, name, type, port) {
     })
     .then(function instanceFree() {
       if (foundHostFree) {
-        var hostRecords = exports.createHostRecords(host);
-        var serviceRecords = exports.createServiceRecords(
+        let hostRecords = exports.createHostRecords(host);
+        let serviceRecords = exports.createServiceRecords(
           name,
           type,
           port,
           host
         );
-        var allRecords = hostRecords.concat(serviceRecords);
+        let allRecords = hostRecords.concat(serviceRecords);
         exports.advertiseService(allRecords);
 
         resolve(
@@ -247,9 +247,9 @@ exports.register = function(host, name, type, port) {
  */
 exports.createHostRecords = function(host) {
   // This just consists of an A Record. Make an entry for every IPv4 address.
-  var result = [];
+  let result = [];
   dnsController.getIPv4Interfaces().forEach(iface => {
-    var aRecord = new resRec.ARecord(
+    let aRecord = new resRec.ARecord(
       host,
       dnsUtil.DEFAULT_TTL,
       iface.address,
@@ -294,8 +294,8 @@ exports.createServiceRecords = function(name, type, port, domain) {
 
   // SRV Records are named according to name.type.domain, which we always
   // assume to be local.
-  var srvName = exports.createSrvName(name, type, 'local');
-  var srvRecord = new resRec.SrvRecord(
+  let srvName = exports.createSrvName(name, type, 'local');
+  let srvRecord = new resRec.SrvRecord(
     srvName,
     dnsUtil.DEFAULT_TTL,
     dnsUtil.DEFAULT_PRIORITY,
@@ -304,7 +304,7 @@ exports.createServiceRecords = function(name, type, port, domain) {
     domain
   );
 
-  var ptrRecord = new resRec.PtrRecord(
+  let ptrRecord = new resRec.PtrRecord(
     type,
     dnsUtil.DEFAULT_TTL,
     srvName,
@@ -314,7 +314,7 @@ exports.createServiceRecords = function(name, type, port, domain) {
   dnsController.addRecord(srvName, srvRecord);
   dnsController.addRecord(type, ptrRecord);
 
-  var result = [srvRecord, ptrRecord];
+  let result = [srvRecord, ptrRecord];
   return result;
 };
 
@@ -327,8 +327,8 @@ exports.createServiceRecords = function(name, type, port, domain) {
  * @return {boolean}
  */
 exports.receivedResponsePacket = function(packets, qName, qType, qClass) {
-  for (var i = 0; i < packets.length; i++) {
-    var packet = packets[i];
+  for (let i = 0; i < packets.length; i++) {
+    let packet = packets[i];
     if (
       !packet.isQuery &&
         exports.packetIsForQuery(packet, qName, qType, qClass)
@@ -353,15 +353,15 @@ exports.receivedResponsePacket = function(packets, qName, qType, qClass) {
  */
 exports.issueProbe = function(queryName, queryType, queryClass) {
   // Track the packets we receive whilst querying.
-  var packets = [];
-  var callback = function(packet) {
+  let packets = [];
+  let callback = function(packet) {
     packets.push(packet);
   };
   dnsController.addOnReceiveCallback(callback);
 
   // Now we kick off a series of queries. We wait a random time to issue a
   // query. 250ms after that we issue another, then another.
-  var result = new Promise(function(resolve, reject) {
+  let result = new Promise(function(resolve, reject) {
     exports.waitForProbeTime()
     .then(function success() {
       dnsController.query(
@@ -442,8 +442,8 @@ exports.issueProbe = function(queryName, queryType, queryClass) {
 exports.resolveService = function(serviceName) {
   console.log('resolveService: ', serviceName);
   return new Promise(function(resolve, reject) {
-    var srvRec = null;
-    var aRec = null;
+    let srvRec = null;
+    let aRec = null;
     exports.queryForInstanceInfo(
         serviceName,
         exports.DEFAULT_QUERY_WAIT_TIME,
@@ -454,7 +454,7 @@ exports.resolveService = function(serviceName) {
         console.log('srvInfos: ', srvInfos);
       }
       if (!srvInfos || srvInfos.length === 0) {
-        var msg = 'did not find SRV record for service: ' + serviceName;
+        let msg = 'did not find SRV record for service: ' + serviceName;
         console.warn(msg);
         reject(msg);
         return;
@@ -472,15 +472,15 @@ exports.resolveService = function(serviceName) {
         console.log('aInfos: ', aInfos);
       }
       if (!aInfos || aInfos.length === 0) {
-        var msg = 'did not find A record for SRV: ' + JSON.stringify(srvRec);
+        let msg = 'did not find A record for SRV: ' + JSON.stringify(srvRec);
         console.warn(msg);
         reject(msg);
         return;
       }
       aRec = aInfos[0];
-      var friendlyName = exports.getUserFriendlyName(serviceName);
+      let friendlyName = exports.getUserFriendlyName(serviceName);
 
-      var result = {
+      let result = {
         serviceType: srvRec.instanceTypeDomain,
         friendlyName: friendlyName,
         instanceName: serviceName,
@@ -549,18 +549,18 @@ exports.resolveService = function(serviceName) {
  */
 exports.browseServiceInstances = function(serviceType) {
   return new Promise(function(resolve, reject) {
-    var ptrResponses = [];
-    var srvResponses = [];
-    var aResponses = [];
+    let ptrResponses = [];
+    let srvResponses = [];
+    let aResponses = [];
 
     // When resolving services, it is possible that at every step along the way
     // a request goes unanswered. These arrays will keep track of that.
     // The PTR records for which SRV records were returned
-    var ptrsWithSrvs = [];
+    let ptrsWithSrvs = [];
     // The PTR records for which both SRV and A records were returned
-    var ptrsWithAs = [];
+    let ptrsWithAs = [];
     // SRV records for which A records were returned
-    var srvsWithAs = [];
+    let srvsWithAs = [];
 
     exports.queryForServiceInstances(
       serviceType,
@@ -571,11 +571,11 @@ exports.browseServiceInstances = function(serviceType) {
       if (exports.DEBUG) {
         console.log('ptrInfos: ', ptrInfos);
       }
-      var srvRequests = [];
+      let srvRequests = [];
       ptrInfos.forEach(ptr => {
         ptrResponses.push(ptr);
-        var instanceName = ptr.serviceName;
-        var req = exports.queryForInstanceInfo(
+        let instanceName = ptr.serviceName;
+        let req = exports.queryForInstanceInfo(
           instanceName,
           exports.DEFAULT_QUERY_WAIT_TIME,
           exports.DEFAULT_NUM_RETRIES
@@ -588,8 +588,8 @@ exports.browseServiceInstances = function(serviceType) {
       if (exports.DEBUG) {
         console.log('srvInfos: ', srvInfos);
       }
-      var aRequests = [];
-      for (var srvIter = 0; srvIter < srvInfos.length; srvIter++) {
+      let aRequests = [];
+      for (let srvIter = 0; srvIter < srvInfos.length; srvIter++) {
         // the query methods return an Array of responses, even if only a
         // single response is requested. This allows for for API similarity
         // across calls and for an eventual implementation that permits both
@@ -598,7 +598,7 @@ exports.browseServiceInstances = function(serviceType) {
         // simplicity, however, we will assume at this stage that we only
         // ever expect a single response, which is correct in the vast
         // majority of cases.
-        var srv = srvInfos[srvIter];
+        let srv = srvInfos[srvIter];
         if (srv.length === 0) {
           // If no records resolved (e.g. from a dropped packet or a peer
           // that has dropped out), fail gracefully and log that it occurred.
@@ -611,8 +611,8 @@ exports.browseServiceInstances = function(serviceType) {
           ptrsWithSrvs.push(ptrResponses[srvIter]);
           srv = srv[0];
           srvResponses.push(srv);
-          var hostname = srv.domain;
-          var req = exports.queryForIpAddress(
+          let hostname = srv.domain;
+          let req = exports.queryForIpAddress(
             hostname,
             exports.DEFAULT_QUERY_WAIT_TIME,
             exports.DEFAULT_NUM_RETRIES
@@ -627,8 +627,8 @@ exports.browseServiceInstances = function(serviceType) {
         console.log('aInfos: ', aInfos);
       }
 
-      for (var aIter = 0; aIter < aInfos.length; aIter++) {
-        var aInfo = aInfos[aIter];
+      for (let aIter = 0; aIter < aInfos.length; aIter++) {
+        let aInfo = aInfos[aIter];
         if (aInfo.length === 0) {
           // We didn't receive an A. Log that both the 
           console.warn(
@@ -695,14 +695,14 @@ exports.getUserFriendlyName = function(instanceTypeDomain) {
   // include two underscores, and underscores are forbidden in URLs that we
   // might expect as a domain. Thus I think we can use the last two indices of
   // underscores to retrieve the name.
-  var idxLastUnderscore = instanceTypeDomain.lastIndexOf('_');
-  var idxPenultimateUnderscore = instanceTypeDomain
+  let idxLastUnderscore = instanceTypeDomain.lastIndexOf('_');
+  let idxPenultimateUnderscore = instanceTypeDomain
     .substring(0, idxLastUnderscore)
     .lastIndexOf('_');
   // The penultimate underscore must be preceded by a period, which we don't
   // want to include in the user friendly name.
-  var idxEnd = idxPenultimateUnderscore - 1;
-  var result = instanceTypeDomain.substring(0, idxEnd);
+  let idxEnd = idxPenultimateUnderscore - 1;
+  let result = instanceTypeDomain.substring(0, idxEnd);
   return result;
 };
 
@@ -732,8 +732,8 @@ exports.queryForServiceInstances = function(
   numRetries
 ) {
   waitTime = waitTime || exports.DEFAULT_QUERY_WAIT_TIME;
-  var rType = dnsCodes.RECORD_TYPES.PTR;
-  var rClass = dnsCodes.CLASS_CODES.IN;
+  let rType = dnsCodes.RECORD_TYPES.PTR;
+  let rClass = dnsCodes.CLASS_CODES.IN;
   return new Promise(function(resolve, reject) {
     exports.queryForResponses(
       serviceType,
@@ -744,11 +744,11 @@ exports.queryForServiceInstances = function(
       numRetries
     )
     .then(function gotPackets(packets) {
-      var result = [];
+      let result = [];
       packets.forEach(packet => {
         packet.answers.forEach(answer => {
           if (answer.recordType === rType && answer.recordClass === rClass) {
-            var friendlyName = exports.getUserFriendlyName(
+            let friendlyName = exports.getUserFriendlyName(
               answer.instanceName
             );
             result.push(
@@ -793,8 +793,8 @@ exports.queryForIpAddress = function(domainName, timeout, numRetries) {
   // addresses per domain name. At a minimum, you could have IPv6 and IPv4
   // addresses. For prototyping purposes, a single IP address is sufficient.
   timeout = timeout || exports.DEFAULT_QUERY_WAIT_TIME;
-  var rType = dnsCodes.RECORD_TYPES.A;
-  var rClass = dnsCodes.CLASS_CODES.IN;
+  let rType = dnsCodes.RECORD_TYPES.A;
+  let rClass = dnsCodes.CLASS_CODES.IN;
   return new Promise(function(resolve, reject) {
     exports.queryForResponses(
       domainName,
@@ -805,7 +805,7 @@ exports.queryForIpAddress = function(domainName, timeout, numRetries) {
       numRetries
     )
     .then(function gotPackets(packets) {
-      var result = [];
+      let result = [];
       packets.forEach(packet => {
         packet.answers.forEach(answer => {
           if (answer.recordType === rType && answer.recordClass === rClass) {
@@ -845,8 +845,8 @@ exports.queryForIpAddress = function(domainName, timeout, numRetries) {
  */
 exports.queryForInstanceInfo = function(instanceName, timeout, numRetries) {
   timeout = timeout || exports.DEFAULT_QUERY_WAIT_TIME;
-  var rType = dnsCodes.RECORD_TYPES.SRV;
-  var rClass = dnsCodes.CLASS_CODES.IN;
+  let rType = dnsCodes.RECORD_TYPES.SRV;
+  let rClass = dnsCodes.CLASS_CODES.IN;
   return new Promise(function(resolve, reject) {
     exports.queryForResponses(
       instanceName,
@@ -857,7 +857,7 @@ exports.queryForInstanceInfo = function(instanceName, timeout, numRetries) {
       numRetries
     )
     .then(function gotPackets(packets) {
-      var result = [];
+      let result = [];
       packets.forEach(packet => {
         packet.answers.forEach(answer => {
           if (answer.recordType === rType && answer.recordClass === rClass) {
@@ -935,11 +935,11 @@ exports.queryForResponses = function(
   return new Promise(function(resolve) {
     // Code executes even after a promise resolves, so we will use this flag to
     // make sure we never try to resolve more than once.
-    var resolved = false;
+    let resolved = false;
 
     // Track the packets we received while querying.
-    var packets = [];
-    var callback = function(packet) {
+    let packets = [];
+    let callback = function(packet) {
       if (exports.packetIsForQuery(packet, qName, qType, qClass)) {
         packets.push(packet);
         if (!multipleResponses) {
@@ -959,9 +959,9 @@ exports.queryForResponses = function(
       console.log('  qClass: ', qClass);
     }
 
-    var retriesAttempted = 0;
+    let retriesAttempted = 0;
 
-    var queryAndWait = function() {
+    let queryAndWait = function() {
       dnsController.query(qName, qType, qClass);
       util.wait(timeoutOrWait)
       .then(() => {

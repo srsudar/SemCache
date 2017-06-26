@@ -1,21 +1,21 @@
 /* global exports, require */
 'use strict';
 
-var byteArray = require('./byte-array');
-var dnsUtil = require('./dns-util');
-var dnsCodes = require('./dns-codes');
+const byteArray = require('./byte-array');
+const dnsUtil = require('./dns-util');
+const dnsCodes = require('./dns-codes');
 
-var NUM_OCTETS_TYPE = 2;
-var NUM_OCTETS_CLASS = 2;
-var NUM_OCTETS_TTL = 4;
-var NUM_OCTETS_RESOURCE_DATA_LENGTH = 2;
+const NUM_OCTETS_TYPE = 2;
+const NUM_OCTETS_CLASS = 2;
+const NUM_OCTETS_TTL = 4;
+const NUM_OCTETS_RESOURCE_DATA_LENGTH = 2;
 
 /** An A Record has four bytes, all representing an IP address. */
-var NUM_OCTETS_RESOURCE_DATA_A_RECORD = 4;
+const NUM_OCTETS_RESOURCE_DATA_A_RECORD = 4;
 
-var NUM_OCTETS_PRIORITY = 2;
-var NUM_OCTETS_WEIGHT = 2;
-var NUM_OCTETS_PORT = 2;
+const NUM_OCTETS_PRIORITY = 2;
+const NUM_OCTETS_WEIGHT = 2;
+const NUM_OCTETS_PORT = 2;
 
 /**
  * A resource record (RR) is a component of a DNS message. They share a similar
@@ -95,7 +95,7 @@ exports.ARecord = function ARecord(
  * @return {ByteArray}
  */
 exports.ARecord.prototype.convertToByteArray = function() {
-  var result = exports.getCommonFieldsAsByteArray(
+  let result = exports.getCommonFieldsAsByteArray(
     this.domainName,
     this.recordType,
     this.recordClass,
@@ -109,7 +109,7 @@ exports.ARecord.prototype.convertToByteArray = function() {
   );
 
   // Then add the IP address itself.
-  var ipStringAsBytes = dnsUtil.getIpStringAsByteArray(this.ipAddress);
+  let ipStringAsBytes = dnsUtil.getIpStringAsByteArray(this.ipAddress);
   result.append(ipStringAsBytes);
 
   return result;
@@ -124,7 +124,7 @@ exports.ARecord.prototype.convertToByteArray = function() {
  * @return {ARecord}
  */
 exports.createARecordFromReader = function(reader) {
-  var commonFields = exports.getCommonFieldsFromByteArrayReader(reader);
+  let commonFields = exports.getCommonFieldsFromByteArrayReader(reader);
 
   if (commonFields.rrType !== dnsCodes.RECORD_TYPES.A) {
     throw new Error(
@@ -134,7 +134,7 @@ exports.createARecordFromReader = function(reader) {
   }
 
   // And now we recover just the resource length and resource data.
-  var resourceLength = reader.getValue(NUM_OCTETS_RESOURCE_DATA_LENGTH);
+  let resourceLength = reader.getValue(NUM_OCTETS_RESOURCE_DATA_LENGTH);
 
   // For an A Record this should always be 4.
   if (resourceLength !== NUM_OCTETS_RESOURCE_DATA_A_RECORD) {
@@ -145,9 +145,9 @@ exports.createARecordFromReader = function(reader) {
     );
   }
 
-  var ipString = dnsUtil.getIpStringFromByteArrayReader(reader);
+  let ipString = dnsUtil.getIpStringFromByteArrayReader(reader);
 
-  var result = new exports.ARecord(
+  let result = new exports.ARecord(
     commonFields.domainName,
     commonFields.ttl,
     ipString,
@@ -166,7 +166,7 @@ exports.createARecordFromReader = function(reader) {
  * @return {PtrRecord}
  */
 exports.createPtrRecordFromReader = function(reader) {
-  var commonFields = exports.getCommonFieldsFromByteArrayReader(reader);
+  let commonFields = exports.getCommonFieldsFromByteArrayReader(reader);
 
   if (commonFields.rrType !== dnsCodes.RECORD_TYPES.PTR) {
     throw new Error(
@@ -176,7 +176,7 @@ exports.createPtrRecordFromReader = function(reader) {
   }
 
   // And now we recover just the resource length and resource data.
-  var resourceLength = reader.getValue(NUM_OCTETS_RESOURCE_DATA_LENGTH);
+  let resourceLength = reader.getValue(NUM_OCTETS_RESOURCE_DATA_LENGTH);
   if (resourceLength < 0 || resourceLength > 65535) {
     throw new Error(
       'Illegal length of PTR Record resource data: ' +
@@ -185,10 +185,10 @@ exports.createPtrRecordFromReader = function(reader) {
 
   // In a PTR Record, the domain name field of the RR is actually the service
   // type (at least for mDNS).
-  var serviceType = commonFields.domainName;
-  var serviceName = dnsUtil.getDomainFromByteArrayReader(reader);
+  let serviceType = commonFields.domainName;
+  let serviceName = dnsUtil.getDomainFromByteArrayReader(reader);
 
-  var result = new exports.PtrRecord(
+  let result = new exports.PtrRecord(
     serviceType,
     commonFields.ttl,
     serviceName,
@@ -207,7 +207,7 @@ exports.createPtrRecordFromReader = function(reader) {
  * @return {SrvRecord}
  */
 exports.createSrvRecordFromReader = function(reader) {
-  var commonFields = exports.getCommonFieldsFromByteArrayReader(reader);
+  let commonFields = exports.getCommonFieldsFromByteArrayReader(reader);
 
   if (commonFields.rrType !== dnsCodes.RECORD_TYPES.SRV) {
     throw new Error(
@@ -217,7 +217,7 @@ exports.createSrvRecordFromReader = function(reader) {
   }
 
   // And now we recover just the resource length and resource data.
-  var resourceLength = reader.getValue(NUM_OCTETS_RESOURCE_DATA_LENGTH);
+  let resourceLength = reader.getValue(NUM_OCTETS_RESOURCE_DATA_LENGTH);
   if (resourceLength < 0 || resourceLength > 65535) {
     throw new Error(
       'Illegal length of SRV Record resource data: ' +
@@ -226,27 +226,27 @@ exports.createSrvRecordFromReader = function(reader) {
 
   // In a SRV Record, the domain name field of the RR is actually the service
   // proto name.
-  var serviceInstanceName = commonFields.domainName;
+  let serviceInstanceName = commonFields.domainName;
   
   // After the common fields, we expect priority, weight, port, target name.
-  var priority = reader.getValue(NUM_OCTETS_PRIORITY);
+  let priority = reader.getValue(NUM_OCTETS_PRIORITY);
   if (priority < 0 || priority > 65535) {
     throw new Error('Illegal length of SRV Record priority: ' + priority);
   }
 
-  var weight = reader.getValue(NUM_OCTETS_WEIGHT);
+  let weight = reader.getValue(NUM_OCTETS_WEIGHT);
   if (weight < 0 || weight > 65535) {
     throw new Error('Illegal length of SRV Record priority: ' + weight);
   }
 
-  var port = reader.getValue(NUM_OCTETS_PORT);
+  let port = reader.getValue(NUM_OCTETS_PORT);
   if (port < 0 || port > 65535) {
     throw new Error('Illegal length of SRV Record priority: ' + port);
   }
 
-  var targetName = dnsUtil.getDomainFromByteArrayReader(reader);
+  let targetName = dnsUtil.getDomainFromByteArrayReader(reader);
 
-  var result = new exports.SrvRecord(
+  let result = new exports.SrvRecord(
     serviceInstanceName,
     commonFields.ttl,
     priority,
@@ -323,15 +323,15 @@ exports.PtrRecord = function PtrRecord(
  * @return {ByteArray}
  */
 exports.PtrRecord.prototype.convertToByteArray = function() {
-  var result = exports.getCommonFieldsAsByteArray(
+  let result = exports.getCommonFieldsAsByteArray(
     this.serviceType,
     this.recordType,
     this.recordClass,
     this.ttl
   );
 
-  var instanceNameAsBytes = dnsUtil.getDomainAsByteArray(this.instanceName);
-  var resourceDataLength = instanceNameAsBytes.length;
+  let instanceNameAsBytes = dnsUtil.getDomainAsByteArray(this.instanceName);
+  let resourceDataLength = instanceNameAsBytes.length;
 
   // First we add the length of the resource data.
   result.push(
@@ -412,16 +412,16 @@ exports.SrvRecord = function SrvRecord(
  * @return {ByteArray}
  */
 exports.SrvRecord.prototype.convertToByteArray = function() {
-  var result = exports.getCommonFieldsAsByteArray(
+  let result = exports.getCommonFieldsAsByteArray(
     this.instanceTypeDomain,
     this.recordType,
     this.recordClass,
     this.ttl
   );
 
-  var targetNameAsBytes = dnsUtil.getDomainAsByteArray(this.targetDomain);
+  let targetNameAsBytes = dnsUtil.getDomainAsByteArray(this.targetDomain);
 
-  var resourceDataLength = NUM_OCTETS_PRIORITY +
+  let resourceDataLength = NUM_OCTETS_PRIORITY +
     NUM_OCTETS_WEIGHT +
     NUM_OCTETS_PORT +
     targetNameAsBytes.length;
@@ -469,9 +469,9 @@ exports.getCommonFieldsAsByteArray = function(
   rrClass,
   ttl
 ) {
-  var result = new byteArray.ByteArray();
+  let result = new byteArray.ByteArray();
 
-  var domainNameAsBytes = dnsUtil.getDomainAsByteArray(domainName);
+  let domainNameAsBytes = dnsUtil.getDomainAsByteArray(domainName);
   result.append(domainNameAsBytes);
 
   result.push(rrType, NUM_OCTETS_TYPE);
@@ -491,12 +491,12 @@ exports.getCommonFieldsAsByteArray = function(
  * and ttl.
  */
 exports.getCommonFieldsFromByteArrayReader = function(reader) {
-  var domainName = dnsUtil.getDomainFromByteArrayReader(reader);
-  var rrType = reader.getValue(NUM_OCTETS_TYPE);
-  var rrClass = reader.getValue(NUM_OCTETS_CLASS);
-  var ttl = reader.getValue(NUM_OCTETS_TTL);
+  let domainName = dnsUtil.getDomainFromByteArrayReader(reader);
+  let rrType = reader.getValue(NUM_OCTETS_TYPE);
+  let rrClass = reader.getValue(NUM_OCTETS_CLASS);
+  let ttl = reader.getValue(NUM_OCTETS_TTL);
 
-  var result = {
+  let result = {
     domainName: domainName,
     rrType: rrType,
     rrClass: rrClass,
@@ -517,14 +517,14 @@ exports.getCommonFieldsFromByteArrayReader = function(reader) {
 exports.peekTypeInReader = function(reader) {
   // Getting values from the reader normally consumes bytes. Create a defensive
   // copy to work with instead.
-  var byteArr = reader.byteArray;
-  var startByte = reader.cursor;
-  var safeReader = byteArr.getReader(startByte);
+  let byteArr = reader.byteArray;
+  let startByte = reader.cursor;
+  let safeReader = byteArr.getReader(startByte);
 
   // Consume an encoded domain name. Note this means we're computing domain
   // names twice, which isn't optimal.
   dnsUtil.getDomainFromByteArrayReader(safeReader);
   // After the domain, the type is next.
-  var result = safeReader.getValue(NUM_OCTETS_TYPE);
+  let result = safeReader.getValue(NUM_OCTETS_TYPE);
   return result;
 };

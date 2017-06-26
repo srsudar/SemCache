@@ -1,6 +1,6 @@
 'use strict';
 
-var util = require('./util');
+const util = require('./util');
 
 /**
  * This module provides a wrapper around the chrome.storage.local API and

@@ -8,10 +8,10 @@
  */
 'use strict';
 
-var resRec = require('./resource-record');
-var dnsCodes = require('./dns-codes');
-var byteArray = require('./byte-array');
-var qSection = require('./question-section');
+const resRec = require('./resource-record');
+const dnsCodes = require('./dns-codes');
+const byteArray = require('./byte-array');
+const qSection = require('./question-section');
 
 // These constants are defined by the number of bits allowed for each value in
 // the DNS spec. Section 4.1.1 of RFC 1035 has a good summary.
@@ -21,22 +21,22 @@ var qSection = require('./question-section');
  * The maximum valid ID of a DNS Packet, defined by the 32 bits allowed in the
  * spec.
  */
-var MAX_ID = 65535;
+const MAX_ID = 65535;
 
 /** The maximum OPCODE is defined by the 4 bits allowed in the spec. */
-var MAX_OPCODE = 15;
+const MAX_OPCODE = 15;
 
 /** The maximum RCODE is defined by the 4 bits allowed in the spec. */
-var MAX_RETURN_CODE = 15;
+const MAX_RETURN_CODE = 15;
 
 /** The number of octets in the ID of the DNS Packet as defined in the spec. */
-var NUM_OCTETS_ID = 2;
+const NUM_OCTETS_ID = 2;
 
 /** The number of octets in the ID of the DNS Packet as defined in the spec. */
-var NUM_OCTETS_FLAGS = 2;
+const NUM_OCTETS_FLAGS = 2;
 
 /** The number of octets in the ID of the DNS Packet as defined in the spec. */
-var NUM_OCTETS_SECTION_LENGTHS = 2;
+const NUM_OCTETS_SECTION_LENGTHS = 2;
 
 /**
  * Parse numRecords Resource Records from a ByteArrayReader object. Returns an
@@ -50,11 +50,11 @@ var NUM_OCTETS_SECTION_LENGTHS = 2;
  * records
  */
 exports.parseResourceRecordsFromReader = function(reader, numRecords) {
-  var result = [];
-  for (var i = 0; i < numRecords; i++) {
-    var recordType = resRec.peekTypeInReader(reader);
+  let result = [];
+  for (let i = 0; i < numRecords; i++) {
+    let recordType = resRec.peekTypeInReader(reader);
 
-    var record = null;
+    let record = null;
     switch (recordType) {
       case dnsCodes.RECORD_TYPES.A:
         record = resRec.createARecordFromReader(reader);
@@ -174,20 +174,20 @@ exports.DnsPacket = function DnsPacket(
  * @return {ByteArray}
  */
 exports.DnsPacket.prototype.convertToByteArray = function() {
-  var result = new byteArray.ByteArray();
+  let result = new byteArray.ByteArray();
 
   result.push(this.id, NUM_OCTETS_ID);
 
   // Prepare flags to be passed to getFlagsAsValue
-  var qr = this.isQuery ? 0 : 1;  // 0 means query, 1 means response
-  var opcode = this.opCode;
-  var aa = this.isAuthorativeAnswer ? 1 : 0;
-  var tc = this.isTruncated ? 1 : 0;
-  var rd = this.recursionDesired ? 1 : 0;
-  var ra = this.recursionAvailable ? 1 : 0;
-  var rcode = this.returnCode;
+  let qr = this.isQuery ? 0 : 1;  // 0 means query, 1 means response
+  let opcode = this.opCode;
+  let aa = this.isAuthorativeAnswer ? 1 : 0;
+  let tc = this.isTruncated ? 1 : 0;
+  let rd = this.recursionDesired ? 1 : 0;
+  let ra = this.recursionAvailable ? 1 : 0;
+  let rcode = this.returnCode;
 
-  var flagValue = exports.getFlagsAsValue(qr, opcode, aa, tc, rd, ra, rcode);
+  let flagValue = exports.getFlagsAsValue(qr, opcode, aa, tc, rd, ra, rcode);
   result.push(flagValue, NUM_OCTETS_FLAGS);
 
   result.push(this.questions.length, NUM_OCTETS_SECTION_LENGTHS);
@@ -203,22 +203,22 @@ exports.DnsPacket.prototype.convertToByteArray = function() {
   }
 
   this.questions.forEach(question => {
-    var byteArr = question.convertToByteArray();
+    let byteArr = question.convertToByteArray();
     result.append(byteArr);
   });
 
   this.answers.forEach(answer => {
-    var byteArr = answer.convertToByteArray();
+    let byteArr = answer.convertToByteArray();
     result.append(byteArr);
   });
 
   this.authority.forEach(authority => {
-    var byteArr = authority.convertToByteArray();
+    let byteArr = authority.convertToByteArray();
     result.append(byteArr);
   });
 
   this.additionalInfo.forEach(info => {
-    var byteArr = info.convertToByteArray();
+    let byteArr = info.convertToByteArray();
     result.append(byteArr);
   });
 
@@ -235,20 +235,20 @@ exports.DnsPacket.prototype.convertToByteArray = function() {
  * @return {DnsPacket} the packet constructed
  */
 exports.createPacketFromReader = function(reader) {
-  var id = reader.getValue(NUM_OCTETS_ID);
-  var flagsAsValue = reader.getValue(NUM_OCTETS_FLAGS);
-  var numQuestions = reader.getValue(NUM_OCTETS_SECTION_LENGTHS);
-  var numAnswers = reader.getValue(NUM_OCTETS_SECTION_LENGTHS);
-  var numAuthority = reader.getValue(NUM_OCTETS_SECTION_LENGTHS);
-  var numAdditionalInfo = reader.getValue(NUM_OCTETS_SECTION_LENGTHS);
+  let id = reader.getValue(NUM_OCTETS_ID);
+  let flagsAsValue = reader.getValue(NUM_OCTETS_FLAGS);
+  let numQuestions = reader.getValue(NUM_OCTETS_SECTION_LENGTHS);
+  let numAnswers = reader.getValue(NUM_OCTETS_SECTION_LENGTHS);
+  let numAuthority = reader.getValue(NUM_OCTETS_SECTION_LENGTHS);
+  let numAdditionalInfo = reader.getValue(NUM_OCTETS_SECTION_LENGTHS);
 
-  var flags = exports.getValueAsFlags(flagsAsValue);
+  let flags = exports.getValueAsFlags(flagsAsValue);
 
-  var opCode = flags.opcode;
-  var returnCode = flags.rcode;
+  let opCode = flags.opcode;
+  let returnCode = flags.rcode;
 
   // 0 means it is a query, 1 means it is a response.
-  var isQuery;
+  let isQuery;
   if (flags.qr === 0) {
     isQuery = true;
   } else {
@@ -257,12 +257,12 @@ exports.createPacketFromReader = function(reader) {
 
   // The non-QR flags map more readily to 0/1 = false/true, so we will use
   // ternary operators.
-  var isAuthorativeAnswer = flags.aa ? true : false;
-  var isTruncated = flags.tc ? true : false;
-  var recursionDesired = flags.rd ? true : false;
-  var recursionAvailable = flags.ra ? true : false;
+  let isAuthorativeAnswer = flags.aa ? true : false;
+  let isTruncated = flags.tc ? true : false;
+  let recursionDesired = flags.rd ? true : false;
+  let recursionAvailable = flags.ra ? true : false;
 
-  var result = new exports.DnsPacket(
+  let result = new exports.DnsPacket(
     id,
     isQuery,
     opCode,
@@ -273,16 +273,16 @@ exports.createPacketFromReader = function(reader) {
     returnCode
   );
 
-  for (var i = 0; i < numQuestions; i++) {
-    var question = qSection.createQuestionFromReader(reader);
+  for (let i = 0; i < numQuestions; i++) {
+    let question = qSection.createQuestionFromReader(reader);
     result.addQuestion(question);
   }
 
-  var answers = exports.parseResourceRecordsFromReader(reader, numAnswers);
-  var authorities = exports.parseResourceRecordsFromReader(
+  let answers = exports.parseResourceRecordsFromReader(reader, numAnswers);
+  let authorities = exports.parseResourceRecordsFromReader(
     reader, numAuthority
   );
-  var infos = exports.parseResourceRecordsFromReader(
+  let infos = exports.parseResourceRecordsFromReader(
     reader, numAdditionalInfo
   );
 
@@ -361,13 +361,13 @@ exports.DnsPacket.prototype.addAdditionalInfo = function(resourceRecord) {
  * }
  */
 exports.getValueAsFlags = function(value) {
-  var qr = (value & 0x8000) >> 15;
-  var opcode = (value & 0x7800) >> 11;
-  var aa = (value & 0x0400) >> 10;
-  var tc = (value & 0x0200) >> 9;
-  var rd = (value & 0x0100) >> 8;
-  var ra = (value & 0x0080) >> 7;
-  var rcode = (value & 0x000f) >> 0;
+  let qr = (value & 0x8000) >> 15;
+  let opcode = (value & 0x7800) >> 11;
+  let aa = (value & 0x0400) >> 10;
+  let tc = (value & 0x0200) >> 9;
+  let rd = (value & 0x0100) >> 8;
+  let ra = (value & 0x0080) >> 7;
+  let rcode = (value & 0x000f) >> 0;
 
   return {
     qr: qr,
@@ -397,7 +397,7 @@ exports.getValueAsFlags = function(value) {
  * order 16 bits
  */
 exports.getFlagsAsValue = function(qr, opcode, aa, tc, rd, ra, rcode) {
-  var value = 0x0000;
+  let value = 0x0000;
 
   value = value << 1;
   value += qr & 0x01;

@@ -1,6 +1,6 @@
 'use strict';
 
-var settings = require('../settings');
+const settings = require('../settings');
 
 /**
  * Remove the peerInfo object that represents our own machine.
@@ -14,8 +14,8 @@ exports.removeOwnInfo = function(peerInfos) {
   return new Promise(function(resolve, reject) {
     settings.init()
     .then(() => {
-      var result = [];
-      var ourDomain = settings.getHostName();
+      let result = [];
+      let ourDomain = settings.getHostName();
       peerInfos.forEach(peerInfo => {
         if (peerInfo.domainName !== ourDomain) {
           result.push(peerInfo);

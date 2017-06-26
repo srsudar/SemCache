@@ -1,12 +1,12 @@
 /*jshint esnext:true*/
 'use strict';
 
-var test = require('tape');
-var proxyquire = require('proxyquire');
-var sinon = require('sinon');
+const test = require('tape');
+const proxyquire = require('proxyquire');
+const sinon = require('sinon');
 require('sinon-as-promised');
 
-var fileSystem = require('../../../app/scripts/persistence/file-system');
+let fileSystem = require('../../../app/scripts/persistence/file-system');
 
 /**
  * Manipulating the object directly leads to polluting the require cache. Any
@@ -42,8 +42,8 @@ function end(t) {
 
 test('promptForDir calls chrome API and returns Entry', function(t) {
   // Make the module think it has started.
-  var expectedEntry = 'foo baz bar';
-  var chooseEntrySpy = sinon.stub().resolves(expectedEntry);
+  let expectedEntry = 'foo baz bar';
+  let chooseEntrySpy = sinon.stub().resolves(expectedEntry);
 
   proxyquireFileSystem({}, {}, { chooseEntry: chooseEntrySpy });
 
@@ -63,7 +63,7 @@ test('promptForDir calls chrome API and returns Entry', function(t) {
 });
 
 test('promptForDir rejects if error', function(t) {
-  var expected = { error: 'trouble' };
+  let expected = { error: 'trouble' };
   proxyquireFileSystem(
     {}, {}, { chooseEntry: sinon.stub().rejects(expected) }
   );
@@ -80,9 +80,9 @@ test('promptForDir rejects if error', function(t) {
 
 test('setBaseCacheDir calls persist functions', function(t) {
   // Make the module think it has started.
-  var expectedId = 'an identifier';
-  var retainEntrySpy = sinon.stub().returns(expectedId);
-  var setSpy = sinon.spy();
+  let expectedId = 'an identifier';
+  let retainEntrySpy = sinon.stub().returns(expectedId);
+  let setSpy = sinon.spy();
 
   proxyquireFileSystem(
     {},
@@ -90,7 +90,7 @@ test('setBaseCacheDir calls persist functions', function(t) {
     { retainEntry: retainEntrySpy }
   );
 
-  var dirEntry = 'directory entry';
+  let dirEntry = 'directory entry';
 
   fileSystem.setBaseCacheDir(dirEntry);
 
@@ -106,9 +106,9 @@ test('setBaseCacheDir calls persist functions', function(t) {
 
 test('baseDirIsSet true correctly', function(t) {
   // Make the module think it has started.
-  var keyValue = { baseDir: 'identifier' };
+  let keyValue = { baseDir: 'identifier' };
 
-  var getSpy = sinon.stub().resolves(keyValue);
+  let getSpy = sinon.stub().resolves(keyValue);
 
   proxyquireFileSystem({}, { get: getSpy }, {});
 
@@ -130,7 +130,7 @@ test('baseDirIsSet true correctly', function(t) {
 
 test('baseDirIsSet true correctly', function(t) {
   // Make the module think it has started.
-  var getSpy = sinon.stub().resolves({});
+  let getSpy = sinon.stub().resolves({});
 
   proxyquireFileSystem({}, { get: getSpy }, {});
 
@@ -150,7 +150,7 @@ test('baseDirIsSet true correctly', function(t) {
 });
 
 test('baseDirIsSet rejects if error', function(t) {
-  var expected = { error: 'trouble' };
+  let expected = { error: 'trouble' };
   proxyquireFileSystem(
     {},
     { get: sinon.stub().rejects(expected) },
@@ -169,10 +169,10 @@ test('baseDirIsSet rejects if error', function(t) {
 });
 
 test('getPersistedBaseDir returns null if not set', function(t) {
-  var fileSystem = require('../../../app/scripts/persistence/file-system');
+  let fileSystem = require('../../../app/scripts/persistence/file-system');
   fileSystem.baseDirIsSet = sinon.stub().resolves(false);
 
-  var expected = null;
+  let expected = null;
   fileSystem.getPersistedBaseDir()
   .then(dirEntry => {
     t.equal(dirEntry, expected);
@@ -187,11 +187,11 @@ test('getPersistedBaseDir returns null if not set', function(t) {
 });
 
 test('getPersistedBaseDir retrieves from storage', function(t) {
-  var savedId = 'persisted identifier';
-  var expectedDirEntry = 'expected directory';
+  let savedId = 'persisted identifier';
+  let expectedDirEntry = 'expected directory';
 
-  var getSpy = sinon.stub().resolves({ baseDir: savedId });
-  var restoreEntrySpy = sinon.stub().resolves(expectedDirEntry);
+  let getSpy = sinon.stub().resolves({ baseDir: savedId });
+  let restoreEntrySpy = sinon.stub().resolves(expectedDirEntry);
 
   proxyquireFileSystem({}, { get: getSpy }, { restoreEntry: restoreEntrySpy });
   fileSystem.baseDirIsSet = sinon.stub().resolves(true);
@@ -211,7 +211,7 @@ test('getPersistedBaseDir retrieves from storage', function(t) {
 });
 
 test('getPersistedBaseDir rejects if error', function(t) {
-  var expected = { error: 'wooeeeee' };
+  let expected = { error: 'wooeeeee' };
   fileSystem.baseDirIsSet = sinon.stub().rejects(expected);
   fileSystem.getPersistedBaseDir()
   .then(res => {
@@ -225,10 +225,10 @@ test('getPersistedBaseDir rejects if error', function(t) {
 });
 
 test('getDirectoryForCacheEntries rejects if no base dir', function(t) {
-  var errObj = { msg: 'no base dir' };
-  var getPersistedBaseDirSpy = sinon.stub().rejects(errObj);
+  let errObj = { msg: 'no base dir' };
+  let getPersistedBaseDirSpy = sinon.stub().rejects(errObj);
 
-  var fileSystem = require('../../../app/scripts/persistence/file-system');
+  let fileSystem = require('../../../app/scripts/persistence/file-system');
   fileSystem.getPersistedBaseDir = getPersistedBaseDirSpy;
 
   fileSystem.getDirectoryForCacheEntries()
@@ -247,9 +247,9 @@ test('getDirectoryForCacheEntries rejects if no base dir', function(t) {
 test(
   'getDirectoryForCacheEntries rejects if getDirectory rejects',
   function(t) {
-    var errObj = { msg: 'getDirectory failed' };
-    var getPersistedBaseDirSpy = sinon.stub().resolves();
-    var getDirectoryStub = sinon.stub().rejects(errObj);
+    let errObj = { msg: 'getDirectory failed' };
+    let getPersistedBaseDirSpy = sinon.stub().resolves();
+    let getDirectoryStub = sinon.stub().rejects(errObj);
 
     proxyquireFileSystem({
       './file-system-util': {
@@ -273,11 +273,11 @@ test(
 );
 
 test('getDirectoryForCacheEntries resolves with entry', function(t) {
-  var baseDir = 'base directory';
-  var cacheDir = 'cache directory';
+  let baseDir = 'base directory';
+  let cacheDir = 'cache directory';
 
-  var getPersistedBaseDirSpy = sinon.stub().resolves(baseDir);
-  var getDirectoryStub = sinon.stub().resolves(cacheDir);
+  let getPersistedBaseDirSpy = sinon.stub().resolves(baseDir);
+  let getDirectoryStub = sinon.stub().resolves(cacheDir);
 
   proxyquireFileSystem({
     './file-system-util': {
@@ -306,28 +306,28 @@ test('getDirectoryForCacheEntries resolves with entry', function(t) {
 });
 
 test('constructFileSchemeUrl creates correct scheme', function(t) {
-  var absPath = '/absolute/path/to/semcachedir';
-  var entryPath = '/semcachedir/cachedPages/my_fancy_page.mhtml';
-  var expected =
+  let absPath = '/absolute/path/to/semcachedir';
+  let entryPath = '/semcachedir/cachedPages/my_fancy_page.mhtml';
+  let expected =
     'file:///absolute/path/to/semcachedir/cachedPages/my_fancy_page.mhtml';
 
-  var fileSystem = require('../../../app/scripts/persistence/file-system');
-  var actual = fileSystem.constructFileSchemeUrl(absPath, entryPath);
+  let fileSystem = require('../../../app/scripts/persistence/file-system');
+  let actual = fileSystem.constructFileSchemeUrl(absPath, entryPath);
   t.equal(actual, expected);
   t.end();
 });
 
 test('getFileContentsFromName resolves with contents', function(t) {
-  var fileName = 'such_a_fancy_name';
-  var cacheDir = sinon.stub();
-  var fileEntry = sinon.stub();
+  let fileName = 'such_a_fancy_name';
+  let cacheDir = sinon.stub();
+  let fileEntry = sinon.stub();
 
-  var expected = Buffer.from('hello');
+  let expected = Buffer.from('hello');
 
-  var getDirectoryForCacheEntriesSpy = sinon.stub().resolves(cacheDir);
+  let getDirectoryForCacheEntriesSpy = sinon.stub().resolves(cacheDir);
 
-  var getFileSpy = sinon.stub().resolves(fileEntry);
-  var getFileContentsSpy = sinon.stub().resolves(expected);
+  let getFileSpy = sinon.stub().resolves(fileEntry);
+  let getFileContentsSpy = sinon.stub().resolves(expected);
 
   proxyquireFileSystem({
     './file-system-util': {
@@ -355,10 +355,10 @@ test('getFileContentsFromName resolves with contents', function(t) {
 });
 
 test('getFileContentsFromName rejects with error', function(t) {
-  var fileName = 'such_a_fancy_name';
-  var expected = { error: 'get directory for cache entries failed' };
+  let fileName = 'such_a_fancy_name';
+  let expected = { error: 'get directory for cache entries failed' };
 
-  var getDirectoryForCacheEntriesSpy = sinon.stub().rejects(expected);
+  let getDirectoryForCacheEntriesSpy = sinon.stub().rejects(expected);
   fileSystem.getDirectoryForCacheEntries = getDirectoryForCacheEntriesSpy;
 
   fileSystem.getFileContentsFromName(fileName)

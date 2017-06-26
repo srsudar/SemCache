@@ -1,10 +1,11 @@
 'use strict';
-var test = require('tape');
-var proxyquire = require('proxyquire');
-var sinon = require('sinon');
+
+const test = require('tape');
+const proxyquire = require('proxyquire');
+const sinon = require('sinon');
 require('sinon-as-promised');
 
-var udp = require('../../../app/scripts/chrome-apis/udp');
+let udp = require('../../../app/scripts/chrome-apis/udp');
 
 function resetUdp() {
   delete require.cache[
@@ -42,11 +43,11 @@ function helperResolve(methodName, t, cbIndex) {
   if (cbIndex === undefined) {
     cbIndex = 1;
   }
-  var entry = sinon.stub();
-  var expected = 'expected value';
-  var methodStub = sinon.stub();
+  let entry = sinon.stub();
+  let expected = 'expected value';
+  let methodStub = sinon.stub();
   methodStub.callsArgWith(cbIndex, expected);
-  var udpStub = {};
+  let udpStub = {};
   udpStub[methodName] = methodStub;
   proxyquireUdp(udpStub, false);
 
@@ -69,11 +70,11 @@ function helperReject(methodName, t, cbIndex) {
   if (cbIndex === undefined) {
     cbIndex = 1;
   }
-  var entry = sinon.stub();
-  var expected = 'error message';
-  var methodStub = sinon.stub();
+  let entry = sinon.stub();
+  let expected = 'error message';
+  let methodStub = sinon.stub();
   methodStub.callsArgWith(cbIndex, expected);
-  var udpStub = {};
+  let udpStub = {};
   udpStub[methodName] = methodStub;
   proxyquireUdp(udpStub, true, expected);
 

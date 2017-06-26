@@ -65,7 +65,7 @@ exports.getFaviconAsUrl = function(url) {
  * @return {string} ISO representation of this moment
  */
 exports.getDateForSave = function() {
-  var result = new Date().toISOString();
+  let result = new Date().toISOString();
   return result;
 };
 
@@ -80,24 +80,24 @@ exports.getDateForSave = function() {
 exports.getDomain = function(fullUrl) {
   // We will rely on the :// that occurs in the scheme to determine the start
   // of the domain.
-  var colonLocation = fullUrl.indexOf(':');
-  var domainStart = colonLocation + 3;  // exclude the colon and two slashes.
+  let colonLocation = fullUrl.indexOf(':');
+  let domainStart = colonLocation + 3;  // exclude the colon and two slashes.
 
   // The end of the domain will be the least of /, ?, or # following the
   // domainStart.
-  var urlWithoutScheme = fullUrl.substring(domainStart);
-  var hashLocation = urlWithoutScheme.indexOf('#');
-  var queryLocation = urlWithoutScheme.indexOf('?');
-  var slashLocation = urlWithoutScheme.indexOf('/');
+  let urlWithoutScheme = fullUrl.substring(domainStart);
+  let hashLocation = urlWithoutScheme.indexOf('#');
+  let queryLocation = urlWithoutScheme.indexOf('?');
+  let slashLocation = urlWithoutScheme.indexOf('/');
   
   // Account for the -1 returned if all these are absent.
   if (hashLocation === -1) { hashLocation = urlWithoutScheme.length; }
   if (queryLocation === -1) { queryLocation = urlWithoutScheme.length; }
   if (slashLocation === -1) { slashLocation = urlWithoutScheme.length; }
 
-  var domainEnd = Math.min(hashLocation, queryLocation, slashLocation);
+  let domainEnd = Math.min(hashLocation, queryLocation, slashLocation);
 
-  var domain = urlWithoutScheme.substring(0, domainEnd);
+  let domain = urlWithoutScheme.substring(0, domainEnd);
 
   return domain;
 };
@@ -111,8 +111,8 @@ exports.getDomain = function(fullUrl) {
 exports.getSnapshotDataUrl = function() {
   // We are going to ask for a low quality image, as are just after thumbnail
   // and nothing more.
-  var jpegQuality = exports.DEFAULT_SNAPSHOT_QUALITY;
-  var options = { quality: jpegQuality };
+  let jpegQuality = exports.DEFAULT_SNAPSHOT_QUALITY;
+  let options = { quality: jpegQuality };
   return tabs.captureVisibleTab(null, options);
 };
 

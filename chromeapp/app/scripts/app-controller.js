@@ -69,10 +69,10 @@ exports.setAbsPathToBaseDir = function(absPath) {
  * @return {string} the URL for the list of pages in this device's own cache
  */
 exports.getListUrlForSelf = function() {
-  var iface = exports.getListeningHttpInterface();
-  var host = iface.address;
-  var port = iface.port;
-  var result = serverApi.getListPageUrlForCache(host, port);
+  let iface = exports.getListeningHttpInterface();
+  let host = iface.address;
+  let port = iface.port;
+  let result = serverApi.getListPageUrlForCache(host, port);
   return result;
 };
 
@@ -117,11 +117,11 @@ exports.networkIsActive = function() {
  * for this device
  */
 exports.getOwnCacheName = function() {
-  var friendlyName = settings.getInstanceName();
-  var fullName = dnssdSem.getFullName(friendlyName);
-  var serviceType = dnssdSem.getSemCacheServiceString();
+  let friendlyName = settings.getInstanceName();
+  let fullName = dnssdSem.getFullName(friendlyName);
+  let serviceType = dnssdSem.getSemCacheServiceString();
 
-  var result = {
+  let result = {
     serviceType: serviceType,
     friendlyName: friendlyName,
     serviceName: fullName
@@ -153,7 +153,7 @@ exports.getOwnCacheName = function() {
  */
 exports.resolveCache = function(fullName) {
   return new Promise(function(resolve, reject) {
-    var ownCache = exports.getOwnCache();
+    let ownCache = exports.getOwnCache();
     if (fullName === constants.SELF_SERVICE_SHORTCUT) {
       resolve(ownCache);
       return;
@@ -199,9 +199,9 @@ exports.getPeerCacheNames = function() {
   // First we'll construct our own cache info. Some of these variables may not
   // be set if we are initializing for the first time and settings haven't been
   // created.
-  var thisCacheName = exports.getOwnCacheName();
+  let thisCacheName = exports.getOwnCacheName();
 
-  var result = [thisCacheName];
+  let result = [thisCacheName];
 
   if (!exports.networkIsActive()) {
     // When we shouldn't query the network.
@@ -256,16 +256,16 @@ exports.getBrowseableCaches = function() {
     return Promise.resolve([]);
   }
 
-  var thisCache = exports.getOwnCache();
+  let thisCache = exports.getOwnCache();
 
-  var result = [thisCache];
+  let result = [thisCache];
 
   if (!exports.networkIsActive()) {
     // When we shouldn't query the network.
     return Promise.resolve(result);
   }
 
-  var ipAddress = exports.getListeningHttpInterface().address;
+  let ipAddress = exports.getListeningHttpInterface().address;
 
   return new Promise(function(resolve, reject) {
     dnssdSem.browseForSemCacheInstances()
@@ -302,11 +302,11 @@ exports.getBrowseableCaches = function() {
  */
 exports.startServersAndRegister = function() {
   return new Promise(function(resolve, reject) {
-    var instanceName = settings.getInstanceName();
-    var serverPort = settings.getServerPort();
-    var baseDirId = settings.getBaseDirId();
-    var hostName = settings.getHostName();
-    var httpIface = '0.0.0.0';
+    let instanceName = settings.getInstanceName();
+    let serverPort = settings.getServerPort();
+    let baseDirId = settings.getBaseDirId();
+    let hostName = settings.getHostName();
+    let httpIface = '0.0.0.0';
     if (!instanceName || !serverPort || !baseDirId || !hostName) {
       reject('Complete and save settings before starting');
       return;
@@ -314,7 +314,7 @@ exports.startServersAndRegister = function() {
 
     dnsController.start()
     .then(() => {
-      var ifaces = dnsController.getIPv4Interfaces();
+      let ifaces = dnsController.getIPv4Interfaces();
       if (ifaces.length === 0) {
         throw new Error('No network interfaces in dns-controller');
       }
@@ -404,10 +404,10 @@ exports.getAbsPathToBaseDir = function() {
  */
 exports.getListFromService = function(serviceName) {
   return new Promise(function(resolve, reject) {
-    var peerAccessor = peerIfMgr.getPeerAccessor();
+    let peerAccessor = peerIfMgr.getPeerAccessor();
     exports.resolveCache(serviceName)
     .then(cacheInfo => {
-      var listParams = ifCommon.createListParams(
+      let listParams = ifCommon.createListParams(
         cacheInfo.ipAddress, cacheInfo.port, cacheInfo.listUrl
       );
       return peerAccessor.getList(listParams);
@@ -432,8 +432,8 @@ exports.getListFromService = function(serviceName) {
  */
 exports.saveMhtmlAndOpen = function(serviceName, href) {
   return new Promise(function(resolve, reject) {
-    var start = evaluation.getNow();
-    var streamName = 'open_' + href;
+    let start = evaluation.getNow();
+    let streamName = 'open_' + href;
     exports.resolveCache(serviceName)
     .then(cacheInfo => {
       return peerIfMgr.getPeerAccessor(
@@ -444,13 +444,13 @@ exports.saveMhtmlAndOpen = function(serviceName, href) {
       return datastore.addPageToCache(cpdisk);
     })
     .then((entry) => {
-      var fileUrl = fileSystem.constructFileSchemeUrl(
+      let fileUrl = fileSystem.constructFileSchemeUrl(
         exports.getAbsPathToBaseDir(),
         entry.fullPath
       );
       extBridge.sendMessageToOpenUrl(fileUrl);
-      var end = evaluation.getNow();
-      var totalTime = end - start;
+      let end = evaluation.getNow();
+      let totalTime = end - start;
       evaluation.logTime(streamName, totalTime);
       console.warn('totalTime to fetch: ', totalTime);
       resolve(totalTime);

@@ -50,9 +50,9 @@ exports.sendMessageForResponse = function(message, timeout) {
   return new Promise(function(resolve, reject) {
     // And now we begin the process of resolving/rejecting based on whether or
     // not the app invokes our callback.
-    var settled = false;
+    let settled = false;
     // We'll update this if we've already resolved or rejected.
-    var callbackForApp = function(response) {
+    let callbackForApp = function(response) {
       if (exports.DEBUG) {
         console.log('got callback from app');
       }
@@ -203,7 +203,7 @@ exports.onMessageExternalCallback = function(message, sender, sendResponse) {
   }
   if (message.type === 'open') {
     // An open request for a URL.
-    var url = message.params.url;
+    let url = message.params.url;
     exports.openUrl(url);
     if (sendResponse) {
       sendResponse();

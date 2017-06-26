@@ -1,7 +1,7 @@
 'use strict';
 
-var stratBloom = require('./bloom-strategy');
-var stratDig = require('./digest-strategy');
+const stratBloom = require('./bloom-strategy');
+const stratDig = require('./digest-strategy');
 
 /**
  * The coalescence/manager module is the API callers should use to interact
@@ -47,7 +47,7 @@ exports.reset = function() {
  */
 exports.queryForUrls = function(urls) {
   return new Promise(function(resolve, reject) {
-    var strategy = exports.getStrategy();
+    let strategy = exports.getStrategy();
     strategy.initialize()
     .then(() => {
       return strategy.performQuery(urls);

@@ -1,14 +1,14 @@
 'use strict';
 
-var test = require('tape');
-var sinon = require('sinon');
+const test = require('tape');
+const sinon = require('sinon');
 require('sinon-as-promised');
 
-var commonChannel = require('../../../app/scripts/webrtc/common-channel');
-var protocol = require('../../../app/scripts/webrtc/protocol');
+const protocol = require('../../../app/scripts/webrtc/protocol');
 
-var Client = commonChannel.BaseClient;
-var Server = commonChannel.BaseServer;
+let commonChannel = require('../../../app/scripts/webrtc/common-channel');
+let Client = commonChannel.BaseClient;
+let Server = commonChannel.BaseServer;
 
 
 /**
@@ -256,7 +256,7 @@ test('handleMessageFromClient throws error for bad message', function(t) {
 test('createChunkGenerator throws if no buffer', function(t) {
   const server = new Server();
   const willThrow = function() {
-    var gen = server.createChunkGenerator();
+    let gen = server.createChunkGenerator();
     gen.next();
   };
 

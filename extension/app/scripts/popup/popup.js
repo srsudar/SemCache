@@ -1,38 +1,38 @@
 'use strict';
 
-var api = require('./popup-api');
-var messaging = require('../app-bridge/messaging');
+const api = require('./popup-api');
+const messaging = require('../app-bridge/messaging');
 
-var btnSave = document.getElementById('btn-save');
-var btnView = document.getElementById('btn-view');
-var spinner = document.getElementById('spinner');
-var message = document.getElementById('message');
-var timing1 = document.getElementById('timing1');
-var timing2 = document.getElementById('timing2');
-var divSaveTime = document.getElementById('save-time');
-var divLoadTime = document.getElementById('load-time');
-var divButtons = document.getElementById('buttons-div');
-var divSave = document.getElementById('save-content-div');
+const btnSave = document.getElementById('btn-save');
+const btnView = document.getElementById('btn-view');
+const spinner = document.getElementById('spinner');
+const message = document.getElementById('message');
+const timing1 = document.getElementById('timing1');
+const timing2 = document.getElementById('timing2');
+const divSaveTime = document.getElementById('save-time');
+const divLoadTime = document.getElementById('load-time');
+const divButtons = document.getElementById('buttons-div');
+const divSave = document.getElementById('save-content-div');
 
 // Crazy value to make sure we notice if there are errors.
-var saveStart = -10000;
-var domCompleteTime = null;
+let saveStart = -10000;
+let domCompleteTime = null;
 
 // A local reference to the page.
-var cachedPage = null;
+let cachedPage = null;
 
 function round(num) {
   // Round to two decimal places
-  var factor = 100;
-  var result = Math.round(num * factor) / factor;
+  let factor = 100;
+  let result = Math.round(num * factor) / factor;
   return result;
 }
 
 function finishTiming() {
-  var saveEnd = window.performance.now();
-  var totalSaveTime = saveEnd - saveStart;
+  let saveEnd = window.performance.now();
+  let totalSaveTime = saveEnd - saveStart;
 
-  var totalLoadTime = domCompleteTime;
+  let totalLoadTime = domCompleteTime;
 
   console.log('un-rounded totalSaveTime: ', totalSaveTime);
   console.log('un-rounded totalLoadTime: ', totalLoadTime);
@@ -86,7 +86,7 @@ function afterLoadComplete(msgFromTab) {
     })
     .catch(err => {
       console.log(err);
-      var timedOut = err === messaging.MSG_TIMEOUT;
+      let timedOut = err === messaging.MSG_TIMEOUT;
       handleError(timedOut);
     });
 }

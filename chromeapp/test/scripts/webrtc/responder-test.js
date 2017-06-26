@@ -5,8 +5,9 @@ const sinon = require('sinon');
 const proxyquire = require('proxyquire');
 require('sinon-as-promised');
 
-let responder = require('../../../app/scripts/webrtc/responder');
 const sutil = require('../server/util');
+
+let responder = require('../../../app/scripts/webrtc/responder');
 
 /**
  * Manipulating the object directly leads to polluting the require cache. Any
@@ -57,9 +58,9 @@ test('onList calls sendBuffer with binary contents', function(t) {
 });
 
 test('onList rejects with error', function(t) {
-  var channel = 'i am the channel';
-  var expected = { error: 'went south' };
-  var getResponseForAllCachedPagesSpy = sinon.stub().rejects(expected);
+  let channel = 'i am the channel';
+  let expected = { error: 'went south' };
+  let getResponseForAllCachedPagesSpy = sinon.stub().rejects(expected);
 
   proxyquireResponder({
     '../server/server-api': {
@@ -79,22 +80,22 @@ test('onList rejects with error', function(t) {
 });
 
 test('onFile calls sendBuffer with file contents', function(t) {
-  var fileName = 'file-name';
-  var accessPath = 'path/to/file';
-  var msg = { request: { accessPath: accessPath } };
-  var buff = Buffer.from('file contents');
-  var channel = { testType: 'channel' };
+  let fileName = 'file-name';
+  let accessPath = 'path/to/file';
+  let msg = { request: { accessPath: accessPath } };
+  let buff = Buffer.from('file contents');
+  let channel = { testType: 'channel' };
 
-  var ccServerSpy = sinon.stub();
-  var createChannelServerSpy = sinon.stub();
+  let ccServerSpy = sinon.stub();
+  let createChannelServerSpy = sinon.stub();
   createChannelServerSpy.withArgs(channel).returns(ccServerSpy);
 
-  var sendBufferSpy = sinon.stub();
+  let sendBufferSpy = sinon.stub();
   ccServerSpy.sendBuffer = sendBufferSpy;
 
-  var getCachedFileNameFromPathSpy = sinon.stub();
+  let getCachedFileNameFromPathSpy = sinon.stub();
   getCachedFileNameFromPathSpy.withArgs(accessPath).returns(fileName);
-  var getFileContentsFromNameSpy = sinon.stub();
+  let getFileContentsFromNameSpy = sinon.stub();
   getFileContentsFromNameSpy.withArgs(fileName).resolves(buff);
 
   proxyquireResponder({
@@ -120,18 +121,18 @@ test('onFile calls sendBuffer with file contents', function(t) {
 });
 
 test('onFile rejects with error', function(t) {
-  var fileName = 'file-name';
-  var accessPath = 'path/to/file';
-  var msg = { request: { accessPath: accessPath } };
-  var channel = { testType: 'channel' };
-  var serverMock = sinon.stub();
-  var sendErrorMock = sinon.stub();
+  let fileName = 'file-name';
+  let accessPath = 'path/to/file';
+  let msg = { request: { accessPath: accessPath } };
+  let channel = { testType: 'channel' };
+  let serverMock = sinon.stub();
+  let sendErrorMock = sinon.stub();
   serverMock.sendError = sendErrorMock;
 
-  var expected = { error: 'trouble' };
+  let expected = { error: 'trouble' };
 
-  var getCachedFileNameFromPathSpy = sinon.stub().returns(fileName);
-  var getFileContentsFromNameSpy = sinon.stub();
+  let getCachedFileNameFromPathSpy = sinon.stub().returns(fileName);
+  let getFileContentsFromNameSpy = sinon.stub();
   getFileContentsFromNameSpy.withArgs(fileName).rejects(expected);
 
   proxyquireResponder({
@@ -272,16 +273,16 @@ test('onDataChannelMessageHandler routes correctly', function(t) {
 });
 
 test('onDataChannelHandler adds onmessage handler to channels', function(t) {
-  var channel = sinon.stub();
-  var event = { channel: channel };
+  let channel = sinon.stub();
+  let event = { channel: channel };
 
-  var onDataChannelMessageHandlerSpy = sinon.stub();
+  let onDataChannelMessageHandlerSpy = sinon.stub();
 
   responder.onDataChannelMessageHandler = onDataChannelMessageHandlerSpy;
 
   responder.onDataChannelHandler(event);
 
-  var msgEvent = 'message event';
+  let msgEvent = 'message event';
   channel.onmessage(msgEvent);
 
   t.deepEqual(onDataChannelMessageHandlerSpy.args[0], [channel, msgEvent]);
@@ -314,9 +315,9 @@ test('onDigest calls sendBuffer with binary contents', function(t) {
 });
 
 test('onDigest rejects with error', function(t) {
-  var channel = 'i am the channel';
-  var expected = { error: 'went south' };
-  var getResponseForAllPagesDigestSpy = sinon.stub().rejects(expected);
+  let channel = 'i am the channel';
+  let expected = { error: 'went south' };
+  let getResponseForAllPagesDigestSpy = sinon.stub().rejects(expected);
 
   proxyquireResponder({
     '../server/server-api': {

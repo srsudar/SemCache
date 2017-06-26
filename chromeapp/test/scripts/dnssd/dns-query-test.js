@@ -1,14 +1,17 @@
 'use strict';
-var test = require('tape');
-var dnsQuery = require('../../../app/scripts/dnssd/dns-query');
-var byteArray = require('../../../app/scripts/dnssd/byte-array');
+
+const test = require('tape');
+
+let dnsQuery = require('../../../app/scripts/dnssd/dns-query');
+
+const byteArray = require('../../../app/scripts/dnssd/byte-array');
 
 test('create a query', function(t) {
-  var name = 'www.example.com';
-  var queryType = 3;
-  var queryClass = 4;
+  let name = 'www.example.com';
+  let queryType = 3;
+  let queryClass = 4;
 
-  var result = new dnsQuery.DnsQuery(name, queryType, queryClass);
+  let result = new dnsQuery.DnsQuery(name, queryType, queryClass);
 
   t.equal(result.domainName, name);
   t.equal(result.queryType, queryType);
@@ -18,35 +21,35 @@ test('create a query', function(t) {
 });
 
 test('serializes and deserializes correctly', function(t) {
-  var domainName = '_semcache._http.local';
-  var queryType = 1;
-  var queryClass = 2;
+  let domainName = '_semcache._http.local';
+  let queryType = 1;
+  let queryClass = 2;
 
-  var expected = new dnsQuery.DnsQuery(domainName, queryType, queryClass);
+  let expected = new dnsQuery.DnsQuery(domainName, queryType, queryClass);
 
-  var serialized = expected.serialize();
+  let serialized = expected.serialize();
 
-  var actual = dnsQuery.createQueryFromByteArray(serialized);
+  let actual = dnsQuery.createQueryFromByteArray(serialized);
 
   t.deepEqual(actual, expected);
   t.end(); 
 });
 
 test('createQueryFromByteArray succeeds when startByte != 0', function(t) {
-  var expected = new dnsQuery.DnsQuery('mydomain.local', 1, 2);
-  var serialized = expected.serialize();
+  let expected = new dnsQuery.DnsQuery('mydomain.local', 1, 2);
+  let serialized = expected.serialize();
 
-  var byteArr = new byteArray.ByteArray();
+  let byteArr = new byteArray.ByteArray();
 
   // Add 5 meaningless bytes.
-  var offset = 5;
-  for (var i = 0; i < offset; i++) {
+  let offset = 5;
+  for (let i = 0; i < offset; i++) {
     byteArr.push(i, 1);
   }
 
   byteArr.append(serialized);
 
-  var actual = dnsQuery.createQueryFromByteArray(byteArr, offset);
+  let actual = dnsQuery.createQueryFromByteArray(byteArr, offset);
   t.deepEqual(actual, expected);
   t.end();
 });

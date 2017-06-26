@@ -14,12 +14,12 @@
  * @return {Array.<Object>} Array of objects as returned by getPeerCacheNames
  */
 exports.createCacheNames = function(serviceType, numCaches) {
-  var baseName = 'Cache No ';
-  var result = [];
-  for (var i = 0; i < numCaches; i++) {
-    var friendlyName = baseName + i;
-    var fullName = friendlyName + '.' + serviceType + '.local';
-    var cacheName = {
+  let baseName = 'Cache No ';
+  let result = [];
+  for (let i = 0; i < numCaches; i++) {
+    let friendlyName = baseName + i;
+    let fullName = friendlyName + '.' + serviceType + '.local';
+    let cacheName = {
       serviceType: serviceType,
       serviceName: fullName,
       friendlyName: friendlyName
@@ -56,8 +56,8 @@ exports.genCacheInfos = function*(num) {
  * @return {Array.<Object>}
  */
 exports.createCacheObjsFromNames = function(cacheNames) {
-  var result = [];
-  for (var i = 0; i < cacheNames.length; i++) {
+  let result = [];
+  for (let i = 0; i < cacheNames.length; i++) {
     let cacheName = cacheNames[i];
     let domain = 'domain' + i + '.local';
     let ipAddress = [i, i, i, i].join('.');
@@ -84,8 +84,8 @@ exports.createCacheObj = function(
   listUrl,
   fullServiceName
 ) {
-  var instanceName = friendlyName + '._semcache._tcp.local';
-  var result = {
+  let instanceName = friendlyName + '._semcache._tcp.local';
+  let result = {
     domainName: domainName,
     friendlyName: friendlyName,
     instanceName: instanceName,

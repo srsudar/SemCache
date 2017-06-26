@@ -1,9 +1,9 @@
 /* global WSC, DummyHandler */
 'use strict';
 
-var api = require('./server-api');
-var handlers = require('./handlers');
-var evalHandlers = require('./evaluation-handler');
+const api = require('./server-api');
+const handlers = require('./handlers');
+const evalHandlers = require('./evaluation-handler');
 
 function startServer(host, port, endpointHandlers) {
   window.httpServer = new WSC.WebApplication({
@@ -37,9 +37,9 @@ exports.start = function(host, port) {
     return;
   }
 
-  var endpoints = api.getApiEndpoints();
+  let endpoints = api.getApiEndpoints();
 
-  var endpointHandlers = [
+  let endpointHandlers = [
     [
       endpoints.listPageCache,
       handlers.ListCachedPagesHandler

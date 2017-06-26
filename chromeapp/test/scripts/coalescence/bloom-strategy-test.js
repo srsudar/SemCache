@@ -53,14 +53,14 @@ function createProcessedBlooms() {
 }
 
 test('initialize rejects if something goes wrong', function(t) {
-  var expectedErr = { msg: 'browse rejected' };
+  let expectedErr = { msg: 'browse rejected' };
   proxyquireBloom({
     '../dnssd/dns-sd-semcache': {
       browseForSemCacheInstances: sinon.stub().rejects(expectedErr)
     }
   });
 
-  var bloom = new bloomStrat.BloomStrategy();
+  let bloom = new bloomStrat.BloomStrategy();
 
   t.false(bloom.isInitializing());
   t.false(bloom.isInitialized());
@@ -80,10 +80,10 @@ test('initialize rejects if something goes wrong', function(t) {
 
 test('initialize resolves on success', function(t) {
   let peerInfos = createPeerInfos();
-  var processedBlooms = createProcessedBlooms();
+  let processedBlooms = createProcessedBlooms();
 
-  var peerAccessor = 'I am a fake peer accessor';
-  var removeOwnInfoStub = sinon.stub().resolves(peerInfos);
+  let peerAccessor = 'I am a fake peer accessor';
+  let removeOwnInfoStub = sinon.stub().resolves(peerInfos);
 
   proxyquireBloom({
     '../dnssd/dns-sd-semcache': {
@@ -97,7 +97,7 @@ test('initialize resolves on success', function(t) {
     }
   });
 
-  var bloom = new bloomStrat.BloomStrategy();
+  let bloom = new bloomStrat.BloomStrategy();
 
   let getAndProcessStub = sinon.stub();
   getAndProcessStub
@@ -108,7 +108,7 @@ test('initialize resolves on success', function(t) {
   // Rather than use a stub to monitor whether or not the blooms have been
   // set, we're going to use a function so that we can also assert that the
   // isInitializing() function is set correctly.
-  var moduleBlooms = null;
+  let moduleBlooms = null;
   bloom.setBloomFilters = function(passedBlooms) {
     moduleBlooms = passedBlooms;
     t.true(bloom.isInitializing());
@@ -151,11 +151,11 @@ test('getAndProcessBloomFilters returns empty array if no peers', function(t) {
 
 
 test('getAndProcessBloomFilters resolves all success', function(t) {
-  var peerInfos = createPeerInfos();
-  var bloomFilters = createBloomFilters();
+  let peerInfos = createPeerInfos();
+  let bloomFilters = createBloomFilters();
   bloomFilters = bloomFilters.map(bf => bf.serialize());
 
-  var getCacheBloomStub = sinon.stub();
+  let getCacheBloomStub = sinon.stub();
   getCacheBloomStub.withArgs(
     pifCommon.createListParams(
       peerInfos[0].ipAddress, peerInfos[0].port, null
@@ -167,12 +167,12 @@ test('getAndProcessBloomFilters resolves all success', function(t) {
     )
   ).resolves(bloomFilters[1]);
   
-  var peerInterface = {
+  let peerInterface = {
     getCacheBloomFilter: getCacheBloomStub
   };
 
-  var expected = createProcessedBlooms();
-  var bloom = new bloomStrat.BloomStrategy();
+  let expected = createProcessedBlooms();
+  let bloom = new bloomStrat.BloomStrategy();
 
   bloom.getAndProcessBloomFilters(peerInterface, peerInfos)
   .then(actual => {
@@ -190,7 +190,7 @@ test('getAndProcessBloomFilters resolves last rejects', function(t) {
   let bloomFilters = createBloomFilters();
   bloomFilters = bloomFilters.map(bf => bf.serialize());
 
-  var getCacheBloomStub = sinon.stub();
+  let getCacheBloomStub = sinon.stub();
   getCacheBloomStub.withArgs(
     pifCommon.createListParams(
       peerInfos[0].ipAddress, peerInfos[0].port, null
@@ -202,14 +202,14 @@ test('getAndProcessBloomFilters resolves last rejects', function(t) {
     )
   ).rejects({ msg: 'an error that will be swallowed' });
   
-  var peerInterface = {
+  let peerInterface = {
     getCacheBloomFilter: getCacheBloomStub
   };
 
-  var expected = [
+  let expected = [
     new coalObjects.PeerBloomFilter(peerInfos[0], bloomFilters[0])
   ];
-  var bloom = new bloomStrat.BloomStrategy();
+  let bloom = new bloomStrat.BloomStrategy();
 
   bloom.getAndProcessBloomFilters(peerInterface, peerInfos)
   .then(actual => {
@@ -223,13 +223,13 @@ test('getAndProcessBloomFilters resolves last rejects', function(t) {
 });
 
 test('performQuery returns empty array if no matches', function(t) {
-  var bloom1 = sinon.stub();
+  let bloom1 = sinon.stub();
   bloom1.performQueryForPage = sinon.stub().returns(false);
-  var bloom2 = sinon.stub();
+  let bloom2 = sinon.stub();
   bloom2.performQueryForPage = sinon.stub().returns(false);
 
-  var blooms = [bloom1, bloom2];
-  var bloom = new bloomStrat.BloomStrategy();
+  let blooms = [bloom1, bloom2];
+  let bloom = new bloomStrat.BloomStrategy();
   bloom.setBloomFilters(blooms);
   bloom.isInitialized = sinon.stub().returns(true);
 
@@ -245,20 +245,20 @@ test('performQuery returns empty array if no matches', function(t) {
 });
 
 test('performQuery correct with extant pages', function(t) {
-  var peerInfos = createPeerInfos();
+  let peerInfos = createPeerInfos();
 
   let peer1 = peerInfos[0];
   let peer2 = peerInfos[1];
 
   // We want to handle duplicates as well as single results.
-  var urlOnly1 = 'http://onbloom1.com';
-  var urlOnly2 = 'http://onbloom2.com';
-  var urlNeither = 'http://inNoblooms.com';
-  var urlBoth = 'http://inBothblooms.com';
+  let urlOnly1 = 'http://onbloom1.com';
+  let urlOnly2 = 'http://onbloom2.com';
+  let urlNeither = 'http://inNoblooms.com';
+  let urlBoth = 'http://inBothblooms.com';
 
-  var urls = [ urlOnly1, urlOnly2, urlNeither, urlBoth ];
+  let urls = [ urlOnly1, urlOnly2, urlNeither, urlBoth ];
 
-  var urlOnly1Result = [
+  let urlOnly1Result = [
     {
       serviceName: peer1.instanceName,
       friendlyName: peer1.friendlyName,
@@ -266,7 +266,7 @@ test('performQuery correct with extant pages', function(t) {
     },
   ];
 
-  var urlOnly2Result = [
+  let urlOnly2Result = [
     {
       serviceName: peer2.instanceName,
       friendlyName: peer2.friendlyName,
@@ -274,7 +274,7 @@ test('performQuery correct with extant pages', function(t) {
     }
   ];
 
-  var urlBothResult = [
+  let urlBothResult = [
     {
       serviceName: peer1.instanceName,
       friendlyName: peer1.friendlyName,
@@ -287,7 +287,7 @@ test('performQuery correct with extant pages', function(t) {
     }
   ];
 
-  var expected = {};
+  let expected = {};
   expected[urlOnly1] = urlOnly1Result;
   expected[urlOnly2] = urlOnly2Result;
   expected[urlBoth] = urlBothResult;
@@ -310,7 +310,7 @@ test('performQuery correct with extant pages', function(t) {
       performQueryForPage: performQueryTwoStub
     }
   ];
-  var bloom = new bloomStrat.BloomStrategy();
+  let bloom = new bloomStrat.BloomStrategy();
   bloom.setBloomFilters(blooms);
   bloom.isInitialized = sinon.stub().returns(true);
 
@@ -326,13 +326,13 @@ test('performQuery correct with extant pages', function(t) {
 });
 
 test('performQuery rejects with Error', function(t) {
-  var expected = { msg: 'I am an error' };
+  let expected = { msg: 'I am an error' };
 
-  var bloomStub = { 
+  let bloomStub = { 
     performQueryForPage: sinon.stub().throws(expected)
   };
 
-  var bloom = new bloomStrat.BloomStrategy();
+  let bloom = new bloomStrat.BloomStrategy();
   bloom.setBloomFilters([ bloomStub ]);
 
   bloom.performQuery([ 'http://woot.com' ])
@@ -358,7 +358,7 @@ test('reset restores state', function(t) {
       removeOwnInfo: sinon.stub().resolves()
     }
   });
-  var bloom = new bloomStrat.BloomStrategy();
+  let bloom = new bloomStrat.BloomStrategy();
   bloom.getAndProcessBloomFilters = sinon.stub().resolves(['a']);
   bloom.setBloomFilters = sinon.stub();
 

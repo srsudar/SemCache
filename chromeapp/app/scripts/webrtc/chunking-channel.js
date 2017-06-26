@@ -1,7 +1,7 @@
 'use strict';
 
-var commonChannel = require('./common-channel');
-var protocol = require('./protocol');
+const commonChannel = require('./common-channel');
+const protocol = require('./protocol');
 
 /**
  * The size of chunks that will be sent over WebRTC at a given time. This is
@@ -60,8 +60,8 @@ class ChunkingChannelServer extends commonChannel.BaseServer {
         // if an ack comes back very quickly (impossibly quickly except in test
         // conditions?) you can send the same chunk twice.
         this.chunksSent++;
-        var chunk = item.value;
-        var chunkMsg = protocol.createSuccessMessage(chunk);
+        let chunk = item.value;
+        let chunkMsg = protocol.createSuccessMessage(chunk);
         this.channel.send(chunkMsg.asBuffer());
       } catch (err) {
         console.log('Error sending chunk: ', err);

@@ -1,15 +1,16 @@
 /*jshint esnext:true*/
 'use strict';
+
 const test = require('tape');
 const proxyquire = require('proxyquire');
 const sinon = require('sinon');
 require('sinon-as-promised');
 
-let api = require('../../../app/scripts/popup/popup-api');
-
 const util = require('../test-util');
 // Get this from the app to generate objects like the app expects.
 const mutil = require('../../../../chromeapp/test/scripts/extension-bridge/test-util');
+
+let api = require('../../../app/scripts/popup/popup-api');
 
 /**
  * Proxyquire the api object with proxies passed as the proxied modules.
@@ -67,9 +68,9 @@ test('saveCurrentPage resolves if saveTab resolves', function(t) {
 });
 
 test('saveCurrentPage rejects', function(t) {
-  var expected = { msg: 'went wrong as expected' };
+  let expected = { msg: 'went wrong as expected' };
 
-  var getActiveTabSpy = sinon.stub().rejects(expected);
+  let getActiveTabSpy = sinon.stub().rejects(expected);
   
   proxyquireApi({
     '../util/util': {
@@ -89,13 +90,13 @@ test('saveCurrentPage rejects', function(t) {
 });
 
 test('waitForCurrentPageToLoad calls sendMessage and resolves', function(t) {
-  var activeTab = { id: 156 };
-  var getActiveTabSpy = sinon.stub().resolves(activeTab);
-  var messageForContentScript = { hello: 'how long did it take you to load?' };
-  var expected = { msg: 'I come from the content script' };
+  let activeTab = { id: 156 };
+  let getActiveTabSpy = sinon.stub().resolves(activeTab);
+  let messageForContentScript = { hello: 'how long did it take you to load?' };
+  let expected = { msg: 'I come from the content script' };
 
-  var sendArgs = [];
-  var sendMessageSpy = function(tabId, message, callback) {
+  let sendArgs = [];
+  let sendMessageSpy = function(tabId, message, callback) {
     sendArgs.push(tabId);
     sendArgs.push(message);
     sendArgs.push(callback);
@@ -213,8 +214,8 @@ test('openCachedPage calls open and resolves', function(t) {
   let serviceName = 'heyo';
   let href = 'foobar.com';
 
-  var expected = { msg: 'hello from app' };
-  var sendMessageSpy = sinon.stub();
+  let expected = { msg: 'hello from app' };
+  let sendMessageSpy = sinon.stub();
   sendMessageSpy
     .withArgs('popup', serviceName, href)
     .resolves(expected);
@@ -237,11 +238,11 @@ test('openCachedPage calls open and resolves', function(t) {
 });
 
 test('openCachedPage rejects if send message rejects', function(t) {
-  var cachedPage = {
+  let cachedPage = {
     accessPath: 'getMeHere'
   };
-  var expected = { msg: 'big trubs!' };
-  var sendMessageSpy = sinon.stub().withArgs(cachedPage).rejects(expected);
+  let expected = { msg: 'big trubs!' };
+  let sendMessageSpy = sinon.stub().withArgs(cachedPage).rejects(expected);
 
   proxyquireApi({
     '../app-bridge/messaging': {

@@ -1,11 +1,12 @@
 /*jshint esnext:true*/
 'use strict';
-var test = require('tape');
-var proxyquire = require('proxyquire');
-var sinon = require('sinon');
+
+const test = require('tape');
+const proxyquire = require('proxyquire');
+const sinon = require('sinon');
 require('sinon-as-promised');
 
-var settings = require('../../app/scripts/settings');
+let settings = require('../../app/scripts/settings');
 
 /**
  * Manipulating the object directly leads to polluting the require cache. Any
@@ -37,11 +38,11 @@ function proxyquireSettings(proxies, localStorageProxies, chromefsProxies) {
  * @param {Tape} t the test param
  */
 function helperGetCallsInternalsForKey(settings, getFn, key, t) {
-  var expected = 'value for call to get';
-  var getStub = sinon.stub().returns(expected);
+  let expected = 'value for call to get';
+  let getStub = sinon.stub().returns(expected);
   settings.get = getStub;
   
-  var actual = getFn();
+  let actual = getFn();
   t.true(getStub.calledOnce);
   t.equal(actual, expected);
 }
@@ -56,8 +57,8 @@ function helperGetCallsInternalsForKey(settings, getFn, key, t) {
  * @param {Tape} t the test param
  */
 function helperSetCallsInternalsForKey(settings, setFn, key, value, t) {
-  var expected = {the: 'settings resolved'};
-  var setStub = sinon.stub().resolves(expected);
+  let expected = {the: 'settings resolved'};
+  let setStub = sinon.stub().resolves(expected);
   settings.set = setStub;
 
   setFn(value)
@@ -74,40 +75,40 @@ function helperSetCallsInternalsForKey(settings, setFn, key, value, t) {
 }
 
 test('createNameSpacedKey returns correct value', function(t) {
-  var key = 'someKey';
-  var expected = 'setting_someKey';
-  var actual = settings.createNameSpacedKey(key);
+  let key = 'someKey';
+  let expected = 'setting_someKey';
+  let actual = settings.createNameSpacedKey(key);
 
   t.equal(actual, expected);
   t.end();
 });
 
 test('removeNameSpaceFromKey returns user-friendly key', function(t) {
-  var nameSpaced = 'setting_mySpecialKey';
-  var expected = 'mySpecialKey';
-  var actual = settings.removeNameSpaceFromKey(nameSpaced);
+  let nameSpaced = 'setting_mySpecialKey';
+  let expected = 'mySpecialKey';
+  let actual = settings.removeNameSpaceFromKey(nameSpaced);
   t.equal(actual, expected);
   t.end();
 });
 
 test('set calls storage.set and resolves with updated cache', function(t) {
-  var key = 'myKey';
-  var oldSettings = {
+  let key = 'myKey';
+  let oldSettings = {
     bar: 'bar value',
   };
   oldSettings[key] = 'old value';
 
-  var newValue = 'the new value';
+  let newValue = 'the new value';
 
-  var expectedSettingsObj = {
+  let expectedSettingsObj = {
     bar: 'bar value'
   };
   expectedSettingsObj[key] = newValue;
 
-  var expectedKvPair = {};
+  let expectedKvPair = {};
   expectedKvPair['setting_' + key] = newValue;
 
-  var setSpy = sinon.stub().resolves();
+  let setSpy = sinon.stub().resolves();
 
   proxyquireSettings({}, { set: setSpy });
   settings.SETTINGS_OBJ = oldSettings;
@@ -129,7 +130,7 @@ test('set calls storage.set and resolves with updated cache', function(t) {
 });
 
 test('set rejects with error', function(t) {
-  var expected = { error: 'much suffering' };
+  let expected = { error: 'much suffering' };
   proxyquireSettings({}, { set: sinon.stub().rejects(expected) });
   settings.set()
   .then(res => {
@@ -145,36 +146,36 @@ test('set rejects with error', function(t) {
 });
 
 test('get returns cached value if present', function(t) {
-  var settingsObj = {
+  let settingsObj = {
     myKey: 'omg its real!'
   };
 
   settings.getSettingsObj = sinon.stub().returns(settingsObj);
 
-  var actual = settings.get('myKey');
+  let actual = settings.get('myKey');
   t.equal(actual, settingsObj.myKey);
   t.end();
   resetSettings();
 });
 
 test('get returns null if not present', function(t) {
-  var settingsObj = {
+  let settingsObj = {
     bar: 'much bar!'
   };
 
   settings.getSettingsObj = sinon.stub().returns(settingsObj);
 
-  var actual = settings.get('fakeKey');
+  let actual = settings.get('fakeKey');
   t.equal(actual, null);
   t.end();
   resetSettings();
 });
 
 test('getAllSettingsKeys has all keys', function(t) {
-  var actual = settings.getAllSettingKeys();
+  let actual = settings.getAllSettingKeys();
 
-  var contains = function(arr, val) {
-    var index = arr.indexOf(val);
+  let contains = function(arr, val) {
+    let index = arr.indexOf(val);
     t.notEqual(index, -1);
   };
 
@@ -188,17 +189,17 @@ test('getAllSettingsKeys has all keys', function(t) {
 });
 
 test('init initializes cache', function(t) {
-  var settingKeys = ['setting_foo', 'setting_bar'];
-  var rawSettings = {
+  let settingKeys = ['setting_foo', 'setting_bar'];
+  let rawSettings = {
     'setting_foo': 'foo_value',
     'setting_bar': 1234
   };
-  var processedSettings = {
+  let processedSettings = {
     'foo': 'foo_value',
     'bar': 1234
   };
-  var getStub = sinon.stub().resolves(rawSettings);
-  var getAllKeysStub = sinon.stub().returns(settingKeys);
+  let getStub = sinon.stub().resolves(rawSettings);
+  let getAllKeysStub = sinon.stub().returns(settingKeys);
 
   proxyquireSettings({}, { get: getStub });
   settings.getAllSettingKeys = getAllKeysStub;
@@ -221,7 +222,7 @@ test('init initializes cache', function(t) {
 });
 
 test('init rejects if error', function(t) {
-  var expected = { error: 'strug' };
+  let expected = { error: 'strug' };
   proxyquireSettings({}, { get: sinon.stub().rejects(expected) });
   settings.init()
   .then(res => {
@@ -286,12 +287,12 @@ test('custom getters call internals', function(t) {
 });
 
 test('getTransportMethod defaults to http', function(t) {
-  var key = 'transportMethod';
-  var getSpy = sinon.stub();
+  let key = 'transportMethod';
+  let getSpy = sinon.stub();
   getSpy.withArgs(key).returns(null);
   settings.get = getSpy;
 
-  var actual = settings.getTransportMethod();
+  let actual = settings.getTransportMethod();
   t.equal(actual, 'http');
   t.deepEqual(getSpy.args[0], [key]);
   t.end();
@@ -362,16 +363,16 @@ test('custom setters call internals', function(t) {
 });
 
 test('promptAndSetNewBaseDir calls storage APIs', function(t) {
-  var chosenDir = 'chosen dir';
-  var dirId = 'retained id';
-  var displayPath = 'the path of the chosend dir';
+  let chosenDir = 'chosen dir';
+  let dirId = 'retained id';
+  let displayPath = 'the path of the chosend dir';
 
-  var setBaseCacheDirSpy = sinon.spy();
-  var promptForDirSpy = sinon.stub().resolves(chosenDir);
-  var retainEntrySpy = sinon.stub().returns(dirId);
-  var getDisplayPathSpy = sinon.stub().resolves(displayPath);
-  var setBaseDirIdSpy = sinon.spy();
-  var setBaseDirPathSpy = sinon.spy();
+  let setBaseCacheDirSpy = sinon.spy();
+  let promptForDirSpy = sinon.stub().resolves(chosenDir);
+  let retainEntrySpy = sinon.stub().returns(dirId);
+  let getDisplayPathSpy = sinon.stub().resolves(displayPath);
+  let setBaseDirIdSpy = sinon.spy();
+  let setBaseDirPathSpy = sinon.spy();
 
   proxyquireSettings(
     {
@@ -389,7 +390,7 @@ test('promptAndSetNewBaseDir calls storage APIs', function(t) {
   settings.setBaseDirId = setBaseDirIdSpy;
   settings.setBaseDirPath = setBaseDirPathSpy;
 
-  var expected = {
+  let expected = {
     baseDirId: dirId,
     baseDirPath: displayPath
   };
@@ -413,7 +414,7 @@ test('promptAndSetNewBaseDir calls storage APIs', function(t) {
 });
 
 test('promptAndSetNewBaseDir rejects if error', function(t) {
-  var expected = { error: 'morals arent worth what a pig would spit' };
+  let expected = { error: 'morals arent worth what a pig would spit' };
   proxyquireSettings({
     './persistence/file-system': {
         promptForDir: sinon.stub().rejects(expected)

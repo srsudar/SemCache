@@ -33,13 +33,13 @@ exports.DEBUG = false;
  */
 exports.addPageToCache = function(cpdisk) {
   return new Promise(function(resolve, reject) {
-    var fileName = exports.createFileNameForPage(
+    let fileName = exports.createFileNameForPage(
       cpdisk.captureHref,
       cpdisk.captureDate
     );
     cpdisk.filePath = fileName;
 
-    var heldEntry = null;
+    let heldEntry = null;
     database.addPageToDb(cpdisk)
     .then(() => {
       return fileSystem.getFileForWritingCachedPage(cpdisk.filePath);

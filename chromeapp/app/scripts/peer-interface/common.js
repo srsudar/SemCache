@@ -1,6 +1,6 @@
 'use strict';
 
-var util = require('../util');
+const util = require('../util');
 
 /**
  * Code shared across the peer-interface implementations.
@@ -10,8 +10,8 @@ var util = require('../util');
  * The path to the HTTP endpoint that serves the digest. Should match the value
  * in the server/server-api module.
  */
-let PATH_GET_PAGE_DIGEST = 'page_digest';
-let PATH_GET_BLOOM_FILTER = 'bloom_filter';
+const PATH_GET_PAGE_DIGEST = 'page_digest';
+const PATH_GET_BLOOM_FILTER = 'bloom_filter';
 
 /**
  * Returns the IP address, extracting if necessary.
@@ -22,7 +22,7 @@ let PATH_GET_BLOOM_FILTER = 'bloom_filter';
  * @return {string}
  */
 function getIpAddress(ipaddr, url) {
-  var result = ipaddr;
+  let result = ipaddr;
   if (!result) {
     result = util.getHostFromUrl(url);
   }
@@ -38,7 +38,7 @@ function getIpAddress(ipaddr, url) {
  * @return {integer}
  */
 function getPort(port, url) {
-  var result = port;
+  let result = port;
   if (!result) {
     result = util.getPortFromUrl(url);
   }
@@ -73,9 +73,9 @@ exports.createListParams = function(ipaddr, port, listUrl) {
   port = getPort(port, listUrl);
 
   // Create the digest URL.
-  var digestUrl = ['http://', ipaddr, ':', port, '/', exports.getDigestPath()]
+  let digestUrl = ['http://', ipaddr, ':', port, '/', exports.getDigestPath()]
     .join('');
-  var bloomUrl = [
+  let bloomUrl = [
     'http://',
     ipaddr,
     ':',

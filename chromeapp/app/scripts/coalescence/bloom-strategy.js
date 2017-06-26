@@ -1,10 +1,10 @@
 'use strict';
 
-var dnssdSem = require('../dnssd/dns-sd-semcache');
-var objects = require('./objects');
-var peerIf = require('../peer-interface/common');
-var peerIfMgr = require('../peer-interface/manager');
-var util = require('./util');
+const dnssdSem = require('../dnssd/dns-sd-semcache');
+const objects = require('./objects');
+const peerIf = require('../peer-interface/common');
+const peerIfMgr = require('../peer-interface/manager');
+const util = require('./util');
 
 /**
  * This module is responsible for the digest strategy of cache coalescence.
@@ -106,7 +106,7 @@ exports.BloomStrategy.prototype.initialize = function() {
     .then(peerInfos => {
       return util.removeOwnInfo(peerInfos);
     }).then(peerInfos => {
-      var peerAccessor = peerIfMgr.getPeerAccessor();
+      let peerAccessor = peerIfMgr.getPeerAccessor();
       return self.getAndProcessBloomFilters(peerAccessor, peerInfos);
     })
     // This code is for evaluation mode.
@@ -158,16 +158,16 @@ exports.BloomStrategy.prototype.getAndProcessBloomFilters = function(
       resolve([]);
       return;
     }
-    var pendingResponses = peerInfos.length;
-    var result = [];
+    let pendingResponses = peerInfos.length;
+    let result = [];
     peerInfos.forEach(peerInfo => {
-      var params = peerIf.createListParams(
+      let params = peerIf.createListParams(
         peerInfo.ipAddress, peerInfo.port, null
       );
       peerInterface.getCacheBloomFilter(params)
       .then(bloomFilter => {
         pendingResponses--;
-        var peerBf = new objects.PeerBloomFilter(peerInfo, bloomFilter);
+        let peerBf = new objects.PeerBloomFilter(peerInfo, bloomFilter);
         result.push(peerBf);
         if (pendingResponses === 0) {
           resolve(result);
@@ -209,11 +209,11 @@ exports.BloomStrategy.prototype.performQuery = function(urls) {
   return new Promise(function(resolve, reject) {
     Promise.resolve()
     .then(() => {
-      var result = {};
+      let result = {};
       urls.forEach(url => {
-        var copiesForUrl = [];
+        let copiesForUrl = [];
         self.BLOOM_FILTERS.forEach(bloomFilter => {
-          var isPresent = bloomFilter.performQueryForPage(url);
+          let isPresent = bloomFilter.performQueryForPage(url);
           if (isPresent) {
             let info = {
               friendlyName: bloomFilter.peerInfo.friendlyName,

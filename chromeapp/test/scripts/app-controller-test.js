@@ -1,8 +1,9 @@
 /*jshint esnext:true*/
 'use strict';
-var test = require('tape');
-var proxyquire = require('proxyquire');
-var sinon = require('sinon');
+
+const test = require('tape');
+const proxyquire = require('proxyquire');
+const sinon = require('sinon');
 require('sinon-as-promised');
 
 
@@ -151,18 +152,18 @@ test('saveMhtmlAndOpen rejects if error', function(t) {
 });
 
 test('getListFromService resolves with json', function(t) {
-  var serviceName = 'hello.semcache.local';
-  var cacheInfo = {
+  let serviceName = 'hello.semcache.local';
+  let cacheInfo = {
     ipAddress: '1.2.3.4',
     port: 8866,
     listUrl: 'http://peer/list.json'
   };
-  var expected = { cachedPages: ['page1', 'page2'] };
-  var listParams = ifCommon.createListParams(
+  let expected = { cachedPages: ['page1', 'page2'] };
+  let listParams = ifCommon.createListParams(
     cacheInfo.ipAddress, cacheInfo.port, cacheInfo.listUrl
   );
 
-  var peerAccessorStub = sinon.stub();
+  let peerAccessorStub = sinon.stub();
 
   let getListStub = sinon.stub();
   getListStub.withArgs(listParams).resolves(expected);
@@ -193,8 +194,8 @@ test('getListFromService resolves with json', function(t) {
 });
 
 test('getListFromService rejects with error', function(t) {
-  var serviceName = 'hello.semcache.local';
-  var expected = { error: 'getPeerAccessor failed' };
+  let serviceName = 'hello.semcache.local';
+  let expected = { error: 'getPeerAccessor failed' };
 
   proxyquireAppc({
     './peer-interface/manager': {
@@ -232,17 +233,17 @@ test('startServersAndRegisters rejects if missing host', function(t) {
 });
 
 test('startServersAndRegister rejects if register rejects', function(t) {
-  var expectedErr = {message: 'reject in test plz'};
-  var registerSemCacheSpy = sinon.stub().rejects(expectedErr);
-  var iface = {
+  let expectedErr = {message: 'reject in test plz'};
+  let registerSemCacheSpy = sinon.stub().rejects(expectedErr);
+  let iface = {
     address: '4.4.4.4',
     port: 8888
   };
 
-  var instanceName = 'my instance';
-  var port = '1234';
-  var baseDirId = 'zyx';
-  var hostName = 'laptop.local';
+  let instanceName = 'my instance';
+  let port = '1234';
+  let baseDirId = 'zyx';
+  let hostName = 'laptop.local';
 
   proxyquireAppc({
     './settings': {
@@ -280,12 +281,12 @@ test('startServersAndRegister rejects if register rejects', function(t) {
 });
 
 test('startServersAndRegister rejects if no ifaces', function(t) {
-  var expectedErr = 'No network interfaces in dns-controller';
+  let expectedErr = 'No network interfaces in dns-controller';
 
-  var instanceName = 'my instance';
-  var port = '1234';
-  var baseDirId = 'zyx';
-  var hostName = 'laptop.local';
+  let instanceName = 'my instance';
+  let port = '1234';
+  let baseDirId = 'zyx';
+  let hostName = 'laptop.local';
 
   proxyquireAppc({
     './settings': {
@@ -317,22 +318,22 @@ test('startServersAndRegister rejects if no ifaces', function(t) {
 });
 
 test('startServersAndRegister resolves if register resolves', function(t) {
-  var expectedRegisterResult = {foo: 'foo'};
-  var instanceName = 'my instance';
-  var port = '1234';
-  var baseDirId = 'zyx';
-  var hostName = 'laptop.local';
+  let expectedRegisterResult = {foo: 'foo'};
+  let instanceName = 'my instance';
+  let port = '1234';
+  let baseDirId = 'zyx';
+  let hostName = 'laptop.local';
 
-  var iface = {
+  let iface = {
     address: '1.2.3.fromDnsController',
     port: port
   };
 
-  var registerSemCacheSpy = sinon.stub().resolves(expectedRegisterResult);
-  var httpStartSpy = sinon.spy();
-  var dnsControllerStartSpy = sinon.stub().resolves();
-  var getIPv4InterfacesSpy = sinon.stub().returns([iface]);
-  var updateCachesForSettingsSpy = sinon.stub();
+  let registerSemCacheSpy = sinon.stub().resolves(expectedRegisterResult);
+  let httpStartSpy = sinon.spy();
+  let dnsControllerStartSpy = sinon.stub().resolves();
+  let getIPv4InterfacesSpy = sinon.stub().returns([iface]);
+  let updateCachesForSettingsSpy = sinon.stub();
 
   proxyquireAppc({
     './settings': {
@@ -383,15 +384,15 @@ test('startServersAndRegister resolves if register resolves', function(t) {
 });
 
 test('getListUrlForSelf is sensible', function(t) {
-  var iface = {
+  let iface = {
     address: '123.4.5.67',
     port: 7161
   };
   
   appc.getListeningHttpInterface = sinon.stub().returns(iface);
 
-  var expected = 'http://123.4.5.67:7161/list_pages';
-  var actual = appc.getListUrlForSelf();
+  let expected = 'http://123.4.5.67:7161/list_pages';
+  let actual = appc.getListUrlForSelf();
   t.equal(actual, expected);
   t.end();
   resetAppController();
@@ -402,11 +403,11 @@ test('getOwnCache returns correct info', function(t) {
   let expected = testUtil.genCacheInfos(1).next().value;
   expected.listUrl = listUrl;
   
-  var getInstanceNameSpy = sinon.stub().returns(expected.friendlyName);
-  var getServerPortSpy = sinon.stub().returns(expected.port);
-  var getHostNameSpy = sinon.stub().returns(expected.domainName);
-  var getHttpIfaceSpy = sinon.stub().returns({ address: expected.ipAddress });
-  var getListUrlSpy = sinon.stub().returns(expected.listUrl);
+  let getInstanceNameSpy = sinon.stub().returns(expected.friendlyName);
+  let getServerPortSpy = sinon.stub().returns(expected.port);
+  let getHostNameSpy = sinon.stub().returns(expected.domainName);
+  let getHttpIfaceSpy = sinon.stub().returns({ address: expected.ipAddress });
+  let getListUrlSpy = sinon.stub().returns(expected.listUrl);
 
   proxyquireAppc({
     './settings': {
@@ -419,7 +420,7 @@ test('getOwnCache returns correct info', function(t) {
     }
   });
   appc.getListeningHttpInterface = getHttpIfaceSpy;
-  var actual = appc.getOwnCache();
+  let actual = appc.getOwnCache();
 
   t.deepEqual(actual, expected);
   t.end();
@@ -427,31 +428,31 @@ test('getOwnCache returns correct info', function(t) {
 });
 
 test('getOwnCacheName correct', function(t) {
-  var friendlyName = 'Sam Cache';
-  var fullName = 'Sam Cache._semcache._tcp.local';
-  var serviceType = '_semcache._tcp';
+  let friendlyName = 'Sam Cache';
+  let fullName = 'Sam Cache._semcache._tcp.local';
+  let serviceType = '_semcache._tcp';
 
-  var expected = {
+  let expected = {
     serviceType: serviceType,
     friendlyName: friendlyName,
     serviceName: fullName
   };
 
-  var getInstanceNameSpy = sinon.stub().returns(friendlyName);
+  let getInstanceNameSpy = sinon.stub().returns(friendlyName);
   proxyquireAppc({
     './settings': {
       getInstanceName: getInstanceNameSpy,
     }
   });
 
-  var actual = appc.getOwnCacheName();
+  let actual = appc.getOwnCacheName();
   t.deepEqual(expected, actual);
   t.end();
 });
 
 test('getPeerCacheNames does not query network if not started', function(t) {
   appc.SERVERS_STARTED = false;
-  var expected = [];
+  let expected = [];
 
   appc.getPeerCacheNames()
   .then(actual => {
@@ -467,14 +468,14 @@ test('getPeerCacheNames does not query network if not started', function(t) {
 });
 
 test('getPeerCacheNames does not query network if no network', function(t) {
-  var cacheName = { friendlyName: 'my name' };
-  var getOwnCacheNameSpy = sinon.stub().returns(cacheName);
+  let cacheName = { friendlyName: 'my name' };
+  let getOwnCacheNameSpy = sinon.stub().returns(cacheName);
 
   appc.SERVERS_STARTED = true;
   appc.getOwnCacheName = getOwnCacheNameSpy;
   appc.networkIsActive = sinon.stub().returns(false);
 
-  var expected = [cacheName];
+  let expected = [cacheName];
 
   appc.getPeerCacheNames()
   .then(actual => {
@@ -490,18 +491,18 @@ test('getPeerCacheNames does not query network if no network', function(t) {
 });
 
 test('getPeerCacheNames resolves if running', function(t) {
-  var serviceType = '_semcache._tcp';
-  var cacheNames = testUtil.createCacheNames(serviceType, 6);
+  let serviceType = '_semcache._tcp';
+  let cacheNames = testUtil.createCacheNames(serviceType, 6);
 
-  var self = cacheNames[0];
+  let self = cacheNames[0];
   // We want to find all the other caches, in reverse order, with ourselves
   // included.
-  var foundCaches = cacheNames.slice(0);
+  let foundCaches = cacheNames.slice(0);
   foundCaches.reverse();
 
-  var browseForSemCacheInstanceNamesSpy = sinon.stub().resolves(foundCaches);
-  var getOwnCacheNameSpy = sinon.stub().returns(self);
-  var networkIsActiveSpy = sinon.stub().returns(true);
+  let browseForSemCacheInstanceNamesSpy = sinon.stub().resolves(foundCaches);
+  let getOwnCacheNameSpy = sinon.stub().returns(self);
+  let networkIsActiveSpy = sinon.stub().returns(true);
 
   proxyquireAppc({
     './dnssd/dns-sd-semcache': {
@@ -526,8 +527,8 @@ test('getPeerCacheNames resolves if running', function(t) {
 });
 
 test('getPeerCacheNames rejects if error', function(t) {
-  var expected = { error: 'uhoh' };
-  var browseForSemCacheInstanceNamesSpy = sinon.stub().rejects(expected);
+  let expected = { error: 'uhoh' };
+  let browseForSemCacheInstanceNamesSpy = sinon.stub().rejects(expected);
   proxyquireAppc({
     './dnssd/dns-sd-semcache': {
       browseForSemCacheInstanceNames: browseForSemCacheInstanceNamesSpy
@@ -550,16 +551,16 @@ test('getPeerCacheNames rejects if error', function(t) {
 });
 
 test('getBrowseableCaches does not query network if not started', function(t) {
-  var hostName = 'myself.local';
-  var serverPort = 4444;
-  var instanceName = 'my cache';
-  var ipAddress = '4.3.2.1';
-  var listUrl = 'list url';
+  let hostName = 'myself.local';
+  let serverPort = 4444;
+  let instanceName = 'my cache';
+  let ipAddress = '4.3.2.1';
+  let listUrl = 'list url';
 
-  var ownCache = testUtil.createCacheObj(
+  let ownCache = testUtil.createCacheObj(
     hostName, instanceName, ipAddress, serverPort, listUrl
   );
-  var browseSpy = sinon.spy();
+  let browseSpy = sinon.spy();
 
   proxyquireAppc({
     './dnssd/dns-sd-semcache': {
@@ -569,7 +570,7 @@ test('getBrowseableCaches does not query network if not started', function(t) {
   appc.getOwnCache = sinon.stub().returns(ownCache);
   appc.networkIsActive = sinon.stub().returns(false);
 
-  var expected = [];
+  let expected = [];
 
   appc.getBrowseableCaches()
   .then(caches => {
@@ -586,31 +587,31 @@ test('getBrowseableCaches does not query network if not started', function(t) {
 });
 
 test('getBrowseableCaches dedupes and returns correct list', function(t) {
-  var hostName = 'myself.local';
-  var serverPort = 4444;
-  var instanceName = 'my cache';
-  var ipAddress = '4.3.2.1';
+  let hostName = 'myself.local';
+  let serverPort = 4444;
+  let instanceName = 'my cache';
+  let ipAddress = '4.3.2.1';
 
-  var listUrl = 'list url';
+  let listUrl = 'list url';
 
-  var ownCache = testUtil.createCacheObj(
+  let ownCache = testUtil.createCacheObj(
     hostName, instanceName, ipAddress, serverPort, listUrl
   );
-  var firstCache = testUtil.createCacheObj(
+  let firstCache = testUtil.createCacheObj(
     'someone.local', 'aaa cache', '5.5.5.5', 1234, listUrl
   );
-  var lastCache = testUtil.createCacheObj(
+  let lastCache = testUtil.createCacheObj(
     'elseone.local', 'zzz cache', '8.8.8.8', 9999, listUrl
   );
 
   // Order such that we have to sort them and most ourself to the front.
-  var foundCaches = [lastCache, ownCache, firstCache];
+  let foundCaches = [lastCache, ownCache, firstCache];
   
-  var getHttpIfaceSpy = sinon.stub().returns({ address: ipAddress });
-  var getListUrlSpy = sinon.stub().returns(listUrl);
-  var browseSpy = sinon.stub().resolves(foundCaches);
+  let getHttpIfaceSpy = sinon.stub().returns({ address: ipAddress });
+  let getListUrlSpy = sinon.stub().returns(listUrl);
+  let browseSpy = sinon.stub().resolves(foundCaches);
 
-  var getOwnCacheSpy = sinon.stub().returns(ownCache);
+  let getOwnCacheSpy = sinon.stub().returns(ownCache);
 
   proxyquireAppc({
     './server/server-api': {
@@ -627,7 +628,7 @@ test('getBrowseableCaches dedupes and returns correct list', function(t) {
 
   // We should always be first, followed by the other caches sorted by instance
   // name.
-  var expected = [ownCache, firstCache, lastCache];
+  let expected = [ownCache, firstCache, lastCache];
   appc.getBrowseableCaches()
   .then(actual => {
     t.deepEqual(actual, expected);
@@ -644,8 +645,8 @@ test('getBrowseableCaches dedupes and returns correct list', function(t) {
 });
 
 test('getBrowseableCaches rejects if error', function(t) {
-  var expected = { error: 'uh oh' };
-  var browseForSemCacheInstancesSpy = sinon.stub().rejects(expected);
+  let expected = { error: 'uh oh' };
+  let browseForSemCacheInstancesSpy = sinon.stub().rejects(expected);
   proxyquireAppc({
     './dnssd/dns-sd-semcache': {
       browseForSemCacheInstances: browseForSemCacheInstancesSpy
@@ -684,8 +685,8 @@ test('networkIsActive false if not started', function(t) {
 });
 
 test('stopServers restores state', function(t) {
-  var stopSpy = sinon.spy();
-  var stopDnsControllerSpy = sinon.spy();
+  let stopSpy = sinon.spy();
+  let stopDnsControllerSpy = sinon.spy();
   let resetCoalStub = sinon.stub();
 
   proxyquireAppc({
@@ -734,14 +735,14 @@ test('resolveCache respects SELF_SERVICE_SHORTCUT', function(t) {
 });
 
 test('resolveCache does not use network for self', function(t) {
-  var friendlyName = 'friendly name';
-  var ownCache = testUtil.createCacheObj(
+  let friendlyName = 'friendly name';
+  let ownCache = testUtil.createCacheObj(
     'me.local', friendlyName, '1.2.3.4', 7777, 'http://me.local:7777/list'
   );
-  var fullName = ownCache.instanceName;
+  let fullName = ownCache.instanceName;
 
-  var resolveCacheSpy = sinon.stub().resolves();
-  var getOwnCacheSpy = sinon.stub().returns(ownCache);
+  let resolveCacheSpy = sinon.stub().resolves();
+  let getOwnCacheSpy = sinon.stub().returns(ownCache);
 
   proxyquireAppc({
     './dnssd/dns-sd-semcache': {
@@ -765,20 +766,20 @@ test('resolveCache does not use network for self', function(t) {
 });
 
 test('resolveCache queries network if needed and resolves', function(t) {
-  var ownCache = testUtil.createCacheObj(
+  let ownCache = testUtil.createCacheObj(
     'me.local', 'own cache', '1.2.3.4', 7777, 'http://me.local:7777/list'
   );
 
-  var friendlyName = 'friendly name';
-  var expected = testUtil.createCacheObj(
+  let friendlyName = 'friendly name';
+  let expected = testUtil.createCacheObj(
     'expected.local', friendlyName, '123.456.789.0', 9999, 'http://list.json'
   );
-  var fullName = expected.instanceName;
+  let fullName = expected.instanceName;
 
   let resolveCacheSpy = sinon.stub();
   resolveCacheSpy.withArgs(fullName).resolves(expected);
 
-  var getOwnCacheSpy = sinon.stub().returns(ownCache);
+  let getOwnCacheSpy = sinon.stub().returns(ownCache);
 
   proxyquireAppc({
     './dnssd/dns-sd-semcache': {
@@ -801,16 +802,16 @@ test('resolveCache queries network if needed and resolves', function(t) {
 });
 
 test('resolveCache rejects if query fails', function(t) {
-  var ownCache = testUtil.createCacheObj(
+  let ownCache = testUtil.createCacheObj(
     'me.local', 'own cache', '1.2.3.4', 7777, 'http://me.local:7777/list'
   );
-  var fullName = 'missingRecords';
-  var expected = { msg: 'something went wrong '};
+  let fullName = 'missingRecords';
+  let expected = { msg: 'something went wrong '};
 
   let resolveCacheSpy = sinon.stub();
   resolveCacheSpy.withArgs(fullName).rejects(expected);
 
-  var getOwnCacheSpy = sinon.stub().returns(ownCache);
+  let getOwnCacheSpy = sinon.stub().returns(ownCache);
 
   proxyquireAppc({
     './dnssd/dns-sd-semcache': {
@@ -833,7 +834,7 @@ test('resolveCache rejects if query fails', function(t) {
 });
 
 test('start rejects if error', function(t) {
-  var expected = { error: 'setting trouble' };
+  let expected = { error: 'setting trouble' };
   proxyquireAppc({
     './settings': {
       init: sinon.stub().rejects(expected)

@@ -38,7 +38,7 @@ exports.handleExternalMessage = function(message, sender, response) {
   // Methods via onMessagExternal.addListener must respond true if the response
   // callback is going to be invoked asynchronously. We'll create this value
   // and allow the if logic below to specify if it will be invoking response.
-  var result = false;
+  let result = false;
   if (sender.id !== exports.EXTENSION_ID) {
     console.log('ID not from SemCache extension: ', sender);
     return;
@@ -77,7 +77,7 @@ exports.handleExternalMessage = function(message, sender, response) {
       }
     })
     .catch(err => {
-      var errorMsg = common.createResponseError(
+      let errorMsg = common.createResponseError(
         common.responderTypes.localQuery, {}, err
       );
       if (response) {
@@ -161,14 +161,14 @@ exports.queryLocalMachineForUrls = function(message) {
   return new Promise(function(resolve, reject) {
     // Check for the url.
     // Return the information about the entry, including the access path.
-    var urls = message.params.urls;
-    var result = {};
+    let urls = message.params.urls;
+    let result = {};
     datastore.getAllCachedPages()
     .then(cpinfos => {
       cpinfos.forEach(cpinfo => {
         urls.forEach(url => {
           if (url === cpinfo.captureHref) {
-            var copies = result[url];
+            let copies = result[url];
             if (!copies) {
               copies = [];
               result[url] = copies;
@@ -214,23 +214,23 @@ exports.queryLocalNetworkForUrls = function(message) {
 exports.getBlobFromDataUrl = function(dataUrl) {
   // Decoding from data URL based on:
   // https://gist.github.com/fupslot/5015897
-  var byteString = base64.decode(dataUrl.split(',')[1]);
-  var mime = dataUrl.split(',')[0].split(':')[1].split(';')[0];
+  let byteString = base64.decode(dataUrl.split(',')[1]);
+  let mime = dataUrl.split(',')[0].split(':')[1].split(';')[0];
   // write the bytes of the string to an ArrayBuffer
-  var ab = new ArrayBuffer(byteString.length);
-  var ia = new Uint8Array(ab);
-  for (var i = 0; i < byteString.length; i++) {
+  let ab = new ArrayBuffer(byteString.length);
+  let ia = new Uint8Array(ab);
+  for (let i = 0; i < byteString.length; i++) {
     ia[i] = byteString.charCodeAt(i);
   }
   // write the ArrayBuffer to a blob, and you're done
-  var result = new Blob([ab], {type: mime});
+  let result = new Blob([ab], {type: mime});
   return result;
 };
 
 exports.attachListeners = function() {
-  var runtime = chromep.getRuntime();
+  let runtime = chromep.getRuntime();
   console.log('runtime: ', runtime);
-  var ome = runtime.onMessageExternal;
+  let ome = runtime.onMessageExternal;
   console.log('ome: ', ome);
   chromep.getRuntimeBare().onMessageExternal.addListener(
     exports.handleExternalMessage
@@ -243,7 +243,7 @@ exports.attachListeners = function() {
  * @param {string} url
  */
 exports.sendMessageToOpenUrl = function(url) {
-  var message = {
+  let message = {
     type: 'open',
     params: {
       url: url

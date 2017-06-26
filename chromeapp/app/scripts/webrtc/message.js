@@ -21,7 +21,7 @@ exports.TYPE_CACHED_PAGE = 'cachedpage';
 exports.TYPE_BLOOM_FILTER = 'bloomfilter';
 
 /** Valid types of request messages. */
-var VALID_TYPES = [
+let VALID_TYPES = [
   exports.TYPE_LIST,
   exports.TYPE_FILE,
   exports.TYPE_DIGEST,
@@ -33,7 +33,7 @@ var VALID_TYPES = [
  * An increasing suffix of numbers to ensure we create unique channel names.
  * Although we could use UUIDs, using integers will help with debugging.
  */
-var CHANNELS_CREATED = 0;
+let CHANNELS_CREATED = 0;
 
 /**
  * Creates a uuid-based channel name for a message request.
@@ -41,7 +41,7 @@ var CHANNELS_CREATED = 0;
  * @return {string} name for a channel
  */
 exports.createChannelName = function() {
-  var result = 'responseChannel_' + CHANNELS_CREATED;
+  let result = 'responseChannel_' + CHANNELS_CREATED;
   // Handle rollover.
   if (CHANNELS_CREATED === Number.MAX_SAFE_INTEGER) {
     // Will be unlikely to ever happen.
@@ -93,8 +93,8 @@ exports.createCachedPageMessage = function(href) {
  * @return {Object}
  */
 exports.createFileMessage = function(filePath) {
-  var result = exports.createMessage(exports.TYPE_FILE);
-  var request = {};
+  let result = exports.createMessage(exports.TYPE_FILE);
+  let request = {};
   request.accessPath = filePath;
   result.request = request;
   return result;
@@ -110,7 +110,7 @@ exports.createMessage = function(type) {
     throw new Error('Unrecognized message type: ' + type);
   }
 
-  var result = {};
+  let result = {};
 
   result.channelName = exports.createChannelName();
   result.type = type;

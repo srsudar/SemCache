@@ -1,11 +1,13 @@
 'use strict';
-var test = require('tape');
-var sinon = require('sinon');
-var proxyquire = require('proxyquire');
+
+const test = require('tape');
+const sinon = require('sinon');
+const proxyquire = require('proxyquire');
 require('sinon-as-promised');
 
-var common = require('../../../app/scripts/peer-interface/common');
-var webrtcImpl = require('../../../app/scripts/peer-interface/webrtc-impl');
+const common = require('../../../app/scripts/peer-interface/common');
+
+let webrtcImpl = require('../../../app/scripts/peer-interface/webrtc-impl');
 
 /**
  * Proxyquire the messaging module with proxies set as the proxied modules.
@@ -51,26 +53,26 @@ function createAccessor() {
 test('can create PeerAccessor', function(t) {
   let ipaddr = '1.2.3.4';
   let port = 1111;
-  var pa = new webrtcImpl.WebrtcPeerAccessor({ ipaddr, port });
+  let pa = new webrtcImpl.WebrtcPeerAccessor({ ipaddr, port });
   t.deepEqual(pa.ipaddr, ipaddr);
   t.deepEqual(pa.port, port);
   end(t);
 });
 
 test('getFileBlob resolves with peerConnection.getFile', function(t) {
-  var ipaddr = '1.2.3.4';
-  var port = 1234;
-  var fileUrl = 'path to file';
+  let ipaddr = '1.2.3.4';
+  let port = 1234;
+  let fileUrl = 'path to file';
   
-  var buffer = { tesType: 'I am the result of PeerConnection.getFile' };
-  var expected = 'I am a blob';
+  let buffer = { tesType: 'I am the result of PeerConnection.getFile' };
+  let expected = 'I am a blob';
   
-  var getBufferAsBlobSpy = sinon.stub();
+  let getBufferAsBlobSpy = sinon.stub();
   getBufferAsBlobSpy.withArgs(buffer).returns(expected);
-  var peerConn = sinon.stub();
+  let peerConn = sinon.stub();
   peerConn.getFile = sinon.stub();
   peerConn.getFile.withArgs(fileUrl).resolves(buffer);
-  var getOrCreateConnectionSpy = sinon.stub();
+  let getOrCreateConnectionSpy = sinon.stub();
   getOrCreateConnectionSpy.withArgs(ipaddr, port).resolves(peerConn);
   
   proxyquireWebrtcImpl({
@@ -82,8 +84,8 @@ test('getFileBlob resolves with peerConnection.getFile', function(t) {
     }
   });
 
-  var params = common.createFileParams(ipaddr, port, fileUrl);
-  var peerAccessor = new webrtcImpl.WebrtcPeerAccessor();
+  let params = common.createFileParams(ipaddr, port, fileUrl);
+  let peerAccessor = new webrtcImpl.WebrtcPeerAccessor();
   peerAccessor.getFileBlob(params)
   .then(actual => {
     t.equal(actual, expected);
@@ -97,16 +99,16 @@ test('getFileBlob resolves with peerConnection.getFile', function(t) {
 });
 
 test('getFileBlob rejects with error', function(t) {
-  var expected = { error: 'getOrCreateConnection fails' };
+  let expected = { error: 'getOrCreateConnection fails' };
 
-  var getOrCreateConnectionSpy = sinon.stub().rejects(expected);
+  let getOrCreateConnectionSpy = sinon.stub().rejects(expected);
   proxyquireWebrtcImpl({
     '../webrtc/connection-manager': {
       getOrCreateConnection: getOrCreateConnectionSpy
     }
   });
 
-  var peerAccessor = new webrtcImpl.WebrtcPeerAccessor();
+  let peerAccessor = new webrtcImpl.WebrtcPeerAccessor();
   peerAccessor.getFileBlob({})
   .then(res => {
     t.fail(res);
@@ -119,13 +121,13 @@ test('getFileBlob rejects with error', function(t) {
 });
 
 test('getList resolves with json', function(t) {
-  var expected = { listOfPages: 'much list' };
-  var ipaddr = '4.3.2.1';
-  var port = 9876;
-  var peerConn = sinon.stub();
+  let expected = { listOfPages: 'much list' };
+  let ipaddr = '4.3.2.1';
+  let port = 9876;
+  let peerConn = sinon.stub();
   peerConn.getList = sinon.stub().resolves(expected);
 
-  var getOrCreateConnectionSpy = sinon.stub();
+  let getOrCreateConnectionSpy = sinon.stub();
   getOrCreateConnectionSpy.withArgs(ipaddr, port).resolves(peerConn);
   
   proxyquireWebrtcImpl({
@@ -133,9 +135,9 @@ test('getList resolves with json', function(t) {
       getOrCreateConnection: getOrCreateConnectionSpy
     }
   });
-  var params = common.createListParams(ipaddr, port, 'listurl');
+  let params = common.createListParams(ipaddr, port, 'listurl');
 
-  var peerAccessor = new webrtcImpl.WebrtcPeerAccessor();
+  let peerAccessor = new webrtcImpl.WebrtcPeerAccessor();
   peerAccessor.getList(params)
   .then(actual => {
     t.equal(actual, expected);
@@ -151,8 +153,8 @@ test('getList resolves with json', function(t) {
 });
 
 test('getList rejects with error', function(t) {
-  var expected = { error: 'gone so wrong' };
-  var getOrCreateConnectionSpy = sinon.stub().rejects(expected);
+  let expected = { error: 'gone so wrong' };
+  let getOrCreateConnectionSpy = sinon.stub().rejects(expected);
   
   proxyquireWebrtcImpl({
     '../webrtc/connection-manager': {
@@ -160,7 +162,7 @@ test('getList rejects with error', function(t) {
     }
   });
 
-  var peerAccessor = new webrtcImpl.WebrtcPeerAccessor();
+  let peerAccessor = new webrtcImpl.WebrtcPeerAccessor();
   peerAccessor.getList({})
   .then(res => {
     t.fail(res);
@@ -173,13 +175,13 @@ test('getList rejects with error', function(t) {
 });
 
 test('getCacheDigest resolves with json', function(t) {
-  var expected = { digest: 'lots of pages in this digest' };
-  var ipaddr = '4.3.2.1';
-  var port = 9876;
-  var peerConn = sinon.stub();
+  let expected = { digest: 'lots of pages in this digest' };
+  let ipaddr = '4.3.2.1';
+  let port = 9876;
+  let peerConn = sinon.stub();
   peerConn.getCacheDigest = sinon.stub().resolves(expected);
 
-  var getOrCreateConnectionSpy = sinon.stub();
+  let getOrCreateConnectionSpy = sinon.stub();
   getOrCreateConnectionSpy.withArgs(ipaddr, port).resolves(peerConn);
   
   proxyquireWebrtcImpl({
@@ -187,9 +189,9 @@ test('getCacheDigest resolves with json', function(t) {
       getOrCreateConnection: getOrCreateConnectionSpy
     }
   });
-  var params = common.createListParams(ipaddr, port, 'listurl');
+  let params = common.createListParams(ipaddr, port, 'listurl');
 
-  var peerAccessor = new webrtcImpl.WebrtcPeerAccessor();
+  let peerAccessor = new webrtcImpl.WebrtcPeerAccessor();
   peerAccessor.getCacheDigest(params)
   .then(actual => {
     t.equal(actual, expected);
@@ -203,8 +205,8 @@ test('getCacheDigest resolves with json', function(t) {
 });
 
 test('getCacheDigest rejects with error', function(t) {
-  var expected = { error: 'gone so wrong' };
-  var getOrCreateConnectionSpy = sinon.stub().rejects(expected);
+  let expected = { error: 'gone so wrong' };
+  let getOrCreateConnectionSpy = sinon.stub().rejects(expected);
   
   proxyquireWebrtcImpl({
     '../webrtc/connection-manager': {
@@ -212,7 +214,7 @@ test('getCacheDigest rejects with error', function(t) {
     }
   });
 
-  var peerAccessor = new webrtcImpl.WebrtcPeerAccessor();
+  let peerAccessor = new webrtcImpl.WebrtcPeerAccessor();
   peerAccessor.getCacheDigest({})
   .then(res => {
     t.fail(res);

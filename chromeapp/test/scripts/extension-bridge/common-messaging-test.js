@@ -1,8 +1,8 @@
 'use strict';
 
-var test = require('tape');
+const test = require('tape');
 
-var common = require('../../../app/scripts/extension-bridge/common-messaging');
+let common = require('../../../app/scripts/extension-bridge/common-messaging');
 
 function reset() {
   delete require.cache[

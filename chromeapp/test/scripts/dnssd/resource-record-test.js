@@ -1,15 +1,19 @@
 'use strict';
-var test = require('tape');
-var resRec = require('../../../app/scripts/dnssd/resource-record');
-var dnsCodes = require('../../../app/scripts/dnssd/dns-codes');
-var byteArray = require('../../../app/scripts/dnssd/byte-array');
+
+const test = require('tape');
+
+let resRec = require('../../../app/scripts/dnssd/resource-record');
+
+const dnsCodes = require('../../../app/scripts/dnssd/dns-codes');
+const byteArray = require('../../../app/scripts/dnssd/byte-array');
+
 
 test('create an ARecord', function(t) {
-  var domainName = 'www.example.com';
-  var ttl = 10;
-  var ipAddress = '155.33.17.68';
+  let domainName = 'www.example.com';
+  let ttl = 10;
+  let ipAddress = '155.33.17.68';
   
-  var result = new resRec.ARecord(domainName, ttl, ipAddress);
+  let result = new resRec.ARecord(domainName, ttl, ipAddress);
 
   t.equal(result.domainName, domainName);
   t.equal(result.name, domainName);
@@ -22,11 +26,11 @@ test('create an ARecord', function(t) {
 });
 
 test('create a PtrRecord', function(t) {
-  var serviceType = '_printer._tcp.local';
-  var ttl = 10;
-  var instanceName = 'PrintsALot._printer._tcp._local';
+  let serviceType = '_printer._tcp.local';
+  let ttl = 10;
+  let instanceName = 'PrintsALot._printer._tcp._local';
   
-  var result = new resRec.PtrRecord(serviceType, ttl, instanceName);
+  let result = new resRec.PtrRecord(serviceType, ttl, instanceName);
 
   t.equal(result.serviceType, serviceType);
   t.equal(result.name, serviceType);
@@ -39,14 +43,14 @@ test('create a PtrRecord', function(t) {
 });
 
 test('create an SrvRecord', function(t) {
-  var serviceInstanceName = 'PrintsALot._printer._tcp.local';
-  var ttl = 35;
-  var priority = 0;
-  var weight = 55;
-  var port = 8889;
-  var targetDomain = 'fisherman.local';
+  let serviceInstanceName = 'PrintsALot._printer._tcp.local';
+  let ttl = 35;
+  let priority = 0;
+  let weight = 55;
+  let port = 8889;
+  let targetDomain = 'fisherman.local';
   
-  var result = new resRec.SrvRecord(
+  let result = new resRec.SrvRecord(
     serviceInstanceName,
     ttl,
     priority,
@@ -69,19 +73,19 @@ test('create an SrvRecord', function(t) {
 });
 
 test('can encode and decode common RR fields', function(t) {
-  var domainName = 'hello.there.com';
-  var rrType = 3;
-  var rrClass = 4;
-  var ttl = 36000;
+  let domainName = 'hello.there.com';
+  let rrType = 3;
+  let rrClass = 4;
+  let ttl = 36000;
 
-  var byteArr = resRec.getCommonFieldsAsByteArray(
+  let byteArr = resRec.getCommonFieldsAsByteArray(
     domainName,
     rrType,
     rrClass,
     ttl
   );
 
-  var recovered = resRec.getCommonFieldsFromByteArrayReader(
+  let recovered = resRec.getCommonFieldsFromByteArrayReader(
     byteArr.getReader()
   );
 
@@ -94,16 +98,16 @@ test('can encode and decode common RR fields', function(t) {
 });
 
 test('can encode and decode A Record', function(t) {
-  var domainName = 'happy.days.org';
-  var ipAddress = '193.198.2.51';
-  var rrClass = 4;
-  var ttl = 123456;
+  let domainName = 'happy.days.org';
+  let ipAddress = '193.198.2.51';
+  let rrClass = 4;
+  let ttl = 123456;
 
-  var aRecord = new resRec.ARecord(domainName, ttl, ipAddress, rrClass);
+  let aRecord = new resRec.ARecord(domainName, ttl, ipAddress, rrClass);
 
-  var byteArr = aRecord.convertToByteArray();
+  let byteArr = aRecord.convertToByteArray();
 
-  var recovered = resRec.createARecordFromReader(byteArr.getReader());
+  let recovered = resRec.createARecordFromReader(byteArr.getReader());
 
   t.deepEqual(recovered, aRecord);
 
@@ -111,21 +115,21 @@ test('can encode and decode A Record', function(t) {
 });
 
 test('can encode and decode PTR Record', function(t) {
-  var serviceType = '_printer._tcp.local';
-  var instanceName = 'PrintsALot._printer._tcp.local';
-  var rrClass = 3;
-  var ttl = 1000;
+  let serviceType = '_printer._tcp.local';
+  let instanceName = 'PrintsALot._printer._tcp.local';
+  let rrClass = 3;
+  let ttl = 1000;
 
-  var ptrRecord = new resRec.PtrRecord(
+  let ptrRecord = new resRec.PtrRecord(
     serviceType,
     ttl,
     instanceName,
     rrClass
   );
 
-  var byteArr = ptrRecord.convertToByteArray();
+  let byteArr = ptrRecord.convertToByteArray();
 
-  var recovered = resRec.createPtrRecordFromReader(byteArr.getReader());
+  let recovered = resRec.createPtrRecordFromReader(byteArr.getReader());
 
   t.deepEqual(recovered, ptrRecord);
 
@@ -133,14 +137,14 @@ test('can encode and decode PTR Record', function(t) {
 });
 
 test('can encode and decode SRV Record', function(t) {
-  var instanceName = 'PrintsALot._printer._tcp.local';
-  var targetDomain = 'blackhawk.local';
-  var ttl = 2000;
-  var priority = 10;
-  var weight = 60;
-  var port = 8888;
+  let instanceName = 'PrintsALot._printer._tcp.local';
+  let targetDomain = 'blackhawk.local';
+  let ttl = 2000;
+  let priority = 10;
+  let weight = 60;
+  let port = 8888;
 
-  var srvRecord = new resRec.SrvRecord(
+  let srvRecord = new resRec.SrvRecord(
     instanceName,
     ttl,
     priority,
@@ -149,9 +153,9 @@ test('can encode and decode SRV Record', function(t) {
     targetDomain
   );
 
-  var byteArr = srvRecord.convertToByteArray();
+  let byteArr = srvRecord.convertToByteArray();
 
-  var recovered = resRec.createSrvRecordFromReader(byteArr.getReader());
+  let recovered = resRec.createSrvRecordFromReader(byteArr.getReader());
 
   t.deepEqual(recovered, srvRecord);
 
@@ -161,32 +165,32 @@ test('can encode and decode SRV Record', function(t) {
 test('peek type in reader correct', function(t) {
   // We will create two aRecords and focus on peeking the type of the second
   // one, ensuring that the cursor position in the reader isn't mutated.
-  var domainName = 'www.example.com';
-  var ttl = 10;
-  var ipAddress = '155.33.17.68';
-  var domainName2 = 'www.fancy.com';
+  let domainName = 'www.example.com';
+  let ttl = 10;
+  let ipAddress = '155.33.17.68';
+  let domainName2 = 'www.fancy.com';
   
-  var aRecord1 = new resRec.ARecord(domainName, ttl, ipAddress);
-  var aRecord2 = new resRec.ARecord(domainName2, ttl, ipAddress);
+  let aRecord1 = new resRec.ARecord(domainName, ttl, ipAddress);
+  let aRecord2 = new resRec.ARecord(domainName2, ttl, ipAddress);
 
-  var byteArr1 = aRecord1.convertToByteArray();
-  var byteArr2 = aRecord2.convertToByteArray();
+  let byteArr1 = aRecord1.convertToByteArray();
+  let byteArr2 = aRecord2.convertToByteArray();
 
-  var byteArr = new byteArray.ByteArray();
+  let byteArr = new byteArray.ByteArray();
 
   byteArr.append(byteArr1);
   byteArr.append(byteArr2);
-  var reader = byteArr.getReader();
+  let reader = byteArr.getReader();
 
-  var recovered1 = resRec.createARecordFromReader(reader);
+  let recovered1 = resRec.createARecordFromReader(reader);
   t.deepEqual(recovered1, aRecord1);
 
-  var expected = dnsCodes.RECORD_TYPES.A;
-  var actual = resRec.peekTypeInReader(reader);
+  let expected = dnsCodes.RECORD_TYPES.A;
+  let actual = resRec.peekTypeInReader(reader);
   t.equal(actual, expected);
 
   // And make sure we didn't change the position of the reader.
-  var recovered2 = resRec.createARecordFromReader(reader);
+  let recovered2 = resRec.createARecordFromReader(reader);
   t.deepEqual(recovered2, aRecord2);
 
   t.end();

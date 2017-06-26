@@ -1,11 +1,12 @@
 'use strict';
 
-var test = require('tape');
-var proxyquire = require('proxyquire');
-var sinon = require('sinon');
+const test = require('tape');
+const proxyquire = require('proxyquire');
+const sinon = require('sinon');
 require('sinon-as-promised');
 
-let binUtil = require('../../../app/scripts/dnssd/binary-utils').BinaryUtils;
+const binUtil = require('../../../app/scripts/dnssd/binary-utils').BinaryUtils;
+
 let util = require('../../../app/scripts/persistence/file-system-util');
 
 /**
@@ -33,23 +34,23 @@ function end(t) {
 }
 
 test('listEntries returns all entries', function(t) {
-  var readEntriesSpy = sinon.stub();
+  let readEntriesSpy = sinon.stub();
 
-  var arr1 = ['1stCall_a', '1stCall_b', '1stCall_c'];
-  var arr2 = ['2ndCall_1', '2ndCall_2', '2ndCall_2'];
-  var arr3 = ['3rdcall_y', '3rdcall_z'];
+  let arr1 = ['1stCall_a', '1stCall_b', '1stCall_c'];
+  let arr2 = ['2ndCall_1', '2ndCall_2', '2ndCall_2'];
+  let arr3 = ['3rdcall_y', '3rdcall_z'];
 
-  var expectedEntries = arr1.concat(arr2).concat(arr3);
+  let expectedEntries = arr1.concat(arr2).concat(arr3);
 
   readEntriesSpy.onCall(0).callsArgWith(0, arr1);
   readEntriesSpy.onCall(1).callsArgWith(0, arr2);
   readEntriesSpy.onCall(2).callsArgWith(0, arr3);
   readEntriesSpy.onCall(3).callsArgWith(0, []);
 
-  var dirReaderSpy = {};
+  let dirReaderSpy = {};
   dirReaderSpy.readEntries = readEntriesSpy;
 
-  var dirEntry = {};
+  let dirEntry = {};
   dirEntry.createReader = sinon.stub().returns(dirReaderSpy);
 
   util.listEntries(dirEntry)
@@ -65,14 +66,14 @@ test('listEntries returns all entries', function(t) {
 });
 
 test('listEntries returns empty Array if no entries', function(t) {
-  var readEntriesSpy = sinon.stub();
+  let readEntriesSpy = sinon.stub();
 
   readEntriesSpy.onCall(0).callsArgWith(0, []);
 
-  var dirReaderSpy = {};
+  let dirReaderSpy = {};
   dirReaderSpy.readEntries = readEntriesSpy;
 
-  var dirEntry = {};
+  let dirEntry = {};
   dirEntry.createReader = sinon.stub().returns(dirReaderSpy);
 
   util.listEntries(dirEntry)
@@ -88,19 +89,19 @@ test('listEntries returns empty Array if no entries', function(t) {
 });
 
 test('listEntries catches if error callback invoked', function(t) {
-  var readEntriesSpy = sinon.stub();
+  let readEntriesSpy = sinon.stub();
 
-  var arr1 = ['a', 'b', 'c'];
+  let arr1 = ['a', 'b', 'c'];
 
-  var errorMsg = 'there was an error';
+  let errorMsg = 'there was an error';
 
   readEntriesSpy.onCall(0).callsArgWith(0, arr1);
   readEntriesSpy.onCall(1).callsArgWith(1, errorMsg);
 
-  var dirReaderSpy = {};
+  let dirReaderSpy = {};
   dirReaderSpy.readEntries = readEntriesSpy;
 
-  var dirEntry = {};
+  let dirEntry = {};
   dirEntry.createReader = sinon.stub().returns(dirReaderSpy);
 
   util.listEntries(dirEntry)
@@ -122,8 +123,8 @@ test('writeToFile resolves on completion', function(t) {
   let buffToBlobStub = sinon.stub();
   buffToBlobStub.withArgs(buff).returns(blob);
 
-  var writerSpy = {};
-  var fileBlobArg = null;
+  let writerSpy = {};
+  let fileBlobArg = null;
   writerSpy.write = function(fileBlobParam) {
     fileBlobArg = fileBlobParam;
     // This indicates success. We're just scratching our own back to simulate
@@ -132,8 +133,8 @@ test('writeToFile resolves on completion', function(t) {
     writerSpy.onwriteend();
   };
 
-  var fileEntry = {};
-  var createWriterSpy = sinon.stub();
+  let fileEntry = {};
+  let createWriterSpy = sinon.stub();
   createWriterSpy.callsArgWith(0, writerSpy);
   fileEntry.createWriter = createWriterSpy;
 
@@ -159,8 +160,8 @@ test('writeToFile rejects on error', function(t) {
   let buff = 'erroneous blob';
   let error = 'the error';
 
-  var writerSpy = {};
-  var fileBlobArg = null;
+  let writerSpy = {};
+  let fileBlobArg = null;
   writerSpy.write = function(fileBlobParam) {
     fileBlobArg = fileBlobParam;
     // This indicates success. We're just scratching our own back to simulate
@@ -169,8 +170,8 @@ test('writeToFile rejects on error', function(t) {
     writerSpy.onerror(error);
   };
 
-  var fileEntry = {};
-  var createWriterSpy = sinon.stub();
+  let fileEntry = {};
+  let createWriterSpy = sinon.stub();
   createWriterSpy.callsArgWith(0, writerSpy);
   fileEntry.createWriter = createWriterSpy;
 
@@ -192,20 +193,20 @@ test('writeToFile rejects on error', function(t) {
 });
 
 test('getFile resolves with entry', function(t) {
-  var getFileStub = sinon.stub();
+  let getFileStub = sinon.stub();
 
-  var dirEntry = {};
+  let dirEntry = {};
   dirEntry.getFile = getFileStub;
 
-  var fileEntry = 'the created file';
+  let fileEntry = 'the created file';
 
   getFileStub.callsArgWith(2, fileEntry);
 
-  var options = {
+  let options = {
     foo: 1,
     bar: '2'
   };
-  var name = 'fileName.txt';
+  let name = 'fileName.txt';
 
   util.getFile(dirEntry, options, name)
   .then(actualEntry => {
@@ -223,17 +224,17 @@ test('getFile resolves with entry', function(t) {
 
 
 test('getFile rejects with error', function(t) {
-  var getFileStub = sinon.stub();
+  let getFileStub = sinon.stub();
 
-  var dirEntry = {};
+  let dirEntry = {};
   dirEntry.getFile = getFileStub;
 
-  var error = 'error whilst writing';
+  let error = 'error whilst writing';
 
   getFileStub.callsArgWith(3, error);
 
-  var options = {foo: 1, bar: '2'};
-  var name = 'fileName.txt';
+  let options = {foo: 1, bar: '2'};
+  let name = 'fileName.txt';
 
   util.getFile(dirEntry, options, name)
   .then(res => {
@@ -250,17 +251,17 @@ test('getFile rejects with error', function(t) {
 });
 
 test('getDirectory resolves with entry', function(t) {
-  var getDirectoryStub = sinon.stub();
+  let getDirectoryStub = sinon.stub();
 
-  var dirEntry = {};
+  let dirEntry = {};
   dirEntry.getDirectory = getDirectoryStub;
 
-  var directoryEntry = 'the created dir';
+  let directoryEntry = 'the created dir';
 
   getDirectoryStub.callsArgWith(2, directoryEntry);
 
-  var options = {foo: 1, bar: '2'};
-  var name = 'dirName';
+  let options = {foo: 1, bar: '2'};
+  let name = 'dirName';
 
   util.getDirectory(dirEntry, options, name)
   .then(actualEntry => {
@@ -278,20 +279,20 @@ test('getDirectory resolves with entry', function(t) {
 
 
 test('getDirectory rejects with error', function(t) {
-  var getDirectoryStub = sinon.stub();
+  let getDirectoryStub = sinon.stub();
 
-  var dirEntry = {};
+  let dirEntry = {};
   dirEntry.getDirectory = getDirectoryStub;
 
-  var error = 'error whilst creating dir';
+  let error = 'error whilst creating dir';
 
   getDirectoryStub.callsArgWith(3, error);
 
-  var options = {
+  let options = {
     foo: 1,
     bar: '2'
   };
-  var name = 'erroneousDirName';
+  let name = 'erroneousDirName';
 
   util.getDirectory(dirEntry, options, name)
   .then(res => {
@@ -308,13 +309,13 @@ test('getDirectory rejects with error', function(t) {
 });
 
 test('getMetadata resolves with metadata if success', function(t) {
-  var expected = { size: 12345 };
+  let expected = { size: 12345 };
 
-  var getMetadataCB = function(success) {
+  let getMetadataCB = function(success) {
     success(expected); 
   };
 
-  var entryStub = sinon.stub();
+  let entryStub = sinon.stub();
   entryStub.getMetadata = getMetadataCB;
 
   util.getMetadata(entryStub)
@@ -330,13 +331,13 @@ test('getMetadata resolves with metadata if success', function(t) {
 });
 
 test('getMetadata rejects on error', function(t) {
-  var expected = { err: 'get metadata error' };
+  let expected = { err: 'get metadata error' };
 
-  var getMetadataCB = function(successCallback, errorCallback) {
+  let getMetadataCB = function(successCallback, errorCallback) {
     errorCallback(expected);
   };
 
-  var entryStub = sinon.stub();
+  let entryStub = sinon.stub();
   entryStub.getMetadata = getMetadataCB;
 
   util.getMetadata(entryStub)
@@ -352,13 +353,13 @@ test('getMetadata rejects on error', function(t) {
 });
 
 test('getFileFromEntry resolves with file if success', function(t) {
-  var expected = { file: 'object' };
+  let expected = { file: 'object' };
 
-  var getFileStub = function(success) {
+  let getFileStub = function(success) {
     success(expected); 
   };
 
-  var entryStub = sinon.stub();
+  let entryStub = sinon.stub();
   entryStub.file = getFileStub;
 
   util.getFileFromEntry(entryStub)
@@ -374,13 +375,13 @@ test('getFileFromEntry resolves with file if success', function(t) {
 });
 
 test('getFileFromEntry rejects on error', function(t) {
-  var expected = { err: 'file error' };
+  let expected = { err: 'file error' };
 
-  var getFileStub = function(successCallback, errorCallback) {
+  let getFileStub = function(successCallback, errorCallback) {
     errorCallback(expected); 
   };
 
-  var entryStub = sinon.stub();
+  let entryStub = sinon.stub();
   entryStub.file = getFileStub;
 
   util.getFileFromEntry(entryStub)
@@ -396,16 +397,16 @@ test('getFileFromEntry rejects on error', function(t) {
 });
 
 test('getFileContents resolves with full contents', function(t) {
-  var fileReaderStub = sinon.stub();
+  let fileReaderStub = sinon.stub();
   util.createFileReader = sinon.stub().returns(fileReaderStub);
 
   // We write ArrayBuffer objects.
-  var buff1 = binUtil.stringToArrayBuffer('Tyrion ');
-  var buff2 = binUtil.stringToArrayBuffer('Lannister');
-  var expectedResult = Buffer.from('Tyrion Lannister');
+  let buff1 = binUtil.stringToArrayBuffer('Tyrion ');
+  let buff2 = binUtil.stringToArrayBuffer('Lannister');
+  let expectedResult = Buffer.from('Tyrion Lannister');
 
-  var file = { stubType: 'file' };
-  var fileEntry = { stubType: 'fileEntry' };
+  let file = { stubType: 'file' };
+  let fileEntry = { stubType: 'fileEntry' };
 
   util.getFileFromEntry = sinon.stub();
   util.getFileFromEntry.withArgs(fileEntry).resolves(file);
@@ -433,13 +434,13 @@ test('getFileContents resolves with full contents', function(t) {
 });
 
 test('getFileContents rejects when onerror called', function(t) {
-  var fileReaderStub = sinon.stub();
+  let fileReaderStub = sinon.stub();
   util.createFileReader = sinon.stub().returns(fileReaderStub);
 
-  var expectedError = { err: 'much wrong' };
+  let expectedError = { err: 'much wrong' };
 
-  var file = { stubType: 'file' };
-  var fileEntry = { stubType: 'fileEntry' };
+  let file = { stubType: 'file' };
+  let fileEntry = { stubType: 'fileEntry' };
 
   util.getFileFromEntry = sinon.stub();
   util.getFileFromEntry.withArgs(fileEntry).resolves(file);

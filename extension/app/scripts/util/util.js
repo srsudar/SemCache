@@ -1,7 +1,7 @@
 /* globals fetch */
 'use strict';
 
-var tabs = require('../chrome-apis/tabs');
+const tabs = require('../chrome-apis/tabs');
 
 /**
  * Very thin wrapper around the global fetch API to enable mocks during test.
@@ -43,9 +43,9 @@ exports.getPerf = function() {
 exports.getOnCompletePromise = function() {
   // Modeled on Jake Archibald's svgomg utils:
   // https://github.com/jakearchibald/svgomg/blob/master/src/js/page/utils.js
-  var doc = exports.getDocument();
+  let doc = exports.getDocument();
   return new Promise(function(resolve) {
-    var checkState = function() {
+    let checkState = function() {
       if (doc.readyState === 'complete') {
         resolve();
       }
@@ -62,7 +62,7 @@ exports.getActiveTab = function() {
   return new Promise(function(resolve) {
     tabs.query({ currentWindow: true, active: true})
       .then(tabs => {
-        var tab = tabs[0];
+        let tab = tabs[0];
         resolve(tab);
       });
   });

@@ -80,8 +80,8 @@ class CPInfo {
    */
   static sort(arr) {
     arr.sort((a, b) => {
-      var ahref = a.captureHref.toUpperCase();
-      var bhref = b.captureHref.toUpperCase();
+      let ahref = a.captureHref.toUpperCase();
+      let bhref = b.captureHref.toUpperCase();
       if (ahref < bhref) {
         return -1;
       }

@@ -17,7 +17,7 @@
  */
 
 /** The number of bytes used to indicate the length of the header. */
-var NUM_BYTES_HEADER_LENGTH = 4;
+const NUM_BYTES_HEADER_LENGTH = 4;
 
 /**
  * These status codes are based on HTTP status codes, and are added as
@@ -53,7 +53,7 @@ exports.ProtocolMessage = function ProtocolMessage(header, buff) {
  * @return {boolean} true if is an OK message, else false
  */
 exports.ProtocolMessage.prototype.isOk = function() {
-  var statusCode = this.getStatusCode();
+  let statusCode = this.getStatusCode();
   return statusCode === exports.STATUS_CODES.ok;
 };
 
@@ -61,7 +61,7 @@ exports.ProtocolMessage.prototype.isOk = function() {
  * @return {boolean} true if is an Error message, else false
  */
 exports.ProtocolMessage.prototype.isError = function() {
-  var statusCode = this.getStatusCode();
+  let statusCode = this.getStatusCode();
   return statusCode === exports.STATUS_CODES.error;
 };
 
@@ -105,29 +105,29 @@ exports.ProtocolMessage.prototype.asBuffer = function() {
    * API. The first 4 bytes correspond to an integer. This integer denotes the
    * length of the JSON header information. All remaining bytes are data bytes.
    */
-  var metadataLength = NUM_BYTES_HEADER_LENGTH;
-  var headerStr = '';
-  var headerLength = 0;
+  let metadataLength = NUM_BYTES_HEADER_LENGTH;
+  let headerStr = '';
+  let headerLength = 0;
   if (this.header) {
     headerStr = JSON.stringify(this.header);
     headerLength = headerStr.length;
     metadataLength += headerLength;
   }
 
-  var metadataBuff = Buffer.alloc(metadataLength);
+  let metadataBuff = Buffer.alloc(metadataLength);
 
-  var offset = 0;
+  let offset = 0;
   metadataBuff.writeUInt32BE(headerLength);
   offset += NUM_BYTES_HEADER_LENGTH;
 
   metadataBuff.write(headerStr, offset, headerLength);
 
-  var buffsToJoin = [ metadataBuff ];
+  let buffsToJoin = [ metadataBuff ];
   if (this.data) {
     buffsToJoin.push(this.data);
   }
 
-  var result = Buffer.concat(buffsToJoin);
+  let result = Buffer.concat(buffsToJoin);
   return result;
 };
 
@@ -139,18 +139,18 @@ exports.ProtocolMessage.prototype.asBuffer = function() {
  * @return {ProtocolMessage}
  */
 exports.from = function(buff) {
-  var headerLength = buff.readUInt32BE(0);
-  var offset = NUM_BYTES_HEADER_LENGTH;
-  var headerStr = buff.toString('utf8', offset, offset + headerLength);
+  let headerLength = buff.readUInt32BE(0);
+  let offset = NUM_BYTES_HEADER_LENGTH;
+  let headerStr = buff.toString('utf8', offset, offset + headerLength);
   offset += headerLength;
 
-  var header = null;
+  let header = null;
   if (headerLength > 0) {
     header = JSON.parse(headerStr);
   }
-  var data = buff.slice(offset, buff.length);
+  let data = buff.slice(offset, buff.length);
 
-  var result = new exports.ProtocolMessage(header, data);
+  let result = new exports.ProtocolMessage(header, data);
   return result;
 };
 
@@ -173,7 +173,7 @@ exports.createHeader = function(status) {
  * @return {ProtocolMessage}
  */
 exports.createSuccessMessage = function(buff) {
-  var header = exports.createHeader(exports.STATUS_CODES.ok);
+  let header = exports.createHeader(exports.STATUS_CODES.ok);
   return new exports.ProtocolMessage(header, buff);
 };
 
@@ -183,7 +183,7 @@ exports.createSuccessMessage = function(buff) {
  * @return {ProtocolMessage}
  */
 exports.createErrorMessage = function(reason) {
-  var header = exports.createHeader(exports.STATUS_CODES.error);
+  let header = exports.createHeader(exports.STATUS_CODES.error);
   header.message = reason;
   return new exports.ProtocolMessage(header, null);
 };

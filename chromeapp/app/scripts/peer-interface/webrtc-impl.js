@@ -1,7 +1,7 @@
 'use strict';
 
-var cmgr = require('../webrtc/connection-manager');
-var util = require('../util');
+const cmgr = require('../webrtc/connection-manager');
+const util = require('../util');
 
 class WebrtcPeerAccessor {
   /**
@@ -46,7 +46,7 @@ class WebrtcPeerAccessor {
         return peerConnection.getFile(params.fileUrl);
       })
       .then(binary => {
-        var blob = util.getBufferAsBlob(binary);
+        let blob = util.getBufferAsBlob(binary);
         resolve(blob);
       })
       .catch(err => {

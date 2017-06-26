@@ -6,9 +6,9 @@ const serverApi = require('../server/server-api');
 const bufferedChannel = require('./buffered-channel');
 const message = require('./message');
 
-let EV_CLOSE = 'close';
+const EV_CLOSE = 'close';
 
-let Client = bufferedChannel.BufferedChannelClient;
+const Client = bufferedChannel.BufferedChannelClient;
 
 /**
  * Handles a connection to a SemCache peer. This forms the client portion of a
@@ -59,9 +59,9 @@ class PeerConnection extends EventEmitter {
    * of the directory contents
    */
   getList() {
-    var self = this;
+    let self = this;
     return new Promise(function(resolve, reject) {
-      var msg = message.createListMessage();
+      let msg = message.createListMessage();
 
       self.sendAndGetResponse(msg)
       .then(buff => {
@@ -81,9 +81,9 @@ class PeerConnection extends EventEmitter {
    * representing the digest or rejects with an Error.
    */
   getCacheDigest() {
-    var self = this;
+    let self = this;
     return new Promise(function(resolve, reject) {
-      var msg = message.createDigestMessage();
+      let msg = message.createDigestMessage();
 
       self.sendAndGetResponse(msg)
       .then(buff => {
@@ -125,7 +125,7 @@ class PeerConnection extends EventEmitter {
    * @return {Promise.<CPDisk, Error>}
    */
   getCachedPage(href) {
-    var self = this;
+    let self = this;
     return new Promise(function(resolve, reject) {
       let msg = message.createCachedPageMessage(href);
 
@@ -151,7 +151,7 @@ class PeerConnection extends EventEmitter {
   getFile(remotePath) {
     let self = this;
     return new Promise(function(resolve, reject) {
-      var msg = message.createFileMessage(remotePath);
+      let msg = message.createFileMessage(remotePath);
       self.sendAndGetResponse(msg)
       .then(buffer => {
         resolve(buffer);

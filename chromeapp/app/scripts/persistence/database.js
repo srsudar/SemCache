@@ -1,15 +1,15 @@
 'use strict';
 
-var Dexie = require('dexie');
+const Dexie = require('dexie');
 
-var objects = require('./objects');
+const objects = require('./objects');
 
 const CPInfo = objects.CPInfo;
 const CPSummary = objects.CPSummary;
 
 exports.DB_NAME = 'semcache-database';
 
-var db = null;
+let db = null;
 
 const DEFAULT_OFFSET = 0;
 const DEFAULT_LIMIT = 20;
@@ -119,7 +119,7 @@ exports.getAsCPSummaryArr = function(summaryItems, blobItems) {
  */
 exports.getAllCPInfos = function() {
   return new Promise(function(resolve) {
-    var db = exports.getDb();
+    let db = exports.getDb();
     let result = null;
     db.transaction('r', db.pagesummary, function() {
       db.pagesummary.toArray(itemArr => {

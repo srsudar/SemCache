@@ -1,12 +1,14 @@
 'use strict';
-let test = require('tape');
-let sinon = require('sinon');
-let proxyquire = require('proxyquire');
+
+const test = require('tape');
+const sinon = require('sinon');
+const proxyquire = require('proxyquire');
 require('sinon-as-promised');
 
+const objects = require('../../../app/scripts/persistence/objects');
+const putil = require('./persistence-util');
+
 let datastore = require('../../../app/scripts/persistence/datastore');
-let objects = require('../../../app/scripts/persistence/objects');
-let putil = require('./persistence-util');
 
 let CPDisk = objects.CPDisk;
 

@@ -1,15 +1,15 @@
 'use strict';
 
-var test = require('tape');
-var sinon = require('sinon');
+const test = require('tape');
+const sinon = require('sinon');
 require('sinon-as-promised');
 
-var commonChannel = require('../../../app/scripts/webrtc/common-channel');
-var chunkingChannel = require('../../../app/scripts/webrtc/chunking-channel');
-var protocol = require('../../../app/scripts/webrtc/protocol');
+const protocol = require('../../../app/scripts/webrtc/protocol');
+const commonChannel = require('../../../app/scripts/webrtc/common-channel');
 
-var Client = chunkingChannel.ChunkingChannelClient;
-var Server = chunkingChannel.ChunkingChannelServer;
+let chunkingChannel = require('../../../app/scripts/webrtc/chunking-channel');
+let Client = chunkingChannel.ChunkingChannelClient;
+let Server = chunkingChannel.ChunkingChannelServer;
 
 /**
  * Manipulating the object directly leads to polluting the require cache. Any
@@ -40,7 +40,7 @@ function createMessageEvent(data) {
  * @return {Array.<ProtocolMessage>}
  */
 function wrapChunksAsSuccessMsg(chunks) {
-  var result = [];
+  let result = [];
   chunks.forEach(chunk => {
     result.push(protocol.createSuccessMessage(chunk).asBuffer());
   });
@@ -64,15 +64,15 @@ function end(t) {
  * @param {Array.<Buffer>} expectedChunks
  */
 function integrationHelper(t, cacheChunks, expectedChunks, chunkSize) {
-  var buff = Buffer.concat(expectedChunks);
-  var rawConnection = sinon.stub();
+  let buff = Buffer.concat(expectedChunks);
+  let rawConnection = sinon.stub();
   const clientChannel = sinon.stub();
   clientChannel.channelName = 'fooBar';
   clientChannel.close = sinon.stub();
   const serverChannel = sinon.stub();
   rawConnection.createDataChannel = sinon.stub().returns(clientChannel);
-  var msg = { channelName: clientChannel.channelName };
-  var msgBin = Buffer.from(JSON.stringify(msg));
+  let msg = { channelName: clientChannel.channelName };
+  let msgBin = Buffer.from(JSON.stringify(msg));
 
   const client = new Client(rawConnection, cacheChunks, msg);
   const server = new Server(serverChannel, chunkSize);
@@ -80,8 +80,8 @@ function integrationHelper(t, cacheChunks, expectedChunks, chunkSize) {
   // We expect first a request to be sent, and then a continue method for each
   // chunk.
   let continueMsg = commonChannel.BaseClient.createContinueMessage();
-  var continueMsgStr = JSON.stringify(continueMsg);
-  var continueMsgBin = Buffer.from(continueMsgStr);
+  let continueMsgStr = JSON.stringify(continueMsg);
+  let continueMsgBin = Buffer.from(continueMsgStr);
   const expectedClientSent = [msgBin];
   expectedClientSent.push(
     ...Array(expectedChunks.length).fill(continueMsgBin)
@@ -125,7 +125,7 @@ function integrationHelper(t, cacheChunks, expectedChunks, chunkSize) {
     clientChannel.onmessage(event);
   };
 
-  var chunks = [];
+  let chunks = [];
   client.on('chunk', chunk => {
     chunks.push(chunk);
   });
@@ -171,7 +171,7 @@ function integrationHelper(t, cacheChunks, expectedChunks, chunkSize) {
 }
 
 test('integration test for cached chunks', function(t) {
-  var expectedChunks = [
+  let expectedChunks = [
     Buffer.from('Hello'),
     Buffer.from('There'),
     Buffer.from('Camel')
@@ -180,7 +180,7 @@ test('integration test for cached chunks', function(t) {
 });
 
 test('integration test for no cached chunks', function(t) {
-  var expectedChunks = [
+  let expectedChunks = [
     Buffer.from('up'),
     Buffer.from('do'),
     Buffer.from('no'),

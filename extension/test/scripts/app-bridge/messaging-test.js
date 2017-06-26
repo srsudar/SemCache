@@ -1,13 +1,14 @@
 /*jshint esnext:true*/
 'use strict';
-var test = require('tape');
-var proxyquire = require('proxyquire');
-var sinon = require('sinon');
+
+const test = require('tape');
+const proxyquire = require('proxyquire');
+const sinon = require('sinon');
 require('sinon-as-promised');
 
-var messaging = require('../../../app/scripts/app-bridge/messaging');
-
 const mutil = require('../../../../chromeapp/test/scripts/extension-bridge/test-util');
+
+let messaging = require('../../../app/scripts/app-bridge/messaging');
 
 /**
  * Manipulating the object directly leads to polluting the require cache. Any
@@ -38,15 +39,15 @@ function end(t) {
 }
 
 test('sendMessageToApp calls chromeRuntime', function(t) {
-  var sendMessageSpy = sinon.spy();
+  let sendMessageSpy = sinon.spy();
   proxyquireMessaging({
     '../chrome-apis/runtime': {
       sendMessage: sendMessageSpy
     }
   });
 
-  var message = {hello: 'world'};
-  var callback = 'much fancy';
+  let message = {hello: 'world'};
+  let callback = 'much fancy';
   messaging.sendMessageToApp(message, callback);
 
   t.equal(sendMessageSpy.args[0][0], messaging.APP_ID);
@@ -59,7 +60,7 @@ test('sendMessageForResponse resolves on success', function(t) {
   let { i: initiator, r: responder } = mutil.getOpenMsgs();
   let timeout = 100;
 
-  var sendMessageToAppSpy = sinon.stub().callsArgWith(1, responder);
+  let sendMessageToAppSpy = sinon.stub().callsArgWith(1, responder);
   messaging.sendMessageToApp = sendMessageToAppSpy;
   messaging.setTimeout = sinon.stub();
 
@@ -94,15 +95,15 @@ test('sendMessageForResponse rejects if message is error', function(t) {
 });
 
 test('sendMessageForResponse rejects if timeout', function(t) {
-  var expectedErr = new Error(messaging.MSG_TIMEOUT);
-  var timeout = 2468;
+  let expectedErr = new Error(messaging.MSG_TIMEOUT);
+  let timeout = 2468;
 
-  var setTimeoutSpy = sinon.stub().callsArg(0);
+  let setTimeoutSpy = sinon.stub().callsArg(0);
   messaging.setTimeout = setTimeoutSpy;
   // In this case we never invoke the callback.
-  var sendMessageToAppSpy = sinon.stub();
+  let sendMessageToAppSpy = sinon.stub();
   messaging.sendMessageToApp = sendMessageToAppSpy;
-  var message = { msg: 'for app' };
+  let message = { msg: 'for app' };
 
   messaging.sendMessageForResponse(message, timeout)
   .then(actual => {
@@ -118,9 +119,9 @@ test('sendMessageForResponse rejects if timeout', function(t) {
 });
 
 test('sendMessageForResponse rejects if something goes wrong', function(t) {
-  var expected = { msg: 'went wrong' };
+  let expected = { msg: 'went wrong' };
 
-  var sendMessageToAppSpy = sinon.stub().throws(expected);
+  let sendMessageToAppSpy = sinon.stub().throws(expected);
   messaging.sendMessageToApp = sendMessageToAppSpy;
 
   messaging.sendMessageForResponse({ msg: 'for app' })
@@ -159,9 +160,9 @@ test('savePage sends correct message and resolves', function(t) {
 });
 
 test('savePage rejects if sendMessageForResponse rejects', function(t) {
-  var expected = { msg: 'we are rejecting' };
+  let expected = { msg: 'we are rejecting' };
 
-  var sendMessageForResponseSpy = sinon.stub().rejects(expected);
+  let sendMessageForResponseSpy = sinon.stub().rejects(expected);
   messaging.sendMessageForResponse = sendMessageForResponseSpy;
 
   messaging.savePage('url', 'date', 'dataurl', 'so meta')
@@ -177,13 +178,13 @@ test('savePage rejects if sendMessageForResponse rejects', function(t) {
 });
 
 test('savePage rejects if write fails', function(t) {
-  var errFromApp = {
+  let errFromApp = {
     type: 'write',
     result: 'error',
     err: 'something done gone wrong'
   };
 
-  var sendMessageForResponseSpy = sinon.stub().rejects(errFromApp);
+  let sendMessageForResponseSpy = sinon.stub().rejects(errFromApp);
   messaging.sendMessageForResponse = sendMessageForResponseSpy;
 
   messaging.savePage('url', 'date', 'dataurl', 'so meta')
@@ -203,7 +204,7 @@ test('queryForPagesLocally resolves response from app', function(t) {
   let timeout = 7887;
   let urls = initiator.params.urls;
 
-  var sendMessageForResponseSpy = sinon.stub();
+  let sendMessageForResponseSpy = sinon.stub();
   sendMessageForResponseSpy.withArgs(initiator, timeout).resolves(responder);
   messaging.sendMessageForResponse = sendMessageForResponseSpy;
 
@@ -219,8 +220,8 @@ test('queryForPagesLocally resolves response from app', function(t) {
 });
 
 test('queryForPagesLocally rejects correctly', function(t) {
-  var expected = { msg: 'you little devil!' };
-  var sendMessageForResponseSpy = sinon.stub().rejects(expected);
+  let expected = { msg: 'you little devil!' };
+  let sendMessageForResponseSpy = sinon.stub().rejects(expected);
   messaging.sendMessageForResponse = sendMessageForResponseSpy;
 
   messaging.queryForPagesLocally('popup', [])
@@ -235,7 +236,7 @@ test('queryForPagesLocally rejects correctly', function(t) {
 });
 
 test('openUrl calls chromeTabs correctly', function(t) {
-  var updateSpy = sinon.spy();
+  let updateSpy = sinon.spy();
 
   proxyquireMessaging({
     '../chrome-apis/tabs': {
@@ -243,7 +244,7 @@ test('openUrl calls chromeTabs correctly', function(t) {
     }
   });
 
-  var url = 'url to open';
+  let url = 'url to open';
   messaging.openUrl(url);
 
   t.equal(updateSpy.args[0][0], url);
@@ -252,18 +253,18 @@ test('openUrl calls chromeTabs correctly', function(t) {
 });
 
 test('onMessageExternalCallback responds to type open', function(t) {
-  var callback = sinon.spy();
-  var openUrlSpy = sinon.spy();
-  var messaging = require('../../../app/scripts/app-bridge/messaging');
+  let callback = sinon.spy();
+  let openUrlSpy = sinon.spy();
+  let messaging = require('../../../app/scripts/app-bridge/messaging');
   messaging.openUrl = openUrlSpy;
 
-  var message = {
+  let message = {
     type: 'open',
     params: {
       url: 'url to open'
     }
   };
-  var sender = {
+  let sender = {
     id: messaging.APP_ID
   };
 
@@ -278,7 +279,7 @@ test('queryForPagesOnNetwork resolves response from app', function(t) {
   let timeout = 100;
   let { i: initiator, r: responder } = mutil.getNetworkQueryMsgs();
 
-  var sendMessageForResponseSpy = sinon.stub();
+  let sendMessageForResponseSpy = sinon.stub();
   sendMessageForResponseSpy.withArgs(initiator, timeout).resolves(responder);
   messaging.sendMessageForResponse = sendMessageForResponseSpy;
 
@@ -295,10 +296,10 @@ test('queryForPagesOnNetwork resolves response from app', function(t) {
 });
 
 test('queryForPagesOnNetwork rejects correctly', function(t) {
-  var urls = ['oh', 'no'];
+  let urls = ['oh', 'no'];
 
-  var expected = { msg: 'dun gawn rong' };
-  var sendMessageForResponseSpy = sinon.stub().rejects(expected);
+  let expected = { msg: 'dun gawn rong' };
+  let sendMessageForResponseSpy = sinon.stub().rejects(expected);
   messaging.sendMessageForResponse = sendMessageForResponseSpy;
 
   messaging.queryForPagesOnNetwork(urls)
@@ -319,7 +320,7 @@ test('sendMessageToOpenPage resolves', function(t) {
   let serviceName = initiator.params.serviceName;
   let href = initiator.params.href;
 
-  var sendMessageForResponseSpy = sinon.stub();
+  let sendMessageForResponseSpy = sinon.stub();
   sendMessageForResponseSpy.withArgs(initiator, timeout).resolves(responder);
   messaging.sendMessageForResponse = sendMessageForResponseSpy;
 

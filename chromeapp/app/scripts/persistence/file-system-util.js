@@ -24,13 +24,13 @@ function toArray(list) {
 exports.listEntries = function(dirEntry) {
   // This code is based on the Mozilla and HTML5Rocks examples shown here:
   // https://developer.mozilla.org/en/docs/Web/API/DirectoryReader
-  var dirReader = dirEntry.createReader();
-  var entries = [];
+  let dirReader = dirEntry.createReader();
+  let entries = [];
 
   return new Promise(function(resolve, reject) {
 
     // Keep calling readEntries() until no more results are returned.
-    var readEntries = function() {
+    let readEntries = function() {
       dirReader.readEntries (function(results) {
         if (!results.length) {
           resolve(entries.sort());
@@ -165,20 +165,20 @@ exports.getFileFromEntry = function(fileEntry) {
 exports.getFileContents = function(fileEntry) {
   return new Promise(function(resolve, reject) {
     // Array of Buffers that we write chunks to as we receive them.
-    var chunks = [];
+    let chunks = [];
     exports.getFileFromEntry(fileEntry)
     .then(file => {
-      var fileReader = exports.createFileReader();
+      let fileReader = exports.createFileReader();
 
       fileReader.onload = function(evt) {
         // We want to push Buffers, not ArrayBuffers.
-        var arrayBuffer = evt.target.result;
+        let arrayBuffer = evt.target.result;
         chunks.push(Buffer.from(arrayBuffer));
       };
 
       fileReader.onloadend = function() {
         try {
-          var result = Buffer.concat(chunks);
+          let result = Buffer.concat(chunks);
           resolve(result);
         } catch (err) {
           reject(err);

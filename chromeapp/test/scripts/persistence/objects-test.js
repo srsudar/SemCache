@@ -1,12 +1,15 @@
 'use strict';
-let proxyquire = require('proxyquire');
-let sinon = require('sinon');
-let test = require('tape');
+
+const proxyquire = require('proxyquire');
+const sinon = require('sinon');
+const test = require('tape');
 require('sinon-as-promised');
 
-let objects = require('../../../app/scripts/persistence/objects');
-let putil = require('./persistence-util');
+const putil = require('./persistence-util');
 
+let objects = require('../../../app/scripts/persistence/objects');
+
+// let, not const, so they can be redefined in the proxyquire helper method
 let CPInfo = objects.CPInfo;
 let CPSummary = objects.CPSummary;
 let CPDisk = objects.CPDisk;

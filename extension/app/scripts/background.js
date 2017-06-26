@@ -1,13 +1,13 @@
 /* global chrome */
 'use strict';
 
-var backgroundApi = require('./background/background-api');
-var messaging = require('./app-bridge/messaging');
-var chromeRuntime = require('./chrome-apis/runtime');
-var webNavigation = require('./chrome-apis/web-navigation');
+const backgroundApi = require('./background/background-api');
+const messaging = require('./app-bridge/messaging');
+const chromeRuntime = require('./chrome-apis/runtime');
+const webNavigation = require('./chrome-apis/web-navigation');
 
-var numNavs = 0;
-var loadStart = Date.now();
+let numNavs = 0;
+let loadStart = Date.now();
 
 function logQueryPerMin() {
   var minutesSinceStart = (Date.now() - loadStart) / 1000 / 60;

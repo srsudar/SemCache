@@ -19,12 +19,12 @@ const VERSION = 0.0;
 /** 
  * The path from the root of the server that serves cached pages.
  */
-var PATH_LIST_PAGE_CACHE = 'list_pages';
-var PATH_GET_CACHED_PAGE = 'pages';
-var PATH_GET_PAGE_DIGEST = 'page_digest';
+const PATH_LIST_PAGE_CACHE = 'list_pages';
+const PATH_GET_CACHED_PAGE = 'pages';
+const PATH_GET_PAGE_DIGEST = 'page_digest';
 /** The path we use for mimicking the list_pages endpoing during evaluation. */
-var PATH_EVAL_LIST_PAGE_CACHE = 'eval_list';
-var PATH_RECEIVE_WRTC_OFFER = 'receive_wrtc';
+const PATH_EVAL_LIST_PAGE_CACHE = 'eval_list';
+const PATH_RECEIVE_WRTC_OFFER = 'receive_wrtc';
 
 const DEFAULT_OFFSET = 0;
 const DEFAULT_LIMIT = 50;
@@ -33,7 +33,7 @@ const DEFAULT_LIMIT = 50;
  * Create the metadata object that is returned in server responses.
  */
 exports.createMetadatObj = function() {
-  var result = {};
+  let result = {};
   result.version = VERSION;
   return result;
 };
@@ -68,10 +68,10 @@ exports.getApiEndpoints = function() {
  * @param {integer} port the port where the server is listening at ipAddress
  */
 exports.getListPageUrlForCache = function(ipAddress, port) {
-  var scheme = HTTP_SCHEME;
-  var endpoint = exports.getApiEndpoints().listPageCache;
+  let scheme = HTTP_SCHEME;
+  let endpoint = exports.getApiEndpoints().listPageCache;
   
-  var result = scheme + ipAddress + ':' + port + '/' + endpoint;
+  let result = scheme + ipAddress + ':' + port + '/' + endpoint;
   return result;
 };
 
@@ -83,13 +83,13 @@ exports.getListPageUrlForCache = function(ipAddress, port) {
  * @return {string} a fully qualified and valid URL
  */
 exports.getAccessUrlForCachedPage = function(fullPath) {
-  var scheme = HTTP_SCHEME;
+  let scheme = HTTP_SCHEME;
   // TODO: this might have to strip the path of directory where things are
   // stored--it basically maps between the two urls.
-  var httpIface = appController.getListeningHttpInterface();
-  var addressAndPort = httpIface.address + ':' + httpIface.port;
-  var apiPath = exports.getApiEndpoints().pageCache;
-  var result = scheme + [addressAndPort, apiPath, fullPath].join('/');
+  let httpIface = appController.getListeningHttpInterface();
+  let addressAndPort = httpIface.address + ':' + httpIface.port;
+  let apiPath = exports.getApiEndpoints().pageCache;
+  let result = scheme + [addressAndPort, apiPath, fullPath].join('/');
   return result;
 };
 
@@ -166,7 +166,7 @@ exports.getResponseForAllPagesDigest = function() {
   return new Promise(function(resolve, reject) {
     datastore.getAllCachedPages()
     .then(cpinfos => {
-      var result = {};
+      let result = {};
       result.metadata = exports.createMetadatObj();
       
       let pageInfos = cpinfos.map(cpinfo => {
@@ -251,8 +251,8 @@ exports.parseResponseForBloomFilter = function(buff) {
  * @param {string} path the path of the request
  */
 exports.getCachedFileNameFromPath = function(path) {
-  var parts = path.split('/');
+  let parts = path.split('/');
   // The file name is the last part of the path.
-  var result = parts[parts.length - 1];
+  let result = parts[parts.length - 1];
   return result;
 };

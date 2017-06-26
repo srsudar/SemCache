@@ -8,10 +8,10 @@
  * use the dns-sd module.
  */
 
-var dnssd = require('./dns-sd');
-var serverApi = require('../server/server-api');
+const dnssd = require('./dns-sd');
+const serverApi = require('../server/server-api');
 
-var SEMCACHE_SERVICE_STRING = '_semcache._tcp';
+const SEMCACHE_SERVICE_STRING = '_semcache._tcp';
 
 /**
  * Return the service string representing SemCache, e.g. "_semcache._tcp".
@@ -52,7 +52,7 @@ exports.getFullName = function(friendlyName) {
  * }
  */
 exports.registerSemCache = function(host, name, port) {
-  var result = dnssd.register(host, name, SEMCACHE_SERVICE_STRING, port);
+  let result = dnssd.register(host, name, SEMCACHE_SERVICE_STRING, port);
   return result;
 };
 
@@ -101,7 +101,7 @@ exports.resolveCache = function(fullName) {
   return new Promise(function(resolve, reject) {
     dnssd.resolveService(fullName)
     .then(info => {
-      var listUrl = serverApi.getListPageUrlForCache(
+      let listUrl = serverApi.getListPageUrlForCache(
         info.ipAddress, info.port
       );
       info.listUrl = listUrl;
@@ -131,6 +131,6 @@ exports.resolveCache = function(fullName) {
  * }
  */
 exports.browseForSemCacheInstances = function() {
-  var result = dnssd.browseServiceInstances(SEMCACHE_SERVICE_STRING);
+  let result = dnssd.browseServiceInstances(SEMCACHE_SERVICE_STRING);
   return result;
 };

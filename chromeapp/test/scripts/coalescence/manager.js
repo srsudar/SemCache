@@ -54,8 +54,8 @@ test('getStrategy returns existing object if active', function(t) {
 });
 
 test('queryForUrls rejects on error', function(t) {
-  var expectedErr = { msg: 'initialize went wrong' };
-  var strategy = {
+  let expectedErr = { msg: 'initialize went wrong' };
+  let strategy = {
     initialize: sinon.stub().rejects(expectedErr)
   };
 

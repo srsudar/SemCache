@@ -1,11 +1,12 @@
 /*jshint esnext:true*/
 'use strict';
-var test = require('tape');
-var proxyquire = require('proxyquire');
-var sinon = require('sinon');
+
+const test = require('tape');
+const proxyquire = require('proxyquire');
+const sinon = require('sinon');
 require('sinon-as-promised');
 
-var util = require('../../../app/scripts/util/util.js');
+let util = require('../../../app/scripts/util/util.js');
 
 function proxyquireUtil(proxies) {
   util = proxyquire('../../../app/scripts/util/util.js', proxies);
@@ -24,10 +25,10 @@ function resetUtil() {
 }
 
 test('getOnCompletePromise resolves if already complete', function(t) {
-  var doc = {};
+  let doc = {};
   doc.readyState = 'complete';
   doc.addEventListener = sinon.stub();
-  var getDocumentSpy = sinon.stub().returns(doc);
+  let getDocumentSpy = sinon.stub().returns(doc);
   util.getDocument = getDocumentSpy;
 
   util.getOnCompletePromise()
@@ -38,11 +39,11 @@ test('getOnCompletePromise resolves if already complete', function(t) {
 });
 
 test('getOnCompletePromise resolves after complete', function(t) {
-  var doc = {};
+  let doc = {};
   doc.readyState = 'interactive';
-  var addEventListenerSpy = sinon.stub();
+  let addEventListenerSpy = sinon.stub();
   doc.addEventListener = addEventListenerSpy;
-  var getDocumentSpy = sinon.stub().returns(doc);
+  let getDocumentSpy = sinon.stub().returns(doc);
 
   util.getDocument = getDocumentSpy;
 
@@ -55,14 +56,14 @@ test('getOnCompletePromise resolves after complete', function(t) {
 
   // The promise is waiting. Retrieve the event listener and invoke it.
   doc.readyState = 'complete';
-  var checkState = addEventListenerSpy.args[0][1];
+  let checkState = addEventListenerSpy.args[0][1];
   checkState();
 });
 
 test('getActiveTab returns 0th tab from tabs API', function(t) {
-  var tabs = ['foo', 'bar'];
-  var expectedQueryArg = { currentWindow: true, active: true };
-  var querySpy = sinon.stub().withArgs(expectedQueryArg).resolves(tabs);
+  let tabs = ['foo', 'bar'];
+  let expectedQueryArg = { currentWindow: true, active: true };
+  let querySpy = sinon.stub().withArgs(expectedQueryArg).resolves(tabs);
 
   proxyquireUtil({
     '../chrome-apis/tabs': {

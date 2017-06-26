@@ -1,10 +1,12 @@
 /*jshint esnext:true*/
 'use strict';
-var test = require('tape');
-var proxyquire = require('proxyquire');
-var sinon = require('sinon');
+
+const test = require('tape');
+const proxyquire = require('proxyquire');
+const sinon = require('sinon');
 require('sinon-as-promised');
-var api = require('../../../app/scripts/content-script/cs-api');
+
+let api = require('../../../app/scripts/content-script/cs-api');
 
 /**
  * Proxyquire the datastore object with proxies passed as the proxied modules.
@@ -35,13 +37,13 @@ function end(t) {
 }
 
 test('onMessageHandler returns true and calls handleLoadMessage', function(t) {
-  var message = { type: 'readystateComplete' };
-  var sender = 'sender';
-  var callback = 'callback';
-  var handleLoadMessageSpy = sinon.stub();
+  let message = { type: 'readystateComplete' };
+  let sender = 'sender';
+  let callback = 'callback';
+  let handleLoadMessageSpy = sinon.stub();
   api.handleLoadMessage = handleLoadMessageSpy;
 
-  var actual = api.onMessageHandler(message, sender, callback);
+  let actual = api.onMessageHandler(message, sender, callback);
 
   t.true(actual);  // true to say we'll handle it asynchronously
   t.deepEqual(handleLoadMessageSpy.args[0], [message, sender, callback]);
@@ -51,15 +53,15 @@ test('onMessageHandler returns true and calls handleLoadMessage', function(t) {
 test(
   'onMessageHandler returns false and calls handleQueryResultMessage',
   function(t) {
-    var message = {
+    let message = {
       type: 'queryResult'
     };
 
-    var sender = 'sender';
-    var callback = 'callback';
+    let sender = 'sender';
+    let callback = 'callback';
     api.handleQueryResultMessage = sinon.stub();
 
-    var actual = api.onMessageHandler(message, sender, callback);
+    let actual = api.onMessageHandler(message, sender, callback);
     t.false(actual);
     t.deepEqual(
       api.handleQueryResultMessage.args[0],
@@ -71,16 +73,16 @@ test(
 
 test('onMessageHandler returns true and calls handleQueryFromPopup',
   function(t) {
-    var message = {
+    let message = {
       type: 'queryForPage',
       from: 'popup'
     };
 
-    var sender = 'sender';
-    var callback = 'callback';
+    let sender = 'sender';
+    let callback = 'callback';
     api.handleQueryFromPopup = sinon.stub();
 
-    var actual = api.onMessageHandler(message, sender, callback);
+    let actual = api.onMessageHandler(message, sender, callback);
     t.true(actual);
     t.deepEqual(
       api.handleQueryFromPopup.args[0],
@@ -91,8 +93,8 @@ test('onMessageHandler returns true and calls handleQueryFromPopup',
 );
 
 test('handleQueryResultMessage caches page from query', function(t) {
-  var savedPage = 'I am the saved page';
-  var message = {
+  let savedPage = 'I am the saved page';
+  let message = {
     type: 'queryResult',
     page: savedPage
   };
@@ -105,7 +107,7 @@ test('handleQueryResultMessage caches page from query', function(t) {
 });
 
 test('handleQueryResultMessage does not cache if no page', function(t) {
-  var message = {
+  let message = {
     type: 'queryResult',
   };
 
@@ -117,11 +119,11 @@ test('handleQueryResultMessage does not cache if no page', function(t) {
 });
 
 test('handleQueryFromPopup invokes callback with saved page', function(t) {
-  var expected = 'cashmoney page';
+  let expected = 'cashmoney page';
 
   api.getLocalCachedPage = sinon.stub().returns(expected);
 
-  var message = {
+  let message = {
     from: 'popup',
     type: 'queryForPage'
   };
@@ -135,9 +137,9 @@ test('handleQueryFromPopup invokes callback with saved page', function(t) {
 });
 
 test('handleLoadMessage creates response and invokes callback', function(t) {
-  var expected = { hello: 'from content script' };
+  let expected = { hello: 'from content script' };
 
-  var getOnCompletePromiseSpy = sinon.stub().resolves();
+  let getOnCompletePromiseSpy = sinon.stub().resolves();
 
   proxyquireApi({
     '../util/util': {
@@ -154,16 +156,16 @@ test('handleLoadMessage creates response and invokes callback', function(t) {
 });
 
 test('createLoadResponseMessage gets load time' ,function(t) {
-  var time = 1234.42;
-  var getFullLoadTimeSpy = sinon.stub().returns(time);
-  var expected = {
+  let time = 1234.42;
+  let getFullLoadTimeSpy = sinon.stub().returns(time);
+  let expected = {
     type: 'readystateComplete',
     loadTime: time
   };
 
   api.getFullLoadTime = getFullLoadTimeSpy;
 
-  var actual = api.createLoadResponseMessage();
+  let actual = api.createLoadResponseMessage();
   t.deepEqual(actual, expected);
   t.end();
   resetApi();
@@ -171,7 +173,7 @@ test('createLoadResponseMessage gets load time' ,function(t) {
 
 test('getLinksOnPage correct', function(t) {
   // We want to handle duplicates as well as single URLs.
-  var anchors = [
+  let anchors = [
     { 
       id: 1,
       href: 'example.com',
@@ -189,7 +191,7 @@ test('getLinksOnPage correct', function(t) {
     }
   ];
 
-  var expected = {};
+  let expected = {};
   expected[anchors[0].absoluteUrl] = [ anchors[0], anchors[2] ];
   expected[anchors[1].absoluteUrl] = [ anchors[1] ];
 
@@ -198,14 +200,14 @@ test('getLinksOnPage correct', function(t) {
     return 'http://' + href;
   };
 
-  var actual = api.getLinksOnPage();
+  let actual = api.getLinksOnPage();
   t.deepEqual(actual, expected);
   end(t);
 });
 
 test('annotateLocalLinks annotates on success', function(t) {
   // Ugly duplication with the network query test.
-  var anchors = [
+  let anchors = [
     { 
       id: 1,
       href: 'http://example.com'
@@ -224,18 +226,18 @@ test('annotateLocalLinks annotates on success', function(t) {
     }
   ];
 
-  var links = {};
+  let links = {};
   links[anchors[0].href] = [ anchors[0], anchors[2] ];
   links[anchors[1].href] = [ anchors[1] ];
   links[anchors[3].href] = [ anchors[3] ];
 
-  var urls = Object.keys(links);
+  let urls = Object.keys(links);
 
-  var queryResponse = {};
+  let queryResponse = {};
   queryResponse[anchors[0].href] = 'whatever';
   queryResponse[anchors[1].href] = 'yawn';
 
-  var annotateAnchorSpy = sinon.stub();
+  let annotateAnchorSpy = sinon.stub();
 
   let queryLocallyStub = sinon.stub();
   queryLocallyStub.withArgs('contentscript', urls).resolves(queryResponse);
@@ -264,7 +266,7 @@ test('annotateLocalLinks annotates on success', function(t) {
 
 test('annotateLocalLinks does nothing on failure', function(t) {
   // Ugly duplication with the network questy
-  var expectedErr = { msg: 'fail.' };
+  let expectedErr = { msg: 'fail.' };
   proxyquireApi({
     '../app-bridge/messaging': {
       queryForPagesLocally: sinon.stub().rejects(expectedErr)
@@ -285,7 +287,7 @@ test('annotateLocalLinks does nothing on failure', function(t) {
 
 test('annotateNetworkLocalLinks annotates on success', function(t) {
   // We want to handle duplicates as well as single URLs.
-  var anchors = [
+  let anchors = [
     { 
       id: 1,
       href: 'http://example.com'
@@ -304,18 +306,18 @@ test('annotateNetworkLocalLinks annotates on success', function(t) {
     }
   ];
 
-  var links = {};
+  let links = {};
   links[anchors[0].href] = [ anchors[0], anchors[2] ];
   links[anchors[1].href] = [ anchors[1] ];
   links[anchors[3].href] = [ anchors[3] ];
 
-  var urls = Object.keys(links);
+  let urls = Object.keys(links);
 
-  var queryResponse = {};
+  let queryResponse = {};
   queryResponse[anchors[0].href] = 'whatever';
   queryResponse[anchors[1].href] = 'yawn';
 
-  var annotateAnchorSpy = sinon.stub();
+  let annotateAnchorSpy = sinon.stub();
 
   let queryForPagesStub = sinon.stub();
   queryForPagesStub.withArgs('contentscript', urls).resolves(queryResponse);
@@ -343,7 +345,7 @@ test('annotateNetworkLocalLinks annotates on success', function(t) {
 });
 
 test('annotateNetworkLocalLinks does nothing on failure', function(t) {
-  var expectedErr = { msg: 'fail.' };
+  let expectedErr = { msg: 'fail.' };
   proxyquireApi({
     '../app-bridge/messaging': {
       queryForPagesOnNetwork: sinon.stub().rejects(expectedErr)

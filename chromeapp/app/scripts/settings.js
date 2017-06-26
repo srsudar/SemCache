@@ -1,8 +1,8 @@
 /* global Promise */
 'use strict';
 
-var chromep = require('./chrome-apis/chromep');
-var fileSystem = require('./persistence/file-system');
+const chromep = require('./chrome-apis/chromep');
+const fileSystem = require('./persistence/file-system');
 
 /**
  * Settings for the application as a whole.
@@ -14,19 +14,19 @@ var fileSystem = require('./persistence/file-system');
 // 'absPath', while the underlying key is stored as setting_absPath.
 
 /** The prefix that we use to namespace setting keys. */
-var SETTING_NAMESPACE_PREFIX = 'setting_';
+const SETTING_NAMESPACE_PREFIX = 'setting_';
 
 /**
  * The strings we use to represent transport mechanisms in the database.
  */
-var TRANSPORT_METHOD_STRINGS = {
+const TRANSPORT_METHOD_STRINGS = {
   http: 'http',
   webrtc: 'webrtc'
 };
 
 exports.SETTINGS_OBJ = null;
 
-var userFriendlyKeys = {
+const userFriendlyKeys = {
   absPath: 'absPath',
   instanceName: 'instanceName',
   baseDirId: 'baseDirId',
@@ -82,11 +82,11 @@ exports.init = function() {
   return new Promise(function(resolve, reject) {
     chromep.getStorageLocal().get(exports.getAllSettingKeys())
     .then(allKvPairs => {
-      var processedSettings = {};
+      let processedSettings = {};
       Object.keys(allKvPairs).forEach(rawKey => {
         // we're dealing with the raw keys here, e.g. setting_absPath
-        var processedKey = exports.removeNameSpaceFromKey(rawKey);
-        var value = allKvPairs[rawKey];
+        let processedKey = exports.removeNameSpaceFromKey(rawKey);
+        let value = allKvPairs[rawKey];
         processedSettings[processedKey] = value;
       });
       exports.SETTINGS_OBJ = processedSettings;
@@ -108,8 +108,8 @@ exports.init = function() {
  */
 exports.set = function(key, value) {
   return new Promise(function(resolve, reject) {
-    var namespacedKey = exports.createNameSpacedKey(key);
-    var kvPair = {};
+    let namespacedKey = exports.createNameSpacedKey(key);
+    let kvPair = {};
     kvPair[namespacedKey] = value;
 
     chromep.getStorageLocal().set(kvPair)
@@ -130,7 +130,7 @@ exports.set = function(key, value) {
  * @return {string}
  */
 exports.createNameSpacedKey = function(key) {
-  var result = exports.getNameSpacePrefix() + key;
+  let result = exports.getNameSpacePrefix() + key;
   return result;
 };
 
@@ -157,16 +157,16 @@ exports.removeNameSpaceFromKey = function(key) {
  * @return {any} the value in the settings obj, or null if it hasn't been set
  */
 exports.get = function(key) {
-  var settingsObj = exports.getSettingsObj();
+  let settingsObj = exports.getSettingsObj();
   if (!settingsObj) {
     console.warn('Settings object not initialized, returning null');
     return null;
   }
-  var settings = exports.getSettingsObj();
+  let settings = exports.getSettingsObj();
   if (!settings.hasOwnProperty(key)) {
     return null;
   } else {
-    var result = settings[key];
+    let result = settings[key];
     return result;
   }
 };
@@ -222,7 +222,7 @@ exports.getHostName = function() {
  * to 'http'.
  */
 exports.getTransportMethod = function() {
-  var result = exports.get(userFriendlyKeys.transportMethod);
+  let result = exports.get(userFriendlyKeys.transportMethod);
   if (result === null) {
     result = TRANSPORT_METHOD_STRINGS.http;
   }
@@ -316,7 +316,7 @@ exports.setTransportWebrtc = function() {
  */
 exports.promptAndSetNewBaseDir = function() {
   return new Promise(function(resolve, reject) {
-    var dirId;
+    let dirId;
     fileSystem.promptForDir()
     .then(dirEntry => {
       if (!dirEntry) {

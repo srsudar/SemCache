@@ -1,8 +1,8 @@
 'use strict';
 
-var settings = require('../settings');
-var ifHttp = require('./http-impl');
-var ifWebrtc = require('./webrtc-impl');
+const settings = require('../settings');
+const ifHttp = require('./http-impl');
+const ifWebrtc = require('./webrtc-impl');
 
 /**
  * Manages peer interfaces for the application.
@@ -14,7 +14,7 @@ var ifWebrtc = require('./webrtc-impl');
  * @return {HttpPeerAccessor|WebrtcPeerAccessor}
  */
 exports.getPeerAccessor = function(ipaddr, port) {
-  var transportMethod = settings.getTransportMethod();
+  let transportMethod = settings.getTransportMethod();
   console.log(transportMethod);
   if (transportMethod === 'http') {
     return new ifHttp.HttpPeerAccessor(); 

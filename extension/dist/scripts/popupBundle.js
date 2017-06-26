@@ -70,10 +70,10 @@ exports.setAbsPathToBaseDir = function(absPath) {
  * @return {string} the URL for the list of pages in this device's own cache
  */
 exports.getListUrlForSelf = function() {
-  var iface = exports.getListeningHttpInterface();
-  var host = iface.address;
-  var port = iface.port;
-  var result = serverApi.getListPageUrlForCache(host, port);
+  let iface = exports.getListeningHttpInterface();
+  let host = iface.address;
+  let port = iface.port;
+  let result = serverApi.getListPageUrlForCache(host, port);
   return result;
 };
 
@@ -118,11 +118,11 @@ exports.networkIsActive = function() {
  * for this device
  */
 exports.getOwnCacheName = function() {
-  var friendlyName = settings.getInstanceName();
-  var fullName = dnssdSem.getFullName(friendlyName);
-  var serviceType = dnssdSem.getSemCacheServiceString();
+  let friendlyName = settings.getInstanceName();
+  let fullName = dnssdSem.getFullName(friendlyName);
+  let serviceType = dnssdSem.getSemCacheServiceString();
 
-  var result = {
+  let result = {
     serviceType: serviceType,
     friendlyName: friendlyName,
     serviceName: fullName
@@ -154,7 +154,7 @@ exports.getOwnCacheName = function() {
  */
 exports.resolveCache = function(fullName) {
   return new Promise(function(resolve, reject) {
-    var ownCache = exports.getOwnCache();
+    let ownCache = exports.getOwnCache();
     if (fullName === constants.SELF_SERVICE_SHORTCUT) {
       resolve(ownCache);
       return;
@@ -200,9 +200,9 @@ exports.getPeerCacheNames = function() {
   // First we'll construct our own cache info. Some of these variables may not
   // be set if we are initializing for the first time and settings haven't been
   // created.
-  var thisCacheName = exports.getOwnCacheName();
+  let thisCacheName = exports.getOwnCacheName();
 
-  var result = [thisCacheName];
+  let result = [thisCacheName];
 
   if (!exports.networkIsActive()) {
     // When we shouldn't query the network.
@@ -257,16 +257,16 @@ exports.getBrowseableCaches = function() {
     return Promise.resolve([]);
   }
 
-  var thisCache = exports.getOwnCache();
+  let thisCache = exports.getOwnCache();
 
-  var result = [thisCache];
+  let result = [thisCache];
 
   if (!exports.networkIsActive()) {
     // When we shouldn't query the network.
     return Promise.resolve(result);
   }
 
-  var ipAddress = exports.getListeningHttpInterface().address;
+  let ipAddress = exports.getListeningHttpInterface().address;
 
   return new Promise(function(resolve, reject) {
     dnssdSem.browseForSemCacheInstances()
@@ -303,11 +303,11 @@ exports.getBrowseableCaches = function() {
  */
 exports.startServersAndRegister = function() {
   return new Promise(function(resolve, reject) {
-    var instanceName = settings.getInstanceName();
-    var serverPort = settings.getServerPort();
-    var baseDirId = settings.getBaseDirId();
-    var hostName = settings.getHostName();
-    var httpIface = '0.0.0.0';
+    let instanceName = settings.getInstanceName();
+    let serverPort = settings.getServerPort();
+    let baseDirId = settings.getBaseDirId();
+    let hostName = settings.getHostName();
+    let httpIface = '0.0.0.0';
     if (!instanceName || !serverPort || !baseDirId || !hostName) {
       reject('Complete and save settings before starting');
       return;
@@ -315,7 +315,7 @@ exports.startServersAndRegister = function() {
 
     dnsController.start()
     .then(() => {
-      var ifaces = dnsController.getIPv4Interfaces();
+      let ifaces = dnsController.getIPv4Interfaces();
       if (ifaces.length === 0) {
         throw new Error('No network interfaces in dns-controller');
       }
@@ -405,10 +405,10 @@ exports.getAbsPathToBaseDir = function() {
  */
 exports.getListFromService = function(serviceName) {
   return new Promise(function(resolve, reject) {
-    var peerAccessor = peerIfMgr.getPeerAccessor();
+    let peerAccessor = peerIfMgr.getPeerAccessor();
     exports.resolveCache(serviceName)
     .then(cacheInfo => {
-      var listParams = ifCommon.createListParams(
+      let listParams = ifCommon.createListParams(
         cacheInfo.ipAddress, cacheInfo.port, cacheInfo.listUrl
       );
       return peerAccessor.getList(listParams);
@@ -433,8 +433,8 @@ exports.getListFromService = function(serviceName) {
  */
 exports.saveMhtmlAndOpen = function(serviceName, href) {
   return new Promise(function(resolve, reject) {
-    var start = evaluation.getNow();
-    var streamName = 'open_' + href;
+    let start = evaluation.getNow();
+    let streamName = 'open_' + href;
     exports.resolveCache(serviceName)
     .then(cacheInfo => {
       return peerIfMgr.getPeerAccessor(
@@ -445,13 +445,13 @@ exports.saveMhtmlAndOpen = function(serviceName, href) {
       return datastore.addPageToCache(cpdisk);
     })
     .then((entry) => {
-      var fileUrl = fileSystem.constructFileSchemeUrl(
+      let fileUrl = fileSystem.constructFileSchemeUrl(
         exports.getAbsPathToBaseDir(),
         entry.fullPath
       );
       extBridge.sendMessageToOpenUrl(fileUrl);
-      var end = evaluation.getNow();
-      var totalTime = end - start;
+      let end = evaluation.getNow();
+      let totalTime = end - start;
       evaluation.logTime(streamName, totalTime);
       console.warn('totalTime to fetch: ', totalTime);
       resolve(totalTime);
@@ -472,9 +472,9 @@ exports.saveMhtmlAndOpen = function(serviceName, href) {
  * during testing.
  */
 
-var ChromePromise = require('chrome-promise');
+const ChromePromise = require('chrome-promise');
 
-var CHROMEP_SINGLETON = null;
+let CHROMEP_SINGLETON = null;
 
 /**
  * Return the chrome-promise singleton.
@@ -532,9 +532,9 @@ exports.getRuntimeBare = function() {
 /* globals chrome */
 'use strict';
 
-var util = require('./util');
+const util = require('./util');
 
-var DEBUG = false;
+let DEBUG = false;
 
 /**
  * @constructor
@@ -608,8 +608,8 @@ exports.bind = function(socketId, address, port) {
   return new Promise(function(resolve, reject) {
     util.getUdp().bind(socketId, address, port, function(result) {
       if (result < 0) {
-        var lastError = chrome.runtime.lastError;
-        var logInfo = {
+        let lastError = chrome.runtime.lastError;
+        let logInfo = {
           socketId: socketId,
           address: address,
           port: port,
@@ -677,7 +677,7 @@ exports.joinGroup = function(socketId, address) {
         console.log('address: ', address);
       }
       if (result < 0) {
-        var lastError = chrome.runtime.lastError || {};
+        let lastError = chrome.runtime.lastError || {};
         console.log('chromeUdp.joinGroup: result < 0: ', result);
         reject(new Error('Error joining group: ' + lastError.message));
       } else {
@@ -837,7 +837,7 @@ exports.applyArgsCheckLastError = function(fn, callArgs) {
     // sendMessage function interprets based on type, etc. Rather than passing
     // directly, we are going to pass the arguments variable directly, adding a
     // callback function.
-    var args = Array.prototype.slice.call(callArgs);
+    let args = Array.prototype.slice.call(callArgs);
     args.push(function(response) {
       if (exports.wasError()) {
         reject(exports.getError());
@@ -865,8 +865,8 @@ exports.applyArgsCheckLastError = function(fn, callArgs) {
 /**
  * The library we are wrapping.
  */
-var lib = require('bloomfilter');
-var toArrayBuffer = require('to-arraybuffer');
+const lib = require('bloomfilter');
+const toArrayBuffer = require('to-arraybuffer');
 
 /**
  * Both the number of bits and the number of hash functions are constants that
@@ -874,8 +874,8 @@ var toArrayBuffer = require('to-arraybuffer');
  * a Google Sheets calculation used to generate 0.001 probability of false
  * positive for 1000 elements.
  */
-var NUM_BITS = 14378;
-var NUM_HASH_FUNCTIONS = 10;
+const NUM_BITS = 14378;
+const NUM_HASH_FUNCTIONS = 10;
 
 class BloomFilter {
   constructor() {
@@ -919,11 +919,11 @@ class BloomFilter {
    * @return {BloomFilter}
    */
   static from(buff) {
-    var wrapper = new exports.BloomFilter();
+    let wrapper = new exports.BloomFilter();
 
     // We need an Int32Array, not just a buffer.
-    var arrayBuffer = toArrayBuffer(buff);
-    var typedArray = new Int32Array(arrayBuffer);
+    let arrayBuffer = toArrayBuffer(buff);
+    let typedArray = new Int32Array(arrayBuffer);
     
     wrapper.backingObj = new lib.BloomFilter(typedArray, NUM_HASH_FUNCTIONS);
     return wrapper;
@@ -937,11 +937,11 @@ exports.from = BloomFilter.from;
 },{"bloomfilter":49,"buffer":86,"to-arraybuffer":64}],6:[function(require,module,exports){
 'use strict';
 
-var dnssdSem = require('../dnssd/dns-sd-semcache');
-var objects = require('./objects');
-var peerIf = require('../peer-interface/common');
-var peerIfMgr = require('../peer-interface/manager');
-var util = require('./util');
+const dnssdSem = require('../dnssd/dns-sd-semcache');
+const objects = require('./objects');
+const peerIf = require('../peer-interface/common');
+const peerIfMgr = require('../peer-interface/manager');
+const util = require('./util');
 
 /**
  * This module is responsible for the digest strategy of cache coalescence.
@@ -1043,7 +1043,7 @@ exports.BloomStrategy.prototype.initialize = function() {
     .then(peerInfos => {
       return util.removeOwnInfo(peerInfos);
     }).then(peerInfos => {
-      var peerAccessor = peerIfMgr.getPeerAccessor();
+      let peerAccessor = peerIfMgr.getPeerAccessor();
       return self.getAndProcessBloomFilters(peerAccessor, peerInfos);
     })
     // This code is for evaluation mode.
@@ -1095,16 +1095,16 @@ exports.BloomStrategy.prototype.getAndProcessBloomFilters = function(
       resolve([]);
       return;
     }
-    var pendingResponses = peerInfos.length;
-    var result = [];
+    let pendingResponses = peerInfos.length;
+    let result = [];
     peerInfos.forEach(peerInfo => {
-      var params = peerIf.createListParams(
+      let params = peerIf.createListParams(
         peerInfo.ipAddress, peerInfo.port, null
       );
       peerInterface.getCacheBloomFilter(params)
       .then(bloomFilter => {
         pendingResponses--;
-        var peerBf = new objects.PeerBloomFilter(peerInfo, bloomFilter);
+        let peerBf = new objects.PeerBloomFilter(peerInfo, bloomFilter);
         result.push(peerBf);
         if (pendingResponses === 0) {
           resolve(result);
@@ -1146,11 +1146,11 @@ exports.BloomStrategy.prototype.performQuery = function(urls) {
   return new Promise(function(resolve, reject) {
     Promise.resolve()
     .then(() => {
-      var result = {};
+      let result = {};
       urls.forEach(url => {
-        var copiesForUrl = [];
+        let copiesForUrl = [];
         self.BLOOM_FILTERS.forEach(bloomFilter => {
-          var isPresent = bloomFilter.performQueryForPage(url);
+          let isPresent = bloomFilter.performQueryForPage(url);
           if (isPresent) {
             let info = {
               friendlyName: bloomFilter.peerInfo.friendlyName,
@@ -1175,11 +1175,11 @@ exports.BloomStrategy.prototype.performQuery = function(urls) {
 },{"../dnssd/dns-sd-semcache":17,"../peer-interface/common":25,"../peer-interface/manager":27,"./objects":9,"./util":10}],7:[function(require,module,exports){
 'use strict';
 
-var dnssdSem = require('../dnssd/dns-sd-semcache');
-var objects = require('./objects');
-var peerIf = require('../peer-interface/common');
-var peerIfMgr = require('../peer-interface/manager');
-var util = require('./util');
+const dnssdSem = require('../dnssd/dns-sd-semcache');
+const objects = require('./objects');
+const peerIf = require('../peer-interface/common');
+const peerIfMgr = require('../peer-interface/manager');
+const util = require('./util');
 
 /**
  * This module is responsible for the digest strategy of cache coalescence.
@@ -1278,7 +1278,7 @@ exports.DigestStrategy.prototype.initialize = function() {
     .then(peerInfos => {
       return util.removeOwnInfo(peerInfos);
     }).then(peerInfos => {
-      var peerAccessor = peerIfMgr.getPeerAccessor();
+      let peerAccessor = peerIfMgr.getPeerAccessor();
       return self.getAndProcessDigests(peerAccessor, peerInfos);
     })
     .then(digests => {
@@ -1323,17 +1323,17 @@ exports.DigestStrategy.prototype.getAndProcessDigests = function(
       resolve([]);
       return;
     }
-    var pendingResponses = peerInfos.length;
-    var result = [];
+    let pendingResponses = peerInfos.length;
+    let result = [];
     peerInfos.forEach(peerInfo => {
-      var params = peerIf.createListParams(
+      let params = peerIf.createListParams(
         peerInfo.ipAddress, peerInfo.port, null
       );
       peerInterface.getCacheDigest(params)
       .then(digestResponse => {
-        var rawDigest = digestResponse.digest;
+        let rawDigest = digestResponse.digest;
         pendingResponses--;
-        var digest = new objects.Digest(peerInfo, rawDigest);
+        let digest = new objects.Digest(peerInfo, rawDigest);
         result.push(digest);
         if (pendingResponses === 0) {
           resolve(result);
@@ -1381,11 +1381,11 @@ exports.DigestStrategy.prototype.performQuery = function(urls) {
   return new Promise(function(resolve, reject) {
     Promise.resolve()
     .then(() => {
-      var result = {};
+      let result = {};
       urls.forEach(url => {
-        var copiesForUrl = [];
+        let copiesForUrl = [];
         self.DIGESTS.forEach(digest => {
-          var captureDate = digest.performQueryForPage(url);
+          let captureDate = digest.performQueryForPage(url);
           if (captureDate) {
             let page = {
               friendlyName: digest.peerInfo.friendlyName,
@@ -1411,8 +1411,8 @@ exports.DigestStrategy.prototype.performQuery = function(urls) {
 },{"../dnssd/dns-sd-semcache":17,"../peer-interface/common":25,"../peer-interface/manager":27,"./objects":9,"./util":10}],8:[function(require,module,exports){
 'use strict';
 
-var stratBloom = require('./bloom-strategy');
-var stratDig = require('./digest-strategy');
+const stratBloom = require('./bloom-strategy');
+const stratDig = require('./digest-strategy');
 
 /**
  * The coalescence/manager module is the API callers should use to interact
@@ -1458,7 +1458,7 @@ exports.reset = function() {
  */
 exports.queryForUrls = function(urls) {
   return new Promise(function(resolve, reject) {
-    var strategy = exports.getStrategy();
+    let strategy = exports.getStrategy();
     strategy.initialize()
     .then(() => {
       return strategy.performQuery(urls);
@@ -1497,7 +1497,7 @@ exports.getStrategy = function() {
 (function (Buffer){
 'use strict';
 
-var bloomFilter = require('./bloom-filter');
+const bloomFilter = require('./bloom-filter');
 
 /**
  * Objects relevant to coalescence between instances on the local network.
@@ -1592,7 +1592,7 @@ exports.Digest = function Digest(peerInfo, pageInfos) {
  * otherwise the timestamp of the page
  */
 exports.Digest.prototype.performQueryForPage = function(url) {
-  var captureDate = this.digestInfo[url];
+  let captureDate = this.digestInfo[url];
   if (captureDate) {
     return captureDate;
   } else {
@@ -1642,7 +1642,7 @@ exports.PeerBloomFilter.prototype.performQueryForPage = function(url) {
 },{"../../../../extension/node_modules/is-buffer/index.js":90,"./bloom-filter":5}],10:[function(require,module,exports){
 'use strict';
 
-var settings = require('../settings');
+const settings = require('../settings');
 
 /**
  * Remove the peerInfo object that represents our own machine.
@@ -1656,8 +1656,8 @@ exports.removeOwnInfo = function(peerInfos) {
   return new Promise(function(resolve, reject) {
     settings.init()
     .then(() => {
-      var result = [];
-      var ourDomain = settings.getHostName();
+      let result = [];
+      let ourDomain = settings.getHostName();
       peerInfos.forEach(peerInfo => {
         if (peerInfo.domainName !== ourDomain) {
           result.push(peerInfo);
@@ -2173,13 +2173,13 @@ function defineType(values) {
 /* globals Promise */
 'use strict';
 
-var util = require('../util');
-var chromeUdp = require('../chrome-apis/udp');
-var dnsUtil = require('./dns-util');
-var dnsPacket = require('./dns-packet');
-var byteArray = require('./byte-array');
-var dnsCodes = require('./dns-codes');
-var qSection = require('./question-section');
+const util = require('../util');
+const chromeUdp = require('../chrome-apis/udp');
+const dnsUtil = require('./dns-util');
+const dnsPacket = require('./dns-packet');
+const byteArray = require('./byte-array');
+const dnsCodes = require('./dns-codes');
+const qSection = require('./question-section');
 
 /**
  * This module maintains DNS state and serves as the DNS server. It is
@@ -2189,7 +2189,7 @@ var qSection = require('./question-section');
 /**
  * This is the IPv4 address specified by RFC 6762 to be used for mDNS.
  */
-var DNSSD_MULTICAST_GROUP = '224.0.0.251';
+const DNSSD_MULTICAST_GROUP = '224.0.0.251';
 
 /**
  * The port we use for mDNS.
@@ -2205,7 +2205,7 @@ var DNSSD_MULTICAST_GROUP = '224.0.0.251';
  * new port, and deciding on 5353. This can change as long as peers share the
  * port. Ideally we would be using 5353.
  */
-var MDNS_PORT = 53531;
+const MDNS_PORT = 53531;
 
 /**
  * The special service string used to indicate that callers wish to enumerate
@@ -2216,10 +2216,10 @@ var MDNS_PORT = 53531;
  * they can interact with. This string instead allows callers to enumerate all
  * services.
  */
-var DNSSD_SERVICE_NAME = '_services._dns-sd._udp.local';
+const DNSSD_SERVICE_NAME = '_services._dns-sd._udp.local';
 
 /** True if the service has started. */
-var started = false;
+let started = false;
 
 exports.DNSSD_MULTICAST_GROUP = DNSSD_MULTICAST_GROUP;
 exports.MDNS_PORT = MDNS_PORT;
@@ -2244,14 +2244,14 @@ exports.RESPONSE_WAIT_MAX = 600;
  * of domain name to array of records, e.g. { 'www.example.com': [Object,
  * Object, Object], 'www.foo.com': [Object] }.
  */
-var records = {};
+let records = {};
 
-var onReceiveCallbacks = new Set();
+let onReceiveCallbacks = new Set();
 
 /**
  * The IPv4 interfaces for this machine, cached to provide synchronous calls.
  */
-var ipv4Interfaces = [];
+let ipv4Interfaces = [];
 
 /**
  * Returns all records known to this module.
@@ -2355,8 +2355,8 @@ exports.onReceiveListener = function(info) {
     // Before we do anything else, parse the packet. This will let us try to
     // see if we are getting the packet and ignoring it or just never getting
     // the packet.
-    var byteArrImmediate = new byteArray.ByteArray(info.data);
-    var packetImmediate =
+    let byteArrImmediate = new byteArray.ByteArray(info.data);
+    let packetImmediate =
       dnsPacket.createPacketFromReader(byteArrImmediate.getReader());
     console.log('Got packet: ', packetImmediate);
     console.log('  packet id: ', packetImmediate.id);
@@ -2379,8 +2379,8 @@ exports.onReceiveListener = function(info) {
   }
   
   // Create a DNS packet.
-  var byteArr = new byteArray.ByteArray(info.data);
-  var packet = dnsPacket.createPacketFromReader(byteArr.getReader());
+  let byteArr = new byteArray.ByteArray(info.data);
+  let packet = dnsPacket.createPacketFromReader(byteArr.getReader());
 
   exports.handleIncomingPacket(packet, info.remoteAddress, info.remotePort);
 };
@@ -2418,8 +2418,8 @@ exports.handleIncomingPacket = function(packet, remoteAddress, remotePort) {
   // optimization and nothing more. We will respond to each question with its
   // own packet while still being compliant.
   packet.questions.forEach(question => {
-    var responsePacket = exports.createResponsePacket(packet);
-    var records = exports.getResourcesForQuery(
+    let responsePacket = exports.createResponsePacket(packet);
+    let records = exports.getResourcesForQuery(
       question.queryName,
       question.queryType,
       question.queryClass
@@ -2440,8 +2440,8 @@ exports.handleIncomingPacket = function(packet, remoteAddress, remotePort) {
     });
 
     // We may be multicasting, or we may be unicast responding.
-    var sendAddr = DNSSD_MULTICAST_GROUP;
-    var sendPort = MDNS_PORT;
+    let sendAddr = DNSSD_MULTICAST_GROUP;
+    let sendPort = MDNS_PORT;
     if (question.unicastResponseRequested()) {
       sendAddr = remoteAddress;
       sendPort = remotePort;
@@ -2480,7 +2480,7 @@ exports.createResponsePacket = function(queryPacket) {
     // future, so the API includes it.
     // no op.
   }
-  var result = new dnsPacket.DnsPacket(
+  let result = new dnsPacket.DnsPacket(
     0,      // 18.1: IDs in responses MUST be set to 0
     false,  // not a query.
     0,      // 18.3: MUST be set to 0
@@ -2519,7 +2519,7 @@ exports.getResourcesForQuery = function(qName, qType, qClass) {
   // above MUST be used."
 
   // records stored as {qName: [record, record, record] }
-  var namedRecords = records[qName];
+  let namedRecords = records[qName];
 
   // We need to special case the DNSSD service enumeration string, as specified
   // in RFC 6763, Section 9.
@@ -2529,7 +2529,7 @@ exports.getResourcesForQuery = function(qName, qType, qClass) {
     // filter as necessary for class and type.
     namedRecords = [];
     Object.keys(records).forEach(key => {
-      var keyRecords = records[key];
+      let keyRecords = records[key];
       keyRecords.forEach(record => {
         if (record.recordType === dnsCodes.RECORD_TYPES.PTR) {
           namedRecords.push(record);
@@ -2543,7 +2543,7 @@ exports.getResourcesForQuery = function(qName, qType, qClass) {
     return [];
   }
 
-  var result = exports.filterResourcesForQuery(
+  let result = exports.filterResourcesForQuery(
     namedRecords, qName, qType, qClass
   );
 
@@ -2564,12 +2564,12 @@ exports.getResourcesForQuery = function(qName, qType, qClass) {
  * match the query terms
  */
 exports.filterResourcesForQuery = function(resources, qName, qType, qClass) {
-  var result = [];
+  let result = [];
 
   resources.forEach(record => {
-    var meetsName = false;
-    var meetsType = false;
-    var meetsClass = false;
+    let meetsName = false;
+    let meetsType = false;
+    let meetsClass = false;
     if (qName === record.name || qName === DNSSD_SERVICE_NAME) {
       meetsName = true;
     }
@@ -2606,7 +2606,7 @@ exports.getSocket = function() {
   return new Promise(function(resolve, reject) {
     // We have two steps to do here: create a socket and bind that socket to
     // the mDNS port.
-    var createPromise = chromeUdp.create({});
+    let createPromise = chromeUdp.create({});
     createPromise.then(info => {
       exports.socketInfo = info;
       return info;
@@ -2729,10 +2729,10 @@ exports.sendPacket = function(packet, address, port) {
   packet.id = exports.NEXT_PACKET_ID;
   exports.NEXT_PACKET_ID += 1;
 
-  var byteArr = packet.convertToByteArray();
+  let byteArr = packet.convertToByteArray();
   // And now we need the underlying buffer of the byteArray, truncated to the
   // correct size.
-  var uint8Arr = byteArray.getByteArrayAsUint8Array(byteArr);
+  let uint8Arr = byteArray.getByteArrayAsUint8Array(byteArr);
 
   exports.getSocket().then(socket => {
     if (exports.DEBUG) {
@@ -2754,7 +2754,7 @@ exports.sendPacket = function(packet, address, port) {
  */
 exports.query = function(queryName, queryType, queryClass) {
   // ID is zero, as mDNS ignores the id field.
-  var packet = new dnsPacket.DnsPacket(
+  let packet = new dnsPacket.DnsPacket(
     0,
     true,
     0,
@@ -2765,7 +2765,7 @@ exports.query = function(queryName, queryType, queryClass) {
     0
   );
 
-  var question = new qSection.QuestionSection(
+  let question = new qSection.QuestionSection(
     queryName,
     queryType,
     queryClass
@@ -2837,7 +2837,7 @@ exports.queryForSrvRecord = function(instanceName) {
  * @param {ARecord|PtrRecord|SrvRecord} record the record to add
  */
 exports.addRecord = function(name, record) {
-  var existingRecords = records[name];
+  let existingRecords = records[name];
   if (!existingRecords) {
     existingRecords = [];
     records[name] = existingRecords;
@@ -2856,10 +2856,10 @@ exports.addRecord = function(name, record) {
  */
 'use strict';
 
-var resRec = require('./resource-record');
-var dnsCodes = require('./dns-codes');
-var byteArray = require('./byte-array');
-var qSection = require('./question-section');
+const resRec = require('./resource-record');
+const dnsCodes = require('./dns-codes');
+const byteArray = require('./byte-array');
+const qSection = require('./question-section');
 
 // These constants are defined by the number of bits allowed for each value in
 // the DNS spec. Section 4.1.1 of RFC 1035 has a good summary.
@@ -2869,22 +2869,22 @@ var qSection = require('./question-section');
  * The maximum valid ID of a DNS Packet, defined by the 32 bits allowed in the
  * spec.
  */
-var MAX_ID = 65535;
+const MAX_ID = 65535;
 
 /** The maximum OPCODE is defined by the 4 bits allowed in the spec. */
-var MAX_OPCODE = 15;
+const MAX_OPCODE = 15;
 
 /** The maximum RCODE is defined by the 4 bits allowed in the spec. */
-var MAX_RETURN_CODE = 15;
+const MAX_RETURN_CODE = 15;
 
 /** The number of octets in the ID of the DNS Packet as defined in the spec. */
-var NUM_OCTETS_ID = 2;
+const NUM_OCTETS_ID = 2;
 
 /** The number of octets in the ID of the DNS Packet as defined in the spec. */
-var NUM_OCTETS_FLAGS = 2;
+const NUM_OCTETS_FLAGS = 2;
 
 /** The number of octets in the ID of the DNS Packet as defined in the spec. */
-var NUM_OCTETS_SECTION_LENGTHS = 2;
+const NUM_OCTETS_SECTION_LENGTHS = 2;
 
 /**
  * Parse numRecords Resource Records from a ByteArrayReader object. Returns an
@@ -2898,11 +2898,11 @@ var NUM_OCTETS_SECTION_LENGTHS = 2;
  * records
  */
 exports.parseResourceRecordsFromReader = function(reader, numRecords) {
-  var result = [];
-  for (var i = 0; i < numRecords; i++) {
-    var recordType = resRec.peekTypeInReader(reader);
+  let result = [];
+  for (let i = 0; i < numRecords; i++) {
+    let recordType = resRec.peekTypeInReader(reader);
 
-    var record = null;
+    let record = null;
     switch (recordType) {
       case dnsCodes.RECORD_TYPES.A:
         record = resRec.createARecordFromReader(reader);
@@ -3022,20 +3022,20 @@ exports.DnsPacket = function DnsPacket(
  * @return {ByteArray}
  */
 exports.DnsPacket.prototype.convertToByteArray = function() {
-  var result = new byteArray.ByteArray();
+  let result = new byteArray.ByteArray();
 
   result.push(this.id, NUM_OCTETS_ID);
 
   // Prepare flags to be passed to getFlagsAsValue
-  var qr = this.isQuery ? 0 : 1;  // 0 means query, 1 means response
-  var opcode = this.opCode;
-  var aa = this.isAuthorativeAnswer ? 1 : 0;
-  var tc = this.isTruncated ? 1 : 0;
-  var rd = this.recursionDesired ? 1 : 0;
-  var ra = this.recursionAvailable ? 1 : 0;
-  var rcode = this.returnCode;
+  let qr = this.isQuery ? 0 : 1;  // 0 means query, 1 means response
+  let opcode = this.opCode;
+  let aa = this.isAuthorativeAnswer ? 1 : 0;
+  let tc = this.isTruncated ? 1 : 0;
+  let rd = this.recursionDesired ? 1 : 0;
+  let ra = this.recursionAvailable ? 1 : 0;
+  let rcode = this.returnCode;
 
-  var flagValue = exports.getFlagsAsValue(qr, opcode, aa, tc, rd, ra, rcode);
+  let flagValue = exports.getFlagsAsValue(qr, opcode, aa, tc, rd, ra, rcode);
   result.push(flagValue, NUM_OCTETS_FLAGS);
 
   result.push(this.questions.length, NUM_OCTETS_SECTION_LENGTHS);
@@ -3051,22 +3051,22 @@ exports.DnsPacket.prototype.convertToByteArray = function() {
   }
 
   this.questions.forEach(question => {
-    var byteArr = question.convertToByteArray();
+    let byteArr = question.convertToByteArray();
     result.append(byteArr);
   });
 
   this.answers.forEach(answer => {
-    var byteArr = answer.convertToByteArray();
+    let byteArr = answer.convertToByteArray();
     result.append(byteArr);
   });
 
   this.authority.forEach(authority => {
-    var byteArr = authority.convertToByteArray();
+    let byteArr = authority.convertToByteArray();
     result.append(byteArr);
   });
 
   this.additionalInfo.forEach(info => {
-    var byteArr = info.convertToByteArray();
+    let byteArr = info.convertToByteArray();
     result.append(byteArr);
   });
 
@@ -3083,20 +3083,20 @@ exports.DnsPacket.prototype.convertToByteArray = function() {
  * @return {DnsPacket} the packet constructed
  */
 exports.createPacketFromReader = function(reader) {
-  var id = reader.getValue(NUM_OCTETS_ID);
-  var flagsAsValue = reader.getValue(NUM_OCTETS_FLAGS);
-  var numQuestions = reader.getValue(NUM_OCTETS_SECTION_LENGTHS);
-  var numAnswers = reader.getValue(NUM_OCTETS_SECTION_LENGTHS);
-  var numAuthority = reader.getValue(NUM_OCTETS_SECTION_LENGTHS);
-  var numAdditionalInfo = reader.getValue(NUM_OCTETS_SECTION_LENGTHS);
+  let id = reader.getValue(NUM_OCTETS_ID);
+  let flagsAsValue = reader.getValue(NUM_OCTETS_FLAGS);
+  let numQuestions = reader.getValue(NUM_OCTETS_SECTION_LENGTHS);
+  let numAnswers = reader.getValue(NUM_OCTETS_SECTION_LENGTHS);
+  let numAuthority = reader.getValue(NUM_OCTETS_SECTION_LENGTHS);
+  let numAdditionalInfo = reader.getValue(NUM_OCTETS_SECTION_LENGTHS);
 
-  var flags = exports.getValueAsFlags(flagsAsValue);
+  let flags = exports.getValueAsFlags(flagsAsValue);
 
-  var opCode = flags.opcode;
-  var returnCode = flags.rcode;
+  let opCode = flags.opcode;
+  let returnCode = flags.rcode;
 
   // 0 means it is a query, 1 means it is a response.
-  var isQuery;
+  let isQuery;
   if (flags.qr === 0) {
     isQuery = true;
   } else {
@@ -3105,12 +3105,12 @@ exports.createPacketFromReader = function(reader) {
 
   // The non-QR flags map more readily to 0/1 = false/true, so we will use
   // ternary operators.
-  var isAuthorativeAnswer = flags.aa ? true : false;
-  var isTruncated = flags.tc ? true : false;
-  var recursionDesired = flags.rd ? true : false;
-  var recursionAvailable = flags.ra ? true : false;
+  let isAuthorativeAnswer = flags.aa ? true : false;
+  let isTruncated = flags.tc ? true : false;
+  let recursionDesired = flags.rd ? true : false;
+  let recursionAvailable = flags.ra ? true : false;
 
-  var result = new exports.DnsPacket(
+  let result = new exports.DnsPacket(
     id,
     isQuery,
     opCode,
@@ -3121,16 +3121,16 @@ exports.createPacketFromReader = function(reader) {
     returnCode
   );
 
-  for (var i = 0; i < numQuestions; i++) {
-    var question = qSection.createQuestionFromReader(reader);
+  for (let i = 0; i < numQuestions; i++) {
+    let question = qSection.createQuestionFromReader(reader);
     result.addQuestion(question);
   }
 
-  var answers = exports.parseResourceRecordsFromReader(reader, numAnswers);
-  var authorities = exports.parseResourceRecordsFromReader(
+  let answers = exports.parseResourceRecordsFromReader(reader, numAnswers);
+  let authorities = exports.parseResourceRecordsFromReader(
     reader, numAuthority
   );
-  var infos = exports.parseResourceRecordsFromReader(
+  let infos = exports.parseResourceRecordsFromReader(
     reader, numAdditionalInfo
   );
 
@@ -3209,13 +3209,13 @@ exports.DnsPacket.prototype.addAdditionalInfo = function(resourceRecord) {
  * }
  */
 exports.getValueAsFlags = function(value) {
-  var qr = (value & 0x8000) >> 15;
-  var opcode = (value & 0x7800) >> 11;
-  var aa = (value & 0x0400) >> 10;
-  var tc = (value & 0x0200) >> 9;
-  var rd = (value & 0x0100) >> 8;
-  var ra = (value & 0x0080) >> 7;
-  var rcode = (value & 0x000f) >> 0;
+  let qr = (value & 0x8000) >> 15;
+  let opcode = (value & 0x7800) >> 11;
+  let aa = (value & 0x0400) >> 10;
+  let tc = (value & 0x0200) >> 9;
+  let rd = (value & 0x0100) >> 8;
+  let ra = (value & 0x0080) >> 7;
+  let rcode = (value & 0x000f) >> 0;
 
   return {
     qr: qr,
@@ -3245,7 +3245,7 @@ exports.getValueAsFlags = function(value) {
  * order 16 bits
  */
 exports.getFlagsAsValue = function(qr, opcode, aa, tc, rd, ra, rcode) {
-  var value = 0x0000;
+  let value = 0x0000;
 
   value = value << 1;
   value += qr & 0x01;
@@ -3285,10 +3285,10 @@ exports.getFlagsAsValue = function(qr, opcode, aa, tc, rd, ra, rcode) {
  * use the dns-sd module.
  */
 
-var dnssd = require('./dns-sd');
-var serverApi = require('../server/server-api');
+const dnssd = require('./dns-sd');
+const serverApi = require('../server/server-api');
 
-var SEMCACHE_SERVICE_STRING = '_semcache._tcp';
+const SEMCACHE_SERVICE_STRING = '_semcache._tcp';
 
 /**
  * Return the service string representing SemCache, e.g. "_semcache._tcp".
@@ -3329,7 +3329,7 @@ exports.getFullName = function(friendlyName) {
  * }
  */
 exports.registerSemCache = function(host, name, port) {
-  var result = dnssd.register(host, name, SEMCACHE_SERVICE_STRING, port);
+  let result = dnssd.register(host, name, SEMCACHE_SERVICE_STRING, port);
   return result;
 };
 
@@ -3378,7 +3378,7 @@ exports.resolveCache = function(fullName) {
   return new Promise(function(resolve, reject) {
     dnssd.resolveService(fullName)
     .then(info => {
-      var listUrl = serverApi.getListPageUrlForCache(
+      let listUrl = serverApi.getListPageUrlForCache(
         info.ipAddress, info.port
       );
       info.listUrl = listUrl;
@@ -3408,7 +3408,7 @@ exports.resolveCache = function(fullName) {
  * }
  */
 exports.browseForSemCacheInstances = function() {
-  var result = dnssd.browseServiceInstances(SEMCACHE_SERVICE_STRING);
+  let result = dnssd.browseServiceInstances(SEMCACHE_SERVICE_STRING);
   return result;
 };
 
@@ -3436,14 +3436,14 @@ exports.browseForSemCacheInstances = function() {
  */
 
 
-var _ = require('lodash');
+const _ = require('lodash');
 
-var util = require('../util');
-var dnsUtil = require('./dns-util');
-var dnsController = require('./dns-controller');
-var dnsCodes = require('./dns-codes');
-var resRec = require('./resource-record');
-var dnsPacket = require('./dns-packet');
+const util = require('../util');
+const dnsUtil = require('./dns-util');
+const dnsController = require('./dns-controller');
+const dnsCodes = require('./dns-codes');
+const resRec = require('./resource-record');
+const dnsPacket = require('./dns-packet');
 
 /**
  * In Section 8.1, RFC 6762 uses 250ms as the length of time clients should
@@ -3451,7 +3451,7 @@ var dnsPacket = require('./dns-packet');
  * records (e.g. host names) are already claimed by other devices. In order to
  * remain compliant with the RFC, It should not be changed.
  */
-var MAX_PROBE_WAIT = 250;
+const MAX_PROBE_WAIT = 250;
 
 /**
  * This is the default time we will wait for a response to a DNS query before
@@ -3459,7 +3459,7 @@ var MAX_PROBE_WAIT = 250;
  *
  * This is a best effort value and may be tuned.
  */
-var DEFAULT_QUERY_WAIT_TIME = 3000;
+const DEFAULT_QUERY_WAIT_TIME = 3000;
 
 exports.DEFAULT_QUERY_WAIT_TIME = DEFAULT_QUERY_WAIT_TIME;
 
@@ -3511,7 +3511,7 @@ exports.waitForProbeTime = function() {
  * @return {boolean}
  */
 exports.packetIsForQuery = function(packet, qName, qType, qClass) {
-  var filteredRecords = dnsController.filterResourcesForQuery(
+  let filteredRecords = dnsController.filterResourcesForQuery(
     packet.answers, qName, qType, qClass
   );
   return filteredRecords.length !== 0;
@@ -3524,10 +3524,10 @@ exports.packetIsForQuery = function(packet, qName, qType, qClass) {
  * @param {string}
  */
 exports.createHostName = function() {
-  var start = 'host';
+  let start = 'host';
   // We'll return within the range 0, 1000.
-  var randomInt = dnsUtil.randomInt(0, 1001);
-  var result = start + randomInt + dnsUtil.getLocalSuffix();
+  let randomInt = dnsUtil.randomInt(0, 1001);
+  let result = start + randomInt + dnsUtil.getLocalSuffix();
   return result;
 };
 
@@ -3538,7 +3538,7 @@ exports.createHostName = function() {
  * advertise
  */
 exports.advertiseService = function(resourceRecords) {
-  var advertisePacket = new dnsPacket.DnsPacket(
+  let advertisePacket = new dnsPacket.DnsPacket(
     0,      // id 0 for mDNS
     false,  // not a query
     0,      // opCode must be 0 on transmit (18.3)
@@ -3599,8 +3599,8 @@ exports.register = function(host, name, type, port) {
   // the newly created resource records in the Answer Section. This must be
   // performed twice, one second apart.
 
-  var result = new Promise(function(resolve, reject) {
-    var foundHostFree = null;
+  let result = new Promise(function(resolve, reject) {
+    let foundHostFree = null;
     // We start by probing for messages of type ANY with the hostname.
     exports.issueProbe(
       host,
@@ -3611,7 +3611,7 @@ exports.register = function(host, name, type, port) {
       foundHostFree = true;
       // We need to probe for the name under which a SRV record would be, which
       // is name.type.local
-      var srvName = exports.createSrvName(name, type, 'local');
+      let srvName = exports.createSrvName(name, type, 'local');
       return exports.issueProbe(
         srvName,
         dnsCodes.RECORD_TYPES.ANY,
@@ -3623,14 +3623,14 @@ exports.register = function(host, name, type, port) {
     })
     .then(function instanceFree() {
       if (foundHostFree) {
-        var hostRecords = exports.createHostRecords(host);
-        var serviceRecords = exports.createServiceRecords(
+        let hostRecords = exports.createHostRecords(host);
+        let serviceRecords = exports.createServiceRecords(
           name,
           type,
           port,
           host
         );
-        var allRecords = hostRecords.concat(serviceRecords);
+        let allRecords = hostRecords.concat(serviceRecords);
         exports.advertiseService(allRecords);
 
         resolve(
@@ -3662,9 +3662,9 @@ exports.register = function(host, name, type, port) {
  */
 exports.createHostRecords = function(host) {
   // This just consists of an A Record. Make an entry for every IPv4 address.
-  var result = [];
+  let result = [];
   dnsController.getIPv4Interfaces().forEach(iface => {
-    var aRecord = new resRec.ARecord(
+    let aRecord = new resRec.ARecord(
       host,
       dnsUtil.DEFAULT_TTL,
       iface.address,
@@ -3709,8 +3709,8 @@ exports.createServiceRecords = function(name, type, port, domain) {
 
   // SRV Records are named according to name.type.domain, which we always
   // assume to be local.
-  var srvName = exports.createSrvName(name, type, 'local');
-  var srvRecord = new resRec.SrvRecord(
+  let srvName = exports.createSrvName(name, type, 'local');
+  let srvRecord = new resRec.SrvRecord(
     srvName,
     dnsUtil.DEFAULT_TTL,
     dnsUtil.DEFAULT_PRIORITY,
@@ -3719,7 +3719,7 @@ exports.createServiceRecords = function(name, type, port, domain) {
     domain
   );
 
-  var ptrRecord = new resRec.PtrRecord(
+  let ptrRecord = new resRec.PtrRecord(
     type,
     dnsUtil.DEFAULT_TTL,
     srvName,
@@ -3729,7 +3729,7 @@ exports.createServiceRecords = function(name, type, port, domain) {
   dnsController.addRecord(srvName, srvRecord);
   dnsController.addRecord(type, ptrRecord);
 
-  var result = [srvRecord, ptrRecord];
+  let result = [srvRecord, ptrRecord];
   return result;
 };
 
@@ -3742,8 +3742,8 @@ exports.createServiceRecords = function(name, type, port, domain) {
  * @return {boolean}
  */
 exports.receivedResponsePacket = function(packets, qName, qType, qClass) {
-  for (var i = 0; i < packets.length; i++) {
-    var packet = packets[i];
+  for (let i = 0; i < packets.length; i++) {
+    let packet = packets[i];
     if (
       !packet.isQuery &&
         exports.packetIsForQuery(packet, qName, qType, qClass)
@@ -3768,15 +3768,15 @@ exports.receivedResponsePacket = function(packets, qName, qType, qClass) {
  */
 exports.issueProbe = function(queryName, queryType, queryClass) {
   // Track the packets we receive whilst querying.
-  var packets = [];
-  var callback = function(packet) {
+  let packets = [];
+  let callback = function(packet) {
     packets.push(packet);
   };
   dnsController.addOnReceiveCallback(callback);
 
   // Now we kick off a series of queries. We wait a random time to issue a
   // query. 250ms after that we issue another, then another.
-  var result = new Promise(function(resolve, reject) {
+  let result = new Promise(function(resolve, reject) {
     exports.waitForProbeTime()
     .then(function success() {
       dnsController.query(
@@ -3857,8 +3857,8 @@ exports.issueProbe = function(queryName, queryType, queryClass) {
 exports.resolveService = function(serviceName) {
   console.log('resolveService: ', serviceName);
   return new Promise(function(resolve, reject) {
-    var srvRec = null;
-    var aRec = null;
+    let srvRec = null;
+    let aRec = null;
     exports.queryForInstanceInfo(
         serviceName,
         exports.DEFAULT_QUERY_WAIT_TIME,
@@ -3869,7 +3869,7 @@ exports.resolveService = function(serviceName) {
         console.log('srvInfos: ', srvInfos);
       }
       if (!srvInfos || srvInfos.length === 0) {
-        var msg = 'did not find SRV record for service: ' + serviceName;
+        let msg = 'did not find SRV record for service: ' + serviceName;
         console.warn(msg);
         reject(msg);
         return;
@@ -3887,15 +3887,15 @@ exports.resolveService = function(serviceName) {
         console.log('aInfos: ', aInfos);
       }
       if (!aInfos || aInfos.length === 0) {
-        var msg = 'did not find A record for SRV: ' + JSON.stringify(srvRec);
+        let msg = 'did not find A record for SRV: ' + JSON.stringify(srvRec);
         console.warn(msg);
         reject(msg);
         return;
       }
       aRec = aInfos[0];
-      var friendlyName = exports.getUserFriendlyName(serviceName);
+      let friendlyName = exports.getUserFriendlyName(serviceName);
 
-      var result = {
+      let result = {
         serviceType: srvRec.instanceTypeDomain,
         friendlyName: friendlyName,
         instanceName: serviceName,
@@ -3964,18 +3964,18 @@ exports.resolveService = function(serviceName) {
  */
 exports.browseServiceInstances = function(serviceType) {
   return new Promise(function(resolve, reject) {
-    var ptrResponses = [];
-    var srvResponses = [];
-    var aResponses = [];
+    let ptrResponses = [];
+    let srvResponses = [];
+    let aResponses = [];
 
     // When resolving services, it is possible that at every step along the way
     // a request goes unanswered. These arrays will keep track of that.
     // The PTR records for which SRV records were returned
-    var ptrsWithSrvs = [];
+    let ptrsWithSrvs = [];
     // The PTR records for which both SRV and A records were returned
-    var ptrsWithAs = [];
+    let ptrsWithAs = [];
     // SRV records for which A records were returned
-    var srvsWithAs = [];
+    let srvsWithAs = [];
 
     exports.queryForServiceInstances(
       serviceType,
@@ -3986,11 +3986,11 @@ exports.browseServiceInstances = function(serviceType) {
       if (exports.DEBUG) {
         console.log('ptrInfos: ', ptrInfos);
       }
-      var srvRequests = [];
+      let srvRequests = [];
       ptrInfos.forEach(ptr => {
         ptrResponses.push(ptr);
-        var instanceName = ptr.serviceName;
-        var req = exports.queryForInstanceInfo(
+        let instanceName = ptr.serviceName;
+        let req = exports.queryForInstanceInfo(
           instanceName,
           exports.DEFAULT_QUERY_WAIT_TIME,
           exports.DEFAULT_NUM_RETRIES
@@ -4003,8 +4003,8 @@ exports.browseServiceInstances = function(serviceType) {
       if (exports.DEBUG) {
         console.log('srvInfos: ', srvInfos);
       }
-      var aRequests = [];
-      for (var srvIter = 0; srvIter < srvInfos.length; srvIter++) {
+      let aRequests = [];
+      for (let srvIter = 0; srvIter < srvInfos.length; srvIter++) {
         // the query methods return an Array of responses, even if only a
         // single response is requested. This allows for for API similarity
         // across calls and for an eventual implementation that permits both
@@ -4013,7 +4013,7 @@ exports.browseServiceInstances = function(serviceType) {
         // simplicity, however, we will assume at this stage that we only
         // ever expect a single response, which is correct in the vast
         // majority of cases.
-        var srv = srvInfos[srvIter];
+        let srv = srvInfos[srvIter];
         if (srv.length === 0) {
           // If no records resolved (e.g. from a dropped packet or a peer
           // that has dropped out), fail gracefully and log that it occurred.
@@ -4026,8 +4026,8 @@ exports.browseServiceInstances = function(serviceType) {
           ptrsWithSrvs.push(ptrResponses[srvIter]);
           srv = srv[0];
           srvResponses.push(srv);
-          var hostname = srv.domain;
-          var req = exports.queryForIpAddress(
+          let hostname = srv.domain;
+          let req = exports.queryForIpAddress(
             hostname,
             exports.DEFAULT_QUERY_WAIT_TIME,
             exports.DEFAULT_NUM_RETRIES
@@ -4042,8 +4042,8 @@ exports.browseServiceInstances = function(serviceType) {
         console.log('aInfos: ', aInfos);
       }
 
-      for (var aIter = 0; aIter < aInfos.length; aIter++) {
-        var aInfo = aInfos[aIter];
+      for (let aIter = 0; aIter < aInfos.length; aIter++) {
+        let aInfo = aInfos[aIter];
         if (aInfo.length === 0) {
           // We didn't receive an A. Log that both the 
           console.warn(
@@ -4110,14 +4110,14 @@ exports.getUserFriendlyName = function(instanceTypeDomain) {
   // include two underscores, and underscores are forbidden in URLs that we
   // might expect as a domain. Thus I think we can use the last two indices of
   // underscores to retrieve the name.
-  var idxLastUnderscore = instanceTypeDomain.lastIndexOf('_');
-  var idxPenultimateUnderscore = instanceTypeDomain
+  let idxLastUnderscore = instanceTypeDomain.lastIndexOf('_');
+  let idxPenultimateUnderscore = instanceTypeDomain
     .substring(0, idxLastUnderscore)
     .lastIndexOf('_');
   // The penultimate underscore must be preceded by a period, which we don't
   // want to include in the user friendly name.
-  var idxEnd = idxPenultimateUnderscore - 1;
-  var result = instanceTypeDomain.substring(0, idxEnd);
+  let idxEnd = idxPenultimateUnderscore - 1;
+  let result = instanceTypeDomain.substring(0, idxEnd);
   return result;
 };
 
@@ -4147,8 +4147,8 @@ exports.queryForServiceInstances = function(
   numRetries
 ) {
   waitTime = waitTime || exports.DEFAULT_QUERY_WAIT_TIME;
-  var rType = dnsCodes.RECORD_TYPES.PTR;
-  var rClass = dnsCodes.CLASS_CODES.IN;
+  let rType = dnsCodes.RECORD_TYPES.PTR;
+  let rClass = dnsCodes.CLASS_CODES.IN;
   return new Promise(function(resolve, reject) {
     exports.queryForResponses(
       serviceType,
@@ -4159,11 +4159,11 @@ exports.queryForServiceInstances = function(
       numRetries
     )
     .then(function gotPackets(packets) {
-      var result = [];
+      let result = [];
       packets.forEach(packet => {
         packet.answers.forEach(answer => {
           if (answer.recordType === rType && answer.recordClass === rClass) {
-            var friendlyName = exports.getUserFriendlyName(
+            let friendlyName = exports.getUserFriendlyName(
               answer.instanceName
             );
             result.push(
@@ -4208,8 +4208,8 @@ exports.queryForIpAddress = function(domainName, timeout, numRetries) {
   // addresses per domain name. At a minimum, you could have IPv6 and IPv4
   // addresses. For prototyping purposes, a single IP address is sufficient.
   timeout = timeout || exports.DEFAULT_QUERY_WAIT_TIME;
-  var rType = dnsCodes.RECORD_TYPES.A;
-  var rClass = dnsCodes.CLASS_CODES.IN;
+  let rType = dnsCodes.RECORD_TYPES.A;
+  let rClass = dnsCodes.CLASS_CODES.IN;
   return new Promise(function(resolve, reject) {
     exports.queryForResponses(
       domainName,
@@ -4220,7 +4220,7 @@ exports.queryForIpAddress = function(domainName, timeout, numRetries) {
       numRetries
     )
     .then(function gotPackets(packets) {
-      var result = [];
+      let result = [];
       packets.forEach(packet => {
         packet.answers.forEach(answer => {
           if (answer.recordType === rType && answer.recordClass === rClass) {
@@ -4260,8 +4260,8 @@ exports.queryForIpAddress = function(domainName, timeout, numRetries) {
  */
 exports.queryForInstanceInfo = function(instanceName, timeout, numRetries) {
   timeout = timeout || exports.DEFAULT_QUERY_WAIT_TIME;
-  var rType = dnsCodes.RECORD_TYPES.SRV;
-  var rClass = dnsCodes.CLASS_CODES.IN;
+  let rType = dnsCodes.RECORD_TYPES.SRV;
+  let rClass = dnsCodes.CLASS_CODES.IN;
   return new Promise(function(resolve, reject) {
     exports.queryForResponses(
       instanceName,
@@ -4272,7 +4272,7 @@ exports.queryForInstanceInfo = function(instanceName, timeout, numRetries) {
       numRetries
     )
     .then(function gotPackets(packets) {
-      var result = [];
+      let result = [];
       packets.forEach(packet => {
         packet.answers.forEach(answer => {
           if (answer.recordType === rType && answer.recordClass === rClass) {
@@ -4350,11 +4350,11 @@ exports.queryForResponses = function(
   return new Promise(function(resolve) {
     // Code executes even after a promise resolves, so we will use this flag to
     // make sure we never try to resolve more than once.
-    var resolved = false;
+    let resolved = false;
 
     // Track the packets we received while querying.
-    var packets = [];
-    var callback = function(packet) {
+    let packets = [];
+    let callback = function(packet) {
       if (exports.packetIsForQuery(packet, qName, qType, qClass)) {
         packets.push(packet);
         if (!multipleResponses) {
@@ -4374,9 +4374,9 @@ exports.queryForResponses = function(
       console.log('  qClass: ', qClass);
     }
 
-    var retriesAttempted = 0;
+    let retriesAttempted = 0;
 
-    var queryAndWait = function() {
+    let queryAndWait = function() {
       dnsController.query(qName, qType, qClass);
       util.wait(timeoutOrWait)
       .then(() => {
@@ -4407,14 +4407,14 @@ exports.queryForResponses = function(
 },{"../util":39,"./dns-codes":14,"./dns-controller":15,"./dns-packet":16,"./dns-util":19,"./resource-record":21,"lodash":61}],19:[function(require,module,exports){
 'use strict';
 
-var byteArray = require('./byte-array');
+const byteArray = require('./byte-array');
 
 /**
  * Various methods for common DNS-related operations.
  */
 
-var MAX_LABEL_LENGTH = 63;
-var OCTET_LABEL_LENGTH = 1;
+const MAX_LABEL_LENGTH = 63;
+const OCTET_LABEL_LENGTH = 1;
 
 exports.DEBUG = false;
 
@@ -4453,12 +4453,12 @@ exports.getLocalSuffix = function() {
  * @return {ByteArray} a ByteArray containing the serialized domain
  */
 exports.getDomainAsByteArray = function(domain) {
-  var result = new byteArray.ByteArray();
+  let result = new byteArray.ByteArray();
 
-  var labels = domain.split('.');
+  let labels = domain.split('.');
 
   labels.forEach(label => {
-    var length = label.length;
+    let length = label.length;
     if (length > MAX_LABEL_LENGTH) {
       throw new Error('label exceeds max length: ' + label);
     }
@@ -4467,7 +4467,7 @@ exports.getDomainAsByteArray = function(domain) {
     // character code of each component.
     result.push(length, OCTET_LABEL_LENGTH);
 
-    for (var i = 0; i < label.length; i++) {
+    for (let i = 0; i < label.length; i++) {
       result.push(label.charCodeAt(i), 1);
     }
   });
@@ -4498,9 +4498,9 @@ exports.getDomainFromByteArray = function(byteArr, startByte) {
     startByte = 0;
   }
 
-  var reader = byteArr.getReader(startByte);
+  let reader = byteArr.getReader(startByte);
   
-  var result = exports.getDomainFromByteArrayReader(reader, 0);
+  let result = exports.getDomainFromByteArrayReader(reader, 0);
   return result;
 };
 
@@ -4514,15 +4514,15 @@ exports.getDomainFromByteArray = function(byteArr, startByte) {
  * @return {string}
  */
 exports.getDomainFromByteArrayReader = function(reader) {
-  var result = '';
+  let result = '';
 
   // We expect a series of length charCode pairs, ending when the final length
   // field is a 0. We'll do this by examining a single label at a time.
-  var lengthOfCurrentLabel = -1;
-  var iteration = 0;
+  let lengthOfCurrentLabel = -1;
+  let iteration = 0;
   // Sanity check because while loops are dangerous when faced with outside
   // data.
-  var maxIterations = 10;
+  let maxIterations = 10;
   while (lengthOfCurrentLabel !== 0) {
     if (iteration > maxIterations) {
       throw new Error('Exceeded max iterations, likely malformed data');
@@ -4539,9 +4539,9 @@ exports.getDomainFromByteArrayReader = function(reader) {
       );
     }
 
-    for (var i = 0; i < lengthOfCurrentLabel; i++) {
-      var currentCharCode = reader.getValue(1);
-      var currentChar = String.fromCharCode(currentCharCode);
+    for (let i = 0; i < lengthOfCurrentLabel; i++) {
+      let currentCharCode = reader.getValue(1);
+      let currentChar = String.fromCharCode(currentCharCode);
       result += currentChar;
     }
 
@@ -4573,16 +4573,16 @@ exports.getDomainFromByteArrayReader = function(reader) {
  * @return {ByteArray}
  */
 exports.getIpStringAsByteArray = function(ipAddress) {
-  var parts = ipAddress.split('.');
+  let parts = ipAddress.split('.');
 
   if (parts.length !== 4) {
     throw new Error('IP string does not have 4 parts: ' + ipAddress);
   }
 
-  var result = new byteArray.ByteArray();
+  let result = new byteArray.ByteArray();
   
   parts.forEach(part => {
-    var intValue = parseInt(part);
+    let intValue = parseInt(part);
     if (intValue < 0 || intValue > 255) {
       throw new Error('A byte of the IP address < 0 or > 255: ' + ipAddress);
     }
@@ -4601,16 +4601,16 @@ exports.getIpStringAsByteArray = function(ipAddress) {
  */
 exports.getIpStringFromByteArrayReader = function(reader) {
   // We assume a single byte representing each string.
-  var parts = [];
+  let parts = [];
 
-  var numParts = 4;
-  for (var i = 0; i < numParts; i++) {
-    var intValue = reader.getValue(1);
-    var stringValue = intValue.toString();
+  let numParts = 4;
+  for (let i = 0; i < numParts; i++) {
+    let intValue = reader.getValue(1);
+    let stringValue = intValue.toString();
     parts.push(stringValue);
   }
 
-  var result = parts.join('.');
+  let result = parts.join('.');
   return result;
 };
 
@@ -4618,14 +4618,14 @@ exports.getIpStringFromByteArrayReader = function(reader) {
 /* global exports, require */
 'use strict';
 
-var byteArray = require('./byte-array');
-var dnsUtil = require('./dns-util');
+const byteArray = require('./byte-array');
+const dnsUtil = require('./dns-util');
 
-var NUM_OCTETS_QUERY_TYPE = 2;
-var NUM_OCTETS_QUERY_CLASS = 2;
+const NUM_OCTETS_QUERY_TYPE = 2;
+const NUM_OCTETS_QUERY_CLASS = 2;
 
-var MAX_QUERY_TYPE = 65535;
-var MAX_QUERY_CLASS = 65535;
+const MAX_QUERY_TYPE = 65535;
+const MAX_QUERY_CLASS = 65535;
 
 /**
  * A DNS Question section.
@@ -4678,9 +4678,9 @@ exports.QuestionSection = function QuestionSection(qName, qType, qClass) {
  * @return {ByteArray}
  */
 exports.QuestionSection.prototype.convertToByteArray = function() {
-  var result = new byteArray.ByteArray();
+  let result = new byteArray.ByteArray();
   
-  var queryAsBytes = dnsUtil.getDomainAsByteArray(this.queryName);
+  let queryAsBytes = dnsUtil.getDomainAsByteArray(this.queryName);
   result.append(queryAsBytes);
 
   result.push(this.queryType, NUM_OCTETS_QUERY_TYPE);
@@ -4709,19 +4709,19 @@ exports.QuestionSection.prototype.unicastResponseRequested = function() {
  * @return {QuestionSection}
  */
 exports.createQuestionFromReader = function(reader) {
-  var queryName = dnsUtil.getDomainFromByteArrayReader(reader);
+  let queryName = dnsUtil.getDomainFromByteArrayReader(reader);
 
-  var queryType = reader.getValue(NUM_OCTETS_QUERY_TYPE);
+  let queryType = reader.getValue(NUM_OCTETS_QUERY_TYPE);
   if (queryType < 0 || queryType > MAX_QUERY_TYPE) {
     throw new Error('deserialized query type out of range: ' + queryType);
   }
 
-  var queryClass = reader.getValue(NUM_OCTETS_QUERY_CLASS);
+  let queryClass = reader.getValue(NUM_OCTETS_QUERY_CLASS);
   if (queryClass < 0 || queryClass > MAX_QUERY_CLASS) {
     throw new Error('deserialized query class out of range: ' + queryClass);
   }
 
-  var result = new exports.QuestionSection(queryName, queryType, queryClass);
+  let result = new exports.QuestionSection(queryName, queryType, queryClass);
 
   return result;
 };
@@ -4730,21 +4730,21 @@ exports.createQuestionFromReader = function(reader) {
 /* global exports, require */
 'use strict';
 
-var byteArray = require('./byte-array');
-var dnsUtil = require('./dns-util');
-var dnsCodes = require('./dns-codes');
+const byteArray = require('./byte-array');
+const dnsUtil = require('./dns-util');
+const dnsCodes = require('./dns-codes');
 
-var NUM_OCTETS_TYPE = 2;
-var NUM_OCTETS_CLASS = 2;
-var NUM_OCTETS_TTL = 4;
-var NUM_OCTETS_RESOURCE_DATA_LENGTH = 2;
+const NUM_OCTETS_TYPE = 2;
+const NUM_OCTETS_CLASS = 2;
+const NUM_OCTETS_TTL = 4;
+const NUM_OCTETS_RESOURCE_DATA_LENGTH = 2;
 
 /** An A Record has four bytes, all representing an IP address. */
-var NUM_OCTETS_RESOURCE_DATA_A_RECORD = 4;
+const NUM_OCTETS_RESOURCE_DATA_A_RECORD = 4;
 
-var NUM_OCTETS_PRIORITY = 2;
-var NUM_OCTETS_WEIGHT = 2;
-var NUM_OCTETS_PORT = 2;
+const NUM_OCTETS_PRIORITY = 2;
+const NUM_OCTETS_WEIGHT = 2;
+const NUM_OCTETS_PORT = 2;
 
 /**
  * A resource record (RR) is a component of a DNS message. They share a similar
@@ -4824,7 +4824,7 @@ exports.ARecord = function ARecord(
  * @return {ByteArray}
  */
 exports.ARecord.prototype.convertToByteArray = function() {
-  var result = exports.getCommonFieldsAsByteArray(
+  let result = exports.getCommonFieldsAsByteArray(
     this.domainName,
     this.recordType,
     this.recordClass,
@@ -4838,7 +4838,7 @@ exports.ARecord.prototype.convertToByteArray = function() {
   );
 
   // Then add the IP address itself.
-  var ipStringAsBytes = dnsUtil.getIpStringAsByteArray(this.ipAddress);
+  let ipStringAsBytes = dnsUtil.getIpStringAsByteArray(this.ipAddress);
   result.append(ipStringAsBytes);
 
   return result;
@@ -4853,7 +4853,7 @@ exports.ARecord.prototype.convertToByteArray = function() {
  * @return {ARecord}
  */
 exports.createARecordFromReader = function(reader) {
-  var commonFields = exports.getCommonFieldsFromByteArrayReader(reader);
+  let commonFields = exports.getCommonFieldsFromByteArrayReader(reader);
 
   if (commonFields.rrType !== dnsCodes.RECORD_TYPES.A) {
     throw new Error(
@@ -4863,7 +4863,7 @@ exports.createARecordFromReader = function(reader) {
   }
 
   // And now we recover just the resource length and resource data.
-  var resourceLength = reader.getValue(NUM_OCTETS_RESOURCE_DATA_LENGTH);
+  let resourceLength = reader.getValue(NUM_OCTETS_RESOURCE_DATA_LENGTH);
 
   // For an A Record this should always be 4.
   if (resourceLength !== NUM_OCTETS_RESOURCE_DATA_A_RECORD) {
@@ -4874,9 +4874,9 @@ exports.createARecordFromReader = function(reader) {
     );
   }
 
-  var ipString = dnsUtil.getIpStringFromByteArrayReader(reader);
+  let ipString = dnsUtil.getIpStringFromByteArrayReader(reader);
 
-  var result = new exports.ARecord(
+  let result = new exports.ARecord(
     commonFields.domainName,
     commonFields.ttl,
     ipString,
@@ -4895,7 +4895,7 @@ exports.createARecordFromReader = function(reader) {
  * @return {PtrRecord}
  */
 exports.createPtrRecordFromReader = function(reader) {
-  var commonFields = exports.getCommonFieldsFromByteArrayReader(reader);
+  let commonFields = exports.getCommonFieldsFromByteArrayReader(reader);
 
   if (commonFields.rrType !== dnsCodes.RECORD_TYPES.PTR) {
     throw new Error(
@@ -4905,7 +4905,7 @@ exports.createPtrRecordFromReader = function(reader) {
   }
 
   // And now we recover just the resource length and resource data.
-  var resourceLength = reader.getValue(NUM_OCTETS_RESOURCE_DATA_LENGTH);
+  let resourceLength = reader.getValue(NUM_OCTETS_RESOURCE_DATA_LENGTH);
   if (resourceLength < 0 || resourceLength > 65535) {
     throw new Error(
       'Illegal length of PTR Record resource data: ' +
@@ -4914,10 +4914,10 @@ exports.createPtrRecordFromReader = function(reader) {
 
   // In a PTR Record, the domain name field of the RR is actually the service
   // type (at least for mDNS).
-  var serviceType = commonFields.domainName;
-  var serviceName = dnsUtil.getDomainFromByteArrayReader(reader);
+  let serviceType = commonFields.domainName;
+  let serviceName = dnsUtil.getDomainFromByteArrayReader(reader);
 
-  var result = new exports.PtrRecord(
+  let result = new exports.PtrRecord(
     serviceType,
     commonFields.ttl,
     serviceName,
@@ -4936,7 +4936,7 @@ exports.createPtrRecordFromReader = function(reader) {
  * @return {SrvRecord}
  */
 exports.createSrvRecordFromReader = function(reader) {
-  var commonFields = exports.getCommonFieldsFromByteArrayReader(reader);
+  let commonFields = exports.getCommonFieldsFromByteArrayReader(reader);
 
   if (commonFields.rrType !== dnsCodes.RECORD_TYPES.SRV) {
     throw new Error(
@@ -4946,7 +4946,7 @@ exports.createSrvRecordFromReader = function(reader) {
   }
 
   // And now we recover just the resource length and resource data.
-  var resourceLength = reader.getValue(NUM_OCTETS_RESOURCE_DATA_LENGTH);
+  let resourceLength = reader.getValue(NUM_OCTETS_RESOURCE_DATA_LENGTH);
   if (resourceLength < 0 || resourceLength > 65535) {
     throw new Error(
       'Illegal length of SRV Record resource data: ' +
@@ -4955,27 +4955,27 @@ exports.createSrvRecordFromReader = function(reader) {
 
   // In a SRV Record, the domain name field of the RR is actually the service
   // proto name.
-  var serviceInstanceName = commonFields.domainName;
+  let serviceInstanceName = commonFields.domainName;
   
   // After the common fields, we expect priority, weight, port, target name.
-  var priority = reader.getValue(NUM_OCTETS_PRIORITY);
+  let priority = reader.getValue(NUM_OCTETS_PRIORITY);
   if (priority < 0 || priority > 65535) {
     throw new Error('Illegal length of SRV Record priority: ' + priority);
   }
 
-  var weight = reader.getValue(NUM_OCTETS_WEIGHT);
+  let weight = reader.getValue(NUM_OCTETS_WEIGHT);
   if (weight < 0 || weight > 65535) {
     throw new Error('Illegal length of SRV Record priority: ' + weight);
   }
 
-  var port = reader.getValue(NUM_OCTETS_PORT);
+  let port = reader.getValue(NUM_OCTETS_PORT);
   if (port < 0 || port > 65535) {
     throw new Error('Illegal length of SRV Record priority: ' + port);
   }
 
-  var targetName = dnsUtil.getDomainFromByteArrayReader(reader);
+  let targetName = dnsUtil.getDomainFromByteArrayReader(reader);
 
-  var result = new exports.SrvRecord(
+  let result = new exports.SrvRecord(
     serviceInstanceName,
     commonFields.ttl,
     priority,
@@ -5052,15 +5052,15 @@ exports.PtrRecord = function PtrRecord(
  * @return {ByteArray}
  */
 exports.PtrRecord.prototype.convertToByteArray = function() {
-  var result = exports.getCommonFieldsAsByteArray(
+  let result = exports.getCommonFieldsAsByteArray(
     this.serviceType,
     this.recordType,
     this.recordClass,
     this.ttl
   );
 
-  var instanceNameAsBytes = dnsUtil.getDomainAsByteArray(this.instanceName);
-  var resourceDataLength = instanceNameAsBytes.length;
+  let instanceNameAsBytes = dnsUtil.getDomainAsByteArray(this.instanceName);
+  let resourceDataLength = instanceNameAsBytes.length;
 
   // First we add the length of the resource data.
   result.push(
@@ -5141,16 +5141,16 @@ exports.SrvRecord = function SrvRecord(
  * @return {ByteArray}
  */
 exports.SrvRecord.prototype.convertToByteArray = function() {
-  var result = exports.getCommonFieldsAsByteArray(
+  let result = exports.getCommonFieldsAsByteArray(
     this.instanceTypeDomain,
     this.recordType,
     this.recordClass,
     this.ttl
   );
 
-  var targetNameAsBytes = dnsUtil.getDomainAsByteArray(this.targetDomain);
+  let targetNameAsBytes = dnsUtil.getDomainAsByteArray(this.targetDomain);
 
-  var resourceDataLength = NUM_OCTETS_PRIORITY +
+  let resourceDataLength = NUM_OCTETS_PRIORITY +
     NUM_OCTETS_WEIGHT +
     NUM_OCTETS_PORT +
     targetNameAsBytes.length;
@@ -5198,9 +5198,9 @@ exports.getCommonFieldsAsByteArray = function(
   rrClass,
   ttl
 ) {
-  var result = new byteArray.ByteArray();
+  let result = new byteArray.ByteArray();
 
-  var domainNameAsBytes = dnsUtil.getDomainAsByteArray(domainName);
+  let domainNameAsBytes = dnsUtil.getDomainAsByteArray(domainName);
   result.append(domainNameAsBytes);
 
   result.push(rrType, NUM_OCTETS_TYPE);
@@ -5220,12 +5220,12 @@ exports.getCommonFieldsAsByteArray = function(
  * and ttl.
  */
 exports.getCommonFieldsFromByteArrayReader = function(reader) {
-  var domainName = dnsUtil.getDomainFromByteArrayReader(reader);
-  var rrType = reader.getValue(NUM_OCTETS_TYPE);
-  var rrClass = reader.getValue(NUM_OCTETS_CLASS);
-  var ttl = reader.getValue(NUM_OCTETS_TTL);
+  let domainName = dnsUtil.getDomainFromByteArrayReader(reader);
+  let rrType = reader.getValue(NUM_OCTETS_TYPE);
+  let rrClass = reader.getValue(NUM_OCTETS_CLASS);
+  let ttl = reader.getValue(NUM_OCTETS_TTL);
 
-  var result = {
+  let result = {
     domainName: domainName,
     rrType: rrType,
     rrClass: rrClass,
@@ -5246,15 +5246,15 @@ exports.getCommonFieldsFromByteArrayReader = function(reader) {
 exports.peekTypeInReader = function(reader) {
   // Getting values from the reader normally consumes bytes. Create a defensive
   // copy to work with instead.
-  var byteArr = reader.byteArray;
-  var startByte = reader.cursor;
-  var safeReader = byteArr.getReader(startByte);
+  let byteArr = reader.byteArray;
+  let startByte = reader.cursor;
+  let safeReader = byteArr.getReader(startByte);
 
   // Consume an encoded domain name. Note this means we're computing domain
   // names twice, which isn't optimal.
   dnsUtil.getDomainFromByteArrayReader(safeReader);
   // After the domain, the type is next.
-  var result = safeReader.getValue(NUM_OCTETS_TYPE);
+  let result = safeReader.getValue(NUM_OCTETS_TYPE);
   return result;
 };
 
@@ -5280,7 +5280,7 @@ const util = require('./util');
 const CPInfo = perObjs.CPInfo;
 
 /** The prefix value for timing keys we will use for local storage. */
-var TIMING_KEY_PREFIX = 'timing_';
+const TIMING_KEY_PREFIX = 'timing_';
 
 /**
  * These URLs will be shared across all dummy Digests created for Digest query
@@ -5318,10 +5318,10 @@ exports.createTimingKey = function(key) {
  * @return {Array.<CachedPage>}
  */
 exports.generateDummyPages = function(numPages, nonce) {
-  var result = [];
+  let result = [];
 
-  for (var i = 0; i < numPages; i++) {
-    var page = exports.generateDummyPage(i, nonce);
+  for (let i = 0; i < numPages; i++) {
+    let page = exports.generateDummyPage(i, nonce);
     result.push(page);
   }
 
@@ -5360,8 +5360,8 @@ exports.generateDummyPage = function(index, nonce) {
  * @return {Object} the JSON server response
  */
 exports.getDummyResponseForAllCachedPages = function(numPages, nonce) {
-  var pages = exports.generateDummyPages(numPages, nonce);
-  var result = {};
+  let pages = exports.generateDummyPages(numPages, nonce);
+  let result = {};
   result.metadata = api.createMetadatObj();
   result.cachedPages = pages;
   return result;
@@ -5403,22 +5403,22 @@ exports.mark = function(name) {
  * @return {Object}
  */
 exports.getKeysFromMarks = function() {
-  var marks = exports.getPerf().getEntriesByType('mark');
-  var prefix = 'MARK_';
-  var infix = '_TO_';
+  let marks = exports.getPerf().getEntriesByType('mark');
+  let prefix = 'MARK_';
+  let infix = '_TO_';
 
-  var result = {};
+  let result = {};
   
   marks.forEach(mark => {
-    var key = prefix + mark.name;
+    let key = prefix + mark.name;
     result[key] = mark.startTime;
   });
 
-  for (var i = 1; i < marks.length; i++) {
-    var a = marks[i - 1];
-    var b = marks[i];
-    var key = (prefix + a.name) + infix + (prefix + b.name);
-    var duration = b.startTime - a.startTime;
+  for (let i = 1; i < marks.length; i++) {
+    let a = marks[i - 1];
+    let b = marks[i];
+    let key = (prefix + a.name) + infix + (prefix + b.name);
+    let duration = b.startTime - a.startTime;
     result[key] = duration;
   }
 
@@ -5438,12 +5438,12 @@ exports.getKeysFromMarks = function() {
  */
 exports.logTime = function(key, time) {
   return new Promise(function(resolve, reject) {
-    var scopedKey = exports.createTimingKey(key);
+    let scopedKey = exports.createTimingKey(key);
     exports.getTimeValues(key)
     .then(existingValues => {
-      var setObj = {};
-      var objToLog = time;
-      var keysFromMarks = exports.getKeysFromMarks();
+      let setObj = {};
+      let objToLog = time;
+      let keysFromMarks = exports.getKeysFromMarks();
       if (time !== null && typeof time !== 'object') {
         objToLog = { time: time };
       }
@@ -5481,7 +5481,7 @@ exports.logTime = function(key, time) {
  */
 exports.getTimeValues = function(key) {
   return new Promise(function(resolve, reject) {
-    var scopedKey = exports.createTimingKey(key);
+    let scopedKey = exports.createTimingKey(key);
     chromep.getStorageLocal().get(scopedKey)
     .then(existingValues => {
       if (existingValues && existingValues[scopedKey]) {
@@ -5510,8 +5510,8 @@ exports.getTimeValues = function(key) {
  */
 exports.fulfillPromises = function(promises) {
   return new Promise(function(resolve) {
-    var result = [];
-    var seedPromise = Promise.resolve(null);
+    let result = [];
+    let seedPromise = Promise.resolve(null);
 
     // Now we have an array with all our promises. We want to execute them
     // sequentially, for which we will use reduce. seedPromise will be our
@@ -5569,9 +5569,9 @@ exports.runDiscoverPeerPagesTrial = function(
   return new Promise(function(resolve) {
     // We will call runDiscoverPagesIteration and attach them all to a sequence
     // of Promises, such that they will resolve in order.
-    var iteration = 0;
-    var nextIter = function() {
-      var toLog = {};
+    let iteration = 0;
+    let nextIter = function() {
+      let toLog = {};
       toLog.type = 'discoverPeers';
       toLog.numPeers = numPeers;
       toLog.numPages = numPages;
@@ -5604,8 +5604,8 @@ exports.runDiscoverPeerPagesTrial = function(
       });
     };
 
-    var promises = [];
-    for (var i = 0; i < numIterations; i++) {
+    let promises = [];
+    for (let i = 0; i < numIterations; i++) {
       promises.push(nextIter);
     }
 
@@ -5627,7 +5627,7 @@ exports.runDiscoverPeerPagesTrial = function(
  * evaluation
  */
 exports.getEvalPagesUrl = function(ipAddress, port, numPages) {
-  var result = 'http://' +
+  let result = 'http://' +
     ipAddress +
     ':' +
     port +
@@ -5657,11 +5657,11 @@ exports.resolvePeers = function(cacheNames, resolveDelay, toLog) {
     toLog.resolves = [];
     toLog.serviceNames = [];
 
-    var iteration = 0;
-    var nextIter = function() {
-      var cacheName = cacheNames[iteration];
-      var serviceName = cacheName.serviceName;
-      var startResolve = null;
+    let iteration = 0;
+    let nextIter = function() {
+      let cacheName = cacheNames[iteration];
+      let serviceName = cacheName.serviceName;
+      let startResolve = null;
       iteration += 1;
 
       return new Promise(function(resolve, reject) {
@@ -5671,8 +5671,8 @@ exports.resolvePeers = function(cacheNames, resolveDelay, toLog) {
           return appc.resolveCache(serviceName);
         })
         .then(cache => {
-          var endResolve = exports.getNow();
-          var totalResolve = endResolve - startResolve;
+          let endResolve = exports.getNow();
+          let totalResolve = endResolve - startResolve;
           toLog.resolves.push(totalResolve);
           toLog.serviceNames.push(serviceName);
           resolve(cache);
@@ -5683,8 +5683,8 @@ exports.resolvePeers = function(cacheNames, resolveDelay, toLog) {
       });
     };
 
-    var promises = [];
-    for (var i = 0; i < cacheNames.length; i++) {
+    let promises = [];
+    for (let i = 0; i < cacheNames.length; i++) {
       promises.push(nextIter);
     }
 
@@ -5716,10 +5716,10 @@ exports.runDiscoverPeerPagesIterationLazy = function(
     resolveDelay
 ) {
   return new Promise(function(resolve, reject) {
-    var startBrowse = exports.getNow();
-    var finishBrowsePeers = null;
-    var finishBrowsePages = null;
-    var logInfo = {};
+    let startBrowse = exports.getNow();
+    let finishBrowsePeers = null;
+    let finishBrowsePages = null;
+    let logInfo = {};
     logInfo.resolveErrs = [];
     logInfo.type = 'discoverPeersLazy';
     appc.getPeerCacheNames()
@@ -5727,7 +5727,7 @@ exports.runDiscoverPeerPagesIterationLazy = function(
       console.log('found peer cache names: ', cacheNames);
 
       if (cacheNames.length !== numPeers) {
-        var message = 'missing peer: found ' +
+        let message = 'missing peer: found ' +
           cacheNames.length +
           ', expected ' +
           numPeers;
@@ -5742,20 +5742,20 @@ exports.runDiscoverPeerPagesIterationLazy = function(
     })
     .then(cacheResults => {
       // We'll create a fetch for each listUrl.
-      var promises = [];
+      let promises = [];
       cacheResults.forEach(cacheResult => {
         if (!cacheResult.resolved) {
           // probably caught
           logInfo.resolveErrs.push(cacheResult);
           return;
         }
-        var cache = cacheResult.resolved;
-        var evalUrl = exports.getEvalPagesUrl(
+        let cache = cacheResult.resolved;
+        let evalUrl = exports.getEvalPagesUrl(
           cache.ipAddress,
           cache.port,
           numPages
         );
-        var prom = util.fetchJson(evalUrl);
+        let prom = util.fetchJson(evalUrl);
         promises.push(prom);
       });
 
@@ -5766,7 +5766,7 @@ exports.runDiscoverPeerPagesIterationLazy = function(
 
       cacheJsons.forEach(cacheJson => {
         if (cacheJson.cachedPages.length !== numPages) {
-          var message = 'missing pages: found ' +
+          let message = 'missing pages: found ' +
             cacheJson.cachedPages.length +
             ', expected ' +
             numPages;
@@ -5778,11 +5778,11 @@ exports.runDiscoverPeerPagesIterationLazy = function(
       finishBrowsePages = exports.getNow();
     })
     .then(() => {
-      var timeBrowsePeers = finishBrowsePeers - startBrowse;
-      var timeBrowsePages = finishBrowsePages - finishBrowsePeers;
-      var totalTime = finishBrowsePages - startBrowse;
+      let timeBrowsePeers = finishBrowsePeers - startBrowse;
+      let timeBrowsePages = finishBrowsePages - finishBrowsePeers;
+      let totalTime = finishBrowsePages - startBrowse;
 
-      var result = {
+      let result = {
         timeBrowsePeers: timeBrowsePeers,
         timeBrowsePages: timeBrowsePages,
         totalTime: totalTime,
@@ -5809,15 +5809,15 @@ exports.runDiscoverPeerPagesIterationLazy = function(
  */
 exports.runDiscoverPeerPagesIteration = function(numPeers, numPages) {
   return new Promise(function(resolve, reject) {
-    var startBrowse = exports.getNow();
-    var finishBrowsePeers = null;
-    var finishBrowsePages = null;
+    let startBrowse = exports.getNow();
+    let finishBrowsePeers = null;
+    let finishBrowsePages = null;
     appc.getBrowseableCaches()
     .then(caches => {
       console.log('found peers: ', caches);
 
       if (caches.length !== numPeers) {
-        var message = 'missing peer: found ' +
+        let message = 'missing peer: found ' +
           caches.length +
           ', expected ' +
           numPeers;
@@ -5829,14 +5829,14 @@ exports.runDiscoverPeerPagesIteration = function(numPeers, numPages) {
       finishBrowsePeers = exports.getNow();
       
       // We'll create a fetch for each listUrl.
-      var promises = [];
+      let promises = [];
       caches.forEach(cache => {
-        var evalUrl = exports.getEvalPagesUrl(
+        let evalUrl = exports.getEvalPagesUrl(
           cache.ipAddress,
           cache.port,
           numPages
         );
-        var prom = util.fetchJson(evalUrl);
+        let prom = util.fetchJson(evalUrl);
         promises.push(prom);
       });
 
@@ -5847,7 +5847,7 @@ exports.runDiscoverPeerPagesIteration = function(numPeers, numPages) {
 
       cacheJsons.forEach(cacheJson => {
         if (cacheJson.cachedPages.length !== numPages) {
-          var message = 'missing pages: found ' +
+          let message = 'missing pages: found ' +
             cacheJson.cachedPages.length +
             ', expected ' +
             numPages;
@@ -5859,11 +5859,11 @@ exports.runDiscoverPeerPagesIteration = function(numPeers, numPages) {
       finishBrowsePages = exports.getNow();
     })
     .then(() => {
-      var timeBrowsePeers = finishBrowsePeers - startBrowse;
-      var timeBrowsePages = finishBrowsePages - finishBrowsePeers;
-      var totalTime = finishBrowsePages - startBrowse;
+      let timeBrowsePeers = finishBrowsePeers - startBrowse;
+      let timeBrowsePages = finishBrowsePages - finishBrowsePeers;
+      let totalTime = finishBrowsePages - startBrowse;
 
-      var result = {
+      let result = {
         timeBrowsePeers: timeBrowsePeers,
         timeBrowsePages: timeBrowsePages,
         totalTime: totalTime
@@ -5899,9 +5899,9 @@ exports.runLoadPageTrialForCache = function(numIterations, key, listPagesUrl) {
     .then(cache => {
       // We will call runDiscoverPagesIteration and attach them all to a
       // sequence of Promises, such that they will resolve in order.
-      var numCalls = 0;
-      var nextIter = function() {
-        var cachedPage = cache.cachedPages[numCalls];
+      let numCalls = 0;
+      let nextIter = function() {
+        let cachedPage = cache.cachedPages[numCalls];
         numCalls += 1;
         return exports.runLoadPageTrial(
           numIterations,
@@ -5913,8 +5913,8 @@ exports.runLoadPageTrialForCache = function(numIterations, key, listPagesUrl) {
         );
       };
 
-      var promises = [];
-      for (var i = 0; i < cache.cachedPages.length; i++) {
+      let promises = [];
+      for (let i = 0; i < cache.cachedPages.length; i++) {
         promises.push(nextIter);
       }
 
@@ -5949,9 +5949,9 @@ exports.runLoadPageTrial = function(
   return new Promise(function(resolve) {
     // We will call runDiscoverPagesIteration and attach them all to a sequence
     // of Promises, such that they will resolve in order.
-    var iteration = 0;
-    var nextIter = function() {
-      var toLog = {};
+    let iteration = 0;
+    let nextIter = function() {
+      let toLog = {};
       toLog.captureUrl = captureUrl;
       toLog.numIterations = numIterations;
       toLog.mhtmlUrl = mhtmlUrl;
@@ -5981,8 +5981,8 @@ exports.runLoadPageTrial = function(
       });
     };
 
-    var promises = [];
-    for (var i = 0; i < numIterations; i++) {
+    let promises = [];
+    for (let i = 0; i < numIterations; i++) {
       promises.push(nextIter);
     }
 
@@ -6005,7 +6005,7 @@ exports.downloadKeyAsCsv = function(key) {
     } else {
       console.log(values);
       // And now download a CSV.
-      var csv = json2csv({data: values, flatten: true});
+      let csv = json2csv({data: values, flatten: true});
       util.downloadText(csv, key + '.csv');
     }
   });
@@ -6018,12 +6018,12 @@ exports.runFetchFileTrial = function(
   waitMillis = waitMillis || 8000;
   
   return new Promise(function(resolve, reject) {
-    var iteration = 0;
+    let iteration = 0;
     
     // We want to run these trials serially. We're basically using this
     // function as a generator that we'll pass to fulfillPromises.
-    var nextIter = function() {
-      var toLog = {
+    let nextIter = function() {
+      let toLog = {
         key: key,
         waitMillis: waitMillis,
         mhtmlUrl: mhtmlUrl,
@@ -6051,8 +6051,8 @@ exports.runFetchFileTrial = function(
       });
     };
 
-    var promises = [];
-    for (var i = 0; i < numIterations; i++) {
+    let promises = [];
+    for (let i = 0; i < numIterations; i++) {
       promises.push(nextIter);
     }
 
@@ -6082,14 +6082,14 @@ exports.runFetchFileTrial = function(
  */
 exports.runFetchFileIteration = function(mhtmlUrl, ipAddr, port) {
   return new Promise(function(resolve, reject) {
-    var start = exports.getNow();
-    var params = ifCommon.createFileParams(ipAddr, port, mhtmlUrl);
+    let start = exports.getNow();
+    let params = ifCommon.createFileParams(ipAddr, port, mhtmlUrl);
     peerIfMgr.getPeerAccessor().getFileBlob(params)
     .then(blob => {
       // We are fetching, not writing to disk.
-      var end = exports.getNow();
-      var totalTime = end - start;
-      var result = {
+      let end = exports.getNow();
+      let totalTime = end - start;
+      let result = {
         timeToFetch: totalTime,
         fileSize: blob.size
       };
@@ -6114,18 +6114,18 @@ exports.generateDummyDigests = function(numDigests, numPages) {
   if (numPages < 10) {
     throw new Error('numPages must be > 10');
   }
-  var result = [];
+  let result = [];
 
-  for (var i = 0; i < numDigests; i++) {
-    var ipAddr = i + '.' + i + '.' + i + '.' + i;
-    var peerInfo = {
+  for (let i = 0; i < numDigests; i++) {
+    let ipAddr = i + '.' + i + '.' + i + '.' + i;
+    let peerInfo = {
       ipAddress: ipAddr,
       port: i
     };
 
-    var pageInfos = exports.generateDummyPageInfos(numPages, i);
+    let pageInfos = exports.generateDummyPageInfos(numPages, i);
 
-    var digest = new coalObjects.Digest(peerInfo, pageInfos);
+    let digest = new coalObjects.Digest(peerInfo, pageInfos);
     result.push(digest);
   }
 
@@ -6145,23 +6145,23 @@ exports.generateDummyPeerBloomFilters = function(numPeers, numPages) {
   if (numPages < 10) {
     throw new Error('numPages must be > 10');
   }
-  var result = [];
+  let result = [];
 
-  for (var i = 0; i < numPeers; i++) {
-    var ipAddr = i + '.' + i + '.' + i + '.' + i;
-    var peerInfo = {
+  for (let i = 0; i < numPeers; i++) {
+    let ipAddr = i + '.' + i + '.' + i + '.' + i;
+    let peerInfo = {
       ipAddress: ipAddr,
       port: i
     };
 
-    var pageInfos = exports.generateDummyPageInfos(numPages, i);
+    let pageInfos = exports.generateDummyPageInfos(numPages, i);
 
-    var filter = new bloomFilter.BloomFilter();
+    let filter = new bloomFilter.BloomFilter();
     pageInfos.forEach(info => {
       filter.add(info.fullUrl);
     });
 
-    var digest = new coalObjects.PeerBloomFilter(peerInfo, filter.serialize());
+    let digest = new coalObjects.PeerBloomFilter(peerInfo, filter.serialize());
     result.push(digest);
   }
 
@@ -6187,8 +6187,8 @@ exports.generateDummyPeerBloomFilters = function(numPeers, numPages) {
  * }
  */
 exports.generateDummyPageInfos = function(numPages, peerNumber) {
-  var result = [];
-  var pagesRemaining = numPages;
+  let result = [];
+  let pagesRemaining = numPages;
 
   // Add our shared URLs.
   exports.SHARED_DUMMY_URLS.forEach(commonUrl => {
@@ -6199,14 +6199,14 @@ exports.generateDummyPageInfos = function(numPages, peerNumber) {
     });
   });
 
-  var pathSuffix = '/foo-bar-baz-upsidedowncake/';
-  var urlPrefix = 'http://peer' + peerNumber + '.com/';
+  let pathSuffix = '/foo-bar-baz-upsidedowncake/';
+  let urlPrefix = 'http://peer' + peerNumber + '.com/';
   while (pagesRemaining > 0) {
-    var pagePath = 'page' + pagesRemaining;
-    var fullUrl = urlPrefix + pagePath + pathSuffix;
-    var captureDate = new Date().toISOString();
+    let pagePath = 'page' + pagesRemaining;
+    let fullUrl = urlPrefix + pagePath + pathSuffix;
+    let captureDate = new Date().toISOString();
 
-    var pageInfo = {
+    let pageInfo = {
       fullUrl: fullUrl,
       captureDate: captureDate
     };
@@ -6419,7 +6419,7 @@ exports.handleExternalMessage = function(message, sender, response) {
   // Methods via onMessagExternal.addListener must respond true if the response
   // callback is going to be invoked asynchronously. We'll create this value
   // and allow the if logic below to specify if it will be invoking response.
-  var result = false;
+  let result = false;
   if (sender.id !== exports.EXTENSION_ID) {
     console.log('ID not from SemCache extension: ', sender);
     return;
@@ -6458,7 +6458,7 @@ exports.handleExternalMessage = function(message, sender, response) {
       }
     })
     .catch(err => {
-      var errorMsg = common.createResponseError(
+      let errorMsg = common.createResponseError(
         common.responderTypes.localQuery, {}, err
       );
       if (response) {
@@ -6542,14 +6542,14 @@ exports.queryLocalMachineForUrls = function(message) {
   return new Promise(function(resolve, reject) {
     // Check for the url.
     // Return the information about the entry, including the access path.
-    var urls = message.params.urls;
-    var result = {};
+    let urls = message.params.urls;
+    let result = {};
     datastore.getAllCachedPages()
     .then(cpinfos => {
       cpinfos.forEach(cpinfo => {
         urls.forEach(url => {
           if (url === cpinfo.captureHref) {
-            var copies = result[url];
+            let copies = result[url];
             if (!copies) {
               copies = [];
               result[url] = copies;
@@ -6595,23 +6595,23 @@ exports.queryLocalNetworkForUrls = function(message) {
 exports.getBlobFromDataUrl = function(dataUrl) {
   // Decoding from data URL based on:
   // https://gist.github.com/fupslot/5015897
-  var byteString = base64.decode(dataUrl.split(',')[1]);
-  var mime = dataUrl.split(',')[0].split(':')[1].split(';')[0];
+  let byteString = base64.decode(dataUrl.split(',')[1]);
+  let mime = dataUrl.split(',')[0].split(':')[1].split(';')[0];
   // write the bytes of the string to an ArrayBuffer
-  var ab = new ArrayBuffer(byteString.length);
-  var ia = new Uint8Array(ab);
-  for (var i = 0; i < byteString.length; i++) {
+  let ab = new ArrayBuffer(byteString.length);
+  let ia = new Uint8Array(ab);
+  for (let i = 0; i < byteString.length; i++) {
     ia[i] = byteString.charCodeAt(i);
   }
   // write the ArrayBuffer to a blob, and you're done
-  var result = new Blob([ab], {type: mime});
+  let result = new Blob([ab], {type: mime});
   return result;
 };
 
 exports.attachListeners = function() {
-  var runtime = chromep.getRuntime();
+  let runtime = chromep.getRuntime();
   console.log('runtime: ', runtime);
-  var ome = runtime.onMessageExternal;
+  let ome = runtime.onMessageExternal;
   console.log('ome: ', ome);
   chromep.getRuntimeBare().onMessageExternal.addListener(
     exports.handleExternalMessage
@@ -6624,7 +6624,7 @@ exports.attachListeners = function() {
  * @param {string} url
  */
 exports.sendMessageToOpenUrl = function(url) {
-  var message = {
+  let message = {
     type: 'open',
     params: {
       url: url
@@ -6636,7 +6636,7 @@ exports.sendMessageToOpenUrl = function(url) {
 },{"../app-controller":1,"../chrome-apis/chromep":2,"../coalescence/manager":8,"../constants":11,"../persistence/datastore":30,"../persistence/objects":33,"./common-messaging":23,"base-64":47}],25:[function(require,module,exports){
 'use strict';
 
-var util = require('../util');
+const util = require('../util');
 
 /**
  * Code shared across the peer-interface implementations.
@@ -6646,8 +6646,8 @@ var util = require('../util');
  * The path to the HTTP endpoint that serves the digest. Should match the value
  * in the server/server-api module.
  */
-let PATH_GET_PAGE_DIGEST = 'page_digest';
-let PATH_GET_BLOOM_FILTER = 'bloom_filter';
+const PATH_GET_PAGE_DIGEST = 'page_digest';
+const PATH_GET_BLOOM_FILTER = 'bloom_filter';
 
 /**
  * Returns the IP address, extracting if necessary.
@@ -6658,7 +6658,7 @@ let PATH_GET_BLOOM_FILTER = 'bloom_filter';
  * @return {string}
  */
 function getIpAddress(ipaddr, url) {
-  var result = ipaddr;
+  let result = ipaddr;
   if (!result) {
     result = util.getHostFromUrl(url);
   }
@@ -6674,7 +6674,7 @@ function getIpAddress(ipaddr, url) {
  * @return {integer}
  */
 function getPort(port, url) {
-  var result = port;
+  let result = port;
   if (!result) {
     result = util.getPortFromUrl(url);
   }
@@ -6709,9 +6709,9 @@ exports.createListParams = function(ipaddr, port, listUrl) {
   port = getPort(port, listUrl);
 
   // Create the digest URL.
-  var digestUrl = ['http://', ipaddr, ':', port, '/', exports.getDigestPath()]
+  let digestUrl = ['http://', ipaddr, ':', port, '/', exports.getDigestPath()]
     .join('');
-  var bloomUrl = [
+  let bloomUrl = [
     'http://',
     ipaddr,
     ':',
@@ -6854,9 +6854,9 @@ exports.HttpPeerAccessor.prototype.getCacheBloomFilter = function(params) {
 },{"../server/server-api":36,"../util":39,"buffer":86}],27:[function(require,module,exports){
 'use strict';
 
-var settings = require('../settings');
-var ifHttp = require('./http-impl');
-var ifWebrtc = require('./webrtc-impl');
+const settings = require('../settings');
+const ifHttp = require('./http-impl');
+const ifWebrtc = require('./webrtc-impl');
 
 /**
  * Manages peer interfaces for the application.
@@ -6868,7 +6868,7 @@ var ifWebrtc = require('./webrtc-impl');
  * @return {HttpPeerAccessor|WebrtcPeerAccessor}
  */
 exports.getPeerAccessor = function(ipaddr, port) {
-  var transportMethod = settings.getTransportMethod();
+  let transportMethod = settings.getTransportMethod();
   console.log(transportMethod);
   if (transportMethod === 'http') {
     return new ifHttp.HttpPeerAccessor(); 
@@ -6882,8 +6882,8 @@ exports.getPeerAccessor = function(ipaddr, port) {
 },{"../settings":38,"./http-impl":26,"./webrtc-impl":28}],28:[function(require,module,exports){
 'use strict';
 
-var cmgr = require('../webrtc/connection-manager');
-var util = require('../util');
+const cmgr = require('../webrtc/connection-manager');
+const util = require('../util');
 
 class WebrtcPeerAccessor {
   /**
@@ -6928,7 +6928,7 @@ class WebrtcPeerAccessor {
         return peerConnection.getFile(params.fileUrl);
       })
       .then(binary => {
-        var blob = util.getBufferAsBlob(binary);
+        let blob = util.getBufferAsBlob(binary);
         resolve(blob);
       })
       .catch(err => {
@@ -7001,16 +7001,16 @@ exports.WebrtcPeerAccessor = WebrtcPeerAccessor;
 },{"../util":39,"../webrtc/connection-manager":42}],29:[function(require,module,exports){
 'use strict';
 
-var Dexie = require('dexie');
+const Dexie = require('dexie');
 
-var objects = require('./objects');
+const objects = require('./objects');
 
 const CPInfo = objects.CPInfo;
 const CPSummary = objects.CPSummary;
 
 exports.DB_NAME = 'semcache-database';
 
-var db = null;
+let db = null;
 
 const DEFAULT_OFFSET = 0;
 const DEFAULT_LIMIT = 20;
@@ -7120,7 +7120,7 @@ exports.getAsCPSummaryArr = function(summaryItems, blobItems) {
  */
 exports.getAllCPInfos = function() {
   return new Promise(function(resolve) {
-    var db = exports.getDb();
+    let db = exports.getDb();
     let result = null;
     db.transaction('r', db.pagesummary, function() {
       db.pagesummary.toArray(itemArr => {
@@ -7250,13 +7250,13 @@ exports.DEBUG = false;
  */
 exports.addPageToCache = function(cpdisk) {
   return new Promise(function(resolve, reject) {
-    var fileName = exports.createFileNameForPage(
+    let fileName = exports.createFileNameForPage(
       cpdisk.captureHref,
       cpdisk.captureDate
     );
     cpdisk.filePath = fileName;
 
-    var heldEntry = null;
+    let heldEntry = null;
     database.addPageToDb(cpdisk)
     .then(() => {
       return fileSystem.getFileForWritingCachedPage(cpdisk.filePath);
@@ -7376,13 +7376,13 @@ function toArray(list) {
 exports.listEntries = function(dirEntry) {
   // This code is based on the Mozilla and HTML5Rocks examples shown here:
   // https://developer.mozilla.org/en/docs/Web/API/DirectoryReader
-  var dirReader = dirEntry.createReader();
-  var entries = [];
+  let dirReader = dirEntry.createReader();
+  let entries = [];
 
   return new Promise(function(resolve, reject) {
 
     // Keep calling readEntries() until no more results are returned.
-    var readEntries = function() {
+    let readEntries = function() {
       dirReader.readEntries (function(results) {
         if (!results.length) {
           resolve(entries.sort());
@@ -7517,20 +7517,20 @@ exports.getFileFromEntry = function(fileEntry) {
 exports.getFileContents = function(fileEntry) {
   return new Promise(function(resolve, reject) {
     // Array of Buffers that we write chunks to as we receive them.
-    var chunks = [];
+    let chunks = [];
     exports.getFileFromEntry(fileEntry)
     .then(file => {
-      var fileReader = exports.createFileReader();
+      let fileReader = exports.createFileReader();
 
       fileReader.onload = function(evt) {
         // We want to push Buffers, not ArrayBuffers.
-        var arrayBuffer = evt.target.result;
+        let arrayBuffer = evt.target.result;
         chunks.push(Buffer.from(arrayBuffer));
       };
 
       fileReader.onloadend = function() {
         try {
-          var result = Buffer.concat(chunks);
+          let result = Buffer.concat(chunks);
           resolve(result);
         } catch (err) {
           reject(err);
@@ -7570,8 +7570,8 @@ exports.createFileReader = function() {
  * the contents of a cached page", etc.
  */
 
-var chromep = require('../chrome-apis/chromep');
-var fsUtil = require('./file-system-util');
+const chromep = require('../chrome-apis/chromep');
+const fsUtil = require('./file-system-util');
 
 /** The local storage key for the entry ID of the base directory. */
 exports.KEY_BASE_DIR = 'baseDir';
@@ -7598,10 +7598,10 @@ exports.constructFileSchemeUrl = function(absPathToBaseDir, fileEntryPath) {
   // directory of the base directory. Therefore if we've selected 'semcachedir'
   // as the root of our file system, fullPath will always begin with
   // '/semcachedir/'. We still start by stripping this.
-  var parts = fileEntryPath.split('/');
+  let parts = fileEntryPath.split('/');
   // The first will be an empty string for the leading /. We'll start at index
   // 2 to skip this and skip the leading directory.
-  var sanitizedEntryPath = parts.slice(2).join('/');
+  let sanitizedEntryPath = parts.slice(2).join('/');
   // only file:/, not file://, as join adds one
   return ['file:/', absPathToBaseDir, sanitizedEntryPath].join('/');
 };
@@ -7617,8 +7617,8 @@ exports.getDirectoryForCacheEntries = function() {
   return new Promise(function(resolve, reject) {
     exports.getPersistedBaseDir()
     .then(baseDir => {
-      var dirName = exports.PATH_CACHE_DIR;
-      var options = {
+      let dirName = exports.PATH_CACHE_DIR;
+      let options = {
         create: true,
         exclusive: false
       };
@@ -7644,7 +7644,7 @@ exports.getDirectoryForCacheEntries = function() {
 exports.getFileForWritingCachedPage = function(filePath) {
   return exports.getDirectoryForCacheEntries()
   .then(cacheDir => {
-    var createOptions = {
+    let createOptions = {
       create: true,     // create if it doesn't exist
       exclusive: false  // OK if it already exists--will overwrite
     };
@@ -7672,7 +7672,7 @@ exports.getPersistedBaseDir = function() {
       if (isSet) {
         chromep.getStorageLocal().get(exports.KEY_BASE_DIR)
         .then(keyValue => {
-          var id = keyValue[exports.KEY_BASE_DIR];
+          let id = keyValue[exports.KEY_BASE_DIR];
           return chromep.getFileSystem().restoreEntry(id);
         })
         .then(dirEntry => {
@@ -7696,7 +7696,7 @@ exports.baseDirIsSet = function() {
   return new Promise(function(resolve, reject) {
     chromep.getStorageLocal().get(exports.KEY_BASE_DIR)
     .then(keyValue => {
-      var isSet = false;
+      let isSet = false;
       if (keyValue && keyValue[exports.KEY_BASE_DIR]) {
         isSet = true;
       }
@@ -7714,8 +7714,8 @@ exports.baseDirIsSet = function() {
  * @param {DirectoryEntry} dirEntry the entry that will be set as the base
  */
 exports.setBaseCacheDir = function(dirEntry) {
-  var keyObj = {};
-  var id = chromep.getFileSystem().retainEntry(dirEntry);
+  let keyObj = {};
+  let id = chromep.getFileSystem().retainEntry(dirEntry);
   keyObj[exports.KEY_BASE_DIR] = id;
   console.log('going to call set');
   chromep.getStorageLocal().set(keyObj);
@@ -7855,8 +7855,8 @@ class CPInfo {
    */
   static sort(arr) {
     arr.sort((a, b) => {
-      var ahref = a.captureHref.toUpperCase();
-      var bhref = b.captureHref.toUpperCase();
+      let ahref = a.captureHref.toUpperCase();
+      let bhref = b.captureHref.toUpperCase();
       if (ahref < bhref) {
         return -1;
       }
@@ -8048,7 +8048,7 @@ exports.CPDisk = CPDisk;
 /* globals WSC, _, TextEncoder */
 'use strict';
 
-var evaluation = require('../evaluation');
+const evaluation = require('../evaluation');
 
 /**
  * A handler to generate responses to a mock list_pages endpoint.
@@ -8060,15 +8060,15 @@ exports.EvaluationHandler = function(request) {
 
 _.extend(exports.EvaluationHandler.prototype, {
   get: function() {
-    var numPages = this.get_argument('numPages');
-    var nonce = this.get_argument('nonce');
+    let numPages = this.get_argument('numPages');
+    let nonce = this.get_argument('nonce');
     numPages = numPages || 1;
     nonce = nonce || 'useNonceArg';
 
-    var result = evaluation.getDummyResponseForAllCachedPages(numPages, nonce);
+    let result = evaluation.getDummyResponseForAllCachedPages(numPages, nonce);
     this.setHeader('content-type','text/json');
-    var encoder = new TextEncoder('utf-8');
-    var buf = encoder.encode(JSON.stringify(result)).buffer;
+    let encoder = new TextEncoder('utf-8');
+    let buf = encoder.encode(JSON.stringify(result)).buffer;
     this.write(buf);
     this.finish();
   }
@@ -8078,13 +8078,13 @@ _.extend(exports.EvaluationHandler.prototype, {
 /* globals WSC, RTCPeerConnection, RTCSessionDescription, RTCIceCandidate */
 'use strict';
 
-var _ = require('underscore');
-var api = require('./server-api');
-var fileSystem = require('../persistence/file-system');
-var fsUtil = require('../persistence/file-system-util');
-var binUtil = require('../dnssd/binary-utils').BinaryUtils;
-var rtcConnMgr = require('../webrtc/connection-manager');
-var wrtcResponder = require('../webrtc/responder');
+const _ = require('underscore');
+const api = require('./server-api');
+const fileSystem = require('../persistence/file-system');
+const fsUtil = require('../persistence/file-system-util');
+const binUtil = require('../dnssd/binary-utils').BinaryUtils;
+const rtcConnMgr = require('../webrtc/connection-manager');
+const wrtcResponder = require('../webrtc/responder');
 
 /**
  * Handlers for the webserver backing SemCache. The idea for handlers is based
@@ -8109,8 +8109,8 @@ _.extend(exports.ListCachedPagesHandler.prototype,
       api.getResponseForAllCachedPages()
       .then(response => {
         this.setHeader('content-type', 'text/json');
-        var encoder = new TextEncoder('utf-8');
-        var buffer = encoder.encode(JSON.stringify(response)).buffer;
+        let encoder = new TextEncoder('utf-8');
+        let buffer = encoder.encode(JSON.stringify(response)).buffer;
         this.write(buffer);
         this.finish();
       });
@@ -8137,8 +8137,8 @@ _.extend(exports.FullDigestHandler.prototype,
       api.getResponseForAllPagesDigest()
       .then(response => {
         this.setHeader('content-type', 'text/json');
-        var encoder = new TextEncoder('utf-8');
-        var buffer = encoder.encode(JSON.stringify(response)).buffer;
+        let encoder = new TextEncoder('utf-8');
+        let buffer = encoder.encode(JSON.stringify(response)).buffer;
         this.write(buffer);
         this.finish();
       });
@@ -8158,7 +8158,7 @@ exports.CachedPageHandler = function() {
 _.extend(exports.CachedPageHandler.prototype,
   {
     get: function() {
-      var fileName = api.getCachedFileNameFromPath(this.request.path);
+      let fileName = api.getCachedFileNameFromPath(this.request.path);
 
       fileSystem.getDirectoryForCacheEntries()
       .then(cacheDir => {
@@ -8173,8 +8173,8 @@ _.extend(exports.CachedPageHandler.prototype,
       })
       .then(fileEntry => {
         fileEntry.file(file => {
-          var that = this;
-          var fileReader = new FileReader();
+          let that = this;
+          let fileReader = new FileReader();
 
           fileReader.onload = function(evt) {
             // set mime types etc?
@@ -8216,27 +8216,27 @@ _.extend(exports.WebRtcOfferHandler.prototype,
       console.log(this);
       window.req = this;
 
-      var that = this;
+      let that = this;
 
-      var bodyStr = binUtil.arrayBufferToString(this.request.body);
+      let bodyStr = binUtil.arrayBufferToString(this.request.body);
       console.log('bodyStr: ' + bodyStr);
 
-      var bodyJson = JSON.parse(bodyStr);
+      let bodyJson = JSON.parse(bodyStr);
 
-      var pc = new RTCPeerConnection(null, null);
+      let pc = new RTCPeerConnection(null, null);
       pc.onicecandidate = onIceCandidate;
-      var remoteDescription = new RTCSessionDescription(bodyJson.description);
+      let remoteDescription = new RTCSessionDescription(bodyJson.description);
       pc.setRemoteDescription(remoteDescription);
       rtcConnMgr.remote = pc;
 
       bodyJson.iceCandidates.forEach(candidateStr => {
-        var candidate = new RTCIceCandidate(candidateStr);
+        let candidate = new RTCIceCandidate(candidateStr);
         pc.addIceCandidate(candidate);
       });
 
-      var iceCandidates = [];
-      var description = null;
-      var doneWithIce = false;
+      let iceCandidates = [];
+      let description = null;
+      let doneWithIce = false;
 
       function onIceCandidate(e) {
         if (e.candidate === null) {
@@ -8251,12 +8251,12 @@ _.extend(exports.WebRtcOfferHandler.prototype,
       function maybeRespond() {
         if (doneWithIce && description) {
           console.log('responding');
-          var respJson = {
+          let respJson = {
             description: description,
             iceCandidates: iceCandidates
           };
-          var respStr = JSON.stringify(respJson);
-          var respBin = binUtil.stringToArrayBuffer(respStr);
+          let respStr = JSON.stringify(respJson);
+          let respBin = binUtil.stringToArrayBuffer(respStr);
           that.write(respBin);
         }
       }
@@ -8279,7 +8279,7 @@ _.extend(exports.WebRtcOfferHandler.prototype,
 
     get: function() {
       console.log('IN GET');
-      var fileName = api.getCachedFileNameFromPath(this.request.path);
+      let fileName = api.getCachedFileNameFromPath(this.request.path);
 
       fileSystem.getDirectoryForCacheEntries()
       .then(cacheDir => {
@@ -8294,8 +8294,8 @@ _.extend(exports.WebRtcOfferHandler.prototype,
       })
       .then(fileEntry => {
         fileEntry.file(file => {
-          var that = this;
-          var fileReader = new FileReader();
+          let that = this;
+          let fileReader = new FileReader();
 
           fileReader.onload = function(evt) {
             // set mime types etc?
@@ -8341,12 +8341,12 @@ const VERSION = 0.0;
 /** 
  * The path from the root of the server that serves cached pages.
  */
-var PATH_LIST_PAGE_CACHE = 'list_pages';
-var PATH_GET_CACHED_PAGE = 'pages';
-var PATH_GET_PAGE_DIGEST = 'page_digest';
+const PATH_LIST_PAGE_CACHE = 'list_pages';
+const PATH_GET_CACHED_PAGE = 'pages';
+const PATH_GET_PAGE_DIGEST = 'page_digest';
 /** The path we use for mimicking the list_pages endpoing during evaluation. */
-var PATH_EVAL_LIST_PAGE_CACHE = 'eval_list';
-var PATH_RECEIVE_WRTC_OFFER = 'receive_wrtc';
+const PATH_EVAL_LIST_PAGE_CACHE = 'eval_list';
+const PATH_RECEIVE_WRTC_OFFER = 'receive_wrtc';
 
 const DEFAULT_OFFSET = 0;
 const DEFAULT_LIMIT = 50;
@@ -8355,7 +8355,7 @@ const DEFAULT_LIMIT = 50;
  * Create the metadata object that is returned in server responses.
  */
 exports.createMetadatObj = function() {
-  var result = {};
+  let result = {};
   result.version = VERSION;
   return result;
 };
@@ -8390,10 +8390,10 @@ exports.getApiEndpoints = function() {
  * @param {integer} port the port where the server is listening at ipAddress
  */
 exports.getListPageUrlForCache = function(ipAddress, port) {
-  var scheme = HTTP_SCHEME;
-  var endpoint = exports.getApiEndpoints().listPageCache;
+  let scheme = HTTP_SCHEME;
+  let endpoint = exports.getApiEndpoints().listPageCache;
   
-  var result = scheme + ipAddress + ':' + port + '/' + endpoint;
+  let result = scheme + ipAddress + ':' + port + '/' + endpoint;
   return result;
 };
 
@@ -8405,13 +8405,13 @@ exports.getListPageUrlForCache = function(ipAddress, port) {
  * @return {string} a fully qualified and valid URL
  */
 exports.getAccessUrlForCachedPage = function(fullPath) {
-  var scheme = HTTP_SCHEME;
+  let scheme = HTTP_SCHEME;
   // TODO: this might have to strip the path of directory where things are
   // stored--it basically maps between the two urls.
-  var httpIface = appController.getListeningHttpInterface();
-  var addressAndPort = httpIface.address + ':' + httpIface.port;
-  var apiPath = exports.getApiEndpoints().pageCache;
-  var result = scheme + [addressAndPort, apiPath, fullPath].join('/');
+  let httpIface = appController.getListeningHttpInterface();
+  let addressAndPort = httpIface.address + ':' + httpIface.port;
+  let apiPath = exports.getApiEndpoints().pageCache;
+  let result = scheme + [addressAndPort, apiPath, fullPath].join('/');
   return result;
 };
 
@@ -8488,7 +8488,7 @@ exports.getResponseForAllPagesDigest = function() {
   return new Promise(function(resolve, reject) {
     datastore.getAllCachedPages()
     .then(cpinfos => {
-      var result = {};
+      let result = {};
       result.metadata = exports.createMetadatObj();
       
       let pageInfos = cpinfos.map(cpinfo => {
@@ -8573,9 +8573,9 @@ exports.parseResponseForBloomFilter = function(buff) {
  * @param {string} path the path of the request
  */
 exports.getCachedFileNameFromPath = function(path) {
-  var parts = path.split('/');
+  let parts = path.split('/');
   // The file name is the last part of the path.
-  var result = parts[parts.length - 1];
+  let result = parts[parts.length - 1];
   return result;
 };
 
@@ -8584,9 +8584,9 @@ exports.getCachedFileNameFromPath = function(path) {
 /* global WSC, DummyHandler */
 'use strict';
 
-var api = require('./server-api');
-var handlers = require('./handlers');
-var evalHandlers = require('./evaluation-handler');
+const api = require('./server-api');
+const handlers = require('./handlers');
+const evalHandlers = require('./evaluation-handler');
 
 function startServer(host, port, endpointHandlers) {
   window.httpServer = new WSC.WebApplication({
@@ -8620,9 +8620,9 @@ exports.start = function(host, port) {
     return;
   }
 
-  var endpoints = api.getApiEndpoints();
+  let endpoints = api.getApiEndpoints();
 
-  var endpointHandlers = [
+  let endpointHandlers = [
     [
       endpoints.listPageCache,
       handlers.ListCachedPagesHandler
@@ -8656,8 +8656,8 @@ exports.start = function(host, port) {
 /* global Promise */
 'use strict';
 
-var chromep = require('./chrome-apis/chromep');
-var fileSystem = require('./persistence/file-system');
+const chromep = require('./chrome-apis/chromep');
+const fileSystem = require('./persistence/file-system');
 
 /**
  * Settings for the application as a whole.
@@ -8669,19 +8669,19 @@ var fileSystem = require('./persistence/file-system');
 // 'absPath', while the underlying key is stored as setting_absPath.
 
 /** The prefix that we use to namespace setting keys. */
-var SETTING_NAMESPACE_PREFIX = 'setting_';
+const SETTING_NAMESPACE_PREFIX = 'setting_';
 
 /**
  * The strings we use to represent transport mechanisms in the database.
  */
-var TRANSPORT_METHOD_STRINGS = {
+const TRANSPORT_METHOD_STRINGS = {
   http: 'http',
   webrtc: 'webrtc'
 };
 
 exports.SETTINGS_OBJ = null;
 
-var userFriendlyKeys = {
+const userFriendlyKeys = {
   absPath: 'absPath',
   instanceName: 'instanceName',
   baseDirId: 'baseDirId',
@@ -8737,11 +8737,11 @@ exports.init = function() {
   return new Promise(function(resolve, reject) {
     chromep.getStorageLocal().get(exports.getAllSettingKeys())
     .then(allKvPairs => {
-      var processedSettings = {};
+      let processedSettings = {};
       Object.keys(allKvPairs).forEach(rawKey => {
         // we're dealing with the raw keys here, e.g. setting_absPath
-        var processedKey = exports.removeNameSpaceFromKey(rawKey);
-        var value = allKvPairs[rawKey];
+        let processedKey = exports.removeNameSpaceFromKey(rawKey);
+        let value = allKvPairs[rawKey];
         processedSettings[processedKey] = value;
       });
       exports.SETTINGS_OBJ = processedSettings;
@@ -8763,8 +8763,8 @@ exports.init = function() {
  */
 exports.set = function(key, value) {
   return new Promise(function(resolve, reject) {
-    var namespacedKey = exports.createNameSpacedKey(key);
-    var kvPair = {};
+    let namespacedKey = exports.createNameSpacedKey(key);
+    let kvPair = {};
     kvPair[namespacedKey] = value;
 
     chromep.getStorageLocal().set(kvPair)
@@ -8785,7 +8785,7 @@ exports.set = function(key, value) {
  * @return {string}
  */
 exports.createNameSpacedKey = function(key) {
-  var result = exports.getNameSpacePrefix() + key;
+  let result = exports.getNameSpacePrefix() + key;
   return result;
 };
 
@@ -8812,16 +8812,16 @@ exports.removeNameSpaceFromKey = function(key) {
  * @return {any} the value in the settings obj, or null if it hasn't been set
  */
 exports.get = function(key) {
-  var settingsObj = exports.getSettingsObj();
+  let settingsObj = exports.getSettingsObj();
   if (!settingsObj) {
     console.warn('Settings object not initialized, returning null');
     return null;
   }
-  var settings = exports.getSettingsObj();
+  let settings = exports.getSettingsObj();
   if (!settings.hasOwnProperty(key)) {
     return null;
   } else {
-    var result = settings[key];
+    let result = settings[key];
     return result;
   }
 };
@@ -8877,7 +8877,7 @@ exports.getHostName = function() {
  * to 'http'.
  */
 exports.getTransportMethod = function() {
-  var result = exports.get(userFriendlyKeys.transportMethod);
+  let result = exports.get(userFriendlyKeys.transportMethod);
   if (result === null) {
     result = TRANSPORT_METHOD_STRINGS.http;
   }
@@ -8971,7 +8971,7 @@ exports.setTransportWebrtc = function() {
  */
 exports.promptAndSetNewBaseDir = function() {
   return new Promise(function(resolve, reject) {
-    var dirId;
+    let dirId;
     fileSystem.promptForDir()
     .then(dirEntry => {
       if (!dirEntry) {
@@ -9067,7 +9067,7 @@ exports.wait = function(ms) {
  */
 exports.waitInRange = function(min, max) {
   // + 1 because we specify inclusive, but randomInt is exclusive.
-  var waitTime = exports.randomInt(min, max + 1);
+  let waitTime = exports.randomInt(min, max + 1);
   return exports.wait(waitTime);
 };
 
@@ -9094,7 +9094,7 @@ exports.downloadText = function(text, fileName) {
   // Based on:
   // https://stackoverflow.com/questions/3665115/
   // create-a-file-in-memory-for-user-to-download-not-through-server
-  var element = document.createElement('a');
+  let element = document.createElement('a');
   element.setAttribute(
     'href',
     'data:text/plain;charset=utf-8,' +
@@ -9114,7 +9114,7 @@ exports.downloadText = function(text, fileName) {
  * https://github.com/webrtc/samples/blob/gh-pages/src/js/common.js
  */
 exports.trace = function trace(arg) {
-  var now = (window.performance.now() / 1000).toFixed(3);
+  let now = (window.performance.now() / 1000).toFixed(3);
   console.log(now + ': ', arg);
 };
 
@@ -9135,18 +9135,18 @@ exports.getPerf = function() {
 exports.getHostFromUrl = function(url) {
   // Find '//'. This will be the end of the scheme.
   // Then find the minimum of '/', ':', '#', '?'. That will contain the URL.
-  var slashes = url.indexOf('//');
+  let slashes = url.indexOf('//');
   if (slashes < 0) { throw new Error('not a url: ' + url); }
   // Truncate to ignore the slashes.
   url = url.substring(slashes + 2);
 
-  var candidateIndices = [
+  let candidateIndices = [
     url.indexOf(':'),
     url.indexOf('#'),
     url.indexOf('?'),
     url.indexOf('/')
   ];
-  var min = url.length;
+  let min = url.length;
   candidateIndices.forEach(idx => {
     if (idx !== -1) {
       // It is present in the string.
@@ -9168,9 +9168,9 @@ exports.getHostFromUrl = function(url) {
  * @return {integer}
  */
 exports.getPortFromUrl = function(url) {
-  var originalUrl = url;
-  var host = exports.getHostFromUrl(url);
-  var idxOfHost = url.indexOf(host);
+  let originalUrl = url;
+  let host = exports.getHostFromUrl(url);
+  let idxOfHost = url.indexOf(host);
   // Truncate the host
   url = url.substring(idxOfHost + host.length);
   if (!url.startsWith(':')) {
@@ -9178,12 +9178,12 @@ exports.getPortFromUrl = function(url) {
   }
   // Truncate the colon
   url = url.substring(1);
-  var candidateIndices = [
+  let candidateIndices = [
     url.indexOf('#'),
     url.indexOf('?'),
     url.indexOf('/')
   ];
-  var min = url.length;
+  let min = url.length;
   candidateIndices.forEach(idx => {
     if (idx !== -1) {
       if (idx < min) {
@@ -9191,12 +9191,12 @@ exports.getPortFromUrl = function(url) {
       }
     }
   });
-  var portStr = url.substring(0, min);
+  let portStr = url.substring(0, min);
   // There is no easy way that I'm aware of to check is something can be safely
   // parsed to an int in JavaScript. Wtf. But this is will work well enough for
   // our cases. It will permit things like '12a', '0xaf', etc, but this seems
   // fine.
-  var result = parseInt(portStr, 10);
+  let result = parseInt(portStr, 10);
   if (isNaN(result)) {
     throw new Error('Invalid port in url: ' + originalUrl);
   }
@@ -9275,9 +9275,9 @@ exports.getDataUrlAsBuffer = function(dataUrl) {
  */
 exports.getBlobAsDataUrl = function(blob) {
   return new Promise(function(resolve) {
-    var reader = new window.FileReader();
+    let reader = new window.FileReader();
     reader.onloadend = function() {
-      var base64 = reader.result;
+      let base64 = reader.result;
       resolve(base64);
     };
     reader.readAsDataURL(blob);
@@ -9408,8 +9408,8 @@ exports.buffToObj = function(buff) {
 },{"blob-to-buffer":48,"buffer":86,"dataurl-to-blob":51,"smart-buffer":63}],40:[function(require,module,exports){
 'use strict';
 
-var commonChannel = require('./common-channel');
-var protocol = require('./protocol');
+const commonChannel = require('./common-channel');
+const protocol = require('./protocol');
 
 /**
  * This object communicates binary data over a data channel using the buffered
@@ -9497,7 +9497,7 @@ class BufferedChannelServer extends commonChannel.BaseServer {
   sendAsMuchAsPossible() {
     const gen = this.chunkGenerator;
     // pick up where we left off.
-    var item = this._pendingItem;
+    let item = this._pendingItem;
     this._pendingItem = null;
     if (!item) {
       item = gen.next();
@@ -9521,8 +9521,8 @@ class BufferedChannelServer extends commonChannel.BaseServer {
         // if an ack comes back very quickly (impossibly quickly except in test
         // conditions?) you can send the same chunk twice.
         this.chunksSent++;
-        var chunk = item.value;
-        var chunkMsg = protocol.createSuccessMessage(chunk);
+        let chunk = item.value;
+        let chunkMsg = protocol.createSuccessMessage(chunk);
         this.channel.send(chunkMsg.asBuffer());
         item = gen.next();
       } catch (err) {
@@ -9755,7 +9755,7 @@ class BaseServer extends EventEmitter {
 
   sendFirstMessage() {
     // Start the process by sending the streamInfo to the client.
-    var streamInfoMsg = protocol.createSuccessMessage(
+    let streamInfoMsg = protocol.createSuccessMessage(
       Buffer.from(JSON.stringify(this.streamInfo))
     );
     this.channel.send(streamInfoMsg.asBuffer());
@@ -9776,10 +9776,10 @@ class BaseServer extends EventEmitter {
     this.streamInfo = BaseServer.createStreamInfo(this.numChunks);
     this.chunksSent = 0;
 
-    var self = this;
+    let self = this;
     this.channel.onmessage = function(event) {
-      var dataBuff = Buffer.from(event.data);
-      var msg = JSON.parse(dataBuff);
+      let dataBuff = Buffer.from(event.data);
+      let msg = JSON.parse(dataBuff);
       
       self.handleMessageFromClient(msg);
     };
@@ -9838,11 +9838,11 @@ exports.BaseServer = BaseServer;
 /* globals RTCPeerConnection, RTCSessionDescription, RTCIceCandidate */
 'use strict';
 
-var util = require('../util');
-var peerConn = require('../../../app/scripts/webrtc/peer-connection');
-var serverApi = require('../server/server-api');
+const util = require('../util');
+const peerConn = require('../../../app/scripts/webrtc/peer-connection');
+const serverApi = require('../server/server-api');
 
-var globalPc;
+let globalPc;
 
 exports.DEBUG = true;
 
@@ -9850,7 +9850,7 @@ exports.DEBUG = true;
  * Manages connections to peers.
  */
 
-var CONNECTIONS = {};
+let CONNECTIONS = {};
 
 exports.remote = null;
 exports.local = null;
@@ -9885,7 +9885,7 @@ exports.addConnection = function(ipaddr, port, cxn) {
   cxn.on('close', () => {
     exports.removeConnection(ipaddr, port);
   });
-  var key = createKey(ipaddr, port);
+  let key = createKey(ipaddr, port);
   CONNECTIONS[key] = cxn;
 };
 
@@ -9895,8 +9895,8 @@ exports.addConnection = function(ipaddr, port, cxn) {
  * @return {PeerConnection|null} the connection if it exists, else null
  */
 exports.getConnection = function(ipaddr, port) {
-  var key = createKey(ipaddr, port);
-  var cxn = CONNECTIONS[key];
+  let key = createKey(ipaddr, port);
+  let cxn = CONNECTIONS[key];
   if (!cxn) {
     return null;
   }
@@ -9911,7 +9911,7 @@ exports.getConnection = function(ipaddr, port) {
  * this connection is connected
  */
 exports.removeConnection = function(ipaddr, port) {
-  var key = createKey(ipaddr, port);
+  let key = createKey(ipaddr, port);
   delete CONNECTIONS[key];
 };
 
@@ -9927,18 +9927,18 @@ exports.removeConnection = function(ipaddr, port) {
  * PeerConnection when it is created
  */
 exports.createConnection = function(ipaddr, port) {
-  var wrtcEndpoint = exports.getPathForWebrtcNegotiation(ipaddr, port);
+  let wrtcEndpoint = exports.getPathForWebrtcNegotiation(ipaddr, port);
   return new Promise(function(resolve, reject) {
-    var pc = exports.createRTCPeerConnection(null, null);
+    let pc = exports.createRTCPeerConnection(null, null);
     globalPc = pc;
 
     // Start a channel to kick off ICE candidates. Without this or otherwise
     // requesting media stream the ICE gathering process does not begin.
     pc.createDataChannel('requestChannel');
 
-    var iceCandidates = [];
-    var description = null;
-    var iceComplete = false;
+    let iceCandidates = [];
+    let description = null;
+    let iceComplete = false;
 
     pc.onicecandidate = function(e) {
       if (e.candidate === null) {
@@ -9985,7 +9985,7 @@ exports.sendOffer = function(
     wrtcEndpoint, rawConnection, desc, iceCandidates, ipaddr, port
 ) {
   return new Promise(function(resolve, reject) {
-    var bodyJson = {};
+    let bodyJson = {};
     bodyJson.description = desc;
     bodyJson.iceCandidates = iceCandidates;
 
@@ -10000,15 +10000,15 @@ exports.sendOffer = function(
       return resp.json();
     })
     .then(json => {
-      var peerDesc = exports.createRTCSessionDescription(json.description);
+      let peerDesc = exports.createRTCSessionDescription(json.description);
       rawConnection.setRemoteDescription(peerDesc);
 
       json.iceCandidates.forEach(candidateJson => {
-        var candidate = exports.createRTCIceCandidate(candidateJson);
+        let candidate = exports.createRTCIceCandidate(candidateJson);
         rawConnection.addIceCandidate(candidate);
       });
 
-      var cxn = exports.createPeerConnection(rawConnection);
+      let cxn = exports.createPeerConnection(rawConnection);
       exports.addConnection(ipaddr, port, cxn);
       resolve(cxn);
     })
@@ -10058,7 +10058,7 @@ exports.createPeerConnection = function(rawConnection) {
  * PeerConnection.
  */
 exports.getOrCreateConnection = function(ipaddr, port) {
-  var key = createKey(ipaddr, port);
+  let key = createKey(ipaddr, port);
   return new Promise(function(resolve, reject) {
     if (CONNECTIONS[key]) {
       console.log('Found existing connection');
@@ -10145,7 +10145,7 @@ exports.TYPE_CACHED_PAGE = 'cachedpage';
 exports.TYPE_BLOOM_FILTER = 'bloomfilter';
 
 /** Valid types of request messages. */
-var VALID_TYPES = [
+let VALID_TYPES = [
   exports.TYPE_LIST,
   exports.TYPE_FILE,
   exports.TYPE_DIGEST,
@@ -10157,7 +10157,7 @@ var VALID_TYPES = [
  * An increasing suffix of numbers to ensure we create unique channel names.
  * Although we could use UUIDs, using integers will help with debugging.
  */
-var CHANNELS_CREATED = 0;
+let CHANNELS_CREATED = 0;
 
 /**
  * Creates a uuid-based channel name for a message request.
@@ -10165,7 +10165,7 @@ var CHANNELS_CREATED = 0;
  * @return {string} name for a channel
  */
 exports.createChannelName = function() {
-  var result = 'responseChannel_' + CHANNELS_CREATED;
+  let result = 'responseChannel_' + CHANNELS_CREATED;
   // Handle rollover.
   if (CHANNELS_CREATED === Number.MAX_SAFE_INTEGER) {
     // Will be unlikely to ever happen.
@@ -10217,8 +10217,8 @@ exports.createCachedPageMessage = function(href) {
  * @return {Object}
  */
 exports.createFileMessage = function(filePath) {
-  var result = exports.createMessage(exports.TYPE_FILE);
-  var request = {};
+  let result = exports.createMessage(exports.TYPE_FILE);
+  let request = {};
   request.accessPath = filePath;
   result.request = request;
   return result;
@@ -10234,7 +10234,7 @@ exports.createMessage = function(type) {
     throw new Error('Unrecognized message type: ' + type);
   }
 
-  var result = {};
+  let result = {};
 
   result.channelName = exports.createChannelName();
   result.type = type;
@@ -10296,9 +10296,9 @@ const serverApi = require('../server/server-api');
 const bufferedChannel = require('./buffered-channel');
 const message = require('./message');
 
-let EV_CLOSE = 'close';
+const EV_CLOSE = 'close';
 
-let Client = bufferedChannel.BufferedChannelClient;
+const Client = bufferedChannel.BufferedChannelClient;
 
 /**
  * Handles a connection to a SemCache peer. This forms the client portion of a
@@ -10349,9 +10349,9 @@ class PeerConnection extends EventEmitter {
    * of the directory contents
    */
   getList() {
-    var self = this;
+    let self = this;
     return new Promise(function(resolve, reject) {
-      var msg = message.createListMessage();
+      let msg = message.createListMessage();
 
       self.sendAndGetResponse(msg)
       .then(buff => {
@@ -10371,9 +10371,9 @@ class PeerConnection extends EventEmitter {
    * representing the digest or rejects with an Error.
    */
   getCacheDigest() {
-    var self = this;
+    let self = this;
     return new Promise(function(resolve, reject) {
-      var msg = message.createDigestMessage();
+      let msg = message.createDigestMessage();
 
       self.sendAndGetResponse(msg)
       .then(buff => {
@@ -10415,7 +10415,7 @@ class PeerConnection extends EventEmitter {
    * @return {Promise.<CPDisk, Error>}
    */
   getCachedPage(href) {
-    var self = this;
+    let self = this;
     return new Promise(function(resolve, reject) {
       let msg = message.createCachedPageMessage(href);
 
@@ -10441,7 +10441,7 @@ class PeerConnection extends EventEmitter {
   getFile(remotePath) {
     let self = this;
     return new Promise(function(resolve, reject) {
-      var msg = message.createFileMessage(remotePath);
+      let msg = message.createFileMessage(remotePath);
       self.sendAndGetResponse(msg)
       .then(buffer => {
         resolve(buffer);
@@ -10519,7 +10519,7 @@ exports.PeerConnection = PeerConnection;
  */
 
 /** The number of bytes used to indicate the length of the header. */
-var NUM_BYTES_HEADER_LENGTH = 4;
+const NUM_BYTES_HEADER_LENGTH = 4;
 
 /**
  * These status codes are based on HTTP status codes, and are added as
@@ -10555,7 +10555,7 @@ exports.ProtocolMessage = function ProtocolMessage(header, buff) {
  * @return {boolean} true if is an OK message, else false
  */
 exports.ProtocolMessage.prototype.isOk = function() {
-  var statusCode = this.getStatusCode();
+  let statusCode = this.getStatusCode();
   return statusCode === exports.STATUS_CODES.ok;
 };
 
@@ -10563,7 +10563,7 @@ exports.ProtocolMessage.prototype.isOk = function() {
  * @return {boolean} true if is an Error message, else false
  */
 exports.ProtocolMessage.prototype.isError = function() {
-  var statusCode = this.getStatusCode();
+  let statusCode = this.getStatusCode();
   return statusCode === exports.STATUS_CODES.error;
 };
 
@@ -10607,29 +10607,29 @@ exports.ProtocolMessage.prototype.asBuffer = function() {
    * API. The first 4 bytes correspond to an integer. This integer denotes the
    * length of the JSON header information. All remaining bytes are data bytes.
    */
-  var metadataLength = NUM_BYTES_HEADER_LENGTH;
-  var headerStr = '';
-  var headerLength = 0;
+  let metadataLength = NUM_BYTES_HEADER_LENGTH;
+  let headerStr = '';
+  let headerLength = 0;
   if (this.header) {
     headerStr = JSON.stringify(this.header);
     headerLength = headerStr.length;
     metadataLength += headerLength;
   }
 
-  var metadataBuff = Buffer.alloc(metadataLength);
+  let metadataBuff = Buffer.alloc(metadataLength);
 
-  var offset = 0;
+  let offset = 0;
   metadataBuff.writeUInt32BE(headerLength);
   offset += NUM_BYTES_HEADER_LENGTH;
 
   metadataBuff.write(headerStr, offset, headerLength);
 
-  var buffsToJoin = [ metadataBuff ];
+  let buffsToJoin = [ metadataBuff ];
   if (this.data) {
     buffsToJoin.push(this.data);
   }
 
-  var result = Buffer.concat(buffsToJoin);
+  let result = Buffer.concat(buffsToJoin);
   return result;
 };
 
@@ -10641,18 +10641,18 @@ exports.ProtocolMessage.prototype.asBuffer = function() {
  * @return {ProtocolMessage}
  */
 exports.from = function(buff) {
-  var headerLength = buff.readUInt32BE(0);
-  var offset = NUM_BYTES_HEADER_LENGTH;
-  var headerStr = buff.toString('utf8', offset, offset + headerLength);
+  let headerLength = buff.readUInt32BE(0);
+  let offset = NUM_BYTES_HEADER_LENGTH;
+  let headerStr = buff.toString('utf8', offset, offset + headerLength);
   offset += headerLength;
 
-  var header = null;
+  let header = null;
   if (headerLength > 0) {
     header = JSON.parse(headerStr);
   }
-  var data = buff.slice(offset, buff.length);
+  let data = buff.slice(offset, buff.length);
 
-  var result = new exports.ProtocolMessage(header, data);
+  let result = new exports.ProtocolMessage(header, data);
   return result;
 };
 
@@ -10675,7 +10675,7 @@ exports.createHeader = function(status) {
  * @return {ProtocolMessage}
  */
 exports.createSuccessMessage = function(buff) {
-  var header = exports.createHeader(exports.STATUS_CODES.ok);
+  let header = exports.createHeader(exports.STATUS_CODES.ok);
   return new exports.ProtocolMessage(header, buff);
 };
 
@@ -10685,7 +10685,7 @@ exports.createSuccessMessage = function(buff) {
  * @return {ProtocolMessage}
  */
 exports.createErrorMessage = function(reason) {
-  var header = exports.createHeader(exports.STATUS_CODES.error);
+  let header = exports.createHeader(exports.STATUS_CODES.error);
   header.message = reason;
   return new exports.ProtocolMessage(header, null);
 };
@@ -10694,12 +10694,12 @@ exports.createErrorMessage = function(reason) {
 },{"buffer":86}],46:[function(require,module,exports){
 'use strict';
 
-var api = require('../server/server-api');
-var binUtil = require('../dnssd/binary-utils').BinaryUtils;
-var bufferedChannel = require('./buffered-channel');
-var fileSystem = require('../persistence/file-system');
-var message = require('./message');
-var serverApi = require('../server/server-api');
+const api = require('../server/server-api');
+const binUtil = require('../dnssd/binary-utils').BinaryUtils;
+const bufferedChannel = require('./buffered-channel');
+const fileSystem = require('../persistence/file-system');
+const message = require('./message');
+const serverApi = require('../server/server-api');
 
 /**
  * This module is responsible for responding to incoming requests via WebRTC.
@@ -10714,7 +10714,7 @@ exports.onDataChannelHandler = function(event) {
   console.log('Data channel has been created by client');
   // Wrap the call to ensure that we can get a handle to the channel receiving
   // the message in order to directly reply.
-  var channel = event.channel;
+  let channel = event.channel;
   event.channel.onmessage = function(msgEvent) {
     exports.onDataChannelMessageHandler(channel, msgEvent);
   };
@@ -10726,9 +10726,9 @@ exports.onDataChannelHandler = function(event) {
  */
 exports.onDataChannelMessageHandler = function(channel, event) {
   // We expect ArrayBuffers containing JSON objects as messages.
-  var jsonBin = event.data;
-  var jsonStr = binUtil.arrayBufferToString(jsonBin);
-  var msg = JSON.parse(jsonStr);
+  let jsonBin = event.data;
+  let jsonStr = binUtil.arrayBufferToString(jsonBin);
+  let msg = JSON.parse(jsonStr);
 
   if (message.isList(msg)) {
     exports.onList(channel, msg);
@@ -10860,8 +10860,8 @@ exports.sendBufferOverChannel = function(channel, buff) {
  */
 exports.onFile = function(channel, msg) {
   return new Promise(function(resolve, reject) {
-    var ccServer = exports.createChannelServer(channel);
-    var fileName = api.getCachedFileNameFromPath(msg.request.accessPath);
+    let ccServer = exports.createChannelServer(channel);
+    let fileName = api.getCachedFileNameFromPath(msg.request.accessPath);
     fileSystem.getFileContentsFromName(fileName)
     .then(buff => {
       ccServer.sendBuffer(buff);
@@ -44650,9 +44650,9 @@ exports.sendMessageForResponse = function(message, timeout) {
   return new Promise(function(resolve, reject) {
     // And now we begin the process of resolving/rejecting based on whether or
     // not the app invokes our callback.
-    var settled = false;
+    let settled = false;
     // We'll update this if we've already resolved or rejected.
-    var callbackForApp = function(response) {
+    let callbackForApp = function(response) {
       if (exports.DEBUG) {
         console.log('got callback from app');
       }
@@ -44803,7 +44803,7 @@ exports.onMessageExternalCallback = function(message, sender, sendResponse) {
   }
   if (message.type === 'open') {
     // An open request for a URL.
-    var url = message.params.url;
+    let url = message.params.url;
     exports.openUrl(url);
     if (sendResponse) {
       sendResponse();
@@ -44877,7 +44877,7 @@ exports.addOnMessageListener = function(fn) {
 },{}],77:[function(require,module,exports){
 'use strict';
 
-var util = require('./util');
+const util = require('./util');
 
 /**
  * This module provides a wrapper around the chrome.storage.local API and
@@ -45132,7 +45132,7 @@ exports.applyArgsCheckLastError = function(fn, callArgs) {
     // sendMessage function interprets based on type, etc. Rather than passing
     // directly, we are going to pass the arguments variable directly, adding a
     // callback function.
-    var args = Array.prototype.slice.call(callArgs);
+    let args = Array.prototype.slice.call(callArgs);
     args.push(function(response) {
       if (exports.wasError()) {
         reject(exports.getError());
@@ -45148,10 +45148,10 @@ exports.applyArgsCheckLastError = function(fn, callArgs) {
 },{}],80:[function(require,module,exports){
 'use strict';
 
-var appMsg = require('../app-bridge/messaging');
-var util = require('../util/util');
+const appMsg = require('../app-bridge/messaging');
+const util = require('../util/util');
 
-var localPageInfo = null;
+let localPageInfo = null;
 
 /**
  * Return the local CachedPage object. This will have been retrieved from the
@@ -45213,14 +45213,14 @@ exports.handleLoadMessage = function(message, sender, callback) {
   // Send the response object.
   util.getOnCompletePromise()
   .then(() => {
-    var response = exports.createLoadResponseMessage();
+    let response = exports.createLoadResponseMessage();
     console.log('Invoking callback with response: ', response);
     callback(response);
   });
 };
 
 exports.createLoadResponseMessage = function() {
-  var loadTime = exports.getFullLoadTime();
+  let loadTime = exports.getFullLoadTime();
   return {
     type: 'readystateComplete',
     loadTime: loadTime
@@ -45233,8 +45233,8 @@ exports.createLoadResponseMessage = function() {
  * @return {number} the time from navigation start to readyState = 'complete'.
  */
 exports.getFullLoadTime = function() {
-  var win = util.getWindow();
-  var result = win.performance.timing.domComplete -
+  let win = util.getWindow();
+  let result = win.performance.timing.domComplete -
     win.performance.timing.navigationStart;
   return result;
 };
@@ -45246,15 +45246,15 @@ exports.getFullLoadTime = function() {
  */
 exports.annotateLocalLinks = function() {
   return new Promise(function(resolve, reject) {
-    var links = exports.getLinksOnPage();
-    var urls = Object.keys(links);
+    let links = exports.getLinksOnPage();
+    let urls = Object.keys(links);
     
     appMsg.queryForPagesLocally('contentscript', urls)
     .then(urlToPageArr => {
       // localUrls will be an Object mapping URLs to arrays of locally
       // available pages.
       Object.keys(urlToPageArr).forEach(url => {
-        var anchors = links[url];
+        let anchors = links[url];
         anchors.forEach(anchor => {
           exports.annotateAnchorIsLocal(anchor);
         });
@@ -45274,15 +45274,15 @@ exports.annotateLocalLinks = function() {
  */
 exports.annotateNetworkLocalLinks = function() {
   return new Promise(function(resolve, reject) {
-    var links = exports.getLinksOnPage();
-    var urls = Object.keys(links);
+    let links = exports.getLinksOnPage();
+    let urls = Object.keys(links);
     
     appMsg.queryForPagesOnNetwork('contentscript', urls)
     .then(urlToInfoArr => {
       // localUrls will be an Object mapping URLs to arrays of locally
       // available pages.
       Object.keys(urlToInfoArr).forEach(url => {
-        var anchors = links[url];
+        let anchors = links[url];
         anchors.forEach(anchor => {
           exports.annotateAnchorIsOnNetwork(anchor);
         });
@@ -45306,13 +45306,13 @@ exports.annotateNetworkLocalLinks = function() {
  * anchors with that URL as its href attribute.
  */
 exports.getLinksOnPage = function() {
-  var allAnchors = exports.selectAllLinksWithHrefs();
-  var result = {};
+  let allAnchors = exports.selectAllLinksWithHrefs();
+  let result = {};
 
   allAnchors.forEach(anchor => {
     // Get the absolute URL.
-    var url = exports.getAbsoluteUrl(anchor.href);
-    var existingDoms = result[url];
+    let url = exports.getAbsoluteUrl(anchor.href);
+    let existingDoms = result[url];
     if (!existingDoms) {
       existingDoms = [];
       result[url] = existingDoms;
@@ -45337,9 +45337,9 @@ exports.getLinksOnPage = function() {
  * hash
  */
 exports.getAbsoluteUrl = function(href) {
-  var a = document.createElement('a');
+  let a = document.createElement('a');
   a.href = href;
-  var result = a.protocol + '//' + a.host + a.pathname;
+  let result = a.protocol + '//' + a.host + a.pathname;
   return result;
 };
 
@@ -45363,13 +45363,13 @@ exports.selectAllLinksWithHrefs = function() {
  */
 exports.annotateAnchorIsLocal = function(anchor) {
   // We'll style the link using a lightning bolt, known as 'zap'.
-  var zap = '\u26A1';
+  let zap = '\u26A1';
   anchor.innerHTML = anchor.innerHTML + zap;
 };
 
 exports.annotateAnchorIsOnNetwork = function(anchor) {
   // We'll style the link using a cloud.
-  var cloud = '\u2601';
+  let cloud = '\u2601';
   anchor.innerHTML = anchor.innerHTML + cloud;
 };
 
@@ -45441,7 +45441,7 @@ exports.getFaviconAsUrl = function(url) {
  * @return {string} ISO representation of this moment
  */
 exports.getDateForSave = function() {
-  var result = new Date().toISOString();
+  let result = new Date().toISOString();
   return result;
 };
 
@@ -45456,24 +45456,24 @@ exports.getDateForSave = function() {
 exports.getDomain = function(fullUrl) {
   // We will rely on the :// that occurs in the scheme to determine the start
   // of the domain.
-  var colonLocation = fullUrl.indexOf(':');
-  var domainStart = colonLocation + 3;  // exclude the colon and two slashes.
+  let colonLocation = fullUrl.indexOf(':');
+  let domainStart = colonLocation + 3;  // exclude the colon and two slashes.
 
   // The end of the domain will be the least of /, ?, or # following the
   // domainStart.
-  var urlWithoutScheme = fullUrl.substring(domainStart);
-  var hashLocation = urlWithoutScheme.indexOf('#');
-  var queryLocation = urlWithoutScheme.indexOf('?');
-  var slashLocation = urlWithoutScheme.indexOf('/');
+  let urlWithoutScheme = fullUrl.substring(domainStart);
+  let hashLocation = urlWithoutScheme.indexOf('#');
+  let queryLocation = urlWithoutScheme.indexOf('?');
+  let slashLocation = urlWithoutScheme.indexOf('/');
   
   // Account for the -1 returned if all these are absent.
   if (hashLocation === -1) { hashLocation = urlWithoutScheme.length; }
   if (queryLocation === -1) { queryLocation = urlWithoutScheme.length; }
   if (slashLocation === -1) { slashLocation = urlWithoutScheme.length; }
 
-  var domainEnd = Math.min(hashLocation, queryLocation, slashLocation);
+  let domainEnd = Math.min(hashLocation, queryLocation, slashLocation);
 
-  var domain = urlWithoutScheme.substring(0, domainEnd);
+  let domain = urlWithoutScheme.substring(0, domainEnd);
 
   return domain;
 };
@@ -45487,8 +45487,8 @@ exports.getDomain = function(fullUrl) {
 exports.getSnapshotDataUrl = function() {
   // We are going to ask for a low quality image, as are just after thumbnail
   // and nothing more.
-  var jpegQuality = exports.DEFAULT_SNAPSHOT_QUALITY;
-  var options = { quality: jpegQuality };
+  let jpegQuality = exports.DEFAULT_SNAPSHOT_QUALITY;
+  let options = { quality: jpegQuality };
   return tabs.captureVisibleTab(null, options);
 };
 
@@ -45560,11 +45560,11 @@ exports.saveTab = function(from, tab) {
  * a popup, eg that the active tab will be the popup tab, etc.
  */
 
-var capture = require('../chrome-apis/page-capture');
-var datastore = require('../persistence/datastore');
-var messaging = require('../app-bridge/messaging');
-var tabs = require('../chrome-apis/tabs');
-var util = require('../util/util');
+const capture = require('../chrome-apis/page-capture');
+const datastore = require('../persistence/datastore');
+const messaging = require('../app-bridge/messaging');
+const tabs = require('../chrome-apis/tabs');
+const util = require('../util/util');
 
 /**
  * Save the currently active page.
@@ -45591,7 +45591,7 @@ exports.saveCurrentPage = function() {
  */
 exports.saveTab = function(tab) {
   return new Promise(function(resolve, reject) {
-    var tabId = tab.id;
+    let tabId = tab.id;
     capture.saveAsMHTML({ tabId: tabId })
     .then(mhtmlBlob => {
       return datastore.savePage(tab, mhtmlBlob);
@@ -45634,7 +45634,7 @@ exports.waitForCurrentPageToLoad = function() {
   return new Promise(function(resolve) {
     util.getActiveTab()
     .then(tab => {
-      var message = exports.createLoadMessage();
+      let message = exports.createLoadMessage();
       tabs.sendMessage(tab.id, message, function(resp) {
         console.log('Got response from tab: ', resp);
         resolve(resp);
@@ -45690,39 +45690,39 @@ exports.getLocalPageInfo = function() {
 },{"../app-bridge/messaging":74,"../chrome-apis/page-capture":75,"../chrome-apis/tabs":78,"../persistence/datastore":81,"../util/util":84}],83:[function(require,module,exports){
 'use strict';
 
-var api = require('./popup-api');
-var messaging = require('../app-bridge/messaging');
+const api = require('./popup-api');
+const messaging = require('../app-bridge/messaging');
 
-var btnSave = document.getElementById('btn-save');
-var btnView = document.getElementById('btn-view');
-var spinner = document.getElementById('spinner');
-var message = document.getElementById('message');
-var timing1 = document.getElementById('timing1');
-var timing2 = document.getElementById('timing2');
-var divSaveTime = document.getElementById('save-time');
-var divLoadTime = document.getElementById('load-time');
-var divButtons = document.getElementById('buttons-div');
-var divSave = document.getElementById('save-content-div');
+const btnSave = document.getElementById('btn-save');
+const btnView = document.getElementById('btn-view');
+const spinner = document.getElementById('spinner');
+const message = document.getElementById('message');
+const timing1 = document.getElementById('timing1');
+const timing2 = document.getElementById('timing2');
+const divSaveTime = document.getElementById('save-time');
+const divLoadTime = document.getElementById('load-time');
+const divButtons = document.getElementById('buttons-div');
+const divSave = document.getElementById('save-content-div');
 
 // Crazy value to make sure we notice if there are errors.
-var saveStart = -10000;
-var domCompleteTime = null;
+let saveStart = -10000;
+let domCompleteTime = null;
 
 // A local reference to the page.
-var cachedPage = null;
+let cachedPage = null;
 
 function round(num) {
   // Round to two decimal places
-  var factor = 100;
-  var result = Math.round(num * factor) / factor;
+  let factor = 100;
+  let result = Math.round(num * factor) / factor;
   return result;
 }
 
 function finishTiming() {
-  var saveEnd = window.performance.now();
-  var totalSaveTime = saveEnd - saveStart;
+  let saveEnd = window.performance.now();
+  let totalSaveTime = saveEnd - saveStart;
 
-  var totalLoadTime = domCompleteTime;
+  let totalLoadTime = domCompleteTime;
 
   console.log('un-rounded totalSaveTime: ', totalSaveTime);
   console.log('un-rounded totalLoadTime: ', totalLoadTime);
@@ -45776,7 +45776,7 @@ function afterLoadComplete(msgFromTab) {
     })
     .catch(err => {
       console.log(err);
-      var timedOut = err === messaging.MSG_TIMEOUT;
+      let timedOut = err === messaging.MSG_TIMEOUT;
       handleError(timedOut);
     });
 }
@@ -45819,7 +45819,7 @@ api.getLocalPageInfo()
 /* globals fetch */
 'use strict';
 
-var tabs = require('../chrome-apis/tabs');
+const tabs = require('../chrome-apis/tabs');
 
 /**
  * Very thin wrapper around the global fetch API to enable mocks during test.
@@ -45861,9 +45861,9 @@ exports.getPerf = function() {
 exports.getOnCompletePromise = function() {
   // Modeled on Jake Archibald's svgomg utils:
   // https://github.com/jakearchibald/svgomg/blob/master/src/js/page/utils.js
-  var doc = exports.getDocument();
+  let doc = exports.getDocument();
   return new Promise(function(resolve) {
-    var checkState = function() {
+    let checkState = function() {
       if (doc.readyState === 'complete') {
         resolve();
       }
@@ -45880,7 +45880,7 @@ exports.getActiveTab = function() {
   return new Promise(function(resolve) {
     tabs.query({ currentWindow: true, active: true})
       .then(tabs => {
-        var tab = tabs[0];
+        let tab = tabs[0];
         resolve(tab);
       });
   });
@@ -48444,11 +48444,11 @@ process.umask = function() { return 0; };
 },{}],"cs-eval":[function(require,module,exports){
 'use strict';
 
-var util = require('../util/util');
-var runtime = require('../chrome-apis/runtime');
-var csApi = require('./cs-api');
-var storage = require('../chrome-apis/storage');
-var appEval = require('../../../../chromeapp/app/scripts/evaluation');
+const util = require('../util/util');
+const runtime = require('../chrome-apis/runtime');
+const csApi = require('./cs-api');
+const storage = require('../chrome-apis/storage');
+const appEval = require('../../../../chromeapp/app/scripts/evaluation');
 
 /**
  * Functionality for evaluating the framework. Note that unlike in the App,
@@ -48522,7 +48522,7 @@ exports.isPerformingTrial = function() {
  */
 exports.getParameters = function() {
   return new Promise(function(resolve) {
-    var keys = [
+    let keys = [
       exports.KEY_NUM_ITERATIONS,
       exports.KEY_CURRENT_ITERATION,
       exports.KEY_LOG_KEY,
@@ -48531,16 +48531,16 @@ exports.getParameters = function() {
     ];
     storage.get(keys)
     .then(getResult => {
-      var urlList = getResult[exports.KEY_URL_LIST];
-      var urlListIndex = getResult[exports.KEY_URL_LIST_INDEX];
+      let urlList = getResult[exports.KEY_URL_LIST];
+      let urlListIndex = getResult[exports.KEY_URL_LIST_INDEX];
       // Start out null to indicate the end of the trial. We'll update the
       // value below if we haven't moved past the end of the array.
-      var activeUrl = null;
+      let activeUrl = null;
       if (urlListIndex < urlList.length) {
         // Then we haven't yet finished the trial.
         activeUrl = urlList[urlListIndex];
       }
-      var result = {
+      let result = {
         key: getResult[exports.KEY_LOG_KEY],
         numIterations: getResult[exports.KEY_NUM_ITERATIONS],
         currentIter: getResult[exports.KEY_CURRENT_ITERATION],
@@ -48590,7 +48590,7 @@ exports.getFromStorageHelper = function(key) {
  */
 exports.startSavePageTrial = function(urls, numIterations, key) {
   return new Promise(function(resolve) {
-    var setArg = {};
+    let setArg = {};
     setArg[exports.KEY_NUM_ITERATIONS] = numIterations;
     setArg[exports.KEY_PERFORMING_TRIAL] = true;
     setArg[exports.KEY_CURRENT_ITERATION] = 0;
@@ -48609,7 +48609,7 @@ exports.startSavePageTrial = function(urls, numIterations, key) {
  * Start a trial for timing the time required to annotate links.
  */
 exports.startAnnotateLinksTrial = function(key, numIterations) {
-  var setArg = {};
+  let setArg = {};
   setArg[exports.LINK_ANNOTATION_KEYS.totalIterations] = numIterations;
   setArg[exports.LINK_ANNOTATION_KEYS.currentIteration] = 0;
   setArg[exports.LINK_ANNOTATION_KEYS.key] = key;
@@ -48632,7 +48632,7 @@ exports.startAnnotateLinksTrial = function(key, numIterations) {
  * resolving whatever savePageForContentScript resolves
  */
 exports.requestSavePage = function() {
-  var message = { type: 'savePageForContentScript' };
+  let message = { type: 'savePageForContentScript' };
   return new Promise(function(resolve) {
     runtime.sendMessage(message, function(response) {
       resolve(response);
@@ -48686,7 +48686,7 @@ exports.logResult = function(key) {
  * @return {Promise} Promise that resolves when the deletes are complete.
  */
 exports.deleteStorageHelperValues = function() {
-  var keys = [
+  let keys = [
     exports.KEY_PERFORMING_TRIAL,
     exports.KEY_NUM_ITERATIONS,
     exports.KEY_CURRENT_ITERATION,
@@ -48718,9 +48718,9 @@ exports.savePage = function() {
         return exports.requestSavePage();
       })
       .then(response => {
-        var domCompleteTime = csApi.getFullLoadTime();
-        var totalTime = domCompleteTime + response.timeToWrite;
-        var result = {
+        let domCompleteTime = csApi.getFullLoadTime();
+        let totalTime = domCompleteTime + response.timeToWrite;
+        let result = {
           domCompleteTime: domCompleteTime,
           timeToWrite: response.timeToWrite,
           totalTime: totalTime
@@ -48738,9 +48738,9 @@ exports.savePage = function() {
  */
 exports.createMetadataForLog = function() {
   // This is rather arbitrary and subject to change.
-  var href = util.getWindow().location.href;
-  var date = util.getToday().toString();
-  var result = {
+  let href = util.getWindow().location.href;
+  let date = util.getToday().toString();
+  let result = {
     href: href,
     date: date
   };
@@ -48763,8 +48763,8 @@ exports.getHref = function() {
  */
 exports.onPageLoadComplete = function() {
   return new Promise(function(resolve, reject) {
-    var params = null;
-    var doneWithAllUrls = false;
+    let params = null;
+    let doneWithAllUrls = false;
     exports.isPerformingTrial()
       .then(isTrial => {
         if (!isTrial) {
@@ -48776,10 +48776,10 @@ exports.onPageLoadComplete = function() {
       })
       .then(returnedParams => {
         params = returnedParams;
-        var href = exports.getHref(); 
+        let href = exports.getHref(); 
         // Some pages are adding '/' on the end, which should be fine, so also
         // check for this.
-        var activeUrlSlash = params.activeUrl + '/';
+        let activeUrlSlash = params.activeUrl + '/';
         if (href !== params.activeUrl && href !== activeUrlSlash) {
           console.log('Running a trial, but not on this page.');
           throw new Error('jump to end');
@@ -48794,7 +48794,7 @@ exports.onPageLoadComplete = function() {
       })
       .then(timingInfo => {
         // Log the results
-        var toLog = {};
+        let toLog = {};
         toLog.timing = timingInfo;
         toLog.metadata = exports.createMetadataForLog();
         toLog.iteration = params.currentIter;
@@ -48805,8 +48805,8 @@ exports.onPageLoadComplete = function() {
       })
       .then(() => {
         // Update the variables.
-        var setArg = {};
-        var nextIter = params.currentIter + 1;
+        let setArg = {};
+        let nextIter = params.currentIter + 1;
         setArg[exports.KEY_CURRENT_ITERATION] = nextIter;
         if (nextIter >= params.numIterations) {
           // We're done with this page. Increment the url list index.
@@ -48829,7 +48829,7 @@ exports.onPageLoadComplete = function() {
         }
         // If we're on the first iteration, navigate to the page.
         if (params.currentIter === 0) {
-          var nextUrl = params.urlList[params.urlListIndex];
+          let nextUrl = params.urlList[params.urlListIndex];
           util.getWindow().location.href = nextUrl;
           return Promise.resolve();
         } else {

@@ -6,11 +6,11 @@
  * a popup, eg that the active tab will be the popup tab, etc.
  */
 
-var capture = require('../chrome-apis/page-capture');
-var datastore = require('../persistence/datastore');
-var messaging = require('../app-bridge/messaging');
-var tabs = require('../chrome-apis/tabs');
-var util = require('../util/util');
+const capture = require('../chrome-apis/page-capture');
+const datastore = require('../persistence/datastore');
+const messaging = require('../app-bridge/messaging');
+const tabs = require('../chrome-apis/tabs');
+const util = require('../util/util');
 
 /**
  * Save the currently active page.
@@ -37,7 +37,7 @@ exports.saveCurrentPage = function() {
  */
 exports.saveTab = function(tab) {
   return new Promise(function(resolve, reject) {
-    var tabId = tab.id;
+    let tabId = tab.id;
     capture.saveAsMHTML({ tabId: tabId })
     .then(mhtmlBlob => {
       return datastore.savePage(tab, mhtmlBlob);
@@ -80,7 +80,7 @@ exports.waitForCurrentPageToLoad = function() {
   return new Promise(function(resolve) {
     util.getActiveTab()
     .then(tab => {
-      var message = exports.createLoadMessage();
+      let message = exports.createLoadMessage();
       tabs.sendMessage(tab.id, message, function(resp) {
         console.log('Got response from tab: ', resp);
         resolve(resp);

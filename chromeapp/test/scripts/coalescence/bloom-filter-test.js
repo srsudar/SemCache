@@ -1,9 +1,9 @@
 'use strict';
 
-var test = require('tape');
+const test = require('tape');
 require('sinon-as-promised');
 
-var bloom = require('../../../app/scripts/coalescence/bloom-filter');
+let bloom = require('../../../app/scripts/coalescence/bloom-filter');
 
 /**
  * Manipulating the object directly leads to polluting the require cache. Any
@@ -24,13 +24,13 @@ function end(t) {
 }
 
 test('constructor succeeds', function(t) {
-  var bf = new bloom.BloomFilter();
+  let bf = new bloom.BloomFilter();
   t.notEqual(bf, null);
   end(t);
 });
 
 test('add and test work as expected', function(t) {
-  var bf = new bloom.BloomFilter();
+  let bf = new bloom.BloomFilter();
   
   t.false(bf.test('foo'));
   bf.add('foo');
@@ -39,14 +39,14 @@ test('add and test work as expected', function(t) {
 });
 
 test('serialize and from work as expected', function(t) {
-  var bf = new bloom.BloomFilter();
+  let bf = new bloom.BloomFilter();
 
   bf.add('tyrion');
   bf.add('jamie');
 
-  var buff = bf.serialize();
+  let buff = bf.serialize();
 
-  var actual = bloom.from(buff);
+  let actual = bloom.from(buff);
 
   t.true(actual.test('tyrion'));
   t.true(actual.test('jamie'));

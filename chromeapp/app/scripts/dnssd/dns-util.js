@@ -1,13 +1,13 @@
 'use strict';
 
-var byteArray = require('./byte-array');
+const byteArray = require('./byte-array');
 
 /**
  * Various methods for common DNS-related operations.
  */
 
-var MAX_LABEL_LENGTH = 63;
-var OCTET_LABEL_LENGTH = 1;
+const MAX_LABEL_LENGTH = 63;
+const OCTET_LABEL_LENGTH = 1;
 
 exports.DEBUG = false;
 
@@ -46,12 +46,12 @@ exports.getLocalSuffix = function() {
  * @return {ByteArray} a ByteArray containing the serialized domain
  */
 exports.getDomainAsByteArray = function(domain) {
-  var result = new byteArray.ByteArray();
+  let result = new byteArray.ByteArray();
 
-  var labels = domain.split('.');
+  let labels = domain.split('.');
 
   labels.forEach(label => {
-    var length = label.length;
+    let length = label.length;
     if (length > MAX_LABEL_LENGTH) {
       throw new Error('label exceeds max length: ' + label);
     }
@@ -60,7 +60,7 @@ exports.getDomainAsByteArray = function(domain) {
     // character code of each component.
     result.push(length, OCTET_LABEL_LENGTH);
 
-    for (var i = 0; i < label.length; i++) {
+    for (let i = 0; i < label.length; i++) {
       result.push(label.charCodeAt(i), 1);
     }
   });
@@ -91,9 +91,9 @@ exports.getDomainFromByteArray = function(byteArr, startByte) {
     startByte = 0;
   }
 
-  var reader = byteArr.getReader(startByte);
+  let reader = byteArr.getReader(startByte);
   
-  var result = exports.getDomainFromByteArrayReader(reader, 0);
+  let result = exports.getDomainFromByteArrayReader(reader, 0);
   return result;
 };
 
@@ -107,15 +107,15 @@ exports.getDomainFromByteArray = function(byteArr, startByte) {
  * @return {string}
  */
 exports.getDomainFromByteArrayReader = function(reader) {
-  var result = '';
+  let result = '';
 
   // We expect a series of length charCode pairs, ending when the final length
   // field is a 0. We'll do this by examining a single label at a time.
-  var lengthOfCurrentLabel = -1;
-  var iteration = 0;
+  let lengthOfCurrentLabel = -1;
+  let iteration = 0;
   // Sanity check because while loops are dangerous when faced with outside
   // data.
-  var maxIterations = 10;
+  let maxIterations = 10;
   while (lengthOfCurrentLabel !== 0) {
     if (iteration > maxIterations) {
       throw new Error('Exceeded max iterations, likely malformed data');
@@ -132,9 +132,9 @@ exports.getDomainFromByteArrayReader = function(reader) {
       );
     }
 
-    for (var i = 0; i < lengthOfCurrentLabel; i++) {
-      var currentCharCode = reader.getValue(1);
-      var currentChar = String.fromCharCode(currentCharCode);
+    for (let i = 0; i < lengthOfCurrentLabel; i++) {
+      let currentCharCode = reader.getValue(1);
+      let currentChar = String.fromCharCode(currentCharCode);
       result += currentChar;
     }
 
@@ -166,16 +166,16 @@ exports.getDomainFromByteArrayReader = function(reader) {
  * @return {ByteArray}
  */
 exports.getIpStringAsByteArray = function(ipAddress) {
-  var parts = ipAddress.split('.');
+  let parts = ipAddress.split('.');
 
   if (parts.length !== 4) {
     throw new Error('IP string does not have 4 parts: ' + ipAddress);
   }
 
-  var result = new byteArray.ByteArray();
+  let result = new byteArray.ByteArray();
   
   parts.forEach(part => {
-    var intValue = parseInt(part);
+    let intValue = parseInt(part);
     if (intValue < 0 || intValue > 255) {
       throw new Error('A byte of the IP address < 0 or > 255: ' + ipAddress);
     }
@@ -194,15 +194,15 @@ exports.getIpStringAsByteArray = function(ipAddress) {
  */
 exports.getIpStringFromByteArrayReader = function(reader) {
   // We assume a single byte representing each string.
-  var parts = [];
+  let parts = [];
 
-  var numParts = 4;
-  for (var i = 0; i < numParts; i++) {
-    var intValue = reader.getValue(1);
-    var stringValue = intValue.toString();
+  let numParts = 4;
+  for (let i = 0; i < numParts; i++) {
+    let intValue = reader.getValue(1);
+    let stringValue = intValue.toString();
     parts.push(stringValue);
   }
 
-  var result = parts.join('.');
+  let result = parts.join('.');
   return result;
 };

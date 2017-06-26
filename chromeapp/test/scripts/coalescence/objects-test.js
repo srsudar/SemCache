@@ -1,9 +1,9 @@
 'use strict';
 
-var test = require('tape');
+const test = require('tape');
 
-var bloomFilter = require('../../../app/scripts/coalescence/bloom-filter');
-var objects = require('../../../app/scripts/coalescence/objects');
+const bloomFilter = require('../../../app/scripts/coalescence/bloom-filter');
+const objects = require('../../../app/scripts/coalescence/objects');
 
 function end(t) {
   if (!t) { throw new Error('You forgot to pass t'); }
@@ -11,7 +11,7 @@ function end(t) {
 }
 
 function createPeerInfo() {
-  var peerInfo = {
+  let peerInfo = {
     ipAddress: '1.2.3.4',
     port: 8888
   };
@@ -19,11 +19,11 @@ function createPeerInfo() {
 }
 
 function createPageInfos() {
-  var pageInfo1 = {
+  let pageInfo1 = {
     fullUrl: 'http://foo.com',
     captureDate: '2017-05-03'
   };
-  var pageInfo2 = {
+  let pageInfo2 = {
     fullUrl: 'http://bar.com',
     captureDate: '2013-04-02'
   };
@@ -31,10 +31,10 @@ function createPageInfos() {
 }
 
 test('NetworkCachedPage constructor succeeds', function(t) {
-  var availability = 'probable';
-  var queryInfo = { url: 'hidyho.com' };
-  var accessInfo = { info: 'come get some' };
-  var ncp = new objects.NetworkCachedPage(availability, queryInfo, accessInfo);
+  let availability = 'probable';
+  let queryInfo = { url: 'hidyho.com' };
+  let accessInfo = { info: 'come get some' };
+  let ncp = new objects.NetworkCachedPage(availability, queryInfo, accessInfo);
 
   t.equal(ncp.availability, availability);
   t.equal(ncp.queryInfo, queryInfo);
@@ -43,10 +43,10 @@ test('NetworkCachedPage constructor succeeds', function(t) {
 });
 
 test('Digest consructor succeeds', function(t) {
-  var peerInfo = createPeerInfo();
-  var pageInfos = [];
+  let peerInfo = createPeerInfo();
+  let pageInfos = [];
 
-  var digest = new objects.Digest(peerInfo, pageInfos);
+  let digest = new objects.Digest(peerInfo, pageInfos);
 
   t.deepEqual(digest.peerInfo, peerInfo);
   // Not going to bother checking the page info, as others tests will verify
@@ -55,21 +55,21 @@ test('Digest consructor succeeds', function(t) {
 });
 
 test('Digest performQueryForPage returns null if no page', function(t) {
-  var peerInfo = createPeerInfo();
-  var pageInfos = createPageInfos();
+  let peerInfo = createPeerInfo();
+  let pageInfos = createPageInfos();
 
-  var digest = new objects.Digest(peerInfo, pageInfos);
+  let digest = new objects.Digest(peerInfo, pageInfos);
   
-  var actual = digest.performQueryForPage('http://not-there.com');
+  let actual = digest.performQueryForPage('http://not-there.com');
   t.equal(actual, null);
   end(t);
 });
 
 test('Digest performQueryForPage returns captureDate', function(t) {
-  var peerInfo = createPeerInfo();
-  var pageInfos = createPageInfos();
+  let peerInfo = createPeerInfo();
+  let pageInfos = createPageInfos();
 
-  var digest = new objects.Digest(peerInfo, pageInfos);
+  let digest = new objects.Digest(peerInfo, pageInfos);
   
   t.equal(
     digest.performQueryForPage(pageInfos[0].fullUrl),
@@ -83,11 +83,11 @@ test('Digest performQueryForPage returns captureDate', function(t) {
 });
 
 test('PeerBloomFilter constructor succeeds with buffer', function(t) {
-  var peerInfo = createPeerInfo();
-  var bloom = new bloomFilter.BloomFilter();
-  var buff = bloom.serialize();
+  let peerInfo = createPeerInfo();
+  let bloom = new bloomFilter.BloomFilter();
+  let buff = bloom.serialize();
 
-  var actual = new objects.PeerBloomFilter(peerInfo, buff);
+  let actual = new objects.PeerBloomFilter(peerInfo, buff);
 
   t.deepEqual(actual.peerInfo, peerInfo);
   t.deepEqual(actual.bloomFilter, bloom);
@@ -108,24 +108,27 @@ test('PeerBloomFilter constructor succeeds with BloomFilter', function(t) {
 });
 
 test('PeerBloomFilter performQueryForPage false if not present', function(t) {
-  var peerInfo = createPeerInfo();
-  var bloom = new bloomFilter.BloomFilter();
-  var buff = bloom.serialize();
+  let peerInfo = createPeerInfo();
+  let bloom = new bloomFilter.BloomFilter();
+  let buff = bloom.serialize();
 
-  var actual = new objects.PeerBloomFilter(peerInfo, buff);
+  let actual = new objects.PeerBloomFilter(peerInfo, buff);
   t.false(actual.performQueryForPage('http://foo.com'));
   end(t);
 });
 
 test('PeerBloomFilter performQueryForPage true if present', function(t) {
-  var peerInfo = createPeerInfo();
-  var rawBloom = new bloomFilter.BloomFilter();
-  var url = 'foo';
+  let peerInfo = createPeerInfo();
+  let rawBloom = new bloomFilter.BloomFilter();
+  let url = 'foo';
   rawBloom.add(url);
-  var buff = rawBloom.serialize();
+  let buff = rawBloom.serialize();
 
-  var peerBloom = new objects.PeerBloomFilter(peerInfo, buff);
-  t.deepEqual(peerBloom.bloomFilter.backingObj.buckets, rawBloom.backingObj.buckets);
+  let peerBloom = new objects.PeerBloomFilter(peerInfo, buff);
+  t.deepEqual(
+    peerBloom.bloomFilter.backingObj.buckets,
+    rawBloom.backingObj.buckets
+  );
   t.true(peerBloom.performQueryForPage(url));
   end(t);
 });

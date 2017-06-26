@@ -1,9 +1,10 @@
 'use strict';
-var test = require('tape');
-var sinon = require('sinon');
+
+const test = require('tape');
+const sinon = require('sinon');
 require('sinon-as-promised');
 
-var message = require('../../../app/scripts/webrtc/message');
+let message = require('../../../app/scripts/webrtc/message');
 
 /**
  * Manipulating the object directly leads to polluting the require cache. Any
@@ -24,13 +25,13 @@ function end(t) {
 }
 
 test('creates correctly with legal args', function(t) {
-  var typeList = 'list';
-  var typeFile = 'file'; 
-  var channelName = 'channel_123';
+  let typeList = 'list';
+  let typeFile = 'file'; 
+  let channelName = 'channel_123';
 
   message.createChannelName = sinon.stub().returns(channelName);
 
-  var msg = new message.createMessage(typeList);
+  let msg = new message.createMessage(typeList);
 
   t.equal(msg.type, typeList);
   t.equal(msg.channelName, channelName);
@@ -42,7 +43,7 @@ test('creates correctly with legal args', function(t) {
 });
 
 test('createMessage throws with invalid type', function(t) {
-  var invalid = function() {
+  let invalid = function() {
     new message.createMessage('fake-type');
   };
 
@@ -51,13 +52,13 @@ test('createMessage throws with invalid type', function(t) {
 });
 
 test('createListMessage returns type list', function(t) {
-  var actual = message.createListMessage();
+  let actual = message.createListMessage();
   t.equal(actual.type, message.TYPE_LIST);
   end(t);
 });
 
 test('createDigestMessage returns type digest', function(t) {
-  var actual = message.createDigestMessage();
+  let actual = message.createDigestMessage();
   t.equal(actual.type, message.TYPE_DIGEST);
   end(t);
 });
@@ -77,8 +78,8 @@ test('createCachedPageMessage returns correct type', function(t) {
 });
 
 test('createFileMessage returns with request information', function(t) {
-  var path = 'path/to/file.mhtml';
-  var actual = message.createFileMessage(path);
+  let path = 'path/to/file.mhtml';
+  let actual = message.createFileMessage(path);
 
   t.equal(actual.type, message.TYPE_FILE);
   t.equal(actual.request.accessPath, path);
@@ -86,7 +87,7 @@ test('createFileMessage returns with request information', function(t) {
 });
 
 test('isList correct', function(t) {
-  var obj = {};
+  let obj = {};
 
   t.false(message.isList(obj));
   obj.type = 'fake';
@@ -99,7 +100,7 @@ test('isList correct', function(t) {
 });
 
 test('isFile correct', function(t) {
-  var obj = {};
+  let obj = {};
 
   t.false(message.isList(obj));
   obj.type = 'fake';
@@ -112,7 +113,7 @@ test('isFile correct', function(t) {
 });
 
 test('isDigest correct', function(t) {
-  var obj = {};
+  let obj = {};
 
   t.false(message.isDigest(obj));
   obj.type = 'fake';
@@ -125,7 +126,7 @@ test('isDigest correct', function(t) {
 });
 
 test('isBloomFilter correct', function(t) {
-  var obj = {};
+  let obj = {};
 
   t.false(message.isBloomFilter(obj));
   obj.type = 'fake';
@@ -138,7 +139,7 @@ test('isBloomFilter correct', function(t) {
 });
 
 test('isCachedPage correct', function(t) {
-  var obj = {};
+  let obj = {};
 
   t.false(message.isCachedPage(obj));
   obj.type = 'fake';

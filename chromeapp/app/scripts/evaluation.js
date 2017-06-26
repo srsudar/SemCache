@@ -19,7 +19,7 @@ const util = require('./util');
 const CPInfo = perObjs.CPInfo;
 
 /** The prefix value for timing keys we will use for local storage. */
-var TIMING_KEY_PREFIX = 'timing_';
+const TIMING_KEY_PREFIX = 'timing_';
 
 /**
  * These URLs will be shared across all dummy Digests created for Digest query
@@ -57,10 +57,10 @@ exports.createTimingKey = function(key) {
  * @return {Array.<CachedPage>}
  */
 exports.generateDummyPages = function(numPages, nonce) {
-  var result = [];
+  let result = [];
 
-  for (var i = 0; i < numPages; i++) {
-    var page = exports.generateDummyPage(i, nonce);
+  for (let i = 0; i < numPages; i++) {
+    let page = exports.generateDummyPage(i, nonce);
     result.push(page);
   }
 
@@ -99,8 +99,8 @@ exports.generateDummyPage = function(index, nonce) {
  * @return {Object} the JSON server response
  */
 exports.getDummyResponseForAllCachedPages = function(numPages, nonce) {
-  var pages = exports.generateDummyPages(numPages, nonce);
-  var result = {};
+  let pages = exports.generateDummyPages(numPages, nonce);
+  let result = {};
   result.metadata = api.createMetadatObj();
   result.cachedPages = pages;
   return result;
@@ -142,22 +142,22 @@ exports.mark = function(name) {
  * @return {Object}
  */
 exports.getKeysFromMarks = function() {
-  var marks = exports.getPerf().getEntriesByType('mark');
-  var prefix = 'MARK_';
-  var infix = '_TO_';
+  let marks = exports.getPerf().getEntriesByType('mark');
+  let prefix = 'MARK_';
+  let infix = '_TO_';
 
-  var result = {};
+  let result = {};
   
   marks.forEach(mark => {
-    var key = prefix + mark.name;
+    let key = prefix + mark.name;
     result[key] = mark.startTime;
   });
 
-  for (var i = 1; i < marks.length; i++) {
-    var a = marks[i - 1];
-    var b = marks[i];
-    var key = (prefix + a.name) + infix + (prefix + b.name);
-    var duration = b.startTime - a.startTime;
+  for (let i = 1; i < marks.length; i++) {
+    let a = marks[i - 1];
+    let b = marks[i];
+    let key = (prefix + a.name) + infix + (prefix + b.name);
+    let duration = b.startTime - a.startTime;
     result[key] = duration;
   }
 
@@ -177,12 +177,12 @@ exports.getKeysFromMarks = function() {
  */
 exports.logTime = function(key, time) {
   return new Promise(function(resolve, reject) {
-    var scopedKey = exports.createTimingKey(key);
+    let scopedKey = exports.createTimingKey(key);
     exports.getTimeValues(key)
     .then(existingValues => {
-      var setObj = {};
-      var objToLog = time;
-      var keysFromMarks = exports.getKeysFromMarks();
+      let setObj = {};
+      let objToLog = time;
+      let keysFromMarks = exports.getKeysFromMarks();
       if (time !== null && typeof time !== 'object') {
         objToLog = { time: time };
       }
@@ -220,7 +220,7 @@ exports.logTime = function(key, time) {
  */
 exports.getTimeValues = function(key) {
   return new Promise(function(resolve, reject) {
-    var scopedKey = exports.createTimingKey(key);
+    let scopedKey = exports.createTimingKey(key);
     chromep.getStorageLocal().get(scopedKey)
     .then(existingValues => {
       if (existingValues && existingValues[scopedKey]) {
@@ -249,8 +249,8 @@ exports.getTimeValues = function(key) {
  */
 exports.fulfillPromises = function(promises) {
   return new Promise(function(resolve) {
-    var result = [];
-    var seedPromise = Promise.resolve(null);
+    let result = [];
+    let seedPromise = Promise.resolve(null);
 
     // Now we have an array with all our promises. We want to execute them
     // sequentially, for which we will use reduce. seedPromise will be our
@@ -308,9 +308,9 @@ exports.runDiscoverPeerPagesTrial = function(
   return new Promise(function(resolve) {
     // We will call runDiscoverPagesIteration and attach them all to a sequence
     // of Promises, such that they will resolve in order.
-    var iteration = 0;
-    var nextIter = function() {
-      var toLog = {};
+    let iteration = 0;
+    let nextIter = function() {
+      let toLog = {};
       toLog.type = 'discoverPeers';
       toLog.numPeers = numPeers;
       toLog.numPages = numPages;
@@ -343,8 +343,8 @@ exports.runDiscoverPeerPagesTrial = function(
       });
     };
 
-    var promises = [];
-    for (var i = 0; i < numIterations; i++) {
+    let promises = [];
+    for (let i = 0; i < numIterations; i++) {
       promises.push(nextIter);
     }
 
@@ -366,7 +366,7 @@ exports.runDiscoverPeerPagesTrial = function(
  * evaluation
  */
 exports.getEvalPagesUrl = function(ipAddress, port, numPages) {
-  var result = 'http://' +
+  let result = 'http://' +
     ipAddress +
     ':' +
     port +
@@ -396,11 +396,11 @@ exports.resolvePeers = function(cacheNames, resolveDelay, toLog) {
     toLog.resolves = [];
     toLog.serviceNames = [];
 
-    var iteration = 0;
-    var nextIter = function() {
-      var cacheName = cacheNames[iteration];
-      var serviceName = cacheName.serviceName;
-      var startResolve = null;
+    let iteration = 0;
+    let nextIter = function() {
+      let cacheName = cacheNames[iteration];
+      let serviceName = cacheName.serviceName;
+      let startResolve = null;
       iteration += 1;
 
       return new Promise(function(resolve, reject) {
@@ -410,8 +410,8 @@ exports.resolvePeers = function(cacheNames, resolveDelay, toLog) {
           return appc.resolveCache(serviceName);
         })
         .then(cache => {
-          var endResolve = exports.getNow();
-          var totalResolve = endResolve - startResolve;
+          let endResolve = exports.getNow();
+          let totalResolve = endResolve - startResolve;
           toLog.resolves.push(totalResolve);
           toLog.serviceNames.push(serviceName);
           resolve(cache);
@@ -422,8 +422,8 @@ exports.resolvePeers = function(cacheNames, resolveDelay, toLog) {
       });
     };
 
-    var promises = [];
-    for (var i = 0; i < cacheNames.length; i++) {
+    let promises = [];
+    for (let i = 0; i < cacheNames.length; i++) {
       promises.push(nextIter);
     }
 
@@ -455,10 +455,10 @@ exports.runDiscoverPeerPagesIterationLazy = function(
     resolveDelay
 ) {
   return new Promise(function(resolve, reject) {
-    var startBrowse = exports.getNow();
-    var finishBrowsePeers = null;
-    var finishBrowsePages = null;
-    var logInfo = {};
+    let startBrowse = exports.getNow();
+    let finishBrowsePeers = null;
+    let finishBrowsePages = null;
+    let logInfo = {};
     logInfo.resolveErrs = [];
     logInfo.type = 'discoverPeersLazy';
     appc.getPeerCacheNames()
@@ -466,7 +466,7 @@ exports.runDiscoverPeerPagesIterationLazy = function(
       console.log('found peer cache names: ', cacheNames);
 
       if (cacheNames.length !== numPeers) {
-        var message = 'missing peer: found ' +
+        let message = 'missing peer: found ' +
           cacheNames.length +
           ', expected ' +
           numPeers;
@@ -481,20 +481,20 @@ exports.runDiscoverPeerPagesIterationLazy = function(
     })
     .then(cacheResults => {
       // We'll create a fetch for each listUrl.
-      var promises = [];
+      let promises = [];
       cacheResults.forEach(cacheResult => {
         if (!cacheResult.resolved) {
           // probably caught
           logInfo.resolveErrs.push(cacheResult);
           return;
         }
-        var cache = cacheResult.resolved;
-        var evalUrl = exports.getEvalPagesUrl(
+        let cache = cacheResult.resolved;
+        let evalUrl = exports.getEvalPagesUrl(
           cache.ipAddress,
           cache.port,
           numPages
         );
-        var prom = util.fetchJson(evalUrl);
+        let prom = util.fetchJson(evalUrl);
         promises.push(prom);
       });
 
@@ -505,7 +505,7 @@ exports.runDiscoverPeerPagesIterationLazy = function(
 
       cacheJsons.forEach(cacheJson => {
         if (cacheJson.cachedPages.length !== numPages) {
-          var message = 'missing pages: found ' +
+          let message = 'missing pages: found ' +
             cacheJson.cachedPages.length +
             ', expected ' +
             numPages;
@@ -517,11 +517,11 @@ exports.runDiscoverPeerPagesIterationLazy = function(
       finishBrowsePages = exports.getNow();
     })
     .then(() => {
-      var timeBrowsePeers = finishBrowsePeers - startBrowse;
-      var timeBrowsePages = finishBrowsePages - finishBrowsePeers;
-      var totalTime = finishBrowsePages - startBrowse;
+      let timeBrowsePeers = finishBrowsePeers - startBrowse;
+      let timeBrowsePages = finishBrowsePages - finishBrowsePeers;
+      let totalTime = finishBrowsePages - startBrowse;
 
-      var result = {
+      let result = {
         timeBrowsePeers: timeBrowsePeers,
         timeBrowsePages: timeBrowsePages,
         totalTime: totalTime,
@@ -548,15 +548,15 @@ exports.runDiscoverPeerPagesIterationLazy = function(
  */
 exports.runDiscoverPeerPagesIteration = function(numPeers, numPages) {
   return new Promise(function(resolve, reject) {
-    var startBrowse = exports.getNow();
-    var finishBrowsePeers = null;
-    var finishBrowsePages = null;
+    let startBrowse = exports.getNow();
+    let finishBrowsePeers = null;
+    let finishBrowsePages = null;
     appc.getBrowseableCaches()
     .then(caches => {
       console.log('found peers: ', caches);
 
       if (caches.length !== numPeers) {
-        var message = 'missing peer: found ' +
+        let message = 'missing peer: found ' +
           caches.length +
           ', expected ' +
           numPeers;
@@ -568,14 +568,14 @@ exports.runDiscoverPeerPagesIteration = function(numPeers, numPages) {
       finishBrowsePeers = exports.getNow();
       
       // We'll create a fetch for each listUrl.
-      var promises = [];
+      let promises = [];
       caches.forEach(cache => {
-        var evalUrl = exports.getEvalPagesUrl(
+        let evalUrl = exports.getEvalPagesUrl(
           cache.ipAddress,
           cache.port,
           numPages
         );
-        var prom = util.fetchJson(evalUrl);
+        let prom = util.fetchJson(evalUrl);
         promises.push(prom);
       });
 
@@ -586,7 +586,7 @@ exports.runDiscoverPeerPagesIteration = function(numPeers, numPages) {
 
       cacheJsons.forEach(cacheJson => {
         if (cacheJson.cachedPages.length !== numPages) {
-          var message = 'missing pages: found ' +
+          let message = 'missing pages: found ' +
             cacheJson.cachedPages.length +
             ', expected ' +
             numPages;
@@ -598,11 +598,11 @@ exports.runDiscoverPeerPagesIteration = function(numPeers, numPages) {
       finishBrowsePages = exports.getNow();
     })
     .then(() => {
-      var timeBrowsePeers = finishBrowsePeers - startBrowse;
-      var timeBrowsePages = finishBrowsePages - finishBrowsePeers;
-      var totalTime = finishBrowsePages - startBrowse;
+      let timeBrowsePeers = finishBrowsePeers - startBrowse;
+      let timeBrowsePages = finishBrowsePages - finishBrowsePeers;
+      let totalTime = finishBrowsePages - startBrowse;
 
-      var result = {
+      let result = {
         timeBrowsePeers: timeBrowsePeers,
         timeBrowsePages: timeBrowsePages,
         totalTime: totalTime
@@ -638,9 +638,9 @@ exports.runLoadPageTrialForCache = function(numIterations, key, listPagesUrl) {
     .then(cache => {
       // We will call runDiscoverPagesIteration and attach them all to a
       // sequence of Promises, such that they will resolve in order.
-      var numCalls = 0;
-      var nextIter = function() {
-        var cachedPage = cache.cachedPages[numCalls];
+      let numCalls = 0;
+      let nextIter = function() {
+        let cachedPage = cache.cachedPages[numCalls];
         numCalls += 1;
         return exports.runLoadPageTrial(
           numIterations,
@@ -652,8 +652,8 @@ exports.runLoadPageTrialForCache = function(numIterations, key, listPagesUrl) {
         );
       };
 
-      var promises = [];
-      for (var i = 0; i < cache.cachedPages.length; i++) {
+      let promises = [];
+      for (let i = 0; i < cache.cachedPages.length; i++) {
         promises.push(nextIter);
       }
 
@@ -688,9 +688,9 @@ exports.runLoadPageTrial = function(
   return new Promise(function(resolve) {
     // We will call runDiscoverPagesIteration and attach them all to a sequence
     // of Promises, such that they will resolve in order.
-    var iteration = 0;
-    var nextIter = function() {
-      var toLog = {};
+    let iteration = 0;
+    let nextIter = function() {
+      let toLog = {};
       toLog.captureUrl = captureUrl;
       toLog.numIterations = numIterations;
       toLog.mhtmlUrl = mhtmlUrl;
@@ -720,8 +720,8 @@ exports.runLoadPageTrial = function(
       });
     };
 
-    var promises = [];
-    for (var i = 0; i < numIterations; i++) {
+    let promises = [];
+    for (let i = 0; i < numIterations; i++) {
       promises.push(nextIter);
     }
 
@@ -744,7 +744,7 @@ exports.downloadKeyAsCsv = function(key) {
     } else {
       console.log(values);
       // And now download a CSV.
-      var csv = json2csv({data: values, flatten: true});
+      let csv = json2csv({data: values, flatten: true});
       util.downloadText(csv, key + '.csv');
     }
   });
@@ -757,12 +757,12 @@ exports.runFetchFileTrial = function(
   waitMillis = waitMillis || 8000;
   
   return new Promise(function(resolve, reject) {
-    var iteration = 0;
+    let iteration = 0;
     
     // We want to run these trials serially. We're basically using this
     // function as a generator that we'll pass to fulfillPromises.
-    var nextIter = function() {
-      var toLog = {
+    let nextIter = function() {
+      let toLog = {
         key: key,
         waitMillis: waitMillis,
         mhtmlUrl: mhtmlUrl,
@@ -790,8 +790,8 @@ exports.runFetchFileTrial = function(
       });
     };
 
-    var promises = [];
-    for (var i = 0; i < numIterations; i++) {
+    let promises = [];
+    for (let i = 0; i < numIterations; i++) {
       promises.push(nextIter);
     }
 
@@ -821,14 +821,14 @@ exports.runFetchFileTrial = function(
  */
 exports.runFetchFileIteration = function(mhtmlUrl, ipAddr, port) {
   return new Promise(function(resolve, reject) {
-    var start = exports.getNow();
-    var params = ifCommon.createFileParams(ipAddr, port, mhtmlUrl);
+    let start = exports.getNow();
+    let params = ifCommon.createFileParams(ipAddr, port, mhtmlUrl);
     peerIfMgr.getPeerAccessor().getFileBlob(params)
     .then(blob => {
       // We are fetching, not writing to disk.
-      var end = exports.getNow();
-      var totalTime = end - start;
-      var result = {
+      let end = exports.getNow();
+      let totalTime = end - start;
+      let result = {
         timeToFetch: totalTime,
         fileSize: blob.size
       };
@@ -853,18 +853,18 @@ exports.generateDummyDigests = function(numDigests, numPages) {
   if (numPages < 10) {
     throw new Error('numPages must be > 10');
   }
-  var result = [];
+  let result = [];
 
-  for (var i = 0; i < numDigests; i++) {
-    var ipAddr = i + '.' + i + '.' + i + '.' + i;
-    var peerInfo = {
+  for (let i = 0; i < numDigests; i++) {
+    let ipAddr = i + '.' + i + '.' + i + '.' + i;
+    let peerInfo = {
       ipAddress: ipAddr,
       port: i
     };
 
-    var pageInfos = exports.generateDummyPageInfos(numPages, i);
+    let pageInfos = exports.generateDummyPageInfos(numPages, i);
 
-    var digest = new coalObjects.Digest(peerInfo, pageInfos);
+    let digest = new coalObjects.Digest(peerInfo, pageInfos);
     result.push(digest);
   }
 
@@ -884,23 +884,23 @@ exports.generateDummyPeerBloomFilters = function(numPeers, numPages) {
   if (numPages < 10) {
     throw new Error('numPages must be > 10');
   }
-  var result = [];
+  let result = [];
 
-  for (var i = 0; i < numPeers; i++) {
-    var ipAddr = i + '.' + i + '.' + i + '.' + i;
-    var peerInfo = {
+  for (let i = 0; i < numPeers; i++) {
+    let ipAddr = i + '.' + i + '.' + i + '.' + i;
+    let peerInfo = {
       ipAddress: ipAddr,
       port: i
     };
 
-    var pageInfos = exports.generateDummyPageInfos(numPages, i);
+    let pageInfos = exports.generateDummyPageInfos(numPages, i);
 
-    var filter = new bloomFilter.BloomFilter();
+    let filter = new bloomFilter.BloomFilter();
     pageInfos.forEach(info => {
       filter.add(info.fullUrl);
     });
 
-    var digest = new coalObjects.PeerBloomFilter(peerInfo, filter.serialize());
+    let digest = new coalObjects.PeerBloomFilter(peerInfo, filter.serialize());
     result.push(digest);
   }
 
@@ -926,8 +926,8 @@ exports.generateDummyPeerBloomFilters = function(numPeers, numPages) {
  * }
  */
 exports.generateDummyPageInfos = function(numPages, peerNumber) {
-  var result = [];
-  var pagesRemaining = numPages;
+  let result = [];
+  let pagesRemaining = numPages;
 
   // Add our shared URLs.
   exports.SHARED_DUMMY_URLS.forEach(commonUrl => {
@@ -938,14 +938,14 @@ exports.generateDummyPageInfos = function(numPages, peerNumber) {
     });
   });
 
-  var pathSuffix = '/foo-bar-baz-upsidedowncake/';
-  var urlPrefix = 'http://peer' + peerNumber + '.com/';
+  let pathSuffix = '/foo-bar-baz-upsidedowncake/';
+  let urlPrefix = 'http://peer' + peerNumber + '.com/';
   while (pagesRemaining > 0) {
-    var pagePath = 'page' + pagesRemaining;
-    var fullUrl = urlPrefix + pagePath + pathSuffix;
-    var captureDate = new Date().toISOString();
+    let pagePath = 'page' + pagesRemaining;
+    let fullUrl = urlPrefix + pagePath + pathSuffix;
+    let captureDate = new Date().toISOString();
 
-    var pageInfo = {
+    let pageInfo = {
       fullUrl: fullUrl,
       captureDate: captureDate
     };

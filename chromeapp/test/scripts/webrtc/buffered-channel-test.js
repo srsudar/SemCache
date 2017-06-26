@@ -1,15 +1,15 @@
 'use strict';
 
-var test = require('tape');
-var sinon = require('sinon');
+const test = require('tape');
+const sinon = require('sinon');
 require('sinon-as-promised');
 
-var commonChannel = require('../../../app/scripts/webrtc/common-channel');
-var bufferedChannel = require('../../../app/scripts/webrtc/buffered-channel');
-var protocol = require('../../../app/scripts/webrtc/protocol');
+const commonChannel = require('../../../app/scripts/webrtc/common-channel');
 
-var Client = bufferedChannel.BufferedChannelClient;
-var Server = bufferedChannel.BufferedChannelServer;
+let bufferedChannel = require('../../../app/scripts/webrtc/buffered-channel');
+let protocol = require('../../../app/scripts/webrtc/protocol');
+let Client = bufferedChannel.BufferedChannelClient;
+let Server = bufferedChannel.BufferedChannelServer;
 
 /**
  * Manipulating the object directly leads to polluting the require cache. Any
@@ -40,7 +40,7 @@ function createMessageEvent(data) {
  * @return {Array.<ProtocolMessage>}
  */
 function wrapChunksAsSuccessMsg(chunks) {
-  var result = [];
+  let result = [];
   chunks.forEach(chunk => {
     result.push(protocol.createSuccessMessage(chunk).asBuffer());
   });
@@ -74,8 +74,8 @@ function integrationHelper(
   bufferLowThreshold,
   bufferFullThreshold
 ) {
-  var buff = Buffer.concat(expectedChunks);
-  var rawConnection = sinon.stub();
+  let buff = Buffer.concat(expectedChunks);
+  let rawConnection = sinon.stub();
   const clientChannel = sinon.stub();
   clientChannel.channelName = 'fooBar';
   clientChannel.close = sinon.stub();
@@ -86,8 +86,8 @@ function integrationHelper(
   serverChannel.removeEventListener = removeEventListenerStub;
 
   rawConnection.createDataChannel = sinon.stub().returns(clientChannel);
-  var startMsg = { channelName: clientChannel.channelName };
-  var startMsgBin = Buffer.from(JSON.stringify(startMsg));
+  let startMsg = { channelName: clientChannel.channelName };
+  let startMsgBin = Buffer.from(JSON.stringify(startMsg));
 
   const client = new Client(rawConnection, cacheChunks, startMsg);
   const server = new Server(serverChannel, chunkSize);
@@ -162,7 +162,7 @@ function integrationHelper(
     listenerFn();
   };
 
-  var chunks = [];
+  let chunks = [];
   client.on('chunk', chunk => {
     chunks.push(chunk);
   });
@@ -214,7 +214,7 @@ function integrationHelper(
 }
 
 test('integration test for cached chunks', function(t) {
-  var expectedChunks = [
+  let expectedChunks = [
     Buffer.from('Hello'),
     Buffer.from('There'),
     Buffer.from('Camel')
@@ -223,7 +223,7 @@ test('integration test for cached chunks', function(t) {
 });
 
 test('integration test for no cached chunks', function(t) {
-  var expectedChunks = [
+  let expectedChunks = [
     Buffer.from('up'),
     Buffer.from('do'),
     Buffer.from('no'),

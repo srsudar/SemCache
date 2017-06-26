@@ -213,7 +213,7 @@ class BaseServer extends EventEmitter {
 
   sendFirstMessage() {
     // Start the process by sending the streamInfo to the client.
-    var streamInfoMsg = protocol.createSuccessMessage(
+    let streamInfoMsg = protocol.createSuccessMessage(
       Buffer.from(JSON.stringify(this.streamInfo))
     );
     this.channel.send(streamInfoMsg.asBuffer());
@@ -234,10 +234,10 @@ class BaseServer extends EventEmitter {
     this.streamInfo = BaseServer.createStreamInfo(this.numChunks);
     this.chunksSent = 0;
 
-    var self = this;
+    let self = this;
     this.channel.onmessage = function(event) {
-      var dataBuff = Buffer.from(event.data);
-      var msg = JSON.parse(dataBuff);
+      let dataBuff = Buffer.from(event.data);
+      let msg = JSON.parse(dataBuff);
       
       self.handleMessageFromClient(msg);
     };

@@ -1,7 +1,7 @@
 'use strict';
 
-var commonChannel = require('./common-channel');
-var protocol = require('./protocol');
+const commonChannel = require('./common-channel');
+const protocol = require('./protocol');
 
 /**
  * This object communicates binary data over a data channel using the buffered
@@ -89,7 +89,7 @@ class BufferedChannelServer extends commonChannel.BaseServer {
   sendAsMuchAsPossible() {
     const gen = this.chunkGenerator;
     // pick up where we left off.
-    var item = this._pendingItem;
+    let item = this._pendingItem;
     this._pendingItem = null;
     if (!item) {
       item = gen.next();
@@ -113,8 +113,8 @@ class BufferedChannelServer extends commonChannel.BaseServer {
         // if an ack comes back very quickly (impossibly quickly except in test
         // conditions?) you can send the same chunk twice.
         this.chunksSent++;
-        var chunk = item.value;
-        var chunkMsg = protocol.createSuccessMessage(chunk);
+        let chunk = item.value;
+        let chunkMsg = protocol.createSuccessMessage(chunk);
         this.channel.send(chunkMsg.asBuffer());
         item = gen.next();
       } catch (err) {

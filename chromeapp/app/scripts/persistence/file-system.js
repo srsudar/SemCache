@@ -7,8 +7,8 @@
  * the contents of a cached page", etc.
  */
 
-var chromep = require('../chrome-apis/chromep');
-var fsUtil = require('./file-system-util');
+const chromep = require('../chrome-apis/chromep');
+const fsUtil = require('./file-system-util');
 
 /** The local storage key for the entry ID of the base directory. */
 exports.KEY_BASE_DIR = 'baseDir';
@@ -35,10 +35,10 @@ exports.constructFileSchemeUrl = function(absPathToBaseDir, fileEntryPath) {
   // directory of the base directory. Therefore if we've selected 'semcachedir'
   // as the root of our file system, fullPath will always begin with
   // '/semcachedir/'. We still start by stripping this.
-  var parts = fileEntryPath.split('/');
+  let parts = fileEntryPath.split('/');
   // The first will be an empty string for the leading /. We'll start at index
   // 2 to skip this and skip the leading directory.
-  var sanitizedEntryPath = parts.slice(2).join('/');
+  let sanitizedEntryPath = parts.slice(2).join('/');
   // only file:/, not file://, as join adds one
   return ['file:/', absPathToBaseDir, sanitizedEntryPath].join('/');
 };
@@ -54,8 +54,8 @@ exports.getDirectoryForCacheEntries = function() {
   return new Promise(function(resolve, reject) {
     exports.getPersistedBaseDir()
     .then(baseDir => {
-      var dirName = exports.PATH_CACHE_DIR;
-      var options = {
+      let dirName = exports.PATH_CACHE_DIR;
+      let options = {
         create: true,
         exclusive: false
       };
@@ -81,7 +81,7 @@ exports.getDirectoryForCacheEntries = function() {
 exports.getFileForWritingCachedPage = function(filePath) {
   return exports.getDirectoryForCacheEntries()
   .then(cacheDir => {
-    var createOptions = {
+    let createOptions = {
       create: true,     // create if it doesn't exist
       exclusive: false  // OK if it already exists--will overwrite
     };
@@ -109,7 +109,7 @@ exports.getPersistedBaseDir = function() {
       if (isSet) {
         chromep.getStorageLocal().get(exports.KEY_BASE_DIR)
         .then(keyValue => {
-          var id = keyValue[exports.KEY_BASE_DIR];
+          let id = keyValue[exports.KEY_BASE_DIR];
           return chromep.getFileSystem().restoreEntry(id);
         })
         .then(dirEntry => {
@@ -133,7 +133,7 @@ exports.baseDirIsSet = function() {
   return new Promise(function(resolve, reject) {
     chromep.getStorageLocal().get(exports.KEY_BASE_DIR)
     .then(keyValue => {
-      var isSet = false;
+      let isSet = false;
       if (keyValue && keyValue[exports.KEY_BASE_DIR]) {
         isSet = true;
       }
@@ -151,8 +151,8 @@ exports.baseDirIsSet = function() {
  * @param {DirectoryEntry} dirEntry the entry that will be set as the base
  */
 exports.setBaseCacheDir = function(dirEntry) {
-  var keyObj = {};
-  var id = chromep.getFileSystem().retainEntry(dirEntry);
+  let keyObj = {};
+  let id = chromep.getFileSystem().retainEntry(dirEntry);
   keyObj[exports.KEY_BASE_DIR] = id;
   console.log('going to call set');
   chromep.getStorageLocal().set(keyObj);

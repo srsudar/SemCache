@@ -1,9 +1,9 @@
 'use strict';
 
-var appMsg = require('../app-bridge/messaging');
-var util = require('../util/util');
+const appMsg = require('../app-bridge/messaging');
+const util = require('../util/util');
 
-var localPageInfo = null;
+let localPageInfo = null;
 
 /**
  * Return the local CachedPage object. This will have been retrieved from the
@@ -65,14 +65,14 @@ exports.handleLoadMessage = function(message, sender, callback) {
   // Send the response object.
   util.getOnCompletePromise()
   .then(() => {
-    var response = exports.createLoadResponseMessage();
+    let response = exports.createLoadResponseMessage();
     console.log('Invoking callback with response: ', response);
     callback(response);
   });
 };
 
 exports.createLoadResponseMessage = function() {
-  var loadTime = exports.getFullLoadTime();
+  let loadTime = exports.getFullLoadTime();
   return {
     type: 'readystateComplete',
     loadTime: loadTime
@@ -85,8 +85,8 @@ exports.createLoadResponseMessage = function() {
  * @return {number} the time from navigation start to readyState = 'complete'.
  */
 exports.getFullLoadTime = function() {
-  var win = util.getWindow();
-  var result = win.performance.timing.domComplete -
+  let win = util.getWindow();
+  let result = win.performance.timing.domComplete -
     win.performance.timing.navigationStart;
   return result;
 };
@@ -98,15 +98,15 @@ exports.getFullLoadTime = function() {
  */
 exports.annotateLocalLinks = function() {
   return new Promise(function(resolve, reject) {
-    var links = exports.getLinksOnPage();
-    var urls = Object.keys(links);
+    let links = exports.getLinksOnPage();
+    let urls = Object.keys(links);
     
     appMsg.queryForPagesLocally('contentscript', urls)
     .then(urlToPageArr => {
       // localUrls will be an Object mapping URLs to arrays of locally
       // available pages.
       Object.keys(urlToPageArr).forEach(url => {
-        var anchors = links[url];
+        let anchors = links[url];
         anchors.forEach(anchor => {
           exports.annotateAnchorIsLocal(anchor);
         });
@@ -126,15 +126,15 @@ exports.annotateLocalLinks = function() {
  */
 exports.annotateNetworkLocalLinks = function() {
   return new Promise(function(resolve, reject) {
-    var links = exports.getLinksOnPage();
-    var urls = Object.keys(links);
+    let links = exports.getLinksOnPage();
+    let urls = Object.keys(links);
     
     appMsg.queryForPagesOnNetwork('contentscript', urls)
     .then(urlToInfoArr => {
       // localUrls will be an Object mapping URLs to arrays of locally
       // available pages.
       Object.keys(urlToInfoArr).forEach(url => {
-        var anchors = links[url];
+        let anchors = links[url];
         anchors.forEach(anchor => {
           exports.annotateAnchorIsOnNetwork(anchor);
         });
@@ -158,13 +158,13 @@ exports.annotateNetworkLocalLinks = function() {
  * anchors with that URL as its href attribute.
  */
 exports.getLinksOnPage = function() {
-  var allAnchors = exports.selectAllLinksWithHrefs();
-  var result = {};
+  let allAnchors = exports.selectAllLinksWithHrefs();
+  let result = {};
 
   allAnchors.forEach(anchor => {
     // Get the absolute URL.
-    var url = exports.getAbsoluteUrl(anchor.href);
-    var existingDoms = result[url];
+    let url = exports.getAbsoluteUrl(anchor.href);
+    let existingDoms = result[url];
     if (!existingDoms) {
       existingDoms = [];
       result[url] = existingDoms;
@@ -189,9 +189,9 @@ exports.getLinksOnPage = function() {
  * hash
  */
 exports.getAbsoluteUrl = function(href) {
-  var a = document.createElement('a');
+  let a = document.createElement('a');
   a.href = href;
-  var result = a.protocol + '//' + a.host + a.pathname;
+  let result = a.protocol + '//' + a.host + a.pathname;
   return result;
 };
 
@@ -215,12 +215,12 @@ exports.selectAllLinksWithHrefs = function() {
  */
 exports.annotateAnchorIsLocal = function(anchor) {
   // We'll style the link using a lightning bolt, known as 'zap'.
-  var zap = '\u26A1';
+  let zap = '\u26A1';
   anchor.innerHTML = anchor.innerHTML + zap;
 };
 
 exports.annotateAnchorIsOnNetwork = function(anchor) {
   // We'll style the link using a cloud.
-  var cloud = '\u2601';
+  let cloud = '\u2601';
   anchor.innerHTML = anchor.innerHTML + cloud;
 };

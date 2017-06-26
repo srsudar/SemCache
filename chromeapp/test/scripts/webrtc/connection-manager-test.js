@@ -1,12 +1,13 @@
 'use strict';
 
-var test = require('tape');
-var proxyquire = require('proxyquire');
-var sinon = require('sinon');
+const test = require('tape');
+const proxyquire = require('proxyquire');
+const sinon = require('sinon');
 require('sinon-as-promised');
 
-var cmgr = require('../../../app/scripts/webrtc/connection-manager');
-var peerConn = require('../../../app/scripts/webrtc/peer-connection');
+const peerConn = require('../../../app/scripts/webrtc/peer-connection');
+
+let cmgr = require('../../../app/scripts/webrtc/connection-manager');
 
 /**
  * Manipulating the object directly leads to polluting the require cache. Any
@@ -71,12 +72,12 @@ function createConnectionAssertionHelper(
     createDataChannelError,
     t
 ) {
-  var ipaddr = '5.4.3.2';
-  var port = 4444;
-  var peerEndpoint = ipaddr + ':' + port + '/receive_wrtc';
-  var localDescription = 'local offer description';
+  let ipaddr = '5.4.3.2';
+  let port = 4444;
+  let peerEndpoint = ipaddr + ':' + port + '/receive_wrtc';
+  let localDescription = 'local offer description';
 
-  var peerConnection = sinon.stub();
+  let peerConnection = sinon.stub();
 
   if (createOfferError) {
     peerConnection.createOffer = sinon.stub().rejects(createOfferError);
@@ -91,13 +92,13 @@ function createConnectionAssertionHelper(
     peerConnection.createDataChannel = sinon.stub();
   }
   
-  var iceCandidates = [
+  let iceCandidates = [
     'candidate 1',
     'candidate 2',
     'candidate 3'
   ];
 
-  var actualDescription = null;
+  let actualDescription = null;
   if (setLocalDescriptionError) {
     peerConnection.setLocalDescription = sinon.stub()
       .rejects(setLocalDescriptionError);
@@ -181,39 +182,39 @@ function createConnectionAssertionHelper(
  * ensure the parameters are correct for a valid call, with the valid stubs
  */
 function sendOfferAssertionHelper(fetchError, createDescError, t) {
-  var wrtcEndpoint = 'endpoint';
-  var rawConnection = sinon.stub();
+  let wrtcEndpoint = 'endpoint';
+  let rawConnection = sinon.stub();
   rawConnection.addIceCandidate = sinon.stub();
   rawConnection.setRemoteDescription = sinon.stub();
 
-  var peerConnection = 'the custom PeerConnection object';
-  var localDescription = 'local description';
-  var remoteDescriptionJson = 'remote description';
-  var remoteDescriptionObj = 'remoteDescription';
-  var localIceCandidates = ['local candidate 1', 'local candidate 2'];
-  var serverIceCandidates = ['peer candidate 1', 'peer candidate 2'];
-  var wrappedServerIceCandidates = [
+  let peerConnection = 'the custom PeerConnection object';
+  let localDescription = 'local description';
+  let remoteDescriptionJson = 'remote description';
+  let remoteDescriptionObj = 'remoteDescription';
+  let localIceCandidates = ['local candidate 1', 'local candidate 2'];
+  let serverIceCandidates = ['peer candidate 1', 'peer candidate 2'];
+  let wrappedServerIceCandidates = [
     { wrapped: serverIceCandidates[0] },
     { wrapped: serverIceCandidates[1] }
   ];
-  var ipaddr = '1.2.3.4';
-  var port = 9876;
+  let ipaddr = '1.2.3.4';
+  let port = 9876;
 
-  var jsonToServer = {
+  let jsonToServer = {
     description: localDescription,
     iceCandidates: localIceCandidates
   };
-  var jsonFromServer = {
+  let jsonFromServer = {
     description: remoteDescriptionJson,
     iceCandidates: serverIceCandidates
   };
 
   // Fetch returns a response, which itself has a json() function that returns
   // a Promise.
-  var respStub = sinon.stub();
+  let respStub = sinon.stub();
   respStub.json = sinon.stub().resolves(jsonFromServer);
 
-  var fetchStub = sinon.stub().resolves(respStub);
+  let fetchStub = sinon.stub().resolves(respStub);
   if (fetchError) {
     fetchStub = sinon.stub().rejects(fetchError);
   }
@@ -233,11 +234,11 @@ function sendOfferAssertionHelper(fetchError, createDescError, t) {
       .returns(remoteDescriptionObj);
   }
 
-  var numCallsToCreateIce = 0;
-  var createRTCIceCandidateArgs = [];
+  let numCallsToCreateIce = 0;
+  let createRTCIceCandidateArgs = [];
   cmgr.createRTCIceCandidate = function(createArg) {
     createRTCIceCandidateArgs.push(createArg);
-    var result = wrappedServerIceCandidates[numCallsToCreateIce];
+    let result = wrappedServerIceCandidates[numCallsToCreateIce];
     numCallsToCreateIce++;
     return result;
   };
@@ -307,13 +308,13 @@ function sendOfferAssertionHelper(fetchError, createDescError, t) {
 }
 
 test('addConnection and getConnection correct in base case', function(t) {
-  var cxn = sinon.stub();
+  let cxn = sinon.stub();
   cxn.on = sinon.stub();
-  var ipaddr = '1.2.3.4';
-  var port = 1234;
+  let ipaddr = '1.2.3.4';
+  let port = 1234;
 
   cmgr.addConnection(ipaddr, port, cxn);
-  var actual = cmgr.getConnection(ipaddr, port, cxn);
+  let actual = cmgr.getConnection(ipaddr, port, cxn);
 
   t.equal(actual, cxn);
   t.end();
@@ -321,9 +322,9 @@ test('addConnection and getConnection correct in base case', function(t) {
 });
 
 test('connection is removed after close event', function(t) {
-  var cxn = new peerConn.PeerConnection(sinon.stub());
-  var ipaddr = '1.2.3.4';
-  var port = 7777;
+  let cxn = new peerConn.PeerConnection(sinon.stub());
+  let ipaddr = '1.2.3.4';
+  let port = 7777;
 
   cmgr.addConnection(ipaddr, port, cxn);
 
@@ -334,21 +335,21 @@ test('connection is removed after close event', function(t) {
 });
 
 test('getConnection returns null if not present', function(t) {
-  var actual = cmgr.getConnection('foo', 11);
+  let actual = cmgr.getConnection('foo', 11);
   t.equal(actual, null);
   t.end();
 });
 
 test('removeConnection deletes connection if present', function(t) {
-  var cxn = sinon.stub();
+  let cxn = sinon.stub();
   cxn.on = sinon.stub();
-  var ipaddr = '9.8.7.6';
-  var port = 5555;
+  let ipaddr = '9.8.7.6';
+  let port = 5555;
 
   cmgr.addConnection(ipaddr, port, cxn);
   cmgr.removeConnection(ipaddr, port);
 
-  var actual = cmgr.getConnection(ipaddr, port);
+  let actual = cmgr.getConnection(ipaddr, port);
   t.equal(actual, null);
   t.end();
 });
@@ -365,7 +366,7 @@ test('createConnection resolves with PeerConnection on success', function(t) {
 });
 
 test('createConnection rejects if createOffer rejects', function(t) {
-  var expected = { error: 'create offer rejected' };
+  let expected = { error: 'create offer rejected' };
   createConnectionAssertionHelper(null, expected, null, null, t);
   
   cmgr.createConnection()
@@ -382,7 +383,7 @@ test('createConnection rejects if createOffer rejects', function(t) {
 });
 
 test('createConnection rejects if setLocalDescription rejects', function(t) {
-  var expected = { error: 'setLocalDescription rejected' };
+  let expected = { error: 'setLocalDescription rejected' };
   createConnectionAssertionHelper(null, null, expected, null, t);
   
   cmgr.createConnection()
@@ -399,7 +400,7 @@ test('createConnection rejects if setLocalDescription rejects', function(t) {
 });
 
 test('createConnection rejects if sendOffer rejects', function(t) {
-  var expected = { error: 'sendOffer rejected' };
+  let expected = { error: 'sendOffer rejected' };
   createConnectionAssertionHelper(expected, null, null, null, t);
   
   cmgr.createConnection()
@@ -416,7 +417,7 @@ test('createConnection rejects if sendOffer rejects', function(t) {
 });
 
 test('createConnection rejects if createDataChannel throws', function(t) {
-  var expected = { error: 'createDataChannel threw' };
+  let expected = { error: 'createDataChannel threw' };
   createConnectionAssertionHelper(null, null, null, expected, t);
   
   cmgr.createConnection()
@@ -437,8 +438,8 @@ test('sendOffer resolves with PeerConnection', function(t) {
 });
 
 test('sendOffer rejects if fetch rejects', function(t) {
-  var expected = { error: 'fetch went wrong' };
-  var wrappedCall = sendOfferAssertionHelper(expected, null, t);
+  let expected = { error: 'fetch went wrong' };
+  let wrappedCall = sendOfferAssertionHelper(expected, null, t);
 
   wrappedCall()
   .then(res => {
@@ -454,8 +455,8 @@ test('sendOffer rejects if fetch rejects', function(t) {
 });
 
 test('sendOffer rejects if setRemoteDescription rejects', function(t) {
-  var expected = { error: 'setRemoteDescription went wrong' };
-  var wrappedCall = sendOfferAssertionHelper(null, expected, t);
+  let expected = { error: 'setRemoteDescription went wrong' };
+  let wrappedCall = sendOfferAssertionHelper(null, expected, t);
 
   wrappedCall()
   .then(res => {

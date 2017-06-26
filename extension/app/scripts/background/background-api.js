@@ -1,14 +1,14 @@
 'use strict';
 
-var browserAction = require('../chrome-apis/browser-action');
-var appMessaging = require('../app-bridge/messaging');
-var popupApi = require('../popup/popup-api');
+const browserAction = require('../chrome-apis/browser-action');
+const appMessaging = require('../app-bridge/messaging');
+const popupApi = require('../popup/popup-api');
 
 // Directly requiring a script from the Chrome App. This seems risky, but I
 // feel it's better than code duplication.
-var evaluation = require('../../../../chromeapp/app/scripts/evaluation');
+const evaluation = require('../../../../chromeapp/app/scripts/evaluation');
 
-var forbiddenTransitionTypes = [
+const forbiddenTransitionTypes = [
   'generated',        // search results from the omnibox, eg
   'auto_subframe',    // automatic things in a subframe
   'auto_toplevel',    // the start page
@@ -29,12 +29,12 @@ var forbiddenTransitionTypes = [
  */
 exports.savePageForContentScript = function(tab) {
   return new Promise(function(resolve, reject) {
-    var start = evaluation.getNow();
+    let start = evaluation.getNow();
     popupApi.saveTab(tab)
       .then(() => {
-        var end = evaluation.getNow();
-        var totalTime = end - start;
-        var result = { timeToWrite: totalTime };
+        let end = evaluation.getNow();
+        let totalTime = end - start;
+        let result = { timeToWrite: totalTime };
         resolve(result);
       })
       .catch(err => {
@@ -127,7 +127,7 @@ exports.isNavOfInterest = function(details) {
 exports.queryForPageWithCallback = function(params, responseCallback) {
   exports.queryForPage(params.tabId, params.url)
   .then(localPageInfo => {
-    var response = {
+    let response = {
       from: 'background-script',
       status: 'success',
       result: localPageInfo
@@ -135,7 +135,7 @@ exports.queryForPageWithCallback = function(params, responseCallback) {
     responseCallback(response);
   })
   .catch(err => {
-    var response = {
+    let response = {
       from: 'background-script',
       status: 'error',
       result: err

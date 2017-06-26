@@ -1,10 +1,12 @@
 'use strict';
 
-var test = require('tape');
-var dnsPacket = require('../../../app/scripts/dnssd/dns-packet');
-var resRec = require('../../../app/scripts/dnssd/resource-record');
-var qSection = require('../../../app/scripts/dnssd/question-section');
-var dnsCodes = require('../../../app/scripts/dnssd/dns-codes');
+const test = require('tape');
+
+let dnsPacket = require('../../../app/scripts/dnssd/dns-packet');
+
+const resRec = require('../../../app/scripts/dnssd/resource-record');
+const qSection = require('../../../app/scripts/dnssd/question-section');
+const dnsCodes = require('../../../app/scripts/dnssd/dns-codes');
 
 /**
  * Create an ARecord for use in testing. This is the same object on every call
@@ -15,7 +17,7 @@ var dnsCodes = require('../../../app/scripts/dnssd/dns-codes');
  */
 function getARecord(domain) {
   domain = domain || 'www.whatsup.com';
-  var result = new resRec.ARecord(domain, 10, '123.123.4.5');
+  let result = new resRec.ARecord(domain, 10, '123.123.4.5');
   return result;
 }
 
@@ -28,7 +30,7 @@ function getARecord(domain) {
  */
 function getPtrRecord(instanceName) {
   instanceName = instanceName || 'PrintsALot';
-  var result = new resRec.PtrRecord(
+  let result = new resRec.PtrRecord(
     '_printer._tcp.local',
     3600,
     instanceName + '._printer._tcp.local'
@@ -47,7 +49,7 @@ function getPtrRecord(instanceName) {
 function getSrvRecord(instanceName, domain) {
   instanceName = instanceName || 'PrintsALot';
   domain = domain || 'blackhawk.local';
-  var result = new resRec.SrvRecord(
+  let result = new resRec.SrvRecord(
     instanceName + '._printer.tcp.local',
     2400,
     0,
@@ -69,16 +71,16 @@ function getSrvRecord(instanceName, domain) {
 function getBasicDnsPacket(params) {
   params = params || {};
 
-  var id = params.id || 8871;
-  var isQuery = params.isQuery || true;
-  var opCode = params.opCode || 2;
-  var isAuthorativeAnswer = params.isAuthorativeAnswer || true;
-  var isTruncated = params.isTruncated || true;
-  var recursionDesired = params.recursionDesired || true;
-  var recursionAvailable = params.recursionAvailable || false;
-  var returnCode = params.returnCode || 8;
+  let id = params.id || 8871;
+  let isQuery = params.isQuery || true;
+  let opCode = params.opCode || 2;
+  let isAuthorativeAnswer = params.isAuthorativeAnswer || true;
+  let isTruncated = params.isTruncated || true;
+  let recursionDesired = params.recursionDesired || true;
+  let recursionAvailable = params.recursionAvailable || false;
+  let returnCode = params.returnCode || 8;
 
-  var result = new dnsPacket.DnsPacket(
+  let result = new dnsPacket.DnsPacket(
     id,
     isQuery,
     opCode,
@@ -92,7 +94,7 @@ function getBasicDnsPacket(params) {
 }
 
 test('can create a DnsPacket', function(t) {
-  var params = {};
+  let params = {};
   params.id = 8871;
   params.isQuery = true;
   params.opCode = 2;
@@ -102,7 +104,7 @@ test('can create a DnsPacket', function(t) {
   params.recursionAvailable = false;
   params.returnCode = 8;
 
-  var packet = getBasicDnsPacket(params);
+  let packet = getBasicDnsPacket(params);
 
   t.equal(packet.id, params.id);
   t.equal(packet.isQuery, params.isQuery);
@@ -117,10 +119,10 @@ test('can create a DnsPacket', function(t) {
 });
 
 test('creating DnsPacket with invalid ID throws', function(t) {
-  var tooBig = function() {
+  let tooBig = function() {
     getBasicDnsPacket({ id: 65536});
   };
-  var tooSmall = function(){ 
+  let tooSmall = function(){ 
     getBasicDnsPacket({ id: -1 });
   };
 
@@ -130,10 +132,10 @@ test('creating DnsPacket with invalid ID throws', function(t) {
 });
 
 test('creating DnsPacket with invalid opCode throws', function(t) {
-  var tooBig = function() {
+  let tooBig = function() {
     getBasicDnsPacket({ opCode: 16});
   };
-  var tooSmall = function(){ 
+  let tooSmall = function(){ 
     getBasicDnsPacket({ opCode: -1 });
   };
 
@@ -143,10 +145,10 @@ test('creating DnsPacket with invalid opCode throws', function(t) {
 });
 
 test('creating DnsPacket with invalid returnCode throws', function(t) {
-  var tooBig = function() {
+  let tooBig = function() {
     getBasicDnsPacket({ returnCode: 16});
   };
-  var tooSmall = function(){ 
+  let tooSmall = function(){ 
     getBasicDnsPacket({ returnCode: -1 });
   };
 
@@ -156,10 +158,10 @@ test('creating DnsPacket with invalid returnCode throws', function(t) {
 });
 
 test('addQuestion throws if add something other than question', function(t) {
-  var packet = getBasicDnsPacket();
-  var aRec = getARecord();
+  let packet = getBasicDnsPacket();
+  let aRec = getARecord();
 
-  var shouldThrow = function() {
+  let shouldThrow = function() {
     // an ARecord is not a QuestionSection
     packet.addQuestion(aRec);
   };
@@ -169,25 +171,25 @@ test('addQuestion throws if add something other than question', function(t) {
 });
 
 test('can serialize and deserialize DnsPacket', function(t) {
-  var aRecord = getARecord();
-  var ptrRecord = getPtrRecord();
-  var srvRecord = getSrvRecord();
+  let aRecord = getARecord();
+  let ptrRecord = getPtrRecord();
+  let srvRecord = getSrvRecord();
 
   // These questions are meaningless, we're just ensuring they are serialized
   // and deserialized correctly.
-  var question1 = new qSection.QuestionSection('www.google.com', 44, 2);
-  var question2 = new qSection.QuestionSection('www.google.com', 33, 2);
+  let question1 = new qSection.QuestionSection('www.google.com', 44, 2);
+  let question2 = new qSection.QuestionSection('www.google.com', 33, 2);
 
-  var id = 8872;
-  var isQuery = false;
-  var opCode = 2;
-  var isAuthorativeAnswer = true;
-  var isTruncated = false;
-  var recursionDesired = true;
-  var recursionAvailable = false;
-  var returnCode = 2;
+  let id = 8872;
+  let isQuery = false;
+  let opCode = 2;
+  let isAuthorativeAnswer = true;
+  let isTruncated = false;
+  let recursionDesired = true;
+  let recursionAvailable = false;
+  let returnCode = 2;
 
-  var packet = new dnsPacket.DnsPacket(
+  let packet = new dnsPacket.DnsPacket(
     id,
     isQuery,
     opCode,
@@ -210,10 +212,10 @@ test('can serialize and deserialize DnsPacket', function(t) {
 
   packet.addAdditionalInfo(srvRecord);
 
-  var byteArr = packet.convertToByteArray();
-  var reader = byteArr.getReader();
+  let byteArr = packet.convertToByteArray();
+  let reader = byteArr.getReader();
 
-  var recovered = dnsPacket.createPacketFromReader(reader);
+  let recovered = dnsPacket.createPacketFromReader(reader);
   t.deepEqual(recovered, packet);
 
   t.end();
@@ -226,9 +228,9 @@ test('can serialize and deserialize DnsPacket', function(t) {
 
 test('getValueAsFlags for 0x0100', function(t) {
   // 0x0100 corresponds to all 0s except RD.
-  var value = 0x0100;
+  let value = 0x0100;
 
-  var expected = {
+  let expected = {
     qr: 0,
     aa: 0,
     opcode: 0,
@@ -238,7 +240,7 @@ test('getValueAsFlags for 0x0100', function(t) {
     rcode: 0
   };
 
-  var actual = dnsPacket.getValueAsFlags(value);
+  let actual = dnsPacket.getValueAsFlags(value);
 
   t.deepEqual(actual, expected);
 
@@ -247,9 +249,9 @@ test('getValueAsFlags for 0x0100', function(t) {
 
 test('getFlagsAsValue for 0x0100', function(t) {
   // 0x0100 corresponds to all 0s except RD.
-  var expected = 0x0100;
+  let expected = 0x0100;
 
-  var actual = dnsPacket.getFlagsAsValue(0, 0, 0, 0, 1, 0, 0);
+  let actual = dnsPacket.getFlagsAsValue(0, 0, 0, 0, 1, 0, 0);
 
   t.equal(actual, expected);
 
@@ -258,9 +260,9 @@ test('getFlagsAsValue for 0x0100', function(t) {
 
 test('getValueAsFlags for 0x9783', function(t) {
   // 9783 corresponds to every possible flag being set to a legal value.
-  var value = 0x9783;
+  let value = 0x9783;
 
-  var expected = {
+  let expected = {
     qr: 1,
     aa: 1,
     opcode: 2,
@@ -270,7 +272,7 @@ test('getValueAsFlags for 0x9783', function(t) {
     rcode: 3
   };
 
-  var actual = dnsPacket.getValueAsFlags(value);
+  let actual = dnsPacket.getValueAsFlags(value);
 
   t.deepEqual(actual, expected);
 
@@ -279,9 +281,9 @@ test('getValueAsFlags for 0x9783', function(t) {
 
 test('getFlagsAsValue for 0x9783', function(t) {
   // 9783 corresponds to every possible flag being set to a legal value.
-  var expected = 0x9783;
+  let expected = 0x9783;
 
-  var actual = dnsPacket.getFlagsAsValue(1, 2, 1, 1, 1, 1, 3);
+  let actual = dnsPacket.getFlagsAsValue(1, 2, 1, 1, 1, 1, 3);
 
   t.equal(actual, expected);
 
@@ -290,9 +292,9 @@ test('getFlagsAsValue for 0x9783', function(t) {
 
 test('getValueAsFlags for max values', function(t) {
   // 0xff8f corresponds to every possible flag bit being set to 1
-  var value = 0xff8f;
+  let value = 0xff8f;
 
-  var expected = {
+  let expected = {
     qr: 1,
     aa: 1,
     opcode: 15,
@@ -302,7 +304,7 @@ test('getValueAsFlags for max values', function(t) {
     rcode: 15
   };
 
-  var actual = dnsPacket.getValueAsFlags(value);
+  let actual = dnsPacket.getValueAsFlags(value);
 
   t.deepEqual(actual, expected);
 
@@ -311,9 +313,9 @@ test('getValueAsFlags for max values', function(t) {
 
 test('getFlagsAsValue for max values', function(t) {
   // 0xff8f corresponds to every possible flag bit being set to 1
-  var expected = 0xff8f;
+  let expected = 0xff8f;
 
-  var actual = dnsPacket.getFlagsAsValue(1, 15, 1, 1, 1, 1, 15);
+  let actual = dnsPacket.getFlagsAsValue(1, 15, 1, 1, 1, 1, 15);
 
   t.equal(actual, expected);
 
@@ -322,53 +324,53 @@ test('getFlagsAsValue for max values', function(t) {
 
 test('parseResourceRecordsFromReader succeeds for single', function(t) {
   // Test that we can parse and recover a single record.
-  var expected = getARecord();
-  var byteArr = expected.convertToByteArray();
-  var reader = byteArr.getReader();
+  let expected = getARecord();
+  let byteArr = expected.convertToByteArray();
+  let reader = byteArr.getReader();
 
-  var actual = dnsPacket.parseResourceRecordsFromReader(reader, 1);
+  let actual = dnsPacket.parseResourceRecordsFromReader(reader, 1);
   t.deepEqual(actual, [expected]);
   t.end();
 });
 
 test('parseResourceRecordsFromReader succeeds for multiple', function(t) {
-  var aRec1 = getARecord();
-  var aRec2 = getARecord('www.howdy.ch');
+  let aRec1 = getARecord();
+  let aRec2 = getARecord('www.howdy.ch');
 
-  var byteArr = aRec1.convertToByteArray();
+  let byteArr = aRec1.convertToByteArray();
   byteArr.append(aRec2.convertToByteArray());
-  var reader = byteArr.getReader();
+  let reader = byteArr.getReader();
 
-  var actual = dnsPacket.parseResourceRecordsFromReader(reader, 2);
+  let actual = dnsPacket.parseResourceRecordsFromReader(reader, 2);
   t.deepEqual(actual, [aRec1, aRec2]);
   t.end();
 });
 
 test('parseResourceRecordsFromReader succeeds for all types', function(t) {
   // We are supporting deserialization of A, PTR, and SRV records.
-  var aRec = getARecord();
-  var srvRec = getSrvRecord();
-  var ptrRec = getPtrRecord();
+  let aRec = getARecord();
+  let srvRec = getSrvRecord();
+  let ptrRec = getPtrRecord();
 
-  var byteArr = aRec.convertToByteArray();
+  let byteArr = aRec.convertToByteArray();
   byteArr.append(srvRec.convertToByteArray());
   byteArr.append(ptrRec.convertToByteArray());
-  var reader = byteArr.getReader();
+  let reader = byteArr.getReader();
 
-  var actual = dnsPacket.parseResourceRecordsFromReader(reader, 3);
+  let actual = dnsPacket.parseResourceRecordsFromReader(reader, 3);
   t.deepEqual(actual, [aRec, srvRec, ptrRec]);
   t.end();
 });
 
 test('parseResourceRecordsFromReader throws for unsupported type', function(t) {
   // We will pretend to be a TXT record.
-  var fakeTxtRecord = getARecord();
+  let fakeTxtRecord = getARecord();
   fakeTxtRecord.recordType = dnsCodes.RECORD_TYPES.TXT;
 
-  var byteArr = fakeTxtRecord.convertToByteArray();
-  var reader = byteArr.getReader();
+  let byteArr = fakeTxtRecord.convertToByteArray();
+  let reader = byteArr.getReader();
 
-  var shouldThrow = function() {
+  let shouldThrow = function() {
     dnsPacket.parseResourceRecordsFromReader(reader, 1);
   };
 

@@ -1,11 +1,12 @@
 /*jshint esnext:true*/
 'use strict';
-var test = require('tape');
-var proxyquire = require('proxyquire');
-var sinon = require('sinon');
+
+const test = require('tape');
+const proxyquire = require('proxyquire');
+const sinon = require('sinon');
 require('sinon-as-promised');
 
-var evaluation = require('../../../app/scripts/content-script/cs-evaluation');
+let evaluation = require('../../../app/scripts/content-script/cs-evaluation');
 
 /**
  * Proxyquire the object with proxies passed as the proxied modules.
@@ -30,9 +31,9 @@ function resetEvaluation() {
 }
 
 function storageGetHelper(key, expected, fnName, t) {
-  var getResult = {};
+  let getResult = {};
   getResult[key] = expected;
-  var getSpy = sinon.stub().resolves(getResult);
+  let getSpy = sinon.stub().resolves(getResult);
 
   proxyquireEvaluation({
     '../chrome-apis/storage': {
@@ -53,7 +54,7 @@ function storageGetHelper(key, expected, fnName, t) {
 }
 
 test('isPerformingTrial correct if not set', function(t) {
-  var getSpy = sinon.stub().resolves({});
+  let getSpy = sinon.stub().resolves({});
 
   proxyquireEvaluation({
     '../chrome-apis/storage': {
@@ -71,7 +72,7 @@ test('isPerformingTrial correct if not set', function(t) {
 });
 
 test('isPerformingTrial returns result if present', function(t) {
-  var expected = 'value from set';
+  let expected = 'value from set';
   storageGetHelper(
     evaluation.KEY_PERFORMING_TRIAL,
     expected,
@@ -81,7 +82,7 @@ test('isPerformingTrial returns result if present', function(t) {
 });
 
 test('getParameters returns results', function(t) {
-  var expected = {
+  let expected = {
     key: 'logKey',
     numIterations: 15,
     currentIter: 2,
@@ -90,7 +91,7 @@ test('getParameters returns results', function(t) {
     activeUrl: 'url1'
   };
 
-  var expectedGetArg = [
+  let expectedGetArg = [
     evaluation.KEY_NUM_ITERATIONS,
     evaluation.KEY_CURRENT_ITERATION,
     evaluation.KEY_LOG_KEY,
@@ -98,14 +99,14 @@ test('getParameters returns results', function(t) {
     exports.KEY_URL_LIST_INDEX
   ];
 
-  var getResult = {};
+  let getResult = {};
   getResult[evaluation.KEY_NUM_ITERATIONS] = expected.numIterations;
   getResult[evaluation.KEY_CURRENT_ITERATION] = expected.currentIter;
   getResult[evaluation.KEY_LOG_KEY] = expected.key;
   getResult[evaluation.KEY_URL_LIST] = expected.urlList;
   getResult[evaluation.KEY_URL_LIST_INDEX] = expected.urlListIndex;
 
-  var getSpy = sinon.stub().withArgs(expectedGetArg).resolves(getResult);
+  let getSpy = sinon.stub().withArgs(expectedGetArg).resolves(getResult);
   proxyquireEvaluation({
     '../chrome-apis/storage': {
       get: getSpy
@@ -121,10 +122,10 @@ test('getParameters returns results', function(t) {
 });
 
 test('requestSavePage sends message and resolves', function(t) {
-  var expectedMessage = { type: 'savePageForContentScript' };
-  var expected = 'response from sendMessage';
+  let expectedMessage = { type: 'savePageForContentScript' };
+  let expected = 'response from sendMessage';
 
-  var sendMessageSpy = function(actualMessage, callback) {
+  let sendMessageSpy = function(actualMessage, callback) {
     t.deepEqual(actualMessage, expectedMessage);
     callback(expected);
   };
@@ -144,15 +145,15 @@ test('requestSavePage sends message and resolves', function(t) {
 });
 
 test('savePage resolves as expected', function(t) {
-  var loadTime = 10101.2;
-  var savePageResult = { timeToWrite: 1982.2 };
-  var totalTime = loadTime + savePageResult.timeToWrite;
+  let loadTime = 10101.2;
+  let savePageResult = { timeToWrite: 1982.2 };
+  let totalTime = loadTime + savePageResult.timeToWrite;
 
-  var getFullLoadTimeSpy = sinon.stub().returns(loadTime);
-  var requestSavePageSpy = sinon.stub().resolves(savePageResult);
-  var getOnCompletePromiseSpy = sinon.stub().resolves();
+  let getFullLoadTimeSpy = sinon.stub().returns(loadTime);
+  let requestSavePageSpy = sinon.stub().resolves(savePageResult);
+  let getOnCompletePromiseSpy = sinon.stub().resolves();
 
-  var expected = {
+  let expected = {
     domCompleteTime: loadTime,
     timeToWrite: savePageResult.timeToWrite,
     totalTime: totalTime
@@ -179,16 +180,16 @@ test('savePage resolves as expected', function(t) {
 });
 
 test('createMetadataForLog correct', function(t) {
-  var dateStr = 'april happy day';
-  var href = 'www.fancy.org#ugh';
+  let dateStr = 'april happy day';
+  let href = 'www.fancy.org#ugh';
 
-  var getWindowSpy = sinon.stub().returns({
+  let getWindowSpy = sinon.stub().returns({
     location: {
       href: href
     }
   });
 
-  var getTodaySpy = sinon.stub().returns({
+  let getTodaySpy = sinon.stub().returns({
     toString: sinon.stub().returns(dateStr)
   });
   
@@ -199,19 +200,19 @@ test('createMetadataForLog correct', function(t) {
     }
   });
 
-  var expected = {
+  let expected = {
     href: href,
     date: dateStr
   };
 
-  var actual = evaluation.createMetadataForLog();
+  let actual = evaluation.createMetadataForLog();
   t.deepEqual(actual, expected);
   t.end();
   resetEvaluation();
 });
 
 test('deleteStorageHelperValues deletes and resolves', function(t) {
-  var removeSpy = sinon.stub().resolves();
+  let removeSpy = sinon.stub().resolves();
   proxyquireEvaluation({
     '../chrome-apis/storage': {
       remove: removeSpy
@@ -239,30 +240,30 @@ test('deleteStorageHelperValues deletes and resolves', function(t) {
 });
 
 test('runSavePageIteration returns save result', function(t) {
-  // var key = 'googleCom';
-  // var numIter = 8;
-  // var totalIterations = 10;
+  // let key = 'googleCom';
+  // let numIter = 8;
+  // let totalIterations = 10;
 
-  var timingInfo = {
+  let timingInfo = {
     time: 'for tea'
   };
-  // var metadata = {
+  // let metadata = {
   //   soMeta: '#hashtag'
   // };
 
-  // var expectedLogArg = {
+  // let expectedLogArg = {
   //   time: timingInfo.time,
   //   metadata: metadata
   // };
-  // var expectedSetArg = {};
+  // let expectedSetArg = {};
   // expectedSetArg[evaluation.KEY_CURRENT_ITERATION] = numIter + 1;
 
-  var savePageSpy = sinon.stub().resolves(timingInfo);
-  // var createMetadataForLogSpy = sinon.stub().returns(metadata);
-  // var logTimeSpy = sinon.stub();
-  // var setSpy = sinon.stub().resolves();
-  // var reloadSpy = sinon.stub();
-  // var getWindowSpy = sinon.stub().returns({
+  let savePageSpy = sinon.stub().resolves(timingInfo);
+  // let createMetadataForLogSpy = sinon.stub().returns(metadata);
+  // let logTimeSpy = sinon.stub();
+  // let setSpy = sinon.stub().resolves();
+  // let reloadSpy = sinon.stub();
+  // let getWindowSpy = sinon.stub().returns({
   //   location: {
   //     reload: reloadSpy
   //   }
@@ -284,16 +285,16 @@ test('runSavePageIteration returns save result', function(t) {
 });
 
 test('onPageLoadComplete deletes values if no more iterations', function(t) {
-  var key = 'googleCom';
+  let key = 'googleCom';
   // this will be the last iteration
-  var numIter = 9;
-  var totalIterations = 10;
+  let numIter = 9;
+  let totalIterations = 10;
 
-  var urlList = ['url0', 'url1', 'url2'];
-  var urlListIndex = 2; // the last one
-  var activeUrl = urlList[urlListIndex];
+  let urlList = ['url0', 'url1', 'url2'];
+  let urlListIndex = 2; // the last one
+  let activeUrl = urlList[urlListIndex];
 
-  var params = {
+  let params = {
     key: key,
     numIterations: totalIterations,
     currentIter: numIter,
@@ -301,16 +302,16 @@ test('onPageLoadComplete deletes values if no more iterations', function(t) {
     urlListIndex: urlListIndex,
     activeUrl: activeUrl
   };
-  var getParametersSpy = sinon.stub().resolves(params);
+  let getParametersSpy = sinon.stub().resolves(params);
 
-  var timingInfo = {
+  let timingInfo = {
     time: 'for tea'
   };
-  var metadata = {
+  let metadata = {
     soMeta: '#hashtag'
   };
 
-  var expectedLogArg = {
+  let expectedLogArg = {
     timing: timingInfo,
     metadata: metadata,
     iteration: params.currentIter,
@@ -319,11 +320,11 @@ test('onPageLoadComplete deletes values if no more iterations', function(t) {
     urlListIndex: params.urlListIndex
   };
 
-  var createMetadataForLogSpy = sinon.stub().returns(metadata);
-  var logTimeSpy = sinon.stub();
-  var deleteStorageHelperValuesSpy = sinon.stub().resolves();
-  var logResultSpy = sinon.stub();
-  var runSavePageIterationSpy = sinon.stub().resolves(timingInfo);
+  let createMetadataForLogSpy = sinon.stub().returns(metadata);
+  let logTimeSpy = sinon.stub();
+  let deleteStorageHelperValuesSpy = sinon.stub().resolves();
+  let logResultSpy = sinon.stub();
+  let runSavePageIterationSpy = sinon.stub().resolves(timingInfo);
 
   proxyquireEvaluation({
     '../../../../chromeapp/app/scripts/evaluation': {
@@ -352,16 +353,16 @@ test('onPageLoadComplete deletes values if no more iterations', function(t) {
 });
 
 test('onPageLoadComplete increments iteration variables', function(t) {
-  var key = 'googleCom';
+  let key = 'googleCom';
   // this will be the last iteration
-  var numIter = 8;
-  var totalIterations = 10;
+  let numIter = 8;
+  let totalIterations = 10;
 
-  var urlList = ['url0', 'url1', 'url2'];
-  var urlListIndex = 2; // the last one
-  var activeUrl = urlList[urlListIndex];
+  let urlList = ['url0', 'url1', 'url2'];
+  let urlListIndex = 2; // the last one
+  let activeUrl = urlList[urlListIndex];
 
-  var params = {
+  let params = {
     key: key,
     numIterations: totalIterations,
     currentIter: numIter,
@@ -369,16 +370,16 @@ test('onPageLoadComplete increments iteration variables', function(t) {
     urlListIndex: urlListIndex,
     activeUrl: activeUrl
   };
-  var getParametersSpy = sinon.stub().resolves(params);
+  let getParametersSpy = sinon.stub().resolves(params);
 
-  var timingInfo = {
+  let timingInfo = {
     time: 'for tea'
   };
-  var metadata = {
+  let metadata = {
     soMeta: '#hashtag'
   };
 
-  var expectedLogArg = {
+  let expectedLogArg = {
     timing: timingInfo,
     metadata: metadata,
     iteration: params.currentIter,
@@ -387,20 +388,20 @@ test('onPageLoadComplete increments iteration variables', function(t) {
     urlListIndex: params.urlListIndex
   };
 
-  var createMetadataForLogSpy = sinon.stub().returns(metadata);
-  var logTimeSpy = sinon.stub();
-  var logResultSpy = sinon.stub();
-  var runSavePageIterationSpy = sinon.stub().resolves(timingInfo);
-  var setSpy = sinon.stub().resolves();
-  var deleteStorageHelperValuesSpy = sinon.stub().resolves();
+  let createMetadataForLogSpy = sinon.stub().returns(metadata);
+  let logTimeSpy = sinon.stub();
+  let logResultSpy = sinon.stub();
+  let runSavePageIterationSpy = sinon.stub().resolves(timingInfo);
+  let setSpy = sinon.stub().resolves();
+  let deleteStorageHelperValuesSpy = sinon.stub().resolves();
 
-  var reloadSpy = sinon.stub();
-  var windowObj = {
+  let reloadSpy = sinon.stub();
+  let windowObj = {
     location: {
       reload: reloadSpy
     }
   };
-  var getWindowSpy = sinon.stub().returns(windowObj);
+  let getWindowSpy = sinon.stub().returns(windowObj);
 
   proxyquireEvaluation({
     '../chrome-apis/storage': {
@@ -421,7 +422,7 @@ test('onPageLoadComplete increments iteration variables', function(t) {
   evaluation.getHref = sinon.stub().returns(activeUrl);
   evaluation.deleteStorageHelperValues = deleteStorageHelperValuesSpy;
 
-  var setArg = {};
+  let setArg = {};
   setArg[evaluation.KEY_CURRENT_ITERATION] = numIter + 1;
 
   evaluation.onPageLoadComplete()
@@ -439,16 +440,16 @@ test('onPageLoadComplete increments iteration variables', function(t) {
 });
 
 test('onPageLoadComplete moves to next url', function(t) {
-  var key = 'googleCom';
+  let key = 'googleCom';
   // this will be the last iteration
-  var numIter = 9;
-  var totalIterations = 10;
+  let numIter = 9;
+  let totalIterations = 10;
 
-  var urlList = ['url0', 'url1', 'url2'];
-  var urlListIndex = 1;
-  var activeUrl = urlList[urlListIndex];
+  let urlList = ['url0', 'url1', 'url2'];
+  let urlListIndex = 1;
+  let activeUrl = urlList[urlListIndex];
 
-  var params = {
+  let params = {
     key: key,
     numIterations: totalIterations,
     currentIter: numIter,
@@ -456,16 +457,16 @@ test('onPageLoadComplete moves to next url', function(t) {
     urlListIndex: urlListIndex,
     activeUrl: activeUrl
   };
-  var getParametersSpy = sinon.stub().resolves(params);
+  let getParametersSpy = sinon.stub().resolves(params);
 
-  var timingInfo = {
+  let timingInfo = {
     time: 'for tea'
   };
-  var metadata = {
+  let metadata = {
     soMeta: '#hashtag'
   };
 
-  var expectedLogArg = {
+  let expectedLogArg = {
     timing: timingInfo,
     metadata: metadata,
     iteration: params.currentIter,
@@ -474,19 +475,19 @@ test('onPageLoadComplete moves to next url', function(t) {
     urlListIndex: params.urlListIndex
   };
 
-  var createMetadataForLogSpy = sinon.stub().returns(metadata);
-  var logTimeSpy = sinon.stub();
-  var logResultSpy = sinon.stub();
-  var runSavePageIterationSpy = sinon.stub().resolves(timingInfo);
-  var setSpy = sinon.stub().resolves();
-  var deleteStorageHelperValuesSpy = sinon.stub().resolves();
+  let createMetadataForLogSpy = sinon.stub().returns(metadata);
+  let logTimeSpy = sinon.stub();
+  let logResultSpy = sinon.stub();
+  let runSavePageIterationSpy = sinon.stub().resolves(timingInfo);
+  let setSpy = sinon.stub().resolves();
+  let deleteStorageHelperValuesSpy = sinon.stub().resolves();
 
-  var windowObj = {
+  let windowObj = {
     location: {
       href: null
     }
   };
-  var getWindowSpy = sinon.stub().returns(windowObj);
+  let getWindowSpy = sinon.stub().returns(windowObj);
 
   proxyquireEvaluation({
     '../chrome-apis/storage': {
@@ -507,7 +508,7 @@ test('onPageLoadComplete moves to next url', function(t) {
   evaluation.getHref = sinon.stub().returns(activeUrl);
   evaluation.deleteStorageHelperValues = deleteStorageHelperValuesSpy;
 
-  var setArg = {};
+  let setArg = {};
   setArg[evaluation.KEY_CURRENT_ITERATION] = 0;
   setArg[evaluation.KEY_URL_LIST_INDEX] = urlListIndex + 1;
 
@@ -526,14 +527,14 @@ test('onPageLoadComplete moves to next url', function(t) {
 });
 
 test('startSavePageTrial sets variables and reloads', function(t) {
-  var urls = ['url0', 'url1'];
+  let urls = ['url0', 'url1'];
 
-  var setSpy = sinon.stub().resolves();
+  let setSpy = sinon.stub().resolves();
 
-  var numIterations = 10;
-  var key = 'firstTry';
+  let numIterations = 10;
+  let key = 'firstTry';
 
-  var setArg = {};
+  let setArg = {};
   setArg[evaluation.KEY_NUM_ITERATIONS] = numIterations;
   setArg[evaluation.KEY_PERFORMING_TRIAL] = true;
   setArg[evaluation.KEY_CURRENT_ITERATION] = 0;

@@ -2,13 +2,13 @@
 /* globals Promise */
 'use strict';
 
-var util = require('../util');
-var chromeUdp = require('../chrome-apis/udp');
-var dnsUtil = require('./dns-util');
-var dnsPacket = require('./dns-packet');
-var byteArray = require('./byte-array');
-var dnsCodes = require('./dns-codes');
-var qSection = require('./question-section');
+const util = require('../util');
+const chromeUdp = require('../chrome-apis/udp');
+const dnsUtil = require('./dns-util');
+const dnsPacket = require('./dns-packet');
+const byteArray = require('./byte-array');
+const dnsCodes = require('./dns-codes');
+const qSection = require('./question-section');
 
 /**
  * This module maintains DNS state and serves as the DNS server. It is
@@ -18,7 +18,7 @@ var qSection = require('./question-section');
 /**
  * This is the IPv4 address specified by RFC 6762 to be used for mDNS.
  */
-var DNSSD_MULTICAST_GROUP = '224.0.0.251';
+const DNSSD_MULTICAST_GROUP = '224.0.0.251';
 
 /**
  * The port we use for mDNS.
@@ -34,7 +34,7 @@ var DNSSD_MULTICAST_GROUP = '224.0.0.251';
  * new port, and deciding on 5353. This can change as long as peers share the
  * port. Ideally we would be using 5353.
  */
-var MDNS_PORT = 53531;
+const MDNS_PORT = 53531;
 
 /**
  * The special service string used to indicate that callers wish to enumerate
@@ -45,10 +45,10 @@ var MDNS_PORT = 53531;
  * they can interact with. This string instead allows callers to enumerate all
  * services.
  */
-var DNSSD_SERVICE_NAME = '_services._dns-sd._udp.local';
+const DNSSD_SERVICE_NAME = '_services._dns-sd._udp.local';
 
 /** True if the service has started. */
-var started = false;
+let started = false;
 
 exports.DNSSD_MULTICAST_GROUP = DNSSD_MULTICAST_GROUP;
 exports.MDNS_PORT = MDNS_PORT;
@@ -73,14 +73,14 @@ exports.RESPONSE_WAIT_MAX = 600;
  * of domain name to array of records, e.g. { 'www.example.com': [Object,
  * Object, Object], 'www.foo.com': [Object] }.
  */
-var records = {};
+let records = {};
 
-var onReceiveCallbacks = new Set();
+let onReceiveCallbacks = new Set();
 
 /**
  * The IPv4 interfaces for this machine, cached to provide synchronous calls.
  */
-var ipv4Interfaces = [];
+let ipv4Interfaces = [];
 
 /**
  * Returns all records known to this module.
@@ -184,8 +184,8 @@ exports.onReceiveListener = function(info) {
     // Before we do anything else, parse the packet. This will let us try to
     // see if we are getting the packet and ignoring it or just never getting
     // the packet.
-    var byteArrImmediate = new byteArray.ByteArray(info.data);
-    var packetImmediate =
+    let byteArrImmediate = new byteArray.ByteArray(info.data);
+    let packetImmediate =
       dnsPacket.createPacketFromReader(byteArrImmediate.getReader());
     console.log('Got packet: ', packetImmediate);
     console.log('  packet id: ', packetImmediate.id);
@@ -208,8 +208,8 @@ exports.onReceiveListener = function(info) {
   }
   
   // Create a DNS packet.
-  var byteArr = new byteArray.ByteArray(info.data);
-  var packet = dnsPacket.createPacketFromReader(byteArr.getReader());
+  let byteArr = new byteArray.ByteArray(info.data);
+  let packet = dnsPacket.createPacketFromReader(byteArr.getReader());
 
   exports.handleIncomingPacket(packet, info.remoteAddress, info.remotePort);
 };
@@ -247,8 +247,8 @@ exports.handleIncomingPacket = function(packet, remoteAddress, remotePort) {
   // optimization and nothing more. We will respond to each question with its
   // own packet while still being compliant.
   packet.questions.forEach(question => {
-    var responsePacket = exports.createResponsePacket(packet);
-    var records = exports.getResourcesForQuery(
+    let responsePacket = exports.createResponsePacket(packet);
+    let records = exports.getResourcesForQuery(
       question.queryName,
       question.queryType,
       question.queryClass
@@ -269,8 +269,8 @@ exports.handleIncomingPacket = function(packet, remoteAddress, remotePort) {
     });
 
     // We may be multicasting, or we may be unicast responding.
-    var sendAddr = DNSSD_MULTICAST_GROUP;
-    var sendPort = MDNS_PORT;
+    let sendAddr = DNSSD_MULTICAST_GROUP;
+    let sendPort = MDNS_PORT;
     if (question.unicastResponseRequested()) {
       sendAddr = remoteAddress;
       sendPort = remotePort;
@@ -309,7 +309,7 @@ exports.createResponsePacket = function(queryPacket) {
     // future, so the API includes it.
     // no op.
   }
-  var result = new dnsPacket.DnsPacket(
+  let result = new dnsPacket.DnsPacket(
     0,      // 18.1: IDs in responses MUST be set to 0
     false,  // not a query.
     0,      // 18.3: MUST be set to 0
@@ -348,7 +348,7 @@ exports.getResourcesForQuery = function(qName, qType, qClass) {
   // above MUST be used."
 
   // records stored as {qName: [record, record, record] }
-  var namedRecords = records[qName];
+  let namedRecords = records[qName];
 
   // We need to special case the DNSSD service enumeration string, as specified
   // in RFC 6763, Section 9.
@@ -358,7 +358,7 @@ exports.getResourcesForQuery = function(qName, qType, qClass) {
     // filter as necessary for class and type.
     namedRecords = [];
     Object.keys(records).forEach(key => {
-      var keyRecords = records[key];
+      let keyRecords = records[key];
       keyRecords.forEach(record => {
         if (record.recordType === dnsCodes.RECORD_TYPES.PTR) {
           namedRecords.push(record);
@@ -372,7 +372,7 @@ exports.getResourcesForQuery = function(qName, qType, qClass) {
     return [];
   }
 
-  var result = exports.filterResourcesForQuery(
+  let result = exports.filterResourcesForQuery(
     namedRecords, qName, qType, qClass
   );
 
@@ -393,12 +393,12 @@ exports.getResourcesForQuery = function(qName, qType, qClass) {
  * match the query terms
  */
 exports.filterResourcesForQuery = function(resources, qName, qType, qClass) {
-  var result = [];
+  let result = [];
 
   resources.forEach(record => {
-    var meetsName = false;
-    var meetsType = false;
-    var meetsClass = false;
+    let meetsName = false;
+    let meetsType = false;
+    let meetsClass = false;
     if (qName === record.name || qName === DNSSD_SERVICE_NAME) {
       meetsName = true;
     }
@@ -435,7 +435,7 @@ exports.getSocket = function() {
   return new Promise(function(resolve, reject) {
     // We have two steps to do here: create a socket and bind that socket to
     // the mDNS port.
-    var createPromise = chromeUdp.create({});
+    let createPromise = chromeUdp.create({});
     createPromise.then(info => {
       exports.socketInfo = info;
       return info;
@@ -558,10 +558,10 @@ exports.sendPacket = function(packet, address, port) {
   packet.id = exports.NEXT_PACKET_ID;
   exports.NEXT_PACKET_ID += 1;
 
-  var byteArr = packet.convertToByteArray();
+  let byteArr = packet.convertToByteArray();
   // And now we need the underlying buffer of the byteArray, truncated to the
   // correct size.
-  var uint8Arr = byteArray.getByteArrayAsUint8Array(byteArr);
+  let uint8Arr = byteArray.getByteArrayAsUint8Array(byteArr);
 
   exports.getSocket().then(socket => {
     if (exports.DEBUG) {
@@ -583,7 +583,7 @@ exports.sendPacket = function(packet, address, port) {
  */
 exports.query = function(queryName, queryType, queryClass) {
   // ID is zero, as mDNS ignores the id field.
-  var packet = new dnsPacket.DnsPacket(
+  let packet = new dnsPacket.DnsPacket(
     0,
     true,
     0,
@@ -594,7 +594,7 @@ exports.query = function(queryName, queryType, queryClass) {
     0
   );
 
-  var question = new qSection.QuestionSection(
+  let question = new qSection.QuestionSection(
     queryName,
     queryType,
     queryClass
@@ -666,7 +666,7 @@ exports.queryForSrvRecord = function(instanceName) {
  * @param {ARecord|PtrRecord|SrvRecord} record the record to add
  */
 exports.addRecord = function(name, record) {
-  var existingRecords = records[name];
+  let existingRecords = records[name];
   if (!existingRecords) {
     existingRecords = [];
     records[name] = existingRecords;

@@ -1,9 +1,10 @@
 'use strict';
-var test = require('tape');
-var sinon = require('sinon');
+
+const test = require('tape');
+const sinon = require('sinon');
 require('sinon-as-promised');
 
-var util = require('../../../app/scripts/chrome-apis/util');
+let util = require('../../../app/scripts/chrome-apis/util');
 
 function resetUtil() {
   delete require.cache[
@@ -28,14 +29,14 @@ function stubErrorMethods(wasError, error) {
 }
 
 test('applyArgsCheckLastError resolves no args', function(t) {
-  var expected = 'expected value';
-  var fn = sinon.stub();
+  let expected = 'expected value';
+  let fn = sinon.stub();
   fn.yields(expected);
   stubErrorMethods(false);
 
   // Ugly to duplicate this method, but I don't know of any other way to
   // reliably create an arguments object.
-  var argGenerator = function() {
+  let argGenerator = function() {
     util.applyArgsCheckLastError(fn, arguments)
     .then(actual => {
       t.equal(actual, expected);
@@ -53,14 +54,14 @@ test('applyArgsCheckLastError resolves no args', function(t) {
 });
 
 test('applyArgsCheckLastError resolves one arg', function(t) {
-  var expected = 'expected value';
-  var fn = sinon.stub();
+  let expected = 'expected value';
+  let fn = sinon.stub();
   fn.yields(expected);
   stubErrorMethods(false);
 
   // Ugly to duplicate this method, but I don't know of any other way to
   // reliably create an arguments object.
-  var argGenerator = function() {
+  let argGenerator = function() {
     util.applyArgsCheckLastError(fn, arguments)
     .then(actual => {
       t.equal(actual, expected);
@@ -78,14 +79,14 @@ test('applyArgsCheckLastError resolves one arg', function(t) {
 });
 
 test('applyArgsCheckLastError resolves four args', function(t) {
-  var expected = 'expected value';
-  var fn = sinon.stub();
+  let expected = 'expected value';
+  let fn = sinon.stub();
   fn.yields(expected);
   stubErrorMethods(false);
 
   // Ugly to duplicate this method, but I don't know of any other way to
   // reliably create an arguments object.
-  var argGenerator = function() {
+  let argGenerator = function() {
     util.applyArgsCheckLastError(fn, arguments)
     .then(actual => {
       t.equal(actual, expected);
@@ -103,14 +104,14 @@ test('applyArgsCheckLastError resolves four args', function(t) {
 });
 
 test('applyArgsCheckLastError rejects no args', function(t) {
-  var expected = { error: 'expected err' };
-  var fn = sinon.stub();
+  let expected = { error: 'expected err' };
+  let fn = sinon.stub();
   fn.yields(expected);
   stubErrorMethods(true, expected);
 
   // Ugly to duplicate this method, but I don't know of any other way to
   // reliably create an arguments object.
-  var argGenerator = function() {
+  let argGenerator = function() {
     util.applyArgsCheckLastError(fn, arguments)
     .then(res => {
       t.fail(res);
@@ -128,14 +129,14 @@ test('applyArgsCheckLastError rejects no args', function(t) {
 });
 
 test('applyArgsCheckLastError rejects one arg', function(t) {
-  var expected = { error: 'expected err' };
-  var fn = sinon.stub();
+  let expected = { error: 'expected err' };
+  let fn = sinon.stub();
   fn.yields(expected);
   stubErrorMethods(true, expected);
 
   // Ugly to duplicate this method, but I don't know of any other way to
   // reliably create an arguments object.
-  var argGenerator = function() {
+  let argGenerator = function() {
     util.applyArgsCheckLastError(fn, arguments)
     .then(res => {
       t.fail(res);
@@ -153,14 +154,14 @@ test('applyArgsCheckLastError rejects one arg', function(t) {
 });
 
 test('applyArgsCheckLastError rejects four args', function(t) {
-  var expected = { error: 'expected err' };
-  var fn = sinon.stub();
+  let expected = { error: 'expected err' };
+  let fn = sinon.stub();
   fn.yields(expected);
   stubErrorMethods(true, expected);
 
   // Ugly to duplicate this method, but I don't know of any other way to
   // reliably create an arguments object.
-  var argGenerator = function() {
+  let argGenerator = function() {
     util.applyArgsCheckLastError(fn, arguments)
     .then(res => {
       t.fail(res);

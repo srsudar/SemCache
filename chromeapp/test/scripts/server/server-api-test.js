@@ -5,10 +5,11 @@ const sinon = require('sinon');
 const proxyquire = require('proxyquire');
 require('sinon-as-promised');
 
-let api = require('../../../app/scripts/server/server-api');
 const BloomFilter = require('../../../app/scripts/coalescence/bloom-filter').BloomFilter;
 const putil = require('../persistence/persistence-util');
 const sutil = require('./util');
+
+let api = require('../../../app/scripts/server/server-api');
 
 function proxyquireApi(proxies) {
   api = proxyquire('../../../app/scripts/server/server-api', proxies);
@@ -33,13 +34,13 @@ function end(t) {
 }
 
 test('getAccessUrlForCachedPage outputs correct url', function(t) {
-  var fullPath = 'www.example.com_somedate';
-  var iface = {
+  let fullPath = 'www.example.com_somedate';
+  let iface = {
     address: '172.9.18.145',
     port: 1234
   };
 
-  var expected = 'http://' +
+  let expected = 'http://' +
     iface.address +
     ':' +
     iface.port +
@@ -52,14 +53,14 @@ test('getAccessUrlForCachedPage outputs correct url', function(t) {
     }
   });
 
-  var actual = api.getAccessUrlForCachedPage(fullPath);
+  let actual = api.getAccessUrlForCachedPage(fullPath);
   t.equal(expected, actual);
   end(t);
 });
 
 test('getResponseForAllCachedPages rejects if read fails', function(t) {
-  var errObj = {msg: 'could not read pages'};
-  var getCachedPageSummariesStub = sinon.stub().rejects(errObj);
+  let errObj = {msg: 'could not read pages'};
+  let getCachedPageSummariesStub = sinon.stub().rejects(errObj);
 
   proxyquireApi({
     '../persistence/datastore': {
@@ -109,29 +110,29 @@ test('getResponseForAllCachedPages resolves with pages', function(t) {
 });
 
 test('getCachedFileNameFromPath parses path correct', function(t) {
-  var expected = 'www.npm.js_somedate.mhtml';
-  var path = '/pages/' + expected;
+  let expected = 'www.npm.js_somedate.mhtml';
+  let path = '/pages/' + expected;
 
-  var api = require('../../../app/scripts/server/server-api');
+  let api = require('../../../app/scripts/server/server-api');
 
-  var actual = api.getCachedFileNameFromPath(path);
+  let actual = api.getCachedFileNameFromPath(path);
   t.equal(actual, expected);
   t.end();
 });
 
 test('getListPageUrlForCache returns correct URL', function(t) {
-  var ipAddress = '123.4.56.7';
-  var port = 3333;
+  let ipAddress = '123.4.56.7';
+  let port = 3333;
 
-  var expected = 'http://123.4.56.7:3333/list_pages';
-  var actual = api.getListPageUrlForCache(ipAddress, port);
+  let expected = 'http://123.4.56.7:3333/list_pages';
+  let actual = api.getListPageUrlForCache(ipAddress, port);
   t.equal(actual, expected);
   end(t);
 });
 
 test('getResponseForAllPagesDigest rejects if read fails', function(t) {
-  var errObj = { msg: 'could not read pages' };
-  var getAllCachedPagesSpy = sinon.stub().rejects(errObj);
+  let errObj = { msg: 'could not read pages' };
+  let getAllCachedPagesSpy = sinon.stub().rejects(errObj);
 
   proxyquireApi({
     '../persistence/datastore': {

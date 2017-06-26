@@ -1,11 +1,11 @@
 /* globals RTCPeerConnection, RTCSessionDescription, RTCIceCandidate */
 'use strict';
 
-var util = require('../util');
-var peerConn = require('../../../app/scripts/webrtc/peer-connection');
-var serverApi = require('../server/server-api');
+const util = require('../util');
+const peerConn = require('../../../app/scripts/webrtc/peer-connection');
+const serverApi = require('../server/server-api');
 
-var globalPc;
+let globalPc;
 
 exports.DEBUG = true;
 
@@ -13,7 +13,7 @@ exports.DEBUG = true;
  * Manages connections to peers.
  */
 
-var CONNECTIONS = {};
+let CONNECTIONS = {};
 
 exports.remote = null;
 exports.local = null;
@@ -48,7 +48,7 @@ exports.addConnection = function(ipaddr, port, cxn) {
   cxn.on('close', () => {
     exports.removeConnection(ipaddr, port);
   });
-  var key = createKey(ipaddr, port);
+  let key = createKey(ipaddr, port);
   CONNECTIONS[key] = cxn;
 };
 
@@ -58,8 +58,8 @@ exports.addConnection = function(ipaddr, port, cxn) {
  * @return {PeerConnection|null} the connection if it exists, else null
  */
 exports.getConnection = function(ipaddr, port) {
-  var key = createKey(ipaddr, port);
-  var cxn = CONNECTIONS[key];
+  let key = createKey(ipaddr, port);
+  let cxn = CONNECTIONS[key];
   if (!cxn) {
     return null;
   }
@@ -74,7 +74,7 @@ exports.getConnection = function(ipaddr, port) {
  * this connection is connected
  */
 exports.removeConnection = function(ipaddr, port) {
-  var key = createKey(ipaddr, port);
+  let key = createKey(ipaddr, port);
   delete CONNECTIONS[key];
 };
 
@@ -90,18 +90,18 @@ exports.removeConnection = function(ipaddr, port) {
  * PeerConnection when it is created
  */
 exports.createConnection = function(ipaddr, port) {
-  var wrtcEndpoint = exports.getPathForWebrtcNegotiation(ipaddr, port);
+  let wrtcEndpoint = exports.getPathForWebrtcNegotiation(ipaddr, port);
   return new Promise(function(resolve, reject) {
-    var pc = exports.createRTCPeerConnection(null, null);
+    let pc = exports.createRTCPeerConnection(null, null);
     globalPc = pc;
 
     // Start a channel to kick off ICE candidates. Without this or otherwise
     // requesting media stream the ICE gathering process does not begin.
     pc.createDataChannel('requestChannel');
 
-    var iceCandidates = [];
-    var description = null;
-    var iceComplete = false;
+    let iceCandidates = [];
+    let description = null;
+    let iceComplete = false;
 
     pc.onicecandidate = function(e) {
       if (e.candidate === null) {
@@ -148,7 +148,7 @@ exports.sendOffer = function(
     wrtcEndpoint, rawConnection, desc, iceCandidates, ipaddr, port
 ) {
   return new Promise(function(resolve, reject) {
-    var bodyJson = {};
+    let bodyJson = {};
     bodyJson.description = desc;
     bodyJson.iceCandidates = iceCandidates;
 
@@ -163,15 +163,15 @@ exports.sendOffer = function(
       return resp.json();
     })
     .then(json => {
-      var peerDesc = exports.createRTCSessionDescription(json.description);
+      let peerDesc = exports.createRTCSessionDescription(json.description);
       rawConnection.setRemoteDescription(peerDesc);
 
       json.iceCandidates.forEach(candidateJson => {
-        var candidate = exports.createRTCIceCandidate(candidateJson);
+        let candidate = exports.createRTCIceCandidate(candidateJson);
         rawConnection.addIceCandidate(candidate);
       });
 
-      var cxn = exports.createPeerConnection(rawConnection);
+      let cxn = exports.createPeerConnection(rawConnection);
       exports.addConnection(ipaddr, port, cxn);
       resolve(cxn);
     })
@@ -221,7 +221,7 @@ exports.createPeerConnection = function(rawConnection) {
  * PeerConnection.
  */
 exports.getOrCreateConnection = function(ipaddr, port) {
-  var key = createKey(ipaddr, port);
+  let key = createKey(ipaddr, port);
   return new Promise(function(resolve, reject) {
     if (CONNECTIONS[key]) {
       console.log('Found existing connection');

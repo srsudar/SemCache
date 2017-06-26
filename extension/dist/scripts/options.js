@@ -3,28 +3,28 @@
 
 console.log('In SemCache options.js');
 
-var evaluation = require('./content-script/cs-evaluation');
-var appEval = require('../../../chromeapp/app/scripts/evaluation');
+const evaluation = require('./content-script/cs-evaluation');
+const appEval = require('../../../chromeapp/app/scripts/evaluation');
 
-var uiUrlList = document.querySelector('#urls');
-var uiNumIterations = document.querySelector('#numIterations');
-var uiKey = document.querySelector('#key');
+let uiUrlList = document.querySelector('#urls');
+let uiNumIterations = document.querySelector('#numIterations');
+let uiKey = document.querySelector('#key');
 
-var uiRetrieveKey = document.querySelector('#retrieveKey');
+let uiRetrieveKey = document.querySelector('#retrieveKey');
 
-var btnSave = document.querySelector('#save');
-var btnStop = document.querySelector('#stop');
-var btnGet = document.querySelector('#getResult');
+let btnSave = document.querySelector('#save');
+let btnStop = document.querySelector('#stop');
+let btnGet = document.querySelector('#getResult');
 
 
 function configureExperiment() {
-  var rawUrls = uiUrlList.value.trim();
-  var urls = rawUrls.split('\n');
+  let rawUrls = uiUrlList.value.trim();
+  let urls = rawUrls.split('\n');
   console.log('recovered the following URLs: ', urls);
-  var numIterations = uiNumIterations.value;
-  var key = uiKey.value;
+  let numIterations = uiNumIterations.value;
+  let key = uiKey.value;
 
-  var intIter = parseInt(numIterations);
+  let intIter = parseInt(numIterations);
 
   if (!intIter || isNaN(intIter)) {
     alert('invalid number of iterations');
@@ -35,7 +35,7 @@ function configureExperiment() {
 }
 
 function retrieveKey() {
-  var keyValue = uiRetrieveKey.value;
+  let keyValue = uiRetrieveKey.value;
   appEval.downloadKeyAsCsv(keyValue);
 }
 

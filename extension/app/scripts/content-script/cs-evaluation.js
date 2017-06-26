@@ -1,10 +1,10 @@
 'use strict';
 
-var util = require('../util/util');
-var runtime = require('../chrome-apis/runtime');
-var csApi = require('./cs-api');
-var storage = require('../chrome-apis/storage');
-var appEval = require('../../../../chromeapp/app/scripts/evaluation');
+const util = require('../util/util');
+const runtime = require('../chrome-apis/runtime');
+const csApi = require('./cs-api');
+const storage = require('../chrome-apis/storage');
+const appEval = require('../../../../chromeapp/app/scripts/evaluation');
 
 /**
  * Functionality for evaluating the framework. Note that unlike in the App,
@@ -78,7 +78,7 @@ exports.isPerformingTrial = function() {
  */
 exports.getParameters = function() {
   return new Promise(function(resolve) {
-    var keys = [
+    let keys = [
       exports.KEY_NUM_ITERATIONS,
       exports.KEY_CURRENT_ITERATION,
       exports.KEY_LOG_KEY,
@@ -87,16 +87,16 @@ exports.getParameters = function() {
     ];
     storage.get(keys)
     .then(getResult => {
-      var urlList = getResult[exports.KEY_URL_LIST];
-      var urlListIndex = getResult[exports.KEY_URL_LIST_INDEX];
+      let urlList = getResult[exports.KEY_URL_LIST];
+      let urlListIndex = getResult[exports.KEY_URL_LIST_INDEX];
       // Start out null to indicate the end of the trial. We'll update the
       // value below if we haven't moved past the end of the array.
-      var activeUrl = null;
+      let activeUrl = null;
       if (urlListIndex < urlList.length) {
         // Then we haven't yet finished the trial.
         activeUrl = urlList[urlListIndex];
       }
-      var result = {
+      let result = {
         key: getResult[exports.KEY_LOG_KEY],
         numIterations: getResult[exports.KEY_NUM_ITERATIONS],
         currentIter: getResult[exports.KEY_CURRENT_ITERATION],
@@ -146,7 +146,7 @@ exports.getFromStorageHelper = function(key) {
  */
 exports.startSavePageTrial = function(urls, numIterations, key) {
   return new Promise(function(resolve) {
-    var setArg = {};
+    let setArg = {};
     setArg[exports.KEY_NUM_ITERATIONS] = numIterations;
     setArg[exports.KEY_PERFORMING_TRIAL] = true;
     setArg[exports.KEY_CURRENT_ITERATION] = 0;
@@ -165,7 +165,7 @@ exports.startSavePageTrial = function(urls, numIterations, key) {
  * Start a trial for timing the time required to annotate links.
  */
 exports.startAnnotateLinksTrial = function(key, numIterations) {
-  var setArg = {};
+  let setArg = {};
   setArg[exports.LINK_ANNOTATION_KEYS.totalIterations] = numIterations;
   setArg[exports.LINK_ANNOTATION_KEYS.currentIteration] = 0;
   setArg[exports.LINK_ANNOTATION_KEYS.key] = key;
@@ -188,7 +188,7 @@ exports.startAnnotateLinksTrial = function(key, numIterations) {
  * resolving whatever savePageForContentScript resolves
  */
 exports.requestSavePage = function() {
-  var message = { type: 'savePageForContentScript' };
+  let message = { type: 'savePageForContentScript' };
   return new Promise(function(resolve) {
     runtime.sendMessage(message, function(response) {
       resolve(response);
@@ -242,7 +242,7 @@ exports.logResult = function(key) {
  * @return {Promise} Promise that resolves when the deletes are complete.
  */
 exports.deleteStorageHelperValues = function() {
-  var keys = [
+  let keys = [
     exports.KEY_PERFORMING_TRIAL,
     exports.KEY_NUM_ITERATIONS,
     exports.KEY_CURRENT_ITERATION,
@@ -274,9 +274,9 @@ exports.savePage = function() {
         return exports.requestSavePage();
       })
       .then(response => {
-        var domCompleteTime = csApi.getFullLoadTime();
-        var totalTime = domCompleteTime + response.timeToWrite;
-        var result = {
+        let domCompleteTime = csApi.getFullLoadTime();
+        let totalTime = domCompleteTime + response.timeToWrite;
+        let result = {
           domCompleteTime: domCompleteTime,
           timeToWrite: response.timeToWrite,
           totalTime: totalTime
@@ -294,9 +294,9 @@ exports.savePage = function() {
  */
 exports.createMetadataForLog = function() {
   // This is rather arbitrary and subject to change.
-  var href = util.getWindow().location.href;
-  var date = util.getToday().toString();
-  var result = {
+  let href = util.getWindow().location.href;
+  let date = util.getToday().toString();
+  let result = {
     href: href,
     date: date
   };
@@ -319,8 +319,8 @@ exports.getHref = function() {
  */
 exports.onPageLoadComplete = function() {
   return new Promise(function(resolve, reject) {
-    var params = null;
-    var doneWithAllUrls = false;
+    let params = null;
+    let doneWithAllUrls = false;
     exports.isPerformingTrial()
       .then(isTrial => {
         if (!isTrial) {
@@ -332,10 +332,10 @@ exports.onPageLoadComplete = function() {
       })
       .then(returnedParams => {
         params = returnedParams;
-        var href = exports.getHref(); 
+        let href = exports.getHref(); 
         // Some pages are adding '/' on the end, which should be fine, so also
         // check for this.
-        var activeUrlSlash = params.activeUrl + '/';
+        let activeUrlSlash = params.activeUrl + '/';
         if (href !== params.activeUrl && href !== activeUrlSlash) {
           console.log('Running a trial, but not on this page.');
           throw new Error('jump to end');
@@ -350,7 +350,7 @@ exports.onPageLoadComplete = function() {
       })
       .then(timingInfo => {
         // Log the results
-        var toLog = {};
+        let toLog = {};
         toLog.timing = timingInfo;
         toLog.metadata = exports.createMetadataForLog();
         toLog.iteration = params.currentIter;
@@ -361,8 +361,8 @@ exports.onPageLoadComplete = function() {
       })
       .then(() => {
         // Update the variables.
-        var setArg = {};
-        var nextIter = params.currentIter + 1;
+        let setArg = {};
+        let nextIter = params.currentIter + 1;
         setArg[exports.KEY_CURRENT_ITERATION] = nextIter;
         if (nextIter >= params.numIterations) {
           // We're done with this page. Increment the url list index.
@@ -385,7 +385,7 @@ exports.onPageLoadComplete = function() {
         }
         // If we're on the first iteration, navigate to the page.
         if (params.currentIter === 0) {
-          var nextUrl = params.urlList[params.urlListIndex];
+          let nextUrl = params.urlList[params.urlListIndex];
           util.getWindow().location.href = nextUrl;
           return Promise.resolve();
         } else {

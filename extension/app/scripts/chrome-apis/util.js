@@ -84,7 +84,7 @@ exports.applyArgsCheckLastError = function(fn, callArgs) {
     // sendMessage function interprets based on type, etc. Rather than passing
     // directly, we are going to pass the arguments variable directly, adding a
     // callback function.
-    var args = Array.prototype.slice.call(callArgs);
+    let args = Array.prototype.slice.call(callArgs);
     args.push(function(response) {
       if (exports.wasError()) {
         reject(exports.getError());

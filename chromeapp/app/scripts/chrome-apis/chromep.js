@@ -7,9 +7,9 @@
  * during testing.
  */
 
-var ChromePromise = require('chrome-promise');
+const ChromePromise = require('chrome-promise');
 
-var CHROMEP_SINGLETON = null;
+let CHROMEP_SINGLETON = null;
 
 /**
  * Return the chrome-promise singleton.

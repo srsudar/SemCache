@@ -61,7 +61,7 @@ exports.wait = function(ms) {
  */
 exports.waitInRange = function(min, max) {
   // + 1 because we specify inclusive, but randomInt is exclusive.
-  var waitTime = exports.randomInt(min, max + 1);
+  let waitTime = exports.randomInt(min, max + 1);
   return exports.wait(waitTime);
 };
 
@@ -88,7 +88,7 @@ exports.downloadText = function(text, fileName) {
   // Based on:
   // https://stackoverflow.com/questions/3665115/
   // create-a-file-in-memory-for-user-to-download-not-through-server
-  var element = document.createElement('a');
+  let element = document.createElement('a');
   element.setAttribute(
     'href',
     'data:text/plain;charset=utf-8,' +
@@ -108,7 +108,7 @@ exports.downloadText = function(text, fileName) {
  * https://github.com/webrtc/samples/blob/gh-pages/src/js/common.js
  */
 exports.trace = function trace(arg) {
-  var now = (window.performance.now() / 1000).toFixed(3);
+  let now = (window.performance.now() / 1000).toFixed(3);
   console.log(now + ': ', arg);
 };
 
@@ -129,18 +129,18 @@ exports.getPerf = function() {
 exports.getHostFromUrl = function(url) {
   // Find '//'. This will be the end of the scheme.
   // Then find the minimum of '/', ':', '#', '?'. That will contain the URL.
-  var slashes = url.indexOf('//');
+  let slashes = url.indexOf('//');
   if (slashes < 0) { throw new Error('not a url: ' + url); }
   // Truncate to ignore the slashes.
   url = url.substring(slashes + 2);
 
-  var candidateIndices = [
+  let candidateIndices = [
     url.indexOf(':'),
     url.indexOf('#'),
     url.indexOf('?'),
     url.indexOf('/')
   ];
-  var min = url.length;
+  let min = url.length;
   candidateIndices.forEach(idx => {
     if (idx !== -1) {
       // It is present in the string.
@@ -162,9 +162,9 @@ exports.getHostFromUrl = function(url) {
  * @return {integer}
  */
 exports.getPortFromUrl = function(url) {
-  var originalUrl = url;
-  var host = exports.getHostFromUrl(url);
-  var idxOfHost = url.indexOf(host);
+  let originalUrl = url;
+  let host = exports.getHostFromUrl(url);
+  let idxOfHost = url.indexOf(host);
   // Truncate the host
   url = url.substring(idxOfHost + host.length);
   if (!url.startsWith(':')) {
@@ -172,12 +172,12 @@ exports.getPortFromUrl = function(url) {
   }
   // Truncate the colon
   url = url.substring(1);
-  var candidateIndices = [
+  let candidateIndices = [
     url.indexOf('#'),
     url.indexOf('?'),
     url.indexOf('/')
   ];
-  var min = url.length;
+  let min = url.length;
   candidateIndices.forEach(idx => {
     if (idx !== -1) {
       if (idx < min) {
@@ -185,12 +185,12 @@ exports.getPortFromUrl = function(url) {
       }
     }
   });
-  var portStr = url.substring(0, min);
+  let portStr = url.substring(0, min);
   // There is no easy way that I'm aware of to check is something can be safely
   // parsed to an int in JavaScript. Wtf. But this is will work well enough for
   // our cases. It will permit things like '12a', '0xaf', etc, but this seems
   // fine.
-  var result = parseInt(portStr, 10);
+  let result = parseInt(portStr, 10);
   if (isNaN(result)) {
     throw new Error('Invalid port in url: ' + originalUrl);
   }
@@ -269,9 +269,9 @@ exports.getDataUrlAsBuffer = function(dataUrl) {
  */
 exports.getBlobAsDataUrl = function(blob) {
   return new Promise(function(resolve) {
-    var reader = new window.FileReader();
+    let reader = new window.FileReader();
     reader.onloadend = function() {
-      var base64 = reader.result;
+      let base64 = reader.result;
       resolve(base64);
     };
     reader.readAsDataURL(blob);

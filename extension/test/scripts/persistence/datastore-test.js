@@ -1,15 +1,16 @@
 /*jshint esnext:true*/
 /* globals Promise */
 'use strict';
+
 const test = require('tape');
 const proxyquire = require('proxyquire');
 const sinon = require('sinon');
 require('sinon-as-promised');
 
-let datastore = require('../../../app/scripts/persistence/datastore');
-
 const util = require('../test-util');
 const putil = require('../../../../chromeapp/test/scripts/persistence/persistence-util');
+
+let datastore = require('../../../app/scripts/persistence/datastore');
 
 /**
  * Proxyquire the datastore object with proxies passed as the proxied modules.
@@ -35,41 +36,41 @@ function end(t) {
 }
 
 test('getDomain works for http://www.google.com', function(t) {
-  var expected = 'www.google.com';
-  var url = 'http://www.google.com';
-  var actual = datastore.getDomain(url);
+  let expected = 'www.google.com';
+  let url = 'http://www.google.com';
+  let actual = datastore.getDomain(url);
   t.equal(actual, expected);
   t.end();
 });
 
 test('getDomain works for https://t.co', function(t) {
-  var expected = 't.co';
-  var url = 'https://t.co';
-  var actual = datastore.getDomain(url);
+  let expected = 't.co';
+  let url = 'https://t.co';
+  let actual = datastore.getDomain(url);
   t.equal(actual, expected);
   t.end();
 });
 
 test('getDomain ignores hash', function(t) {
-  var expected = 'example.com';
-  var url = 'http://example.com#foo';
-  var actual = datastore.getDomain(url);
+  let expected = 'example.com';
+  let url = 'http://example.com#foo';
+  let actual = datastore.getDomain(url);
   t.equal(actual, expected);
   t.end();
 });
 
 test('getDomain ignores query parameters', function(t) {
-  var expected = 'foo.bar.com';
-  var url = 'https://foo.bar.com?happy=golucky&foo=bar';
-  var actual = datastore.getDomain(url);
+  let expected = 'foo.bar.com';
+  let url = 'https://foo.bar.com?happy=golucky&foo=bar';
+  let actual = datastore.getDomain(url);
   t.equal(actual, expected);
   t.end();
 });
 
 test('getDomain ignores both hash and query parameters', function(t) {
-  var expected = 'example.com';
-  var url = 'https://example.com#frame?foo=baz';
-  var actual = datastore.getDomain(url);
+  let expected = 'example.com';
+  let url = 'https://example.com#frame?foo=baz';
+  let actual = datastore.getDomain(url);
   t.equal(actual, expected);
   t.end();
 });
@@ -132,8 +133,8 @@ test('getFaviconAsUrl resolves with data url', function(t) {
 });
 
 test('getFaviconAsUrl handles invalid url input', function(t) {
-  var invalid1 = datastore.getFaviconAsUrl(undefined);
-  var invalid2 = datastore.getFaviconAsUrl('');
+  let invalid1 = datastore.getFaviconAsUrl(undefined);
+  let invalid2 = datastore.getFaviconAsUrl('');
 
   Promise.all([invalid1, invalid2])
     .then(results => {

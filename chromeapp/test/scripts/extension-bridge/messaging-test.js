@@ -6,11 +6,11 @@ const proxyquire = require('proxyquire');
 require('sinon-as-promised');
 
 let messaging = require('../../../app/scripts/extension-bridge/messaging');
+
 const common = require('../../../app/scripts/extension-bridge/common-messaging');
 const constants = require('../../../app/scripts/constants');
-
-let mutil = require('./test-util');
-let putil = require('../persistence/persistence-util');
+const mutil = require('./test-util');
+const putil = require('../persistence/persistence-util');
 
 /**
  * Manipulating the object directly leads to polluting the require cache. Any
@@ -28,8 +28,8 @@ function resetMessaging() {
  * Return a MessageSender object from our extension.
  */
 function getSender() {
-  var messaging = require('../../../app/scripts/extension-bridge/messaging');
-  var extensionId = messaging.EXTENSION_ID;
+  let messaging = require('../../../app/scripts/extension-bridge/messaging');
+  let extensionId = messaging.EXTENSION_ID;
   delete require.cache[
     require.resolve('../../../app/scripts/extension-bridge/messaging')
   ];
@@ -56,8 +56,8 @@ function end(t) {
 }
 
 test('handleExternalMessage returns false if response undefined', function(t) {
-  var message = mutil.getAddPageMessage();
-  var sender = getSender();
+  let message = mutil.getAddPageMessage();
+  let sender = getSender();
 
   proxyquireMessaging({
     '../persistence/datastore': {
@@ -66,7 +66,7 @@ test('handleExternalMessage returns false if response undefined', function(t) {
   });
   messaging.getBlobFromDataUrl = sinon.stub();
 
-  var actual = messaging.handleExternalMessage(message, sender);
+  let actual = messaging.handleExternalMessage(message, sender);
 
   t.false(actual);
   t.end();
@@ -78,7 +78,7 @@ test('handleExternalMessage adds page to cache for write', function(t) {
   let sender = getSender();
   let cpdisk = putil.genCPDisks(1).next().value;
 
-  var addPageToCacheSpy = sinon.stub();
+  let addPageToCacheSpy = sinon.stub();
   addPageToCacheSpy.withArgs(cpdisk).resolves();
 
   proxyquireMessaging({
@@ -123,9 +123,9 @@ test('handleExternalMessage returns result of local query', function(t) {
   queryStub.withArgs(initiator).resolves(responder.body);
   messaging.queryLocalMachineForUrls = queryStub;
 
-  var returnValue;
+  let returnValue;
 
-  var callbackFromExtension = function(actual) {
+  let callbackFromExtension = function(actual) {
     t.deepEqual(actual, responder);
     t.true(returnValue);
     end(t);
@@ -145,9 +145,9 @@ test('handleExternalMessage rejects on local query error', function(t) {
   
   messaging.queryLocalMachineForUrls = sinon.stub().rejects(error);
 
-  var returnValue;
+  let returnValue;
 
-  var callbackFromExtension = function(actual) {
+  let callbackFromExtension = function(actual) {
     t.deepEqual(actual, expected);
     t.true(returnValue);
     end(t);
@@ -165,9 +165,9 @@ test('handleExternalMessage returns result of network query', function(t) {
   queryStub.withArgs(initiator).resolves(responder.body);
   messaging.queryLocalNetworkForUrls = queryStub;
 
-  var returnValue;
+  let returnValue;
 
-  var callbackFromExtension = function(actual) {
+  let callbackFromExtension = function(actual) {
     t.deepEqual(actual, responder);
     t.true(returnValue);
     end(t);
@@ -187,9 +187,9 @@ test('handleExternalMessage rejects on network query error', function(t) {
   
   messaging.queryLocalNetworkForUrls = sinon.stub().rejects(error);
 
-  var returnValue;
+  let returnValue;
 
-  var callbackFromExtension = function(actual) {
+  let callbackFromExtension = function(actual) {
     t.deepEqual(actual, expected);
     t.true(returnValue);
     end(t);
@@ -207,9 +207,9 @@ test('handleExternalMessage correct for open', function(t) {
   handleOpenStub.withArgs(initiator).resolves(responder.body);
   messaging.handleOpenRequest = handleOpenStub;
 
-  var returnValue;
+  let returnValue;
 
-  var callbackFromExtension = function(actual) {
+  let callbackFromExtension = function(actual) {
     t.deepEqual(actual, responder);
     t.true(returnValue);
     end(t);
@@ -229,9 +229,9 @@ test('handleExternalMessage rejects on error for open', function(t) {
   
   messaging.handleOpenRequest = sinon.stub().rejects(error);
 
-  var returnValue;
+  let returnValue;
 
-  var callbackFromExtension = function(actual) {
+  let callbackFromExtension = function(actual) {
     t.deepEqual(actual, expected);
     t.true(returnValue);
     end(t);
@@ -341,7 +341,7 @@ test('queryLocalMachineForUrls returns all matches', function(t) {
     }
   });
 
-  var message = common.createLocalQueryMessage(
+  let message = common.createLocalQueryMessage(
     'popup', [ foundUrl1, foundUrl2 ]
   );
 
@@ -357,7 +357,7 @@ test('queryLocalMachineForUrls returns all matches', function(t) {
 });
 
 test('queryLocalMachineForUrls rejects if something goes wrong', function(t) {
-  var expected = { msg: 'uh oh' };
+  let expected = { msg: 'uh oh' };
 
   proxyquireMessaging({
     '../persistence/datastore': {
@@ -379,10 +379,10 @@ test('queryLocalMachineForUrls rejects if something goes wrong', function(t) {
 });
 
 test('sendMessageToExtension calls sendMessage', function(t) {
-  var sendMessageSpy = sinon.spy();
+  let sendMessageSpy = sinon.spy();
   proxyquireMessaging({}, { sendMessage: sendMessageSpy });
 
-  var message = {hello: 'big fella'};
+  let message = {hello: 'big fella'};
 
   messaging.sendMessageToExtension(message);
   t.equal(sendMessageSpy.args[0][0], messaging.EXTENSION_ID);
@@ -392,16 +392,16 @@ test('sendMessageToExtension calls sendMessage', function(t) {
 });
 
 test('sendMessageToOpenUrl sends correct message', function(t) {
-  var url = 'open me plz';
-  var expectedMessage = {
+  let url = 'open me plz';
+  let expectedMessage = {
     type: 'open',
     params: {
       url: url
     }
   };
 
-  var messaging = require('../../../app/scripts/extension-bridge/messaging');
-  var sendMessageToExtensionSpy = sinon.spy();
+  let messaging = require('../../../app/scripts/extension-bridge/messaging');
+  let sendMessageToExtensionSpy = sinon.spy();
   messaging.sendMessageToExtension = sendMessageToExtensionSpy;
   messaging.sendMessageToOpenUrl(url);
 
@@ -411,8 +411,8 @@ test('sendMessageToOpenUrl sends correct message', function(t) {
 });
 
 test('queryLocalNetworkForUrls rejects on error', function(t) {
-  var expectedErr = { msg: 'query failed' };
-  var urls = ['a', 'b'];
+  let expectedErr = { msg: 'query failed' };
+  let urls = ['a', 'b'];
   let message = common.createNetworkQueryMessage('popup', urls);
 
   let queryForUrlsStub = sinon.stub();
@@ -435,10 +435,10 @@ test('queryLocalNetworkForUrls rejects on error', function(t) {
 });
 
 test('queryLocalNetworkForUrls resolves with result', function(t) {
-  var urls = [ 'bar.com', 'foo.com' ];
+  let urls = [ 'bar.com', 'foo.com' ];
 
-  var message = common.createNetworkQueryMessage('cs', urls);
-  var expected = [ 'hooray', 'woohoo' ];
+  let message = common.createNetworkQueryMessage('cs', urls);
+  let expected = [ 'hooray', 'woohoo' ];
 
   let queryForUrlsStub = sinon.stub();
   queryForUrlsStub.withArgs(urls).resolves(expected);

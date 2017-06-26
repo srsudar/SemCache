@@ -1,12 +1,14 @@
 /*jshint esnext:true*/
 'use strict';
-var test = require('tape');
-var sinon = require('sinon');
-var proxyquire = require('proxyquire');
-require('sinon-as-promised');
-var testUtil = require('./test-util');
 
-var evaluation = require('../../app/scripts/evaluation');
+const test = require('tape');
+const sinon = require('sinon');
+const proxyquire = require('proxyquire');
+require('sinon-as-promised');
+
+const testUtil = require('./test-util');
+
+let evaluation = require('../../app/scripts/evaluation');
 
 /**
  * Manipulating the object directly leads to polluting the require cache. Any
@@ -39,12 +41,12 @@ function proxyquireEvaluation(proxies, localStorageProxies) {
 }
 
 function discoverPeerPagesHelper(doLazy, t) {
-  var numPeers = 30;
-  var numPages = 15;
-  var numIterations = 4;
-  var key = 'testKey';
+  let numPeers = 30;
+  let numPages = 15;
+  let numIterations = 4;
+  let key = 'testKey';
 
-  var expected = [
+  let expected = [
     { resolved: 'fee' },
     { resolved: 'fi' },
     { resolved: 'fo' },
@@ -57,9 +59,9 @@ function discoverPeerPagesHelper(doLazy, t) {
     }
   });
   
-  var logTimeSpy = sinon.stub();
-  var runIterationSpy = sinon.stub();
-  for (var i = 0; i < expected.length; i++) {
+  let logTimeSpy = sinon.stub();
+  let runIterationSpy = sinon.stub();
+  for (let i = 0; i < expected.length; i++) {
     logTimeSpy.onCall(i).resolves();
     runIterationSpy.onCall(i).resolves(expected[i].resolved);
   }
@@ -71,14 +73,14 @@ function discoverPeerPagesHelper(doLazy, t) {
     evaluation.runDiscoverPeerPagesIteration = runIterationSpy;
   }
 
-  var resolveDelay = 4444;
+  let resolveDelay = 4444;
   evaluation.runDiscoverPeerPagesTrial(
     numPeers, numPages, numIterations, key, doLazy, resolveDelay
   )
   .then(actual => {
     t.deepEqual(actual, expected);
 
-    for (var j = 0; j < expected.length; j++) {
+    for (let j = 0; j < expected.length; j++) {
       t.deepEqual(
         logTimeSpy.args[j],
         [
@@ -112,7 +114,7 @@ function discoverPeerPagesHelper(doLazy, t) {
  * returned at the ith call to getNow()
  */
 function mockGetNow(times) {
-  var getNowSpy = sinon.stub();
+  let getNowSpy = sinon.stub();
 
   times.forEach((val, i) => {
     getNowSpy.onCall(i).returns(times[i]);
@@ -122,13 +124,13 @@ function mockGetNow(times) {
 }
 
 test('getTimeValues returns result of get', function(t) {
-  var key = 'timeMePlz';
-  var scopedKey = 'timing_timeMePlz';
-  var expected = [1, 2, 3];
+  let key = 'timeMePlz';
+  let scopedKey = 'timing_timeMePlz';
+  let expected = [1, 2, 3];
 
-  var getResult = {};
+  let getResult = {};
   getResult[scopedKey] = expected;
-  var getSpy = sinon.stub().resolves(getResult);
+  let getSpy = sinon.stub().resolves(getResult);
 
   proxyquireEvaluation({}, { get: getSpy });
 
@@ -147,11 +149,11 @@ test('getTimeValues returns result of get', function(t) {
 });
 
 test('getTimeValues returns null if not present', function(t) {
-  var key = 'timeMePlz';
-  var scopedKey = 'timing_timeMePlz';
-  var expected = null;
+  let key = 'timeMePlz';
+  let scopedKey = 'timing_timeMePlz';
+  let expected = null;
 
-  var getSpy = sinon.stub().resolves({});
+  let getSpy = sinon.stub().resolves({});
 
   proxyquireEvaluation({}, { get: getSpy });
 
@@ -170,7 +172,7 @@ test('getTimeValues returns null if not present', function(t) {
 });
 
 test('getTimeValues rejects if error', function(t) {
-  var expected = { error: 'sigh' };
+  let expected = { error: 'sigh' };
   proxyquireEvaluation({}, { get: sinon.stub().rejects(expected)});
   evaluation.getTimeValues()
   .then(res => {
@@ -186,7 +188,7 @@ test('getTimeValues rejects if error', function(t) {
 });
 
 test('fulfillPromises all resolve', function(t) {
-  var expected = [ 
+  let expected = [ 
     { resolved: 0.1 },
     { resolved: 1.1 },
     { resolved: 2.1 },
@@ -194,12 +196,12 @@ test('fulfillPromises all resolve', function(t) {
     { resolved: 4.1 }
   ];
 
-  var promises = [];
+  let promises = [];
   promises[0] = () => Promise.resolve(expected[0].resolved);
 
   // This value will have the option to not resolve immediately, to ensure that
   // we are waiting between executing in order to do so synchronously.
-  var delayedResolve = function() {
+  let delayedResolve = function() {
     return new Promise(function(resolve) {
       setTimeout(
         function() {
@@ -233,7 +235,7 @@ test('fulfillPromises all resolve', function(t) {
 });
 
 test('fulfillPromises all reject', function(t) {
-  var expected = [ 
+  let expected = [ 
     { caught: 0.1 },
     { caught: 1.1 },
     { caught: 2.1 },
@@ -241,7 +243,7 @@ test('fulfillPromises all reject', function(t) {
     { caught: 4.1 }
   ];
 
-  var promises = [];
+  let promises = [];
   promises[0] = () => Promise.reject(expected[0].caught);
   promises[1] = () => Promise.reject(expected[1].caught);
   promises[2] = () => Promise.reject(expected[2].caught);
@@ -262,10 +264,10 @@ test('fulfillPromises all reject', function(t) {
 });
 
 test('runDiscoverPeerPagesIteration resolves if all is well', function(t) {
-  var numPeers = 2;
-  var numPages = 5;
+  let numPeers = 2;
+  let numPages = 5;
 
-  var peer1 = {
+  let peer1 = {
     serviceName: 'Tyrion Cache',
     type: '_semcache._tcp',
     domain: 'tyrion.local',
@@ -273,7 +275,7 @@ test('runDiscoverPeerPagesIteration resolves if all is well', function(t) {
     ipAddress: '1.2.3.4'
   };
 
-  var peer2 = {
+  let peer2 = {
     serviceName: 'Cersei Cache',
     type: '_semcache._tcp',
     domain: 'cersei.local',
@@ -282,47 +284,47 @@ test('runDiscoverPeerPagesIteration resolves if all is well', function(t) {
   };
 
   // We will return < the number we expect.
-  var resolvedInstances = [ peer1, peer2 ];
+  let resolvedInstances = [ peer1, peer2 ];
 
-  var peer1Response = {
+  let peer1Response = {
     metadata: { version: 0 },
     cachedPages: [ 'one', 'two', 'three', 'four', 'five' ]
   };
 
-  var peer2Response = {
+  let peer2Response = {
     metadata: { version: 0 },
     cachedPages: [ 'a', 'b', 'c', 'd', 'e' ]
   };
 
-  var evalUrl1 = 'tyrion/eval.json';
-  var evalUrl2 = 'cersei/eval.json';
-  var getEvalPagesUrlSpy = sinon.stub();
+  let evalUrl1 = 'tyrion/eval.json';
+  let evalUrl2 = 'cersei/eval.json';
+  let getEvalPagesUrlSpy = sinon.stub();
   getEvalPagesUrlSpy.onCall(0).returns(evalUrl1);
   getEvalPagesUrlSpy.onCall(1).returns(evalUrl2);
 
-  var fetchJsonSpy = sinon.stub();
+  let fetchJsonSpy = sinon.stub();
   fetchJsonSpy.withArgs(evalUrl1).resolves(peer1Response);
   fetchJsonSpy.withArgs(evalUrl2).resolves(peer2Response);
 
-  var startTime = 5413;
-  var browsePeerEnd = 8171;
-  var browsePageEnd = 1200;
-  var totalTime = browsePageEnd - startTime;
-  var browsePeerTime = browsePeerEnd - startTime;
-  var browsePageTime = browsePageEnd - browsePeerEnd;
+  let startTime = 5413;
+  let browsePeerEnd = 8171;
+  let browsePageEnd = 1200;
+  let totalTime = browsePageEnd - startTime;
+  let browsePeerTime = browsePeerEnd - startTime;
+  let browsePageTime = browsePageEnd - browsePeerEnd;
 
-  var getNowSpy = sinon.stub();
+  let getNowSpy = sinon.stub();
   getNowSpy.onCall(0).returns(startTime);
   getNowSpy.onCall(1).returns(browsePeerEnd);
   getNowSpy.onCall(2).returns(browsePageEnd);
   
-  var expected = {
+  let expected = {
     timeBrowsePeers: browsePeerTime,
     timeBrowsePages: browsePageTime,
     totalTime: totalTime
   };
 
-  var getBrowseableCachesSpy = sinon.stub().resolves(resolvedInstances);
+  let getBrowseableCachesSpy = sinon.stub().resolves(resolvedInstances);
   proxyquireEvaluation({
     './app-controller': {
       getBrowseableCaches: getBrowseableCachesSpy
@@ -367,10 +369,10 @@ test('runDiscoverPeerPagesIteration resolves if all is well', function(t) {
 });
 
 test('runDiscoverPeerPagesIteration rejects if not enough pages', function(t) {
-  var numPeers = 2;
-  var numPages = 5;
+  let numPeers = 2;
+  let numPages = 5;
 
-  var peer1 = {
+  let peer1 = {
     serviceName: 'Tyrion Cache',
     type: '_semcache._tcp',
     domain: 'tyrion.local',
@@ -378,7 +380,7 @@ test('runDiscoverPeerPagesIteration rejects if not enough pages', function(t) {
     ipAddress: '1.2.3.4'
   };
 
-  var peer2 = {
+  let peer2 = {
     serviceName: 'Cersei Cache',
     type: '_semcache._tcp',
     domain: 'cersei.local',
@@ -386,24 +388,24 @@ test('runDiscoverPeerPagesIteration rejects if not enough pages', function(t) {
     ipAddress: '172.2.9.45'
   };
 
-  var resolvedInstances = [ peer1, peer2 ];
+  let resolvedInstances = [ peer1, peer2 ];
 
-  var evalUrl1 = 'tyrionlist.json';
-  var evalUrl2 = 'cersei/list.json';
-  var getEvalPagesUrlSpy = sinon.stub();
+  let evalUrl1 = 'tyrionlist.json';
+  let evalUrl2 = 'cersei/list.json';
+  let getEvalPagesUrlSpy = sinon.stub();
   getEvalPagesUrlSpy.withArgs(peer1.ipAddress).returns(evalUrl1);
   getEvalPagesUrlSpy.withArgs(peer2.ipAddress).returns(evalUrl2);
 
-  var peer1Response = {
+  let peer1Response = {
     metadata: { version: 0 },
     cachedPages: [ 'one', 'two', 'three' ]
   };
-  var fetchJsonSpy = sinon.stub();
+  let fetchJsonSpy = sinon.stub();
   fetchJsonSpy.withArgs(evalUrl1).resolves(peer1Response);
   
-  var expected = { err: 'missing pages: found 3, expected 5' };
+  let expected = { err: 'missing pages: found 3, expected 5' };
 
-  var getBrowseableCachesSpy = sinon.stub().resolves(resolvedInstances);
+  let getBrowseableCachesSpy = sinon.stub().resolves(resolvedInstances);
   proxyquireEvaluation({
     './app-controller': {
       getBrowseableCaches: getBrowseableCachesSpy
@@ -429,15 +431,15 @@ test('runDiscoverPeerPagesIteration rejects if not enough pages', function(t) {
 });
 
 test('runDiscoverPeerPagesIteration rejects if missing peers', function(t) {
-  var numPeers = 5;
-  var numPages = 10;
+  let numPeers = 5;
+  let numPages = 10;
 
   // We will return < the number we expect.
-  var resolvedCaches = [ 'one', 'two', 'three', 'four' ];
+  let resolvedCaches = [ 'one', 'two', 'three', 'four' ];
   
-  var expected = { err: 'missing peer: found 4, expected 5' };
+  let expected = { err: 'missing peer: found 4, expected 5' };
 
-  var getBrowseableCachesSpy = sinon.stub().resolves(resolvedCaches);
+  let getBrowseableCachesSpy = sinon.stub().resolves(resolvedCaches);
   proxyquireEvaluation({
     './app-controller': {
       getBrowseableCaches: getBrowseableCachesSpy
@@ -467,16 +469,16 @@ test('runDiscoverPeerPagesTrialLazy calls helper', function(t) {
 });
 
 test('logTime calls storage correctly if new stream', function(t) {
-  var key = 'foo';
-  var time = 1234;
-  var scopedKey = 'timing_foo';
-  var markKeys = { foo: 'from marks' };
+  let key = 'foo';
+  let time = 1234;
+  let scopedKey = 'timing_foo';
+  let markKeys = { foo: 'from marks' };
 
-  var setSpy = sinon.stub();
-  var getSpy = sinon.stub().resolves({});
-  var getKeysFromMarksStub = sinon.stub().returns(markKeys);
-  var clearMarksStub = sinon.stub();
-  var getPerfStub = {
+  let setSpy = sinon.stub();
+  let getSpy = sinon.stub().resolves({});
+  let getKeysFromMarksStub = sinon.stub().returns(markKeys);
+  let clearMarksStub = sinon.stub();
+  let getPerfStub = {
     clearMarks: clearMarksStub
   };
   proxyquireEvaluation(
@@ -492,7 +494,7 @@ test('logTime calls storage correctly if new stream', function(t) {
   );
   evaluation.getKeysFromMarks = getKeysFromMarksStub;
 
-  var expectedSet = {};
+  let expectedSet = {};
   expectedSet[scopedKey] = [{
       time: time,
       keysFromMarks: markKeys
@@ -513,18 +515,18 @@ test('logTime calls storage correctly if new stream', function(t) {
 });
 
 test('logTime calls storage correctly if appending to stream', function(t) {
-  var key = 'openKhan';
-  var time = 123.56;
-  var scopedKey = 'timing_openKhan';
+  let key = 'openKhan';
+  let time = 123.56;
+  let scopedKey = 'timing_openKhan';
 
-  var existingValues = {};
-  var existingTimes = [ 3, 5 ];
+  let existingValues = {};
+  let existingTimes = [ 3, 5 ];
   existingValues[scopedKey] = existingTimes;
 
-  var setSpy = sinon.stub();
-  var getSpy = sinon.stub().resolves(existingValues);
-  var clearMarksStub = sinon.stub();
-  var getPerfStub = {
+  let setSpy = sinon.stub();
+  let getSpy = sinon.stub().resolves(existingValues);
+  let clearMarksStub = sinon.stub();
+  let getPerfStub = {
     clearMarks: clearMarksStub
   };
   proxyquireEvaluation(
@@ -540,8 +542,8 @@ test('logTime calls storage correctly if appending to stream', function(t) {
   );
   evaluation.getKeysFromMarks = sinon.stub().returns({});
 
-  var expectedSet = {};
-  var newTimes = existingTimes.slice();
+  let expectedSet = {};
+  let newTimes = existingTimes.slice();
   newTimes.push({
     time: time,
     keysFromMarks: {}
@@ -563,7 +565,7 @@ test('logTime calls storage correctly if appending to stream', function(t) {
 });
 
 test('logTime rejects with error', function(t) {
-  var expected = { error: 'nope' };
+  let expected = { error: 'nope' };
   evaluation.getTimeValues = sinon.stub().rejects(expected);
   evaluation.logTime()
   .then(res => {
@@ -579,10 +581,10 @@ test('logTime rejects with error', function(t) {
 });
 
 test('generateDummyPage incorporates nonce and number', function(t) {
-  var index = 123;
-  var nonce = 'feefifofum';
+  let index = 123;
+  let nonce = 'feefifofum';
 
-  var actual = evaluation.generateDummyPage(index, nonce);
+  let actual = evaluation.generateDummyPage(index, nonce);
 
   t.notEqual(actual.captureHref.indexOf(index), -1);
   t.notEqual(actual.captureHref.indexOf(nonce), -1);
@@ -591,19 +593,19 @@ test('generateDummyPage incorporates nonce and number', function(t) {
 });
 
 test('generateDummyPages calls helper and correct size', function(t) {
-  var page1 = 'foo';
-  var page2 = 'bar';
+  let page1 = 'foo';
+  let page2 = 'bar';
 
-  var numPages = 2;
-  var nonce = 'abcdef';
+  let numPages = 2;
+  let nonce = 'abcdef';
 
-  var generateDummyPageSpy = sinon.stub();
+  let generateDummyPageSpy = sinon.stub();
   generateDummyPageSpy.onCall(0).returns(page1);
   generateDummyPageSpy.onCall(1).returns(page2);
   evaluation.generateDummyPage = generateDummyPageSpy;
 
-  var expected = [page1, page2];
-  var actual = evaluation.generateDummyPages(numPages, nonce);
+  let expected = [page1, page2];
+  let actual = evaluation.generateDummyPages(numPages, nonce);
 
   t.deepEqual(actual, expected);
   t.deepEqual(generateDummyPageSpy.args[0], [0, nonce]);
@@ -613,11 +615,11 @@ test('generateDummyPages calls helper and correct size', function(t) {
 });
 
 test('getDummyResponseForAllCachedPages calls helpers', function(t) {
-  var mdataObj = { md: 'meta' };
-  var pages = ['alpha', 'beta'];
+  let mdataObj = { md: 'meta' };
+  let pages = ['alpha', 'beta'];
 
-  var createMetadatObjSpy = sinon.stub().returns(mdataObj);
-  var generateDummyPagesSpy = sinon.stub().returns(pages);
+  let createMetadatObjSpy = sinon.stub().returns(mdataObj);
+  let generateDummyPagesSpy = sinon.stub().returns(pages);
 
   proxyquireEvaluation({
     './server/server-api': {
@@ -626,15 +628,15 @@ test('getDummyResponseForAllCachedPages calls helpers', function(t) {
   });
   evaluation.generateDummyPages = generateDummyPagesSpy;
 
-  var numPages = 5;
-  var nonce = 'poobear';
+  let numPages = 5;
+  let nonce = 'poobear';
 
-  var expected = {
+  let expected = {
     metadata: mdataObj,
     cachedPages: pages
   };
 
-  var actual = evaluation.getDummyResponseForAllCachedPages(numPages, nonce);
+  let actual = evaluation.getDummyResponseForAllCachedPages(numPages, nonce);
 
   t.deepEqual(actual, expected);
   t.deepEqual(generateDummyPagesSpy.args[0], [numPages, nonce]);
@@ -643,36 +645,36 @@ test('getDummyResponseForAllCachedPages calls helpers', function(t) {
 });
 
 test('getEvalPagesUrl correct', function(t) {
-  var ipAddress = '1.2.3.4';
-  var port = 123;
-  var numPages = 5;
+  let ipAddress = '1.2.3.4';
+  let port = 123;
+  let numPages = 5;
 
-  var expected = 'http://1.2.3.4:123/eval_list?numPages=5';
-  var actual = evaluation.getEvalPagesUrl(ipAddress, port, numPages);
+  let expected = 'http://1.2.3.4:123/eval_list?numPages=5';
+  let actual = evaluation.getEvalPagesUrl(ipAddress, port, numPages);
 
   t.equal(actual, expected);
   t.end();
 });
 
 test('runLoadPageTrial correct', function(t) {
-  var numIterations = 4;
-  var key = 'loadKey';
-  var captureUrl = 'original_url.html';
-  var captureDate = 'the date it was saved';
-  var mhtmlUrl = 'the_url_to_save_the_page.mhtml';
-  var metadata = { meta: 'data', fullUrl: 'full url' };
+  let numIterations = 4;
+  let key = 'loadKey';
+  let captureUrl = 'original_url.html';
+  let captureDate = 'the date it was saved';
+  let mhtmlUrl = 'the_url_to_save_the_page.mhtml';
+  let metadata = { meta: 'data', fullUrl: 'full url' };
 
-  var loadTimes = [
+  let loadTimes = [
     1.1,
     2.2,
     3.3,
     4.4
   ];
-  var expected = [];
+  let expected = [];
 
-  var runLoadPageIterationSpy = sinon.stub();
-  for (var i = 0; i < numIterations; i++) {
-    var value = loadTimes[i];
+  let runLoadPageIterationSpy = sinon.stub();
+  for (let i = 0; i < numIterations; i++) {
+    let value = loadTimes[i];
     runLoadPageIterationSpy.onCall(i).resolves(value);
     expected.push({ resolved: value });
   }
@@ -683,7 +685,7 @@ test('runLoadPageTrial correct', function(t) {
     }
   });
   
-  var logTimeSpy = sinon.stub();
+  let logTimeSpy = sinon.stub();
   evaluation.logTime = logTimeSpy;
   evaluation.runLoadPageIteration = runLoadPageIterationSpy;
 
@@ -699,7 +701,7 @@ test('runLoadPageTrial correct', function(t) {
     t.deepEqual(actual, expected);
     t.equal(runLoadPageIterationSpy.callCount, numIterations);
 
-    for (var j = 0; j < expected.length; j++) {
+    for (let j = 0; j < expected.length; j++) {
       t.deepEqual(
         logTimeSpy.args[j],
         [
@@ -728,41 +730,41 @@ test('runLoadPageTrial correct', function(t) {
 });
 
 test('runLoadPageTrialForCache correct', function(t) {
-  var listPagesUrl = 'host:port/list_pages';
-  var numIterations = 3;
-  var key = 'cacheKey';
+  let listPagesUrl = 'host:port/list_pages';
+  let numIterations = 3;
+  let key = 'cacheKey';
 
-  var page1 = {
+  let page1 = {
     captureUrl: 'url1',
     captureDate: 'date1',
     accessPath: 'path1',
     metadata: { mdata: '1' }
   };
 
-  var page2 = {
+  let page2 = {
     captureUrl: 'url2',
     captureDate: 'date2',
     accessPath: 'path2',
     metadata: { mdata: '2' }
   };
 
-  var caches = {
+  let caches = {
     cachedPages: [page1, page2]
   };
 
   let fetchJsonSpy = sinon.stub();
   fetchJsonSpy.withArgs(listPagesUrl).resolves(caches);
 
-  var pageResults = [
+  let pageResults = [
     'result for page 1',
     'result for page 2',
   ];
 
-  var expected = [];
+  let expected = [];
 
-  var runLoadPageTrialSpy = sinon.stub();
-  for (var i = 0; i < caches.cachedPages.length; i++) {
-    var value = pageResults[i];
+  let runLoadPageTrialSpy = sinon.stub();
+  for (let i = 0; i < caches.cachedPages.length; i++) {
+    let value = pageResults[i];
     runLoadPageTrialSpy.onCall(i).resolves(value);
     expected.push({ resolved: value });
   }
@@ -816,27 +818,27 @@ test('runLoadPageTrialForCache correct', function(t) {
 });
 
 test('resolvePeers correct', function(t) {
-  var cacheNames = testUtil.createCacheNames('_semcache._tcp', 3);
-  var caches = testUtil.createCacheObjsFromNames(cacheNames);
-  var toLog = {};
+  let cacheNames = testUtil.createCacheNames('_semcache._tcp', 3);
+  let caches = testUtil.createCacheObjsFromNames(cacheNames);
+  let toLog = {};
 
-  var expectedErr = { msg: 'something went wrong' };
+  let expectedErr = { msg: 'something went wrong' };
 
-  var resolveCacheSpy = sinon.stub();
+  let resolveCacheSpy = sinon.stub();
   resolveCacheSpy.withArgs(cacheNames[0].serviceName).resolves(caches[0]);
   resolveCacheSpy.withArgs(cacheNames[1].serviceName).resolves(caches[1]);
   resolveCacheSpy.withArgs(cacheNames[2].serviceName).rejects(expectedErr);
 
-  var resolveDelay = 12345;
+  let resolveDelay = 12345;
 
-  var getNowSpy = sinon.stub();
+  let getNowSpy = sinon.stub();
   getNowSpy.onCall(0).returns(10);
   getNowSpy.onCall(1).returns(15);
   getNowSpy.onCall(2).returns(10);
   getNowSpy.onCall(3).returns(20);
 
-  var expectedResolves = [ 5, 10 ];  // 15 - 10, 20 - 10
-  var expectedServiceNames = [
+  let expectedResolves = [ 5, 10 ];  // 15 - 10, 20 - 10
+  let expectedServiceNames = [
     cacheNames[0].serviceName, 
     cacheNames[1].serviceName
   ];
@@ -844,7 +846,7 @@ test('resolvePeers correct', function(t) {
   let waitSpy = sinon.stub();
   waitSpy.withArgs(resolveDelay).resolves();
 
-  var expected = [
+  let expected = [
     { resolved: caches[0] },
     { resolved: caches[1] },
     { caught: expectedErr }
@@ -878,29 +880,29 @@ test('resolvePeers correct', function(t) {
 });
 
 test('runFetchFileIteration correct on success', function(t) {
-  var times = [10, 50];
-  var totalTime = times[1] - times[0];
-  var blob = { size: 7777 };
+  let times = [10, 50];
+  let totalTime = times[1] - times[0];
+  let blob = { size: 7777 };
 
-  var expected = {
+  let expected = {
     timeToFetch: totalTime,
     fileSize: blob.size
   };
 
-  var ipAddr = '1.2.3.4';
-  var port = 8876;
-  var mhtmlUrl = 'whyme.mhtml';
+  let ipAddr = '1.2.3.4';
+  let port = 8876;
+  let mhtmlUrl = 'whyme.mhtml';
 
-  var params = { iam: 'aparam' };
-  var createFileParamsSpy = sinon.stub();
+  let params = { iam: 'aparam' };
+  let createFileParamsSpy = sinon.stub();
   createFileParamsSpy.withArgs(ipAddr, port, mhtmlUrl).returns(params);
 
   let getFileBlobStub = sinon.stub();
   getFileBlobStub.withArgs(params).resolves(blob);
-  var peerAccessor = {
+  let peerAccessor = {
     getFileBlob: getFileBlobStub
   };
-  var getPeerAccessorSpy = sinon.stub().returns(peerAccessor);
+  let getPeerAccessorSpy = sinon.stub().returns(peerAccessor);
 
   proxyquireEvaluation({
     './peer-interface/common': {
@@ -924,21 +926,21 @@ test('runFetchFileIteration correct on success', function(t) {
 });
 
 test('runFetchFileTrial correct on success', function(t) {
-  var numIterations = 4;
-  var key = 'testKey';
-  var mhtmlUrl = 'sigh.com';
-  var ipAddr = '8.7.6.0';
-  var port = 12345;
-  var waitMillis = 4433;
+  let numIterations = 4;
+  let key = 'testKey';
+  let mhtmlUrl = 'sigh.com';
+  let ipAddr = '8.7.6.0';
+  let port = 12345;
+  let waitMillis = 4433;
 
-  var iterationResults = [
+  let iterationResults = [
     { timeToFetch: 1111, fileSize: 100 },
     { timeToFetch: 2222, fileSize: 100 },
     { timeToFetch: 3333, fileSize: 100 },
     { timeToFetch: 4444, fileSize: 100 }
   ];
 
-  var expected = [
+  let expected = [
     { resolved: iterationResults[0] },
     { resolved: iterationResults[1] },
     { resolved: iterationResults[2] },
@@ -951,9 +953,9 @@ test('runFetchFileTrial correct on success', function(t) {
     }
   });
   
-  var logTimeSpy = sinon.stub();
-  var runIterationSpy = sinon.stub();
-  for (var i = 0; i < expected.length; i++) {
+  let logTimeSpy = sinon.stub();
+  let runIterationSpy = sinon.stub();
+  for (let i = 0; i < expected.length; i++) {
     logTimeSpy.onCall(i).resolves();
     runIterationSpy.onCall(i).resolves(expected[i].resolved);
   }
@@ -967,7 +969,7 @@ test('runFetchFileTrial correct on success', function(t) {
   .then(actual => {
     t.deepEqual(actual, expected);
 
-    for (var j = 0; j < expected.length; j++) {
+    for (let j = 0; j < expected.length; j++) {
       t.deepEqual(
         logTimeSpy.args[j],
         [
@@ -996,10 +998,10 @@ test('runFetchFileTrial correct on success', function(t) {
 
 test('generateDummyPageInfos broadly correct', function(t) {
   // Going to only kind of test this...there's a lot to change.
-  var numPages = 12;
-  var peerNumber = 2;
+  let numPages = 12;
+  let peerNumber = 2;
 
-  var actual = evaluation.generateDummyPageInfos(numPages, peerNumber);
+  let actual = evaluation.generateDummyPageInfos(numPages, peerNumber);
 
   t.equal(actual.length, numPages);
   actual.forEach(pageInfo => {
@@ -1010,10 +1012,10 @@ test('generateDummyPageInfos broadly correct', function(t) {
 });
 
 test('generateDummyDigests broadly correct', function(t) {
-  var numDigests = 10;
-  var numPages = 450;
+  let numDigests = 10;
+  let numPages = 450;
 
-  var actual = evaluation.generateDummyDigests(numDigests, numPages);
+  let actual = evaluation.generateDummyDigests(numDigests, numPages);
 
   t.equal(actual.length, numDigests);
   actual.forEach(digest => {
@@ -1025,7 +1027,7 @@ test('generateDummyDigests broadly correct', function(t) {
 });
 
 test('getKeysFromMarks correct' , function(t) {
-  var marks = [
+  let marks = [
     {
       name: 'alpha',
       startTime: 100.0
@@ -1036,18 +1038,18 @@ test('getKeysFromMarks correct' , function(t) {
     }
   ];
 
-  var expected = {
+  let expected = {
     MARK_alpha: 100.0,
     MARK_beta: 150.0,
     MARK_alpha_TO_MARK_beta: 50.0
   };
 
-  var getEntriesStub = sinon.stub().withArgs('mark').returns(marks);
+  let getEntriesStub = sinon.stub().withArgs('mark').returns(marks);
   evaluation.getPerf = sinon.stub().returns({
     getEntriesByType: getEntriesStub
   });
 
-  var actual = evaluation.getKeysFromMarks();
+  let actual = evaluation.getKeysFromMarks();
   t.deepEqual(actual, expected);
   end(t);
 });

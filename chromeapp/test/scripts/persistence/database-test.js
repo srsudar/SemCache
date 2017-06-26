@@ -1,12 +1,13 @@
 'use strict';
-let test = require('tape');
-let proxyquire = require('proxyquire');
+
+const test = require('tape');
+const proxyquire = require('proxyquire');
 require('sinon-as-promised');
 
-let database = require('../../../app/scripts/persistence/database');
-let objects = require('../../../app/scripts/persistence/objects');
+const objects = require('../../../app/scripts/persistence/objects');
 
-const CPDisk = objects.CPDisk;
+let database = require('../../../app/scripts/persistence/database');
+
 const CPInfo = objects.CPInfo;
 const CPSummary = objects.CPSummary;
 

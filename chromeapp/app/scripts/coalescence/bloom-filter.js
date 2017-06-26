@@ -11,8 +11,8 @@
 /**
  * The library we are wrapping.
  */
-var lib = require('bloomfilter');
-var toArrayBuffer = require('to-arraybuffer');
+const lib = require('bloomfilter');
+const toArrayBuffer = require('to-arraybuffer');
 
 /**
  * Both the number of bits and the number of hash functions are constants that
@@ -20,8 +20,8 @@ var toArrayBuffer = require('to-arraybuffer');
  * a Google Sheets calculation used to generate 0.001 probability of false
  * positive for 1000 elements.
  */
-var NUM_BITS = 14378;
-var NUM_HASH_FUNCTIONS = 10;
+const NUM_BITS = 14378;
+const NUM_HASH_FUNCTIONS = 10;
 
 class BloomFilter {
   constructor() {
@@ -65,11 +65,11 @@ class BloomFilter {
    * @return {BloomFilter}
    */
   static from(buff) {
-    var wrapper = new exports.BloomFilter();
+    let wrapper = new exports.BloomFilter();
 
     // We need an Int32Array, not just a buffer.
-    var arrayBuffer = toArrayBuffer(buff);
-    var typedArray = new Int32Array(arrayBuffer);
+    let arrayBuffer = toArrayBuffer(buff);
+    let typedArray = new Int32Array(arrayBuffer);
     
     wrapper.backingObj = new lib.BloomFilter(typedArray, NUM_HASH_FUNCTIONS);
     return wrapper;

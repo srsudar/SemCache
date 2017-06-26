@@ -1,9 +1,9 @@
 /* globals chrome */
 'use strict';
 
-var util = require('./util');
+const util = require('./util');
 
-var DEBUG = false;
+let DEBUG = false;
 
 /**
  * @constructor
@@ -77,8 +77,8 @@ exports.bind = function(socketId, address, port) {
   return new Promise(function(resolve, reject) {
     util.getUdp().bind(socketId, address, port, function(result) {
       if (result < 0) {
-        var lastError = chrome.runtime.lastError;
-        var logInfo = {
+        let lastError = chrome.runtime.lastError;
+        let logInfo = {
           socketId: socketId,
           address: address,
           port: port,
@@ -146,7 +146,7 @@ exports.joinGroup = function(socketId, address) {
         console.log('address: ', address);
       }
       if (result < 0) {
-        var lastError = chrome.runtime.lastError || {};
+        let lastError = chrome.runtime.lastError || {};
         console.log('chromeUdp.joinGroup: result < 0: ', result);
         reject(new Error('Error joining group: ' + lastError.message));
       } else {

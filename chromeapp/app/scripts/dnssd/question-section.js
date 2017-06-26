@@ -1,14 +1,14 @@
 /* global exports, require */
 'use strict';
 
-var byteArray = require('./byte-array');
-var dnsUtil = require('./dns-util');
+const byteArray = require('./byte-array');
+const dnsUtil = require('./dns-util');
 
-var NUM_OCTETS_QUERY_TYPE = 2;
-var NUM_OCTETS_QUERY_CLASS = 2;
+const NUM_OCTETS_QUERY_TYPE = 2;
+const NUM_OCTETS_QUERY_CLASS = 2;
 
-var MAX_QUERY_TYPE = 65535;
-var MAX_QUERY_CLASS = 65535;
+const MAX_QUERY_TYPE = 65535;
+const MAX_QUERY_CLASS = 65535;
 
 /**
  * A DNS Question section.
@@ -61,9 +61,9 @@ exports.QuestionSection = function QuestionSection(qName, qType, qClass) {
  * @return {ByteArray}
  */
 exports.QuestionSection.prototype.convertToByteArray = function() {
-  var result = new byteArray.ByteArray();
+  let result = new byteArray.ByteArray();
   
-  var queryAsBytes = dnsUtil.getDomainAsByteArray(this.queryName);
+  let queryAsBytes = dnsUtil.getDomainAsByteArray(this.queryName);
   result.append(queryAsBytes);
 
   result.push(this.queryType, NUM_OCTETS_QUERY_TYPE);
@@ -92,19 +92,19 @@ exports.QuestionSection.prototype.unicastResponseRequested = function() {
  * @return {QuestionSection}
  */
 exports.createQuestionFromReader = function(reader) {
-  var queryName = dnsUtil.getDomainFromByteArrayReader(reader);
+  let queryName = dnsUtil.getDomainFromByteArrayReader(reader);
 
-  var queryType = reader.getValue(NUM_OCTETS_QUERY_TYPE);
+  let queryType = reader.getValue(NUM_OCTETS_QUERY_TYPE);
   if (queryType < 0 || queryType > MAX_QUERY_TYPE) {
     throw new Error('deserialized query type out of range: ' + queryType);
   }
 
-  var queryClass = reader.getValue(NUM_OCTETS_QUERY_CLASS);
+  let queryClass = reader.getValue(NUM_OCTETS_QUERY_CLASS);
   if (queryClass < 0 || queryClass > MAX_QUERY_CLASS) {
     throw new Error('deserialized query class out of range: ' + queryClass);
   }
 
-  var result = new exports.QuestionSection(queryName, queryType, queryClass);
+  let result = new exports.QuestionSection(queryName, queryType, queryClass);
 
   return result;
 };

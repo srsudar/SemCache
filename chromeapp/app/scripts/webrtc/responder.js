@@ -1,11 +1,11 @@
 'use strict';
 
-var api = require('../server/server-api');
-var binUtil = require('../dnssd/binary-utils').BinaryUtils;
-var bufferedChannel = require('./buffered-channel');
-var fileSystem = require('../persistence/file-system');
-var message = require('./message');
-var serverApi = require('../server/server-api');
+const api = require('../server/server-api');
+const binUtil = require('../dnssd/binary-utils').BinaryUtils;
+const bufferedChannel = require('./buffered-channel');
+const fileSystem = require('../persistence/file-system');
+const message = require('./message');
+const serverApi = require('../server/server-api');
 
 /**
  * This module is responsible for responding to incoming requests via WebRTC.
@@ -20,7 +20,7 @@ exports.onDataChannelHandler = function(event) {
   console.log('Data channel has been created by client');
   // Wrap the call to ensure that we can get a handle to the channel receiving
   // the message in order to directly reply.
-  var channel = event.channel;
+  let channel = event.channel;
   event.channel.onmessage = function(msgEvent) {
     exports.onDataChannelMessageHandler(channel, msgEvent);
   };
@@ -32,9 +32,9 @@ exports.onDataChannelHandler = function(event) {
  */
 exports.onDataChannelMessageHandler = function(channel, event) {
   // We expect ArrayBuffers containing JSON objects as messages.
-  var jsonBin = event.data;
-  var jsonStr = binUtil.arrayBufferToString(jsonBin);
-  var msg = JSON.parse(jsonStr);
+  let jsonBin = event.data;
+  let jsonStr = binUtil.arrayBufferToString(jsonBin);
+  let msg = JSON.parse(jsonStr);
 
   if (message.isList(msg)) {
     exports.onList(channel, msg);
@@ -166,8 +166,8 @@ exports.sendBufferOverChannel = function(channel, buff) {
  */
 exports.onFile = function(channel, msg) {
   return new Promise(function(resolve, reject) {
-    var ccServer = exports.createChannelServer(channel);
-    var fileName = api.getCachedFileNameFromPath(msg.request.accessPath);
+    let ccServer = exports.createChannelServer(channel);
+    let fileName = api.getCachedFileNameFromPath(msg.request.accessPath);
     fileSystem.getFileContentsFromName(fileName)
     .then(buff => {
       ccServer.sendBuffer(buff);

@@ -1,9 +1,9 @@
 'use strict';
 
-var test = require('tape');
+const test = require('tape');
 require('sinon-as-promised');
 
-var protocol = require('../../../app/scripts/webrtc/protocol');
+let protocol = require('../../../app/scripts/webrtc/protocol');
 
 /**
  * Manipulating the object directly leads to polluting the require cache. Any
@@ -30,8 +30,8 @@ function end(t) {
  * @param {ProtocolMessage} msg
  */
 function serializeDeserializeHelper(msg, t) {
-  var serialized = msg.asBuffer();
-  var recovered = protocol.from(serialized);
+  let serialized = msg.asBuffer();
+  let recovered = protocol.from(serialized);
 
   t.notEqual(null, serialized);
   t.notEqual(undefined, serialized);
@@ -40,10 +40,10 @@ function serializeDeserializeHelper(msg, t) {
 }
 
 test('getters return values', function(t) {
-  var header = { foo: 'bar' };
-  var buff = 'buffer';
+  let header = { foo: 'bar' };
+  let buff = 'buffer';
 
-  var msg = new protocol.ProtocolMessage(header, buff);
+  let msg = new protocol.ProtocolMessage(header, buff);
 
   t.equal(msg.getHeader(), header);
   t.equal(msg.getData(), buff);
@@ -51,16 +51,16 @@ test('getters return values', function(t) {
 });
 
 test('createSuccessMessage correct', function(t) {
-  var buff = 'buffer';
-  var msg = protocol.createSuccessMessage(buff);
+  let buff = 'buffer';
+  let msg = protocol.createSuccessMessage(buff);
   t.equal(msg.getData(), buff);
   t.equal(msg.getHeader().status, protocol.STATUS_CODES.ok);
   end(t);
 });
 
 test('createErorMessage correct', function(t) {
-  var reason = 'something went wrong';
-  var msg = protocol.createErrorMessage(reason);
+  let reason = 'something went wrong';
+  let msg = protocol.createErrorMessage(reason);
   t.deepEqual(msg.getData(), Buffer.alloc(0));
   t.equal(msg.getHeader().status, protocol.STATUS_CODES.error);
   t.equal(msg.getHeader().message, reason);
@@ -68,92 +68,92 @@ test('createErorMessage correct', function(t) {
 });
 
 test('createHeader sets status', function(t) {
-  var status = 123;
-  var expected = { status: status };
-  var actual = protocol.createHeader(status);
+  let status = 123;
+  let expected = { status: status };
+  let actual = protocol.createHeader(status);
   t.deepEqual(actual, expected);
   end(t);
 });
 
 test('isOk true for status OK', function(t) {
-  var okMsg = protocol.createSuccessMessage();
+  let okMsg = protocol.createSuccessMessage();
   t.true(okMsg.isOk());
   end(t);
 });
 
 test('isOk false for status error', function(t) {
-  var errorMsg = protocol.createErrorMessage();
+  let errorMsg = protocol.createErrorMessage();
   t.false(errorMsg.isOk());
   end(t);
 });
 
 test('getStatusCode null for no header', function(t) {
-  var msg = new protocol.ProtocolMessage(null, null);
-  var actual = msg.getStatusCode();
+  let msg = new protocol.ProtocolMessage(null, null);
+  let actual = msg.getStatusCode();
   t.equal(actual, null);
   end(t);
 });
 
 test('getStatusCode null for no status in header', function(t) {
-  var msg = new protocol.ProtocolMessage({}, null);
-  var actual = msg.getStatusCode();
+  let msg = new protocol.ProtocolMessage({}, null);
+  let actual = msg.getStatusCode();
   t.equal(actual, null);
   end(t);
 });
 
 test('getStatusCode returns status from header', function(t) {
-  var msg = protocol.createSuccessMessage('buffer');
+  let msg = protocol.createSuccessMessage('buffer');
   t.equal(msg.getStatusCode(), protocol.STATUS_CODES.ok);
   end(t);
 });
 
 test('isError true for status error', function(t) {
-  var errorMsg = protocol.createErrorMessage();
+  let errorMsg = protocol.createErrorMessage();
   t.true(errorMsg.isError());
   end(t);
 });
 
 test('isError true for status ok', function(t) {
-  var okMsg = protocol.createSuccessMessage();
+  let okMsg = protocol.createSuccessMessage();
   t.false(okMsg.isError());
   end(t);
 });
 
 test('serialization correct base case', function(t) {
   // The base case is a header with values in the header and a buffer.
-  var buff = Buffer.from('hello there this is fine');
-  var header = {
+  let buff = Buffer.from('hello there this is fine');
+  let header = {
     status: 200,
     metadata: { something: 'else' }
   };
-  var msg = new protocol.ProtocolMessage(header, buff);
+  let msg = new protocol.ProtocolMessage(header, buff);
 
   serializeDeserializeHelper(msg, t);
 });
 
 test('serialization correct no header', function(t) {
-  var buff = Buffer.from('nope nope nope');
-  var msg = new protocol.ProtocolMessage(null, buff);
+  let buff = Buffer.from('nope nope nope');
+  let msg = new protocol.ProtocolMessage(null, buff);
 
   serializeDeserializeHelper(msg, t);
 });
 
 test('serialization correct no data', function(t) {
-  var header = {
+  let header = {
     status: 500,
     msg: 'much trouble is occurring'
   };
 
-  var msg = new protocol.ProtocolMessage(header, null);
+  let msg = new protocol.ProtocolMessage(header, null);
 
   serializeDeserializeHelper(msg, t);
 });
 
 test('serialization correct empty buffer', function(t) {
-  var buff = Buffer.from('');
-  var header = { status: 200 };
+  let buff = Buffer.from('');
+  let header = { status: 200 };
 
-  var msg = new protocol.ProtocolMessage(header, buff);
+  let msg = new protocol.ProtocolMessage(header, buff);
 
   serializeDeserializeHelper(msg, t);
 });

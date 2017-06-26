@@ -1,11 +1,11 @@
 'use strict';
 
-var test = require('tape');
-var proxyquire = require('proxyquire');
-var sinon = require('sinon');
+const test = require('tape');
+const proxyquire = require('proxyquire');
+const sinon = require('sinon');
 require('sinon-as-promised');
 
-var util = require('../../../app/scripts/coalescence/util');
+let util = require('../../../app/scripts/coalescence/util');
 
 /**
  * Manipulating the object directly leads to polluting the require cache. Any
@@ -50,8 +50,8 @@ test('removeOwnInfo does nothing if not present', function(t) {
     }
   });
 
-  var peerInfos = createPeerInfos();
-  var expected = createPeerInfos();
+  let peerInfos = createPeerInfos();
+  let expected = createPeerInfos();
 
   util.removeOwnInfo(peerInfos)
   .then(actual => {
@@ -65,9 +65,9 @@ test('removeOwnInfo does nothing if not present', function(t) {
 });
 
 test('removeOwnInfo removes our own information', function(t) {
-  var peerInfos = createPeerInfos();
-  var ourInfo = peerInfos[0];
-  var expected = peerInfos.slice(1);
+  let peerInfos = createPeerInfos();
+  let ourInfo = peerInfos[0];
+  let expected = peerInfos.slice(1);
 
   proxyquireUtil({
     '../settings': {
@@ -88,8 +88,8 @@ test('removeOwnInfo removes our own information', function(t) {
 });
 
 test('removeOwnInfo rejects on error', function(t) {
-  var expected = { msg: 'trubs' };
-  var peerInfos = createPeerInfos();
+  let expected = { msg: 'trubs' };
+  let peerInfos = createPeerInfos();
 
   proxyquireUtil({
     '../settings': {

@@ -1,10 +1,10 @@
 'use strict';
 
-var dnssdSem = require('../dnssd/dns-sd-semcache');
-var objects = require('./objects');
-var peerIf = require('../peer-interface/common');
-var peerIfMgr = require('../peer-interface/manager');
-var util = require('./util');
+const dnssdSem = require('../dnssd/dns-sd-semcache');
+const objects = require('./objects');
+const peerIf = require('../peer-interface/common');
+const peerIfMgr = require('../peer-interface/manager');
+const util = require('./util');
 
 /**
  * This module is responsible for the digest strategy of cache coalescence.
@@ -103,7 +103,7 @@ exports.DigestStrategy.prototype.initialize = function() {
     .then(peerInfos => {
       return util.removeOwnInfo(peerInfos);
     }).then(peerInfos => {
-      var peerAccessor = peerIfMgr.getPeerAccessor();
+      let peerAccessor = peerIfMgr.getPeerAccessor();
       return self.getAndProcessDigests(peerAccessor, peerInfos);
     })
     .then(digests => {
@@ -148,17 +148,17 @@ exports.DigestStrategy.prototype.getAndProcessDigests = function(
       resolve([]);
       return;
     }
-    var pendingResponses = peerInfos.length;
-    var result = [];
+    let pendingResponses = peerInfos.length;
+    let result = [];
     peerInfos.forEach(peerInfo => {
-      var params = peerIf.createListParams(
+      let params = peerIf.createListParams(
         peerInfo.ipAddress, peerInfo.port, null
       );
       peerInterface.getCacheDigest(params)
       .then(digestResponse => {
-        var rawDigest = digestResponse.digest;
+        let rawDigest = digestResponse.digest;
         pendingResponses--;
-        var digest = new objects.Digest(peerInfo, rawDigest);
+        let digest = new objects.Digest(peerInfo, rawDigest);
         result.push(digest);
         if (pendingResponses === 0) {
           resolve(result);
@@ -206,11 +206,11 @@ exports.DigestStrategy.prototype.performQuery = function(urls) {
   return new Promise(function(resolve, reject) {
     Promise.resolve()
     .then(() => {
-      var result = {};
+      let result = {};
       urls.forEach(url => {
-        var copiesForUrl = [];
+        let copiesForUrl = [];
         self.DIGESTS.forEach(digest => {
-          var captureDate = digest.performQueryForPage(url);
+          let captureDate = digest.performQueryForPage(url);
           if (captureDate) {
             let page = {
               friendlyName: digest.peerInfo.friendlyName,

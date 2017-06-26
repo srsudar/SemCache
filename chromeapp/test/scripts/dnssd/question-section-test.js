@@ -1,14 +1,15 @@
 'use strict';
 
-var test = require('tape');
-var qRec = require('../../../app/scripts/dnssd/question-section');
+const test = require('tape');
+
+let qRec = require('../../../app/scripts/dnssd/question-section');
 
 test('can create a QuestionSection', function(t) {
-  var queryName = 'blackhawk.local';
-  var queryType = 33;
-  var queryClass = 4;
+  let queryName = 'blackhawk.local';
+  let queryType = 33;
+  let queryClass = 4;
   
-  var question = new qRec.QuestionSection(queryName, queryType, queryClass);
+  let question = new qRec.QuestionSection(queryName, queryType, queryClass);
 
   t.equal(question.queryName, queryName);
   t.equal(question.queryType, queryType);
@@ -18,15 +19,15 @@ test('can create a QuestionSection', function(t) {
 });
 
 test('can serialize and deserialize a QuestionSection', function(t) {
-  var queryName = 'fancy.pantsy.com';
-  var queryType = 12;
-  var queryClass = 3;
+  let queryName = 'fancy.pantsy.com';
+  let queryType = 12;
+  let queryClass = 3;
   
-  var expected = new qRec.QuestionSection(queryName, queryType, queryClass);
+  let expected = new qRec.QuestionSection(queryName, queryType, queryClass);
 
-  var byteArr = expected.convertToByteArray();
+  let byteArr = expected.convertToByteArray();
 
-  var recovered = qRec.createQuestionFromReader(byteArr.getReader());
+  let recovered = qRec.createQuestionFromReader(byteArr.getReader());
 
   t.deepEqual(recovered, expected);
 

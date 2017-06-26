@@ -1,6 +1,6 @@
 'use strict';
 
-var bloomFilter = require('./bloom-filter');
+const bloomFilter = require('./bloom-filter');
 
 /**
  * Objects relevant to coalescence between instances on the local network.
@@ -95,7 +95,7 @@ exports.Digest = function Digest(peerInfo, pageInfos) {
  * otherwise the timestamp of the page
  */
 exports.Digest.prototype.performQueryForPage = function(url) {
-  var captureDate = this.digestInfo[url];
+  let captureDate = this.digestInfo[url];
   if (captureDate) {
     return captureDate;
   } else {

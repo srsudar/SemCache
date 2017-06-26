@@ -1,13 +1,13 @@
 /* globals WSC, RTCPeerConnection, RTCSessionDescription, RTCIceCandidate */
 'use strict';
 
-var _ = require('underscore');
-var api = require('./server-api');
-var fileSystem = require('../persistence/file-system');
-var fsUtil = require('../persistence/file-system-util');
-var binUtil = require('../dnssd/binary-utils').BinaryUtils;
-var rtcConnMgr = require('../webrtc/connection-manager');
-var wrtcResponder = require('../webrtc/responder');
+const _ = require('underscore');
+const api = require('./server-api');
+const fileSystem = require('../persistence/file-system');
+const fsUtil = require('../persistence/file-system-util');
+const binUtil = require('../dnssd/binary-utils').BinaryUtils;
+const rtcConnMgr = require('../webrtc/connection-manager');
+const wrtcResponder = require('../webrtc/responder');
 
 /**
  * Handlers for the webserver backing SemCache. The idea for handlers is based
@@ -32,8 +32,8 @@ _.extend(exports.ListCachedPagesHandler.prototype,
       api.getResponseForAllCachedPages()
       .then(response => {
         this.setHeader('content-type', 'text/json');
-        var encoder = new TextEncoder('utf-8');
-        var buffer = encoder.encode(JSON.stringify(response)).buffer;
+        let encoder = new TextEncoder('utf-8');
+        let buffer = encoder.encode(JSON.stringify(response)).buffer;
         this.write(buffer);
         this.finish();
       });
@@ -60,8 +60,8 @@ _.extend(exports.FullDigestHandler.prototype,
       api.getResponseForAllPagesDigest()
       .then(response => {
         this.setHeader('content-type', 'text/json');
-        var encoder = new TextEncoder('utf-8');
-        var buffer = encoder.encode(JSON.stringify(response)).buffer;
+        let encoder = new TextEncoder('utf-8');
+        let buffer = encoder.encode(JSON.stringify(response)).buffer;
         this.write(buffer);
         this.finish();
       });
@@ -81,7 +81,7 @@ exports.CachedPageHandler = function() {
 _.extend(exports.CachedPageHandler.prototype,
   {
     get: function() {
-      var fileName = api.getCachedFileNameFromPath(this.request.path);
+      let fileName = api.getCachedFileNameFromPath(this.request.path);
 
       fileSystem.getDirectoryForCacheEntries()
       .then(cacheDir => {
@@ -96,8 +96,8 @@ _.extend(exports.CachedPageHandler.prototype,
       })
       .then(fileEntry => {
         fileEntry.file(file => {
-          var that = this;
-          var fileReader = new FileReader();
+          let that = this;
+          let fileReader = new FileReader();
 
           fileReader.onload = function(evt) {
             // set mime types etc?
@@ -139,27 +139,27 @@ _.extend(exports.WebRtcOfferHandler.prototype,
       console.log(this);
       window.req = this;
 
-      var that = this;
+      let that = this;
 
-      var bodyStr = binUtil.arrayBufferToString(this.request.body);
+      let bodyStr = binUtil.arrayBufferToString(this.request.body);
       console.log('bodyStr: ' + bodyStr);
 
-      var bodyJson = JSON.parse(bodyStr);
+      let bodyJson = JSON.parse(bodyStr);
 
-      var pc = new RTCPeerConnection(null, null);
+      let pc = new RTCPeerConnection(null, null);
       pc.onicecandidate = onIceCandidate;
-      var remoteDescription = new RTCSessionDescription(bodyJson.description);
+      let remoteDescription = new RTCSessionDescription(bodyJson.description);
       pc.setRemoteDescription(remoteDescription);
       rtcConnMgr.remote = pc;
 
       bodyJson.iceCandidates.forEach(candidateStr => {
-        var candidate = new RTCIceCandidate(candidateStr);
+        let candidate = new RTCIceCandidate(candidateStr);
         pc.addIceCandidate(candidate);
       });
 
-      var iceCandidates = [];
-      var description = null;
-      var doneWithIce = false;
+      let iceCandidates = [];
+      let description = null;
+      let doneWithIce = false;
 
       function onIceCandidate(e) {
         if (e.candidate === null) {
@@ -174,12 +174,12 @@ _.extend(exports.WebRtcOfferHandler.prototype,
       function maybeRespond() {
         if (doneWithIce && description) {
           console.log('responding');
-          var respJson = {
+          let respJson = {
             description: description,
             iceCandidates: iceCandidates
           };
-          var respStr = JSON.stringify(respJson);
-          var respBin = binUtil.stringToArrayBuffer(respStr);
+          let respStr = JSON.stringify(respJson);
+          let respBin = binUtil.stringToArrayBuffer(respStr);
           that.write(respBin);
         }
       }
@@ -202,7 +202,7 @@ _.extend(exports.WebRtcOfferHandler.prototype,
 
     get: function() {
       console.log('IN GET');
-      var fileName = api.getCachedFileNameFromPath(this.request.path);
+      let fileName = api.getCachedFileNameFromPath(this.request.path);
 
       fileSystem.getDirectoryForCacheEntries()
       .then(cacheDir => {
@@ -217,8 +217,8 @@ _.extend(exports.WebRtcOfferHandler.prototype,
       })
       .then(fileEntry => {
         fileEntry.file(file => {
-          var that = this;
-          var fileReader = new FileReader();
+          let that = this;
+          let fileReader = new FileReader();
 
           fileReader.onload = function(evt) {
             // set mime types etc?
