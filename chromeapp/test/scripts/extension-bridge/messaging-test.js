@@ -420,6 +420,9 @@ test('queryLocalNetworkForUrls rejects on error', function(t) {
   proxyquireMessaging({
     '../coalescence/manager': {
       queryForUrls: queryForUrlsStub
+    },
+    '../app-controller': {
+      SERVERS_STARTED: true
     }
   });
 
@@ -445,6 +448,9 @@ test('queryLocalNetworkForUrls resolves with result', function(t) {
   proxyquireMessaging({
     '../coalescence/manager': {
       queryForUrls: queryForUrlsStub
+    },
+    '../app-controller': {
+      SERVERS_STARTED: true
     }
   });
 
@@ -455,6 +461,26 @@ test('queryLocalNetworkForUrls resolves with result', function(t) {
   })
   .catch(actual => {
     t.fail(actual);
+    end(t);
+  });
+});
+
+test('queryLocalNetworkForUrls no-ops if not started', function(t) {
+  // We don't want to query the network if we haven't started the app.
+  proxyquireMessaging({
+    '../app-controller': {
+      SERVERS_STARTED: false
+    }
+  });
+
+  let expected = {};
+  messaging.queryLocalNetworkForUrls({})
+  .then(actual => {
+    t.deepEqual(actual, expected);
+    end(t);
+  })
+  .catch(err => {
+    t.fail(err);
     end(t);
   });
 });

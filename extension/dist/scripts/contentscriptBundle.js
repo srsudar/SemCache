@@ -13,8 +13,8 @@ const dnssdSem = require('./dnssd/dns-sd-semcache');
 const evaluation = require('./evaluation');
 const extBridge = require('./extension-bridge/messaging');
 const fileSystem = require('./persistence/file-system');
-const peerIfMgr = require('./peer-interface/manager');
 const ifCommon = require('./peer-interface/common');
+const peerIfMgr = require('./peer-interface/manager');
 const settings = require('./settings');
 const serverApi = require('./server/server-api');
 
@@ -6576,6 +6576,14 @@ exports.queryLocalMachineForUrls = function(message) {
  * @return {Promise.<Object, Error>} the result of the query
  */
 exports.queryLocalNetworkForUrls = function(message) {
+  // This is a bit odd. We don't want to issue queries to the network unless
+  // the app has been toggled on. This is mostly to try and provide a
+  // consistent user model that if the toggle isn't switched on, you're limited
+  // to your own machine. Without this check, we issue calls to the network
+  // during regular browsing. Therefore we're going to do a check here.
+  if (!appc.SERVERS_STARTED) {
+    return Promise.resolve({});
+  }
   return new Promise(function(resolve, reject) {
     coalMgr.queryForUrls(message.params.urls)
     .then(result => {

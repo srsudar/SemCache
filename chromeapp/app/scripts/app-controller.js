@@ -12,8 +12,8 @@ const dnssdSem = require('./dnssd/dns-sd-semcache');
 const evaluation = require('./evaluation');
 const extBridge = require('./extension-bridge/messaging');
 const fileSystem = require('./persistence/file-system');
-const peerIfMgr = require('./peer-interface/manager');
 const ifCommon = require('./peer-interface/common');
+const peerIfMgr = require('./peer-interface/manager');
 const settings = require('./settings');
 const serverApi = require('./server/server-api');
 
