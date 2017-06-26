@@ -44,7 +44,7 @@ exports.onDataChannelMessageHandler = function(channel, event) {
     exports.onDigest(channel, msg);
   } else if (message.isCachedPage(msg)) {
     exports.onCachedPage(channel, msg);
-  } else if (message.isBloomFilter(channel, msg)) {
+  } else if (message.isBloomFilter(msg)) {
     exports.onBloomFilter(channel, msg);
   } else {
     console.log('Unrecognized message type: ', msg.type, msg);

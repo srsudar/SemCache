@@ -108,7 +108,6 @@ class PeerConnection extends EventEmitter {
 
       self.sendAndGetResponse(msg)
       .then(buff => {
-        console.log(buff);
         let result = serverApi.parseResponseForBloomFilter(buff);
         resolve(result);
       })

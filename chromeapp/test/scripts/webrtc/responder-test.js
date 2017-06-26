@@ -176,6 +176,18 @@ test('onDataChannelMessageHandler routes correctly', function(t) {
   let onCachedPageSpy = sinon.stub();
   let onBloomFilterSpy = sinon.stub();
 
+  function setIsSpysFalse() {
+    isListSpy.withArgs(msg).returns(false); 
+    isFileSpy.withArgs(msg).returns(false); 
+    isDigestSpy.withArgs(msg).returns(false); 
+    isCachedPageSpy.withArgs(msg).returns(false); 
+    isBloomFilterSpy.withArgs(msg).returns(false); 
+  }
+
+  function setIsSpyTrue(spy) {
+    spy.withArgs(msg).returns(true);
+  }
+
   proxyquireResponder({
     './message': {
       isList: isListSpy,
@@ -192,11 +204,8 @@ test('onDataChannelMessageHandler routes correctly', function(t) {
   responder.onBloomFilter = onBloomFilterSpy;
 
   // First a list message
-  isListSpy.returns(true);
-  isFileSpy.returns(false);
-  isDigestSpy.returns(false);
-  isCachedPageSpy.returns(false);
-  isBloomFilterSpy.returns(false);
+  setIsSpysFalse();
+  setIsSpyTrue(isListSpy);
 
   responder.onDataChannelMessageHandler(channel, event);
 
@@ -208,11 +217,8 @@ test('onDataChannelMessageHandler routes correctly', function(t) {
   t.deepEqual(onListSpy.args[0], [channel, msg]);
 
   // Now a file message
-  isListSpy.returns(false);
-  isFileSpy.returns(true);
-  isDigestSpy.returns(false);
-  isCachedPageSpy.returns(false);
-  isBloomFilterSpy.returns(false);
+  setIsSpysFalse();
+  setIsSpyTrue(isFileSpy);
 
   responder.onDataChannelMessageHandler(channel, event);
 
@@ -224,11 +230,8 @@ test('onDataChannelMessageHandler routes correctly', function(t) {
   t.deepEqual(onFileSpy.args[0], [channel, msg]);
 
   // Now a digest message
-  isListSpy.returns(false);
-  isFileSpy.returns(false);
-  isDigestSpy.returns(true);
-  isCachedPageSpy.returns(false);
-  isBloomFilterSpy.returns(false);
+  setIsSpysFalse();
+  setIsSpyTrue(isDigestSpy);
 
   responder.onDataChannelMessageHandler(channel, event);
 
@@ -240,11 +243,8 @@ test('onDataChannelMessageHandler routes correctly', function(t) {
   t.deepEqual(onDigestSpy.args[0], [channel, msg]);
 
   // Now a cached page
-  isListSpy.returns(false);
-  isFileSpy.returns(false);
-  isDigestSpy.returns(false);
-  isCachedPageSpy.returns(true);
-  isBloomFilterSpy.returns(false);
+  setIsSpysFalse();
+  setIsSpyTrue(isCachedPageSpy);
 
   responder.onDataChannelMessageHandler(channel, event);
 
@@ -256,11 +256,8 @@ test('onDataChannelMessageHandler routes correctly', function(t) {
   t.deepEqual(onCachedPageSpy.args[0], [channel, msg]);
 
   // Now a Bloom filter
-  isListSpy.returns(false);
-  isFileSpy.returns(false);
-  isDigestSpy.returns(false);
-  isCachedPageSpy.returns(false);
-  isBloomFilterSpy.returns(true);
+  setIsSpysFalse();
+  setIsSpyTrue(isBloomFilterSpy);
 
   responder.onDataChannelMessageHandler(channel, event);
 

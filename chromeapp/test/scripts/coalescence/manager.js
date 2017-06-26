@@ -1,11 +1,12 @@
 'use strict';
 
-var test = require('tape');
-var sinon = require('sinon');
+const test = require('tape');
+const sinon = require('sinon');
 require('sinon-as-promised');
 
-var mgr = require('../../../app/scripts/coalescence/manager');
-var stratDig = require('../../../app/scripts/coalescence/digest-strategy');
+let mgr = require('../../../app/scripts/coalescence/manager');
+const stratDig = require('../../../app/scripts/coalescence/digest-strategy');
+const stratBloom = require('../../../app/scripts/coalescence/bloom-strategy');
 
 /**
  * Manipulating the object directly leads to polluting the require cache. Any
@@ -26,8 +27,18 @@ function end(t) {
 }
 
 test('getStrategy returns digest strategy', function(t) {
+  mgr.CURRENT_STRATEGY = mgr.STRATEGIES.digest;
   let actual = mgr.getStrategy();
   let expected = new stratDig.DigestStrategy();
+
+  t.deepEqual(actual, expected);
+  end(t);
+});
+
+test('getStrategy returns bloom strategy', function(t) {
+  mgr.CURRENT_STRATEGY = mgr.STRATEGIES.bloom;
+  let actual = mgr.getStrategy();
+  let expected = new stratBloom.BloomStrategy();
 
   t.deepEqual(actual, expected);
   end(t);

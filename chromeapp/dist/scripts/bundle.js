@@ -4932,7 +4932,6 @@ class PeerConnection extends EventEmitter {
 
       self.sendAndGetResponse(msg)
       .then(buff => {
-        console.log(buff);
         let result = serverApi.parseResponseForBloomFilter(buff);
         resolve(result);
       })
@@ -5273,7 +5272,7 @@ exports.onDataChannelMessageHandler = function(channel, event) {
     exports.onDigest(channel, msg);
   } else if (message.isCachedPage(msg)) {
     exports.onCachedPage(channel, msg);
-  } else if (message.isBloomFilter(channel, msg)) {
+  } else if (message.isBloomFilter(msg)) {
     exports.onBloomFilter(channel, msg);
   } else {
     console.log('Unrecognized message type: ', msg.type, msg);
