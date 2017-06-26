@@ -18,13 +18,15 @@ exports.TYPE_LIST = 'list';
 exports.TYPE_FILE = 'file';
 exports.TYPE_DIGEST = 'digest';
 exports.TYPE_CACHED_PAGE = 'cachedpage';
+exports.TYPE_BLOOM_FILTER = 'bloomfilter';
 
 /** Valid types of request messages. */
 var VALID_TYPES = [
   exports.TYPE_LIST,
   exports.TYPE_FILE,
   exports.TYPE_DIGEST,
-  exports.TYPE_CACHED_PAGE
+  exports.TYPE_CACHED_PAGE,
+  exports.TYPE_BLOOM_FILTER,
 ];
 
 /**
@@ -63,6 +65,13 @@ exports.createListMessage = function() {
  */
 exports.createDigestMessage = function() {
   return exports.createMessage(exports.TYPE_DIGEST);
+};
+
+/**
+ * @return {Object}
+ */
+exports.createBloomFilterMessage = function() {
+  return exports.createMessage(exports.TYPE_BLOOM_FILTER);
 };
 
 /**
@@ -134,6 +143,15 @@ exports.isFile = function(msg) {
  */
 exports.isDigest = function(msg) {
   return msg.type && msg.type === exports.TYPE_DIGEST;
+};
+
+/**
+ * @param {Object} msg
+ *
+ * @return {boolean}
+ */
+exports.isBloomFilter = function(msg) {
+  return msg.type && msg.type === exports.TYPE_BLOOM_FILTER;
 };
 
 /**

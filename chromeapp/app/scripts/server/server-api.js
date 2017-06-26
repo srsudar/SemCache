@@ -8,6 +8,7 @@
  */
 
 const appController = require('../app-controller');
+const BloomFilter = require('../coalescence/bloom-filter').BloomFilter;
 const datastore = require('../persistence/datastore');
 const objects = require('../persistence/objects');
 
@@ -185,6 +186,18 @@ exports.getResponseForAllPagesDigest = function() {
 };
 
 /**
+ * @return {Promise.<Buffer, Error>}
+ */
+exports.getResponseForBloomFilter = function() {
+  return datastore.getAllCachedPages()
+  .then(cpinfos => {
+    let bloomFilter = new BloomFilter();
+    cpinfos.forEach(cpinfo => bloomFilter.add(cpinfo.captureHref));
+    return bloomFilter.serialize();
+  });
+};
+
+/**
  * @param {Buffer} buff
  *
  * @return {Object}
@@ -221,6 +234,15 @@ exports.parseResponseForCachedPage = function(buff) {
 exports.parseResponseForDigest = function(buff) {
   // This one is pure JSON.
   return JSON.parse(buff.toString());
+};
+
+/**
+ * @param {Buffer} buff
+ *
+ * @return {BloomFilter}
+ */
+exports.parseResponseForBloomFilter = function(buff) {
+  return BloomFilter.from(buff);
 };
 
 /**

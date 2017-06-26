@@ -168,6 +168,62 @@ test('getCacheDigest rejects if sendAndGetResponse rejects', function(t) {
   });
 });
 
+test('getCacheBloomFilter calls peer and resolves', function(t) {
+  let msg = message.createBloomFilterMessage();
+  let buff = 'the buffer';
+  let expected = 'parse result';
+
+  let sendAndGetResponseStub = sinon.stub();
+  sendAndGetResponseStub.withArgs(msg).resolves(buff);
+
+  let parseStub = sinon.stub();
+  parseStub.withArgs(buff).returns(expected);
+
+  proxyquirePeerConn({
+    '../server/server-api': {
+      parseResponseForBloomFilter: parseStub
+    },
+    './message': {
+      createBloomFilterMessage: sinon.stub().returns(msg)
+    }
+  });
+
+  let pc = new peerConn.PeerConnection(sinon.stub());
+  pc.sendAndGetResponse = sendAndGetResponseStub;
+
+  pc.getCacheBloomFilter()
+  .then(actual => {
+    t.deepEqual(actual, expected);
+    end(t);
+  })
+  .catch(err => {
+    t.fail(err);
+    end(t);
+  });
+});
+
+test('getCacheBloomFilter rejects', function(t) {
+  let expected = { err: 'trub' };
+
+  proxyquirePeerConn({
+    './message': {
+      createBloomFilterMessage: sinon.stub().throws(expected)
+    }
+  });
+
+  let pc = new peerConn.PeerConnection(sinon.stub());
+
+  pc.getCacheBloomFilter()
+  .then(result => {
+    t.fail(result);
+    end(t);
+  })
+  .catch(actual => {
+    t.deepEqual(actual, expected);
+    end(t);
+  });
+});
+
 test('getFile resolves with response from server', function(t) {
   var rawConnection = sinon.stub();
   rawConnection.on = sinon.stub();

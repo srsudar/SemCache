@@ -35,6 +35,12 @@ function end(t) {
   resetWebrtcImpl();
 }
 
+function getListParams() {
+  let ip = '1.2.3.4';
+  let port = 4321;
+  return common.createListParams(ip, port, null);
+}
+
 /**
  * @return {WebrtcPeerAccessor}
  */
@@ -214,6 +220,57 @@ test('getCacheDigest rejects with error', function(t) {
   })
   .catch(actual => {
     t.equal(actual, expected);
+    end(t);
+  });
+});
+
+test('getCacheBloomFilter resolves on success', function(t) {
+  let expected = 'the bloom filter';
+  let params = getListParams();
+  let getBloomStub = sinon.stub().resolves(expected);
+
+  let pcxn = {
+    getCacheBloomFilter: getBloomStub
+  };
+
+  let getCxnStub = sinon.stub();
+  getCxnStub.withArgs(params.ipAddress, params.port).resolves(pcxn);
+
+  proxyquireWebrtcImpl({
+    '../webrtc/connection-manager': {
+      getOrCreateConnection: getCxnStub
+    }
+  });
+
+  let accessor = new webrtcImpl.WebrtcPeerAccessor();
+  accessor.getCacheBloomFilter(params)
+  .then(actual => {
+    t.deepEqual(actual, expected);
+    end(t);
+  })
+  .catch(err => {
+    t.fail(err);
+    end(t);
+  });
+});
+
+test('getCacheBloomFilter rejects on error', function(t) {
+  let expected = { err: 'nope' };
+
+  proxyquireWebrtcImpl({
+    '../webrtc/connection-manager': {
+      getOrCreateConnection: sinon.stub().rejects(expected)
+    }
+  });
+
+  let accessor = new webrtcImpl.WebrtcPeerAccessor();
+  accessor.getCacheBloomFilter({})
+  .then(result => {
+    t.fail(result);
+    end(t);
+  })
+  .catch(actual => {
+    t.deepEqual(actual, expected);
     end(t);
   });
 });

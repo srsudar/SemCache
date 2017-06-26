@@ -193,3 +193,65 @@ test('getCacheDigest rejects with error', function(t) {
     end(t);
   });
 });
+
+test('getCacheBloomFilter resolves on success', function(t) {
+  // We need to return an ArrayBuffer from fetch and then pass a Buffer to our
+  // parse method.
+  let uintArr = new Uint8Array(8);
+  uintArr[1] = 42;
+  let buff = Buffer.from(uintArr);
+  let arrayBuff = uintArr.buffer;
+  let params = common.createListParams('1.2.3.4', 4321);
+  let expected = 'parse result';
+
+  let responseStub = {
+    arrayBuffer: sinon.stub().resolves(arrayBuff)
+  };
+
+  let fetchStub = sinon.stub();
+  fetchStub.withArgs(params.bloomUrl).resolves(responseStub);
+
+  let parseStub = sinon.stub();
+  parseStub.withArgs(buff).returns(expected);
+
+  proxyquireHttpImpl({
+    '../server/server-api': {
+      parseResponseForBloomFilter: parseStub
+    },
+    '../util': {
+      fetch: fetchStub
+    }
+  });
+
+  var peerAccessor = new httpImpl.HttpPeerAccessor();
+  peerAccessor.getCacheBloomFilter(params)
+  .then(actual => {
+    t.deepEqual(actual, expected);
+    end(t);
+  })
+  .catch(err => {
+    t.fail(err);
+    end(t);
+  });
+});
+
+test('getCacheBloomFilter rejects on error', function(t) {
+  let expected = { err: 'yup' };
+  
+  proxyquireHttpImpl({
+    '../util': {
+      fetch: sinon.stub().rejects(expected)
+    }
+  });
+
+  let accessor = new httpImpl.HttpPeerAccessor();
+  accessor.getCacheBloomFilter({})
+  .then(result => {
+    t.fail(result);
+    end(t);
+  })
+  .catch(actual => {
+    t.deepEqual(actual, expected);
+    end(t);
+  });
+});

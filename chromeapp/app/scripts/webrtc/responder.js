@@ -44,6 +44,8 @@ exports.onDataChannelMessageHandler = function(channel, event) {
     exports.onDigest(channel, msg);
   } else if (message.isCachedPage(msg)) {
     exports.onCachedPage(channel, msg);
+  } else if (message.isBloomFilter(channel, msg)) {
+    exports.onBloomFilter(channel, msg);
   } else {
     console.log('Unrecognized message type: ', msg.type, msg);
   }
@@ -96,6 +98,22 @@ exports.onDigest = function(channel) {
     .catch(err => {
       reject(err);
     });
+  });
+};
+
+/**
+ * Handler that responds to a request for a Bloom filter.
+ *
+ * @param {RTCDataChannel} channel the data channel on which to send the
+ * response
+ *
+ * @return {Promise.<undefined, Error>} Promise that returns after sending has
+ * begun
+ */
+exports.onBloomFilter = function(channel) {
+  return serverApi.getResponseForBloomFilter()
+  .then(buff => {
+    return exports.sendBufferOverChannel(channel, buff);
   });
 };
 

@@ -10,7 +10,8 @@ var util = require('../util');
  * The path to the HTTP endpoint that serves the digest. Should match the value
  * in the server/server-api module.
  */
-var PATH_GET_PAGE_DIGEST = 'page_digest';
+let PATH_GET_PAGE_DIGEST = 'page_digest';
+let PATH_GET_BLOOM_FILTER = 'bloom_filter';
 
 /**
  * Returns the IP address, extracting if necessary.
@@ -52,6 +53,10 @@ exports.getDigestPath = function() {
   return PATH_GET_PAGE_DIGEST;
 };
 
+exports.getBloomFilterPath = function() {
+  return PATH_GET_BLOOM_FILTER;
+};
+
 /**
  * Create parameters for a PeerAccessor getList call. If ipaddr or port is
  * missing, tries to interpolate them from listUrl.
@@ -70,12 +75,20 @@ exports.createListParams = function(ipaddr, port, listUrl) {
   // Create the digest URL.
   var digestUrl = ['http://', ipaddr, ':', port, '/', exports.getDigestPath()]
     .join('');
+  var bloomUrl = [
+    'http://',
+    ipaddr,
+    ':',
+    port,
+    '/', exports.getBloomFilterPath()
+  ].join('');
 
   return {
     ipAddress: ipaddr,
     port: port,
     listUrl: listUrl,
-    digestUrl: digestUrl
+    digestUrl: digestUrl,
+    bloomUrl: bloomUrl
   };
 };
 

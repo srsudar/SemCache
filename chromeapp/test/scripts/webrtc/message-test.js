@@ -62,6 +62,12 @@ test('createDigestMessage returns type digest', function(t) {
   end(t);
 });
 
+test('createBloomFilterMessage returns type bloom filter', function(t) {
+  let actual = message.createBloomFilterMessage();
+  t.equal(actual.type, message.TYPE_BLOOM_FILTER);
+  end(t);
+});
+
 test('createCachedPageMessage returns correct type', function(t) {
   let href = 'http://nyt.com';
   let actual = message.createCachedPageMessage(href);
@@ -114,6 +120,19 @@ test('isDigest correct', function(t) {
 
   obj.type = message.TYPE_DIGEST;
   t.true(message.isDigest(obj));
+
+  end(t);
+});
+
+test('isBloomFilter correct', function(t) {
+  var obj = {};
+
+  t.false(message.isBloomFilter(obj));
+  obj.type = 'fake';
+  t.false(message.isBloomFilter(obj));
+
+  obj.type = message.TYPE_BLOOM_FILTER;
+  t.true(message.isBloomFilter(obj));
 
   end(t);
 });

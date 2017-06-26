@@ -1,6 +1,7 @@
 'use strict';
 
-var util = require('../util');
+const serverApi = require('../server/server-api');
+const util = require('../util');
 
 /**
  * @constructor
@@ -76,5 +77,22 @@ exports.HttpPeerAccessor.prototype.getCacheDigest = function(params) {
     .catch(err => {
       reject(err);
     });
+  });
+};
+
+/**
+ * @param {Object} params
+ *
+ * @return {Promise.<BloomFilter, Error>}
+ */
+exports.HttpPeerAccessor.prototype.getCacheBloomFilter = function(params) {
+  return util.fetch(params.bloomUrl)
+  .then(response => {
+    return response.arrayBuffer();
+  })
+  .then(arrayBuffer => {
+    let buff = Buffer.from(arrayBuffer);
+    let result = serverApi.parseResponseForBloomFilter(buff);
+    return result;
   });
 };

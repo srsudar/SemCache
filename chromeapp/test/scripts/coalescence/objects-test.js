@@ -82,7 +82,7 @@ test('Digest performQueryForPage returns captureDate', function(t) {
   end(t);
 });
 
-test('PeerBloomFilter constructor succeeds', function(t) {
+test('PeerBloomFilter constructor succeeds with buffer', function(t) {
   var peerInfo = createPeerInfo();
   var bloom = new bloomFilter.BloomFilter();
   var buff = bloom.serialize();
@@ -91,6 +91,19 @@ test('PeerBloomFilter constructor succeeds', function(t) {
 
   t.deepEqual(actual.peerInfo, peerInfo);
   t.deepEqual(actual.bloomFilter, bloom);
+  end(t);
+});
+
+test('PeerBloomFilter constructor succeeds with BloomFilter', function(t) {
+  let pinfo = createPeerInfo();
+  let bloom = new bloomFilter.BloomFilter();
+  bloom.add('toots');
+
+  let actual = new objects.PeerBloomFilter(pinfo, bloom);
+
+  t.deepEqual(actual.peerInfo, pinfo);
+  t.deepEqual(actual.bloomFilter, bloom);
+
   end(t);
 });
 

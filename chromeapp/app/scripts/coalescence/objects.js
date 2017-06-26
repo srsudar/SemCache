@@ -107,15 +107,25 @@ exports.Digest.prototype.performQueryForPage = function(url) {
  * Create a Bloom filter to use for coalescence. This is a wrapper around the
  * pure Bloom filter implementation and includes information about the peer
  * itself.
+ *
+ * @param {Object} peerInfo
+ * @param {BloomFilter|Buffer} bloom
  */
-exports.PeerBloomFilter = function PeerBloomFilter(peerInfo, bloomBuff) {
+exports.PeerBloomFilter = function PeerBloomFilter(peerInfo, bloom) {
   if (!(this instanceof PeerBloomFilter)) {
     throw new Error('PeerBloomFilter must be called with new');
   }
   this.peerInfo = peerInfo;
 
   // Now process the pageInfos.
-  this.bloomFilter = bloomFilter.from(bloomBuff);
+  if (Buffer.isBuffer(bloom)) {
+    this.bloomFilter = bloomFilter.from(bloom);
+  } else if (bloom instanceof bloomFilter.BloomFilter) {
+    this.bloomFilter = bloom;
+  } else {
+    console.log(bloom);
+    throw new Error('bloom must be Buffer or BloomFilter');
+  }
 };
 
 /**

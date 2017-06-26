@@ -168,30 +168,35 @@ test('onDataChannelMessageHandler routes correctly', function(t) {
   let isFileSpy = sinon.stub();
   let isDigestSpy = sinon.stub();
   let isCachedPageSpy = sinon.stub();
+  let isBloomFilterSpy = sinon.stub();
  
   let onListSpy = sinon.stub();
   let onFileSpy = sinon.stub();
   let onDigestSpy = sinon.stub();
   let onCachedPageSpy = sinon.stub();
+  let onBloomFilterSpy = sinon.stub();
 
   proxyquireResponder({
     './message': {
       isList: isListSpy,
       isFile: isFileSpy,
       isDigest: isDigestSpy,
-      isCachedPage: isCachedPageSpy
+      isCachedPage: isCachedPageSpy,
+      isBloomFilter: isBloomFilterSpy
     }
   });
   responder.onList = onListSpy;
   responder.onFile = onFileSpy;
   responder.onDigest = onDigestSpy;
   responder.onCachedPage = onCachedPageSpy;
+  responder.onBloomFilter = onBloomFilterSpy;
 
   // First a list message
   isListSpy.returns(true);
   isFileSpy.returns(false);
   isDigestSpy.returns(false);
   isCachedPageSpy.returns(false);
+  isBloomFilterSpy.returns(false);
 
   responder.onDataChannelMessageHandler(channel, event);
 
@@ -199,6 +204,7 @@ test('onDataChannelMessageHandler routes correctly', function(t) {
   t.equal(onFileSpy.callCount, 0);
   t.equal(onDigestSpy.callCount, 0);
   t.equal(onCachedPageSpy.callCount, 0);
+  t.equal(onBloomFilterSpy.callCount, 0);
   t.deepEqual(onListSpy.args[0], [channel, msg]);
 
   // Now a file message
@@ -206,6 +212,7 @@ test('onDataChannelMessageHandler routes correctly', function(t) {
   isFileSpy.returns(true);
   isDigestSpy.returns(false);
   isCachedPageSpy.returns(false);
+  isBloomFilterSpy.returns(false);
 
   responder.onDataChannelMessageHandler(channel, event);
 
@@ -213,6 +220,7 @@ test('onDataChannelMessageHandler routes correctly', function(t) {
   t.equal(onFileSpy.callCount, 1);
   t.equal(onDigestSpy.callCount, 0);
   t.equal(onCachedPageSpy.callCount, 0);
+  t.equal(onBloomFilterSpy.callCount, 0);
   t.deepEqual(onFileSpy.args[0], [channel, msg]);
 
   // Now a digest message
@@ -220,6 +228,7 @@ test('onDataChannelMessageHandler routes correctly', function(t) {
   isFileSpy.returns(false);
   isDigestSpy.returns(true);
   isCachedPageSpy.returns(false);
+  isBloomFilterSpy.returns(false);
 
   responder.onDataChannelMessageHandler(channel, event);
 
@@ -227,6 +236,7 @@ test('onDataChannelMessageHandler routes correctly', function(t) {
   t.equal(onFileSpy.callCount, 1);
   t.equal(onDigestSpy.callCount, 1);
   t.equal(onCachedPageSpy.callCount, 0);
+  t.equal(onBloomFilterSpy.callCount, 0);
   t.deepEqual(onDigestSpy.args[0], [channel, msg]);
 
   // Now a cached page
@@ -234,6 +244,7 @@ test('onDataChannelMessageHandler routes correctly', function(t) {
   isFileSpy.returns(false);
   isDigestSpy.returns(false);
   isCachedPageSpy.returns(true);
+  isBloomFilterSpy.returns(false);
 
   responder.onDataChannelMessageHandler(channel, event);
 
@@ -241,7 +252,24 @@ test('onDataChannelMessageHandler routes correctly', function(t) {
   t.equal(onFileSpy.callCount, 1);
   t.equal(onDigestSpy.callCount, 1);
   t.equal(onCachedPageSpy.callCount, 1);
+  t.equal(onBloomFilterSpy.callCount, 0);
   t.deepEqual(onCachedPageSpy.args[0], [channel, msg]);
+
+  // Now a Bloom filter
+  isListSpy.returns(false);
+  isFileSpy.returns(false);
+  isDigestSpy.returns(false);
+  isCachedPageSpy.returns(false);
+  isBloomFilterSpy.returns(true);
+
+  responder.onDataChannelMessageHandler(channel, event);
+
+  t.equal(onListSpy.callCount, 1);
+  t.equal(onFileSpy.callCount, 1);
+  t.equal(onDigestSpy.callCount, 1);
+  t.equal(onCachedPageSpy.callCount, 1);
+  t.equal(onBloomFilterSpy.callCount, 1);
+  t.deepEqual(onBloomFilterSpy.args[0], [channel, msg]);
 
   end(t);
 });
@@ -302,6 +330,51 @@ test('onDigest rejects with error', function(t) {
   responder.onDigest(channel)
   .then(res => {
     t.fail(res);
+    end(t);
+  })
+  .catch(actual => {
+    t.deepEqual(actual, expected);
+    end(t);
+  });
+});
+
+test('onBloomFilter calls send with contents', function(t) {
+  let channel = 'channel for bloom';
+  let buff = Buffer.from('yo yo');
+
+  let sendBufferStub = sinon.stub();
+  sendBufferStub.withArgs(channel, buff).resolves();
+
+  proxyquireResponder({
+    '../server/server-api': {
+      getResponseForBloomFilter: sinon.stub().resolves(buff)
+    },
+  });
+  responder.sendBufferOverChannel = sendBufferStub;
+
+  responder.onBloomFilter(channel)
+  .then(actual => {
+    t.equal(actual, undefined);
+    end(t);
+  })
+  .catch(err => {
+    t.fail(err);
+    end(t);
+  });
+});
+
+test('onBloomFilter rejects with error', function(t) {
+  let expected = { err: 'sizzle me timbers. Oh no the rolls!' };
+
+  proxyquireResponder({
+    '../server/server-api': {
+      getResponseForBloomFilter: sinon.stub().rejects(expected)
+    }
+  });
+
+  responder.onBloomFilter({})
+  .then(result => {
+    t.fail(result);
     end(t);
   })
   .catch(actual => {

@@ -97,6 +97,28 @@ class PeerConnection extends EventEmitter {
   }
 
   /**
+   * Get the BloomFilter representing cache contents from the peer.
+   *
+   * @return {Promise.<BloomFilter, Error>}
+   */
+  getCacheBloomFilter() {
+    let self = this;
+    return new Promise(function(resolve, reject) {
+      let msg = message.createBloomFilterMessage();
+
+      self.sendAndGetResponse(msg)
+      .then(buff => {
+        console.log(buff);
+        let result = serverApi.parseResponseForBloomFilter(buff);
+        resolve(result);
+      })
+      .catch(err => {
+        reject(err);
+      });
+    });
+  }
+
+  /**
    * Get a cached page from the peer.
    *
    * @param {string} href

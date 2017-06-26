@@ -107,7 +107,10 @@ class WebrtcPeerAccessor {
    * @return {Promise.<BloomFilter, Error>}
    */
   getCacheBloomFilter(params) {
-    throw new Error('unimplemented');
+    return cmgr.getOrCreateConnection(params.ipAddress, params.port)
+    .then(peerConnection => {
+      return peerConnection.getCacheBloomFilter();
+    });
   }
 }
 
