@@ -1,13 +1,15 @@
 /*jshint esnext:true*/
 'use strict';
+
 const test = require('tape');
 const proxyquire = require('proxyquire');
 const sinon = require('sinon');
 require('sinon-as-promised');
 
+const tutil = require('../../../../chromeapp/test/scripts/extension-bridge/test-util');
+
 let api = require('../../../app/scripts/background/background-api');
 
-const tutil = require('../../../../chromeapp/test/scripts/extension-bridge/test-util');
 
 /**
  * Proxyquire the api object with proxies passed as the proxied modules.
