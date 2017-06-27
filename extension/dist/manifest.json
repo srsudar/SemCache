@@ -23,6 +23,9 @@
       ],
       "js": [
         "scripts/contentscriptBundle.js"
+      ],
+      "css": [
+        "styles/sweetalert2.css"
       ]
     }
   ],

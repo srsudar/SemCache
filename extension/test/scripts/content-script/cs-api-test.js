@@ -5,6 +5,8 @@ const proxyquire = require('proxyquire');
 const sinon = require('sinon');
 const test = require('tape');
 
+// Cannot require this without stubbing out proxyquire, b/c it does some
+// annoying auto-invoking stuff that relies on document.
 let api = require('../../../app/scripts/content-script/cs-api');
 
 
@@ -238,6 +240,8 @@ test('annotateLocalLinks annotates on success', function(t) {
   queryResponse[anchors[1].href] = 'yawn';
 
   let annotateAnchorSpy = sinon.stub();
+  let saveStateStub = sinon.stub();
+  let initPopupStub = sinon.stub();
 
   let queryLocallyStub = sinon.stub();
   queryLocallyStub.withArgs('contentscript', urls).resolves(queryResponse);
@@ -249,13 +253,21 @@ test('annotateLocalLinks annotates on success', function(t) {
   });
   api.getLinksOnPage = sinon.stub().returns(links);
   api.annotateAnchorIsLocal = annotateAnchorSpy;
+  api.saveCpInfoState = saveStateStub;
+  api.initPopupForAnchor = initPopupStub;
 
   api.annotateLocalLinks()
   .then(actual => {
     t.equal(actual, undefined);
-    t.true(annotateAnchorSpy.calledWith(anchors[0]));
-    t.true(annotateAnchorSpy.calledWith(anchors[1]));
-    t.true(annotateAnchorSpy.calledWith(anchors[2]));
+    let matchingAnchors = [ anchors[0], anchors[1], anchors[2] ];
+
+    matchingAnchors.forEach(anchor => {
+      t.true(annotateAnchorSpy.calledWith(anchor));
+      t.true(initPopupStub.calledWith(anchor));
+    });
+
+    t.deepEqual(saveStateStub.args[0], [true, queryResponse]);
+
     end(t);
   })
   .catch(err => {
@@ -322,6 +334,9 @@ test('annotateNetworkLocalLinks annotates on success', function(t) {
   let queryForPagesStub = sinon.stub();
   queryForPagesStub.withArgs('contentscript', urls).resolves(queryResponse);
 
+  let initPopupStub = sinon.stub();
+  let saveStateStub = sinon.stub();
+
   proxyquireApi({
     '../app-bridge/messaging': {
       queryForPagesOnNetwork: queryForPagesStub
@@ -329,13 +344,21 @@ test('annotateNetworkLocalLinks annotates on success', function(t) {
   });
   api.getLinksOnPage = sinon.stub().returns(links);
   api.annotateAnchorIsOnNetwork = annotateAnchorSpy;
+  api.saveCpInfoState = saveStateStub;
+  api.initPopupForAnchor = initPopupStub;
 
   api.annotateNetworkLocalLinks()
   .then(actual => {
     t.equal(actual, undefined);
-    t.true(annotateAnchorSpy.calledWith(anchors[0]));
-    t.true(annotateAnchorSpy.calledWith(anchors[1]));
-    t.true(annotateAnchorSpy.calledWith(anchors[2]));
+    let matchingAnchors = [ anchors[0], anchors[1], anchors[2] ];
+
+    matchingAnchors.forEach(anchor => {
+      t.true(annotateAnchorSpy.calledWith(anchor));
+      t.true(initPopupStub.calledWith(anchor));
+    });
+
+    t.deepEqual(saveStateStub.args[0], [false, queryResponse]);
+
     end(t);
   })
   .catch(err => {
@@ -362,4 +385,174 @@ test('annotateNetworkLocalLinks does nothing on failure', function(t) {
     t.equal(actual, expectedErr);
     end(t);
   });
+});
+
+test('initPopupForAnchor correct', function(t) {
+  let addEventListenerStub = sinon.stub();
+
+  let absoluteUrl = 'absolute';
+  let anchor = {
+    href: 'relativel',
+    addEventListener: addEventListenerStub
+  };
+
+  let getAbsoluteStub = sinon.stub();
+  getAbsoluteStub.withArgs(anchor.href).returns(absoluteUrl);
+
+  let local = [ 'fee', 'fi' ];
+  let network = [ 'fo', 'fum' ];
+  let html = '<body></body>';
+
+  let savedState = {
+    [absoluteUrl]: { local, network }
+  };
+  let swalStub = sinon.stub();
+  let createHtmlStub = sinon.stub();
+  createHtmlStub.withArgs(absoluteUrl, local, network).returns(html);
+
+  api.getAbsoluteUrl = getAbsoluteStub;
+  api.getSweetAlert = sinon.stub().returns(swalStub);
+  api.getCpInfoState = sinon.stub().returns(savedState);
+  api.createPopupHtml = createHtmlStub;
+
+  api.initPopupForAnchor(anchor);
+
+  t.true(addEventListenerStub.calledOnce);
+  end(t);
+});
+
+test('saveCpInfoState correct', function(t) {
+  // Starts empty
+  t.deepEqual(api.getCpInfoState(), {});
+
+  let url1 = 'http://foo.org';
+  let url2 = 'http://nyt.com';
+
+  let info = {
+    [url1]: [ 'one', 'two' ],
+    [url2]: [ 1, 2 ]
+  };
+
+  let expected = {
+    [url1]: {
+      local: info[url1],
+    },
+    [url2]: {
+      local: info[url2]
+    }
+  };
+
+  api.saveCpInfoState(true, info);
+
+  t.deepEqual(api.getCpInfoState(), expected);
+
+  expected[url1].network = info[url1];
+  expected[url2].network = info[url2];
+
+  api.saveCpInfoState(false, info);
+
+  t.deepEqual(api.getCpInfoState(), expected);
+
+  end(t);
+});
+
+test('getIndexFromId can reverse getNetworkButtonIdForIndex', function(t) {
+  let expected = 1;
+  let id = api.getNetworkButtonIdForIndex(expected);
+  let actual = api.getIndexFromId(id);
+
+  t.equal(actual, expected);
+  end(t);
+});
+
+test('handleOpenButtonClick right for original', function(t) {
+  let href = 'foo.com';
+  let btn = {
+    id: api.idOpenOriginal
+  };
+
+  let windowStub = sinon.stub();
+
+  proxyquireApi({
+    '../util/util': {
+      getWindow: sinon.stub().returns(windowStub)
+    }
+  });
+
+  api.handleOpenButtonClick(href, btn);
+
+  t.deepEqual(windowStub.location, href);
+  end(t);
+});
+
+test('handleOpenButtonClick right for local', function(t) {
+  let href = 'nyt.com';
+  let serviceName = 'samcache';
+  let cpinfoState = {
+    [href]: {
+      local: [
+        {
+          serviceName: serviceName,
+          captureHref: href
+        }
+      ]
+    }
+  };
+
+  let btn = {
+    id: api.idOpenLocal
+  };
+
+  let sendStub = sinon.stub();
+
+  proxyquireApi({
+    '../app-bridge/messaging': {
+      sendMessageToOpenPage: sendStub
+    }
+  });
+  api.getCpInfoState = sinon.stub().returns(cpinfoState);
+
+  api.handleOpenButtonClick(href, btn);
+
+  t.deepEqual(sendStub.args[0], ['contentscript', serviceName, href]);
+  end(t);
+});
+
+test('handleOpenButtonClick right for network', function(t) {
+  let href = 'nyt.com';
+  let serviceName = 'samcache';
+  let serviceName2 = 'foobar';
+  let cpinfoState = {
+    [href]: {
+      network: [
+        {
+          serviceName: serviceName,
+          captureHref: href
+        },
+        {
+          serviceName: serviceName2,
+          captureHref: href
+        }
+      ]
+    }
+  };
+
+  // We want to open the 1th version
+  let btn = {
+    id: api.getNetworkButtonIdForIndex(1)
+  };
+
+  let sendStub = sinon.stub();
+
+  proxyquireApi({
+    '../app-bridge/messaging': {
+      sendMessageToOpenPage: sendStub
+    }
+  });
+  api.getCpInfoState = sinon.stub().returns(cpinfoState);
+
+  api.handleOpenButtonClick(href, btn);
+
+  t.deepEqual(sendStub.args[0], ['contentscript', serviceName2, href]);
+  end(t);
 });

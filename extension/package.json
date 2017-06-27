@@ -48,6 +48,7 @@
     }
   },
   "dependencies": {
-    "json2csv": "^3.6.3"
+    "json2csv": "^3.6.3",
+    "sweetalert2": "^6.6.5"
   }
 }

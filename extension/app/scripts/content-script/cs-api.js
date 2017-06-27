@@ -3,8 +3,75 @@
 const appMsg = require('../app-bridge/messaging');
 const util = require('../util/util');
 
+// Lazily initialize the sweetalert2 module.
+let swal = null;
 
 let localPageInfo = null;
+
+// IDs for use with templating popups.
+exports.idOpenOriginal = 'openOriginal';
+exports.idOpenLocal = 'openLocal';
+exports.idNetworkPrefix = 'networkLink_';
+
+/**
+ * We receive local cpinfos and network cpinfos seperately. For that reason, we
+ * are going to cache them here. only create the popup HTML when clicked.
+ *
+ * This object holds entries like:
+ * {
+ *   href: {
+ *     local: [ CPInfo, CPInfo, ... ],
+ *     network: [ CPInfo, CPInfo, ... ]
+ *   }
+ * }
+ */
+let hrefToCpInfos = {};
+
+/**
+ * @param {number} idx
+ *
+ * @return {string} A string for use in an HTML template.
+ */
+exports.getNetworkButtonIdForIndex = function(idx) {
+  return exports.idNetworkPrefix + idx;
+};
+
+/**
+ * Get the index of the network page from the id of the element. Essentially a
+ * reverse mapping for getNetworkButtonIdForIndex().
+ *
+ * @param {string} id
+ *
+ * @return {number}
+ */
+exports.getIndexFromId = function(id) {
+  let intStr = id.substr(exports.idNetworkPrefix.length);
+  return parseInt(intStr);
+};
+
+/**
+ * Lazily get the sweetalert2 module. We can't require it on its own,
+ * annoyingly, due to an apparent global requirement on document.
+ */
+exports.getSweetAlert = function() {
+  if (!swal) {
+    swal = require('sweetalert2');
+  }
+  return swal;
+};
+
+/**
+ * Get the cached cpInfos, an object mapping:
+ * {
+ *   href: {
+ *     local: [ CPInfo, CPInfo, ... ],
+ *     network: [ CPInfo, CPInfo, ... ]
+ *   }
+ * }
+ */  
+exports.getCpInfoState = function() {
+  return hrefToCpInfos;
+};
 
 /**
  * Return the local CachedPage object. This will have been retrieved from the
@@ -93,6 +160,104 @@ exports.getFullLoadTime = function() {
 };
 
 /**
+ * Set up the popup for viewing cached versions of the page.
+ */
+exports.initPopupForAnchor = function(anchor) {
+  let absoluteUrl = exports.getAbsoluteUrl(anchor.href);
+
+  let savedState = exports.getCpInfoState()[absoluteUrl];
+
+  if (!savedState) {
+    console.log('No saved cpinfos for href! There should be.', absoluteUrl);
+    return;
+  }
+
+  let local = savedState.local || [];
+  let network = savedState.network || [];
+
+  let popupHtml = exports.createPopupHtml(absoluteUrl, local, network);
+
+  let swal = exports.getSweetAlert();
+
+  // Overwite the onclick property to return false so that we don't open the
+  // link by default.
+  anchor.onclick = () => false;
+
+  function handleClick(e) {
+    exports.handleOpenButtonClick(absoluteUrl, e.currentTarget);
+  }
+
+  anchor.addEventListener('click', function() {
+    swal({
+      html: popupHtml,
+      cancelButtonText: 'Cancel',
+      showConfirmButton: false,
+      showCancelButton: true,
+      showCloseButton: true,
+      onOpen: function(modal) {
+        // Set up our listeners here. modal is the element of the modal itself.
+        let btns = modal.querySelectorAll('.btn');
+        btns.forEach(btn => {
+          btn.addEventListener('click', handleClick);        
+        });
+      }
+    });
+  });
+};
+
+/**
+ * @param {string} href
+ * @param {DOMElement} btn The button being clicked
+ */
+exports.handleOpenButtonClick = function(href, btn) {
+  let id = btn.id;
+  let savedState = exports.getCpInfoState()[href];
+  if (id === exports.idOpenOriginal) {
+    // Open the page to the href
+    util.getWindow().location = href;
+  } else if (id === exports.idOpenLocal) {
+    // Open the local page. We're assuming only 1.
+    let cpinfo = savedState.local[0];
+    appMsg.sendMessageToOpenPage(
+      'contentscript', cpinfo.serviceName, cpinfo.captureHref
+    );
+  } else {
+    // A network page.
+    // Get the index. 
+    let idx = exports.getIndexFromId(id);
+    let cpinfo = savedState.network[idx];
+    appMsg.sendMessageToOpenPage(
+      'contentscript', cpinfo.serviceName, cpinfo.captureHref
+    );
+  }
+};
+
+/**
+ * @param {boolean} isLocal true if these are local CPInfos, otherwise they are
+ * assumed to be on the network
+ * @param {Object} urlToPageArr an Object like:
+ * {
+ *   href: [ CPInfo, ... ]
+ * }
+ */
+exports.saveCpInfoState = function(isLocal, urlToPageArr) {
+  // Update our cache state in the content script.
+  for (let url of Object.keys(urlToPageArr)) {
+    let toSave = urlToPageArr[url];
+    let existingInfo = hrefToCpInfos[url];
+    if (!existingInfo) {
+      existingInfo = {};
+      hrefToCpInfos[url] = existingInfo;
+    }
+    if (isLocal) {
+      existingInfo.local = toSave;
+    } else {
+      existingInfo.network = toSave;
+    }
+  }
+};
+
+/**
  * Annotate links that are locally available.
  *
  * @return {Promise.<undefined, Error>}
@@ -107,9 +272,14 @@ exports.annotateLocalLinks = function() {
       // localUrls will be an Object mapping URLs to arrays of locally
       // available pages.
       Object.keys(urlToPageArr).forEach(url => {
+        // Save query results
+        exports.saveCpInfoState(true, urlToPageArr);
+
+        // Update page state.
         let anchors = links[url];
         anchors.forEach(anchor => {
           exports.annotateAnchorIsLocal(anchor);
+          exports.initPopupForAnchor(anchor);
         });
       });
       resolve();
@@ -133,11 +303,14 @@ exports.annotateNetworkLocalLinks = function() {
     appMsg.queryForPagesOnNetwork('contentscript', urls)
     .then(urlToInfoArr => {
       // localUrls will be an Object mapping URLs to arrays of locally
+      exports.saveCpInfoState(false, urlToInfoArr);
+
       // available pages.
       Object.keys(urlToInfoArr).forEach(url => {
         let anchors = links[url];
         anchors.forEach(anchor => {
           exports.annotateAnchorIsOnNetwork(anchor);
+          exports.initPopupForAnchor(anchor);
         });
       });
       resolve();
@@ -208,6 +381,61 @@ exports.selectAllLinksWithHrefs = function() {
 };
 
 /**
+ * @param {string} href
+ * @param {CPInfo} localCpinfo
+ * @param {Array.<CPInfo>} networkCpinfoArr
+ *
+ * @return {string} HTML for an alert.
+ */
+exports.createPopupHtml = function(href, localCpinfo, networkCpinfoArr) {
+  let header =
+  `<h2 class="swal2-title" id="swal2-title">Cached Versions Available</h2>`;
+  let normalLink =
+    `<table align="center" id="mainTables" class="table">
+     <tbody>
+     <tr>
+       <td>Open original link</td>
+       <td>
+         <button id="${exports.idOpenOriginal}"
+          class="open-original btn btn-sm">
+         Go
+         </button>
+       </td>
+     </tr>`;
+
+  let ownLink =
+    `<tr>
+       <td>View local copy</td>
+       <td>
+         <button id="${exports.idOpenLocal}" class="btn btn-sm open-local">
+           Open
+         </button>
+       </td>
+     </tr>`;
+
+  let otherLinks = '';
+
+  for (let i = 0; i < networkCpinfoArr.length; i++) {
+    let cpinfo = networkCpinfoArr[i];
+    let linkId = exports.getNetworkButtonIdForIndex(i);
+    let nextTr =
+      `<tr>
+        <td>${cpinfo.captureHref}</td>
+        <td>
+          <button id="${linkId}" class="btn btn-sm open-network">
+            Get
+          </button>
+        </td>
+      </tr>`;
+    otherLinks += nextTr;
+  }
+
+  let footer = `</tbody></table>`;
+  let result = header + normalLink + ownLink + otherLinks + footer;
+  return result;
+};
+
+/**
  * Annotate an individual anchor to indicate that it is available locally. The
  * anchor is annotated in place.
  *
@@ -217,6 +445,25 @@ exports.selectAllLinksWithHrefs = function() {
 exports.annotateAnchorIsLocal = function(anchor) {
   // We'll style the link using a lightning bolt, known as 'zap'.
   let zap = '\u26A1';
+  // We want a swal that gives the option of opening the like on click.
+  // let localEl = document.createElement('span');
+  // localEl.textContent = zap;
+  //
+  // localEl.addEventListener('click', function() {
+  //   swal({
+  //     html: exports.createPopupHtml()
+  //     // title: 'You have a copy saved locally.',
+  //     // confirmButtonText: 'View'
+  //   })
+  //   .then(() => {
+  //     appMsg.sendMessageToOpenPage(
+  //       'mainwindow', cpinfo.serviceName, cpinfo.captureHref
+  //     );
+  //   });
+  // });
+  //
+  // // anchor.insertAdjacentElement('afterend', localEl);
+  // anchor.insertAdjacentElement('beforeend', localEl);
   anchor.innerHTML = anchor.innerHTML + zap;
 };
 
