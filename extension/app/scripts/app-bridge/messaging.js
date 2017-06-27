@@ -41,10 +41,10 @@ exports.sendMessageToApp = function(message, callback) {
  * @param {number} timeout a timeout to apply to the message. If falsey, uses
  * default.
  *
- * @return {Promise.<any, Error>} Promise that resolves with the response from
- * the app or rejects with an Error if something went wrong or if the response
- * times out. Note that the Promise resolves if communication was successful,
- * even if the request failed gracefully.
+ * @return {Promise.<any, any|Error>} Promise that resolves with the response
+ * from the app. It rejects if the message is of type error, or if there was a
+ * failure of some sort. Note that the Promise resolves if communication was
+ * successful, even if the request failed gracefully.
  */
 exports.sendMessageForResponse = function(message, timeout) {
   timeout = timeout || exports.DEFAULT_TIMEOUT;
@@ -63,12 +63,12 @@ exports.sendMessageForResponse = function(message, timeout) {
       }
       settled = true;
       if (commonMsg.isError(response)) {
-        reject(response);
+        reject(response.body);
       } else if (commonMsg.isSuccess(response)) {
-        resolve(response);
+        resolve(response.body);
       } else {
         console.log('unrecognized message:', response);
-        reject(response);
+        reject(new Error('unrecognized message from app'));
       }
     };
     exports.sendMessageToApp(message, callbackForApp);
@@ -102,9 +102,6 @@ exports.queryForPagesLocally = function(from, urls, timeout) {
   .then(() => {
     let message = commonMsg.createLocalQueryMessage(from, urls);
     return exports.sendMessageForResponse(message, timeout);
-  })
-  .then(response => {
-    return response.body;
   });
 };
 
@@ -122,9 +119,6 @@ exports.queryForPagesOnNetwork = function(from, urls, timeout) {
   .then(() => {
     let message = commonMsg.createNetworkQueryMessage(from, urls);
     return exports.sendMessageForResponse(message, timeout);
-  })
-  .then(response => {
-    return response.body;
   });
 };
 
@@ -140,9 +134,6 @@ exports.sendMessageToOpenPage = function(from, serviceName, href, timeout) {
   .then(() => {
     let message = commonMsg.createOpenMessage(from, serviceName, href);
     return exports.sendMessageForResponse(message, timeout);
-  })
-  .then(response => {
-    return response.body;
   });
 };
 
@@ -162,9 +153,6 @@ exports.savePage = function(from, cpdiskJson, timeout) {
   .then(() => {
     let message = commonMsg.createAddPageMessage(from, cpdiskJson);
     return exports.sendMessageForResponse(message, timeout);
-  })
-  .then(response => {
-    return response.body;
   });
 };
 

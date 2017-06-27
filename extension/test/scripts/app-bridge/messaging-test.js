@@ -67,7 +67,7 @@ test('sendMessageForResponse resolves on success', function(t) {
   messaging.sendMessageForResponse(initiator, timeout)
   .then(actual => {
     t.deepEqual(sendMessageToAppSpy.args[0][0], initiator);
-    t.deepEqual(actual, responder);
+    t.deepEqual(actual, responder.body);
     end(t);
   }).catch(err => {
     t.fail(err);
@@ -89,7 +89,7 @@ test('sendMessageForResponse rejects if message is error', function(t) {
     end(t);
   })
   .catch(actual => {
-    t.deepEqual(actual, expected);
+    t.deepEqual(actual, expected.body);
     end(t);
   });
 });
@@ -144,7 +144,7 @@ test('savePage sends correct message and resolves', function(t) {
   let sendMessageForResponseSpy = sinon.stub();
   sendMessageForResponseSpy
     .withArgs(initiator, timeout)
-    .resolves(responder);
+    .resolves(responder.body);
   messaging.sendMessageForResponse = sendMessageForResponseSpy;
 
   messaging.savePage('popup', initiator.params.cachedPage, timeout)
@@ -205,7 +205,9 @@ test('queryForPagesLocally resolves response from app', function(t) {
   let urls = initiator.params.urls;
 
   let sendMessageForResponseSpy = sinon.stub();
-  sendMessageForResponseSpy.withArgs(initiator, timeout).resolves(responder);
+  sendMessageForResponseSpy
+    .withArgs(initiator, timeout)
+    .resolves(responder.body);
   messaging.sendMessageForResponse = sendMessageForResponseSpy;
 
   messaging.queryForPagesLocally('popup', urls, timeout)
@@ -280,7 +282,9 @@ test('queryForPagesOnNetwork resolves response from app', function(t) {
   let { i: initiator, r: responder } = mutil.getNetworkQueryMsgs();
 
   let sendMessageForResponseSpy = sinon.stub();
-  sendMessageForResponseSpy.withArgs(initiator, timeout).resolves(responder);
+  sendMessageForResponseSpy
+    .withArgs(initiator, timeout)
+    .resolves(responder.body);
   messaging.sendMessageForResponse = sendMessageForResponseSpy;
 
   let urls = initiator.params.urls;
@@ -321,7 +325,9 @@ test('sendMessageToOpenPage resolves', function(t) {
   let href = initiator.params.href;
 
   let sendMessageForResponseSpy = sinon.stub();
-  sendMessageForResponseSpy.withArgs(initiator, timeout).resolves(responder);
+  sendMessageForResponseSpy
+    .withArgs(initiator, timeout)
+    .resolves(responder.body);
   messaging.sendMessageForResponse = sendMessageForResponseSpy;
 
   messaging.sendMessageToOpenPage('popup', serviceName, href, timeout)

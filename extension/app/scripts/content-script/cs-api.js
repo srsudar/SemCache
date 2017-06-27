@@ -245,7 +245,7 @@ exports.handleOpenButtonClick = function(href, btn) {
   .catch(err => {
     console.log(err);
     openingDiv.remove();
-    let errorDiv = exports.toastError(err.body);
+    let errorDiv = exports.toastError(err);
     errorDiv.onclick = () => { errorDiv.remove(); }; 
   });
 };
@@ -275,6 +275,9 @@ exports.toastMessage = function(msg) {
 };
 
 exports.toastError = function(msg) {
+  if (msg instanceof Error) {
+    msg = msg.message;
+  }
   let result = exports.addAlertDiv(msg);
   result.classList.add('sem-error');
   return result;
