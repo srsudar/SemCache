@@ -45201,6 +45201,18 @@ exports.idNetworkPrefix = 'networkLink_';
 let hrefToCpInfos = {};
 
 /**
+ * Add listeners for buttons in our popups.
+ */
+exports.addListenersToBtns = function(href) {
+  let btns = document.querySelectorAll('button.btn-sem');
+  btns.forEach(btn => {
+    btn.addEventListener('click', function(e) {
+      exports.handleOpenButtonClick(href, e.currentTarget);
+    });
+  });
+};
+
+/**
  * @param {number} idx
  *
  * @return {string} A string for use in an HTML template.
@@ -45356,10 +45368,6 @@ exports.initPopupForAnchor = function(anchor) {
   // link by default.
   anchor.onclick = () => false;
 
-  function handleClick(e) {
-    exports.handleOpenButtonClick(absoluteUrl, e.currentTarget);
-  }
-
   anchor.addEventListener('click', function() {
     swal({
       html: popupHtml,
@@ -45367,15 +45375,18 @@ exports.initPopupForAnchor = function(anchor) {
       showConfirmButton: false,
       showCancelButton: true,
       showCloseButton: true,
-      onOpen: function(modal) {
-        // Set up our listeners here. modal is the element of the modal itself.
-        let btns = modal.querySelectorAll('.btn');
-        btns.forEach(btn => {
-          btn.addEventListener('click', handleClick);        
-        });
-      }
     });
+
+    // Add the listeners separately. This saves us from Chrome's CSP on
+    // displaying mhtml pages, which blocks our script when we try to run via
+    // the onOpen() function sweet alert provides. This makes me nervous that
+    // if sweet alert was ever slow to insert the buttons into the dom we might
+    // miss them when attaching listeners, but setTimeout() functions are
+    // blocked on mhtml pages. I've never seen this to be a problem, but I
+    // worry that it could become a problem.
+    exports.addListenersToBtns(absoluteUrl);
   });
+
 };
 
 /**
@@ -45570,7 +45581,7 @@ exports.createPopupHtml = function(href, localCpinfo, networkCpinfoArr) {
        <td>Open original link</td>
        <td>
          <button id="${exports.idOpenOriginal}"
-          class="open-original btn btn-sm">
+          class="open-original btn btn-sm btn-sem">
          Go
          </button>
        </td>
@@ -45580,11 +45591,17 @@ exports.createPopupHtml = function(href, localCpinfo, networkCpinfoArr) {
     `<tr>
        <td>View local copy</td>
        <td>
-         <button id="${exports.idOpenLocal}" class="btn btn-sm open-local">
+         <button id="${exports.idOpenLocal}"
+          class="btn btn-sm open-local btn-sem">
            Open
          </button>
        </td>
      </tr>`;
+
+  // Don't set this if we don't have a local copy.
+  if (!localCpinfo || localCpinfo.length === 0) {
+    ownLink = '';
+  }
 
   let otherLinks = '';
 
@@ -45595,7 +45612,7 @@ exports.createPopupHtml = function(href, localCpinfo, networkCpinfoArr) {
       `<tr>
         <td>${cpinfo.friendlyName}</td>
         <td>
-          <button id="${linkId}" class="btn btn-sm open-network">
+          <button id="${linkId}" class="btn btn-sm open-network btn-sem">
             Get
           </button>
         </td>
@@ -45618,25 +45635,6 @@ exports.createPopupHtml = function(href, localCpinfo, networkCpinfoArr) {
 exports.annotateAnchorIsLocal = function(anchor) {
   // We'll style the link using a lightning bolt, known as 'zap'.
   let zap = '\u26A1';
-  // We want a swal that gives the option of opening the like on click.
-  // let localEl = document.createElement('span');
-  // localEl.textContent = zap;
-  //
-  // localEl.addEventListener('click', function() {
-  //   swal({
-  //     html: exports.createPopupHtml()
-  //     // title: 'You have a copy saved locally.',
-  //     // confirmButtonText: 'View'
-  //   })
-  //   .then(() => {
-  //     appMsg.sendMessageToOpenPage(
-  //       'mainwindow', cpinfo.serviceName, cpinfo.captureHref
-  //     );
-  //   });
-  // });
-  //
-  // // anchor.insertAdjacentElement('afterend', localEl);
-  // anchor.insertAdjacentElement('beforeend', localEl);
   anchor.innerHTML = anchor.innerHTML + zap;
 };
 
