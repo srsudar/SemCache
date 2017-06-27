@@ -472,7 +472,7 @@ exports.BloomStrategy.prototype.performQuery = function(urls) {
             let info = {
               friendlyName: bloomFilter.peerInfo.friendlyName,
               serviceName: bloomFilter.peerInfo.instanceName,
-              href: url
+              captureHref: url
             };
             copiesForUrl.push(info);
           }
@@ -708,7 +708,7 @@ exports.DigestStrategy.prototype.performQuery = function(urls) {
             let page = {
               friendlyName: digest.peerInfo.friendlyName,
               serviceName: digest.peerInfo.instanceName,
-              href: url,
+              captureHref: url,
               captureDate: captureDate
             };
             copiesForUrl.push(page);

@@ -216,7 +216,7 @@ exports.DigestStrategy.prototype.performQuery = function(urls) {
             let page = {
               friendlyName: digest.peerInfo.friendlyName,
               serviceName: digest.peerInfo.instanceName,
-              href: url,
+              captureHref: url,
               captureDate: captureDate
             };
             copiesForUrl.push(page);

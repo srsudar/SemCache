@@ -420,7 +420,7 @@ exports.createPopupHtml = function(href, localCpinfo, networkCpinfoArr) {
     let linkId = exports.getNetworkButtonIdForIndex(i);
     let nextTr =
       `<tr>
-        <td>${cpinfo.captureHref}</td>
+        <td>${cpinfo.friendlyName}</td>
         <td>
           <button id="${linkId}" class="btn btn-sm open-network">
             Get

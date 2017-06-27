@@ -262,7 +262,7 @@ test('performQuery correct with extant pages', function(t) {
     {
       serviceName: peer1.instanceName,
       friendlyName: peer1.friendlyName,
-      href: urlOnly1,
+      captureHref: urlOnly1,
     },
   ];
 
@@ -270,7 +270,7 @@ test('performQuery correct with extant pages', function(t) {
     {
       serviceName: peer2.instanceName,
       friendlyName: peer2.friendlyName,
-      href: urlOnly2,
+      captureHref: urlOnly2,
     }
   ];
 
@@ -278,12 +278,12 @@ test('performQuery correct with extant pages', function(t) {
     {
       serviceName: peer1.instanceName,
       friendlyName: peer1.friendlyName,
-      href: urlBoth,
+      captureHref: urlBoth,
     },
     {
       serviceName: peer2.instanceName,
       friendlyName: peer2.friendlyName,
-      href: urlBoth,
+      captureHref: urlBoth,
     }
   ];
 

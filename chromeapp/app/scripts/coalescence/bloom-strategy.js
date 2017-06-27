@@ -219,7 +219,7 @@ exports.BloomStrategy.prototype.performQuery = function(urls) {
             let info = {
               friendlyName: bloomFilter.peerInfo.friendlyName,
               serviceName: bloomFilter.peerInfo.instanceName,
-              href: url
+              captureHref: url
             };
             copiesForUrl.push(info);
           }

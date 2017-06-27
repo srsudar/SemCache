@@ -1160,7 +1160,7 @@ exports.BloomStrategy.prototype.performQuery = function(urls) {
             let info = {
               friendlyName: bloomFilter.peerInfo.friendlyName,
               serviceName: bloomFilter.peerInfo.instanceName,
-              href: url
+              captureHref: url
             };
             copiesForUrl.push(info);
           }
@@ -1396,7 +1396,7 @@ exports.DigestStrategy.prototype.performQuery = function(urls) {
             let page = {
               friendlyName: digest.peerInfo.friendlyName,
               serviceName: digest.peerInfo.instanceName,
-              href: url,
+              captureHref: url,
               captureDate: captureDate
             };
             copiesForUrl.push(page);
@@ -45664,7 +45664,7 @@ exports.createPopupHtml = function(href, localCpinfo, networkCpinfoArr) {
     let linkId = exports.getNetworkButtonIdForIndex(i);
     let nextTr =
       `<tr>
-        <td>${cpinfo.captureHref}</td>
+        <td>${cpinfo.friendlyName}</td>
         <td>
           <button id="${linkId}" class="btn btn-sm open-network">
             Get
