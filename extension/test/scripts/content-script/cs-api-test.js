@@ -472,12 +472,14 @@ test('handleOpenButtonClick right for original', function(t) {
   };
 
   let windowStub = sinon.stub();
+  let toastStub = sinon.stub();
 
   proxyquireApi({
     '../util/util': {
       getWindow: sinon.stub().returns(windowStub)
     }
   });
+  api.toastMessage = toastStub;
 
   api.handleOpenButtonClick(href, btn);
 
@@ -503,7 +505,8 @@ test('handleOpenButtonClick right for local', function(t) {
     id: api.idOpenLocal
   };
 
-  let sendStub = sinon.stub();
+  let sendStub = sinon.stub().resolves();
+  let toastMessageStub = sinon.stub();
 
   proxyquireApi({
     '../app-bridge/messaging': {
@@ -511,10 +514,12 @@ test('handleOpenButtonClick right for local', function(t) {
     }
   });
   api.getCpInfoState = sinon.stub().returns(cpinfoState);
+  api.toastMessage = toastMessageStub;
 
   api.handleOpenButtonClick(href, btn);
 
   t.deepEqual(sendStub.args[0], ['contentscript', serviceName, href]);
+  t.deepEqual(toastMessageStub.args[0], ['Opening...']);
   end(t);
 });
 
@@ -542,7 +547,8 @@ test('handleOpenButtonClick right for network', function(t) {
     id: api.getNetworkButtonIdForIndex(1)
   };
 
-  let sendStub = sinon.stub();
+  let sendStub = sinon.stub().resolves();
+  let toastStub = sinon.stub();
 
   proxyquireApi({
     '../app-bridge/messaging': {
@@ -550,6 +556,7 @@ test('handleOpenButtonClick right for network', function(t) {
     }
   });
   api.getCpInfoState = sinon.stub().returns(cpinfoState);
+  api.toastMessage = toastStub;
 
   api.handleOpenButtonClick(href, btn);
 

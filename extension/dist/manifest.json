@@ -25,6 +25,7 @@
         "scripts/contentscriptBundle.js"
       ],
       "css": [
+        "styles/contentscript.css",
         "styles/sweetalert2.css"
       ]
     }

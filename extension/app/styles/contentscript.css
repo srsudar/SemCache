@@ -1,0 +1,15 @@
+#sem-message {
+  position: fixed;
+  left: 16px;
+  bottom: 16px;
+  color: #fff;
+  z-index: 999;
+}
+
+.sem-error {
+  background: rgba(244,67,54,.8);
+}
+
+.sem-toast {
+  background: rgba(0,0,0,.87);
+}

@@ -45176,7 +45176,6 @@ exports.applyArgsCheckLastError = function(fn, callArgs) {
 const appMsg = require('../app-bridge/messaging');
 const util = require('../util/util');
 
-// Lazily initialize the sweetalert2 module.
 let swal = null;
 
 let localPageInfo = null;
@@ -45396,24 +45395,62 @@ exports.initPopupForAnchor = function(anchor) {
 exports.handleOpenButtonClick = function(href, btn) {
   let id = btn.id;
   let savedState = exports.getCpInfoState()[href];
+  let cpinfoToOpen = null;
   if (id === exports.idOpenOriginal) {
     // Open the page to the href
+    exports.toastMessage('Opening...');
     util.getWindow().location = href;
+    return;
   } else if (id === exports.idOpenLocal) {
     // Open the local page. We're assuming only 1.
-    let cpinfo = savedState.local[0];
-    appMsg.sendMessageToOpenPage(
-      'contentscript', cpinfo.serviceName, cpinfo.captureHref
-    );
+    cpinfoToOpen = savedState.local[0];
   } else {
     // A network page.
     // Get the index. 
     let idx = exports.getIndexFromId(id);
-    let cpinfo = savedState.network[idx];
-    appMsg.sendMessageToOpenPage(
-      'contentscript', cpinfo.serviceName, cpinfo.captureHref
-    );
+    cpinfoToOpen = savedState.network[idx];
   }
+  console.log('opening');
+  let openingDiv = exports.toastMessage('Opening...');
+  appMsg.sendMessageToOpenPage(
+    'contentscript', cpinfoToOpen.serviceName, cpinfoToOpen.captureHref
+  )
+  .catch(err => {
+    console.log(err);
+    openingDiv.remove();
+    let errorDiv = exports.toastError(err.body);
+    errorDiv.onclick = () => { errorDiv.remove(); }; 
+  });
+};
+
+exports.addAlertDiv = function(msg) {
+  let html =
+    `<div style="padding: 5px;">
+      <div>
+          ${msg}
+      </div>
+    </div>`;
+  let div = document.createElement('div');
+  div.id = 'sem-message';
+  div.innerHTML = html;
+  let body = document.querySelector('body');
+  body.appendChild(div);
+
+  // Close on click
+  div.onclick = () => { div.remove(); };
+  return div;
+};
+
+exports.toastMessage = function(msg) {
+  let result = exports.addAlertDiv(msg);
+  result.classList.add('sem-toast');
+  return result;
+};
+
+exports.toastError = function(msg) {
+  let result = exports.addAlertDiv(msg);
+  result.classList.add('sem-error');
+  return result;
 };
 
 /**

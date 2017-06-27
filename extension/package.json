@@ -48,7 +48,10 @@
     }
   },
   "dependencies": {
+    "alertify.js": "^1.0.12",
     "json2csv": "^3.6.3",
-    "sweetalert2": "^6.6.5"
+    "sweetalert2": "^6.6.5",
+    "toast-js": "^1.1.0",
+    "toastr": "^2.1.2"
   }
 }
