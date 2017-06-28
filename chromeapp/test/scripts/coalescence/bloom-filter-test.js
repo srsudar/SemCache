@@ -38,15 +38,15 @@ test('add and test work as expected', function(t) {
   end(t);
 });
 
-test('serialize and from work as expected', function(t) {
+test('toBuffer and fromBuffer work as expected', function(t) {
   let bf = new bloom.BloomFilter();
 
   bf.add('tyrion');
   bf.add('jamie');
 
-  let buff = bf.serialize();
+  let buff = bf.toBuffer();
 
-  let actual = bloom.from(buff);
+  let actual = bloom.BloomFilter.fromBuffer(buff);
 
   t.true(actual.test('tyrion'));
   t.true(actual.test('jamie'));

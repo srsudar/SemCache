@@ -194,7 +194,7 @@ exports.getResponseForBloomFilter = function() {
   .then(cpinfos => {
     let bloomFilter = new BloomFilter();
     cpinfos.forEach(cpinfo => bloomFilter.add(cpinfo.captureHref));
-    return bloomFilter.serialize();
+    return bloomFilter.toBuffer();
   });
 };
 
@@ -243,7 +243,7 @@ exports.parseResponseForDigest = function(buff) {
  * @return {BloomFilter}
  */
 exports.parseResponseForBloomFilter = function(buff) {
-  return BloomFilter.from(buff);
+  return BloomFilter.fromBuffer(buff);
 };
 
 /**

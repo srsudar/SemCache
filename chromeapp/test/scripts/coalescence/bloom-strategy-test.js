@@ -47,8 +47,8 @@ function createProcessedBlooms() {
   let bloomFilters = createBloomFilters();
 
   return [
-    new coalObjects.PeerBloomFilter(peerInfos[0], bloomFilters[0].serialize()),
-    new coalObjects.PeerBloomFilter(peerInfos[1], bloomFilters[1].serialize()),
+    new coalObjects.PeerBloomFilter(peerInfos[0], bloomFilters[0].toBuffer()),
+    new coalObjects.PeerBloomFilter(peerInfos[1], bloomFilters[1].toBuffer()),
   ];
 }
 
@@ -153,7 +153,7 @@ test('getAndProcessBloomFilters returns empty array if no peers', function(t) {
 test('getAndProcessBloomFilters resolves all success', function(t) {
   let peerInfos = createPeerInfos();
   let bloomFilters = createBloomFilters();
-  bloomFilters = bloomFilters.map(bf => bf.serialize());
+  bloomFilters = bloomFilters.map(bf => bf.toBuffer());
 
   let getCacheBloomStub = sinon.stub();
   getCacheBloomStub.withArgs(
@@ -188,7 +188,7 @@ test('getAndProcessBloomFilters resolves all success', function(t) {
 test('getAndProcessBloomFilters resolves last rejects', function(t) {
   let peerInfos = createPeerInfos();
   let bloomFilters = createBloomFilters();
-  bloomFilters = bloomFilters.map(bf => bf.serialize());
+  bloomFilters = bloomFilters.map(bf => bf.toBuffer());
 
   let getCacheBloomStub = sinon.stub();
   getCacheBloomStub.withArgs(

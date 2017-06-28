@@ -86,7 +86,7 @@ test('Digest performQueryForPage returns captureDate', function(t) {
 test('PeerBloomFilter constructor succeeds with buffer', function(t) {
   let peerInfo = createPeerInfo();
   let bloom = new bloomFilter.BloomFilter();
-  let buff = bloom.serialize();
+  let buff = bloom.toBuffer();
 
   let actual = new objects.PeerBloomFilter(peerInfo, buff);
 
@@ -111,7 +111,7 @@ test('PeerBloomFilter constructor succeeds with BloomFilter', function(t) {
 test('PeerBloomFilter performQueryForPage false if not present', function(t) {
   let peerInfo = createPeerInfo();
   let bloom = new bloomFilter.BloomFilter();
-  let buff = bloom.serialize();
+  let buff = bloom.toBuffer();
 
   let actual = new objects.PeerBloomFilter(peerInfo, buff);
   t.false(actual.performQueryForPage('http://foo.com'));
@@ -123,7 +123,7 @@ test('PeerBloomFilter performQueryForPage true if present', function(t) {
   let rawBloom = new bloomFilter.BloomFilter();
   let url = 'foo';
   rawBloom.add(url);
-  let buff = rawBloom.serialize();
+  let buff = rawBloom.toBuffer();
 
   let peerBloom = new objects.PeerBloomFilter(peerInfo, buff);
   t.deepEqual(

@@ -2,6 +2,8 @@
 
 const bloomFilter = require('./bloom-filter');
 
+const BloomFilter = bloomFilter.BloomFilter;
+
 
 /**
  * Objects relevant to coalescence between instances on the local network.
@@ -120,8 +122,8 @@ exports.PeerBloomFilter = function PeerBloomFilter(peerInfo, bloom) {
 
   // Now process the pageInfos.
   if (Buffer.isBuffer(bloom)) {
-    this.bloomFilter = bloomFilter.from(bloom);
-  } else if (bloom instanceof bloomFilter.BloomFilter) {
+    this.bloomFilter = BloomFilter.fromBuffer(bloom);
+  } else if (bloom instanceof BloomFilter) {
     this.bloomFilter = bloom;
   } else {
     console.log(bloom);

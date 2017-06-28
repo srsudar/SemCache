@@ -190,7 +190,7 @@ test('getResponseForBloomFilter resolves on success', function(t) {
   let cpinfos = [...putil.genCPInfos(5)];
   let bf = new BloomFilter();
   cpinfos.forEach(info => bf.add(info.captureHref));
-  let expected = bf.serialize();
+  let expected = bf.toBuffer();
 
   proxyquireApi({
     '../persistence/datastore': {
@@ -334,7 +334,7 @@ test('parseResponseForBloomFilter correct', function(t) {
   expected.add('yo');
 
   // We expect the response to be just a serialized Bloom filter.
-  let buff = expected.serialize();
+  let buff = expected.toBuffer();
 
   let actual = api.parseResponseForBloomFilter(buff);
 
