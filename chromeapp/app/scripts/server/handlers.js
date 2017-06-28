@@ -2,9 +2,9 @@
 'use strict';
 
 const _ = require('underscore');
+const TextDecoder = require('text-encoding').TextDecoder;
 
 const api = require('./server-api');
-const binUtil = require('../dnssd/binary-utils').BinaryUtils;
 const fileSystem = require('../persistence/file-system');
 const fsUtil = require('../persistence/file-system-util');
 const rtcConnMgr = require('../webrtc/connection-manager');
@@ -143,7 +143,7 @@ _.extend(exports.WebRtcOfferHandler.prototype,
 
       let that = this;
 
-      let bodyStr = binUtil.arrayBufferToString(this.request.body);
+      let bodyStr = new TextDecoder().decode(this.request.body);
       console.log('bodyStr: ' + bodyStr);
 
       let bodyJson = JSON.parse(bodyStr);

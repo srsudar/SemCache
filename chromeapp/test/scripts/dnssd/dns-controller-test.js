@@ -5,7 +5,6 @@ const proxyquire = require('proxyquire');
 const sinon = require('sinon');
 const test = require('tape');
 
-const byteArray = require('../../../app/scripts/dnssd/byte-array');
 const chromeUdp = require('../../../app/scripts/chrome-apis/udp');
 const dnsCodes = require('../../../app/scripts/dnssd/dns-codes');
 const dnsPacket = require('../../../app/scripts/dnssd/dns-packet');
@@ -14,23 +13,33 @@ const resRec = require('../../../app/scripts/dnssd/resource-record');
 
 let dnsController = require('../../../app/scripts/dnssd/dns-controller');
 
+dnsController.DEBUG = false;
+
 
 /**
  * Manipulating the object directly leads to polluting the require cache. Any
  * test that modifies the required object should call this method to get a
  * fresh version
  */
-function resetDnsController() {
+function reset() {
   delete require.cache[
     require.resolve('../../../app/scripts/dnssd/dns-controller')
   ];
   dnsController = require('../../../app/scripts/dnssd/dns-controller');
+  dnsController.DEBUG = false;
 }
 
 function proxyquireDnsController(proxies) {
   dnsController = proxyquire(
     '../../../app/scripts/dnssd/dns-controller', proxies
   );
+  dnsController.DEBUG = false;
+}
+
+function end(t) {
+  if (!t) { throw new Error('You forgot to pass tape'); }
+  t.end();
+  reset();
 }
 
 /**
@@ -99,8 +108,7 @@ function helperTestForSendAddress(t, isUnicast, address, port) {
     [dnsController.RESPONSE_WAIT_MIN, dnsController.RESPONSE_WAIT_MAX]
   );
 
-  resetDnsController();
-  t.end();
+  end(t);
 }
 
 function helperQueryForType(t, name, type, clazz, controller, fn, argsArray) {
@@ -113,9 +121,8 @@ function helperQueryForType(t, name, type, clazz, controller, fn, argsArray) {
 
   t.deepEqual(querySpy.args[0], [name, type, clazz]);
   t.equal(actual, returnArg);
-  t.end();
 
-  resetDnsController();
+  end(t);
 }
 
 test('getSocket resolves immediately if socket is present', function(t) {
@@ -127,13 +134,11 @@ test('getSocket resolves immediately if socket is present', function(t) {
   result.then(function success(socket) {
     // It should return null by default, as we don't have the socket set yet.
     t.equal(socket, dummySocket);
-    t.end();
-    resetDnsController();
+    end(t);
   })
   .catch(err => {
     t.fail(err);
-    t.end();
-    resetDnsController();
+    end(t);
   });
 });
 
@@ -157,13 +162,11 @@ test('getSocket follows success chain and resolves with socket', function(t) {
   .then(function success(actual) {
     t.deepEqual(actual, expected);
     t.true(dnsController.isStarted());
-    t.end();
-    resetDnsController();
+    end(t);
   })
   .catch(err => {
     t.fail(err);
-    t.end();
-    resetDnsController();
+    end(t);
   });
 });
 
@@ -191,15 +194,13 @@ test('getSocket fails if bind fails', function(t) {
   let result = dnsController.getSocket();
   result.then(res => {
     t.fail(res);
-    t.end();
-    resetDnsController();
+    end(t);
   })
   .catch(actual => {
     t.deepEqual(actual, expected);
     t.equal(dnsController.socket, null);
     t.equal(closeAllSocketsSpy.callCount, 1);
-    t.end();
-    resetDnsController();
+    end(t);
   });
 });
 
@@ -225,15 +226,13 @@ test('getSocket fails if join group fails', function(t) {
   dnsController.getSocket()
   .then(res => {
     t.fail(res);
-    t.end();
-    resetDnsController();
+    end(t);
   })
   .catch(actual => {
     t.deepEqual(actual, expected);
     t.equal(dnsController.socket, null);
     t.equal(closeAllSocketsSpy.callCount, 1);
-    t.end();
-    resetDnsController();
+    end(t);
   });
 });
 
@@ -322,9 +321,8 @@ test('query calls sendPacket with correct args', function(t) {
   t.deepEqual(args[0], targetPacket);
   t.deepEqual(args[1], mockedController.DNSSD_MULTICAST_GROUP);
   t.deepEqual(args[2], mockedController.MDNS_PORT);
-  t.end();
 
-  resetDnsController();
+  end(t);
 });
 
 test('addRecord updates data structures', function(t) {
@@ -358,9 +356,7 @@ test('addRecord updates data structures', function(t) {
   dnsController.addRecord(aName, aRecord2);
   t.deepEqual(dnsController.getRecords(), expectedRecords);
 
-  t.end();
-
-  resetDnsController();
+  end(t);
 });
 
 test('addOnReceiveCallback adds function', function(t) {
@@ -380,9 +376,7 @@ test('addOnReceiveCallback adds function', function(t) {
   dnsController.addOnReceiveCallback(fn2);
   t.deepEqual(dnsController.getOnReceiveCallbacks(), expected);
 
-  t.end();
-
-  resetDnsController();
+  end(t);
 });
 
 test('removeOnReceiveCallback removes function', function(t) {
@@ -420,7 +414,7 @@ test('removeOnReceiveCallback removes function', function(t) {
   expected.add(fn3);
   t.deepEqual(dnsController.getOnReceiveCallbacks(), expected);
 
-  t.end();
+  end(t);
 });
 
 test('sendPacket gets socket and sends', function(t) {
@@ -435,8 +429,7 @@ test('sendPacket gets socket and sends', function(t) {
     0
   );
 
-  let byteArr = packet.convertToByteArray();
-  let expectedBuffer = byteArray.getByteArrayAsUint8Array(byteArr).buffer;
+  let buff = packet.asBuffer();
   let address = 'hello';
   let port = '6789';
 
@@ -444,11 +437,10 @@ test('sendPacket gets socket and sends', function(t) {
   // function.
   let sendSpy = {
     send: function(bufferParam, addressParam, portParam) {
-      t.deepEqual(bufferParam, expectedBuffer);
+      t.deepEqual(bufferParam, buff);
       t.deepEqual(addressParam, address);
       t.deepEqual(portParam, port);
-      resetDnsController();
-      t.end();
+      end(t);
     }
   };
   let getSocketSpy = sinon.stub().resolves(sendSpy);
@@ -470,13 +462,11 @@ test('start initializes correctly', function(t) {
   .then(() => {
     t.true(getSocketStub.calledOnce);
     t.true(initializeCacheStub.calledOnce);
-    t.end();
-    resetDnsController();
+    end(t);
   })
   .catch(err => {
     t.fail(err);
-    t.end();
-    resetDnsController();
+    end(t);
   });
 });
 
@@ -485,7 +475,7 @@ test('getIPv4Interfaces throws if not started', function(t) {
   controller.isStarted = sinon.stub().returns(false);
 
   t.throws(controller.getIPv4Interfaces, Error);
-  t.end();
+  end(t);
 });
 
 test('initializeNetworkInterfaceCache initializes cache', function(t) {
@@ -529,13 +519,11 @@ test('initializeNetworkInterfaceCache initializes cache', function(t) {
   .then(function addedInterfaces() {
     let expectedInterfaces = [wantedIface];
     t.deepEqual(dnsController.getIPv4Interfaces(), expectedInterfaces);
-    t.end();
-    resetDnsController();
+    end(t);
   })
   .catch(err => {
     t.fail(err);
-    t.end();
-    resetDnsController();
+    end(t);
   });
 });
 
@@ -550,13 +538,11 @@ test('initializeNetworkInterfaceCache rejects if error', function(t) {
   dnsController.initializeNetworkInterfaceCache()
   .then(res => {
     t.fail(res);
-    t.end();
-    resetDnsController();
+    end(t);
   })
   .catch(actual => {
     t.equal(actual, expected);
-    t.end();
-    resetDnsController();
+    end(t);
   });
 });
 
@@ -585,8 +571,7 @@ test('handleIncomingPacket invokes all callbacks', function(t) {
   t.deepEqual(callback1.args[0], [responsePacket]);
   t.deepEqual(callback2.args[0], [responsePacket]);
 
-  resetDnsController();
-  t.end();
+  end(t);
 });
 
 test('handleIncomingPacket does not send packets if not query', function(t) {
@@ -612,9 +597,8 @@ test('handleIncomingPacket does not send packets if not query', function(t) {
   dnsController.handleIncomingPacket(responsePacket, 'addr', 4444);
 
   t.equal(sendSpy.callCount, 0);
-  t.end();
 
-  resetDnsController();
+  end(t);
 });
 
 test('handleIncomingPacket sends packet for each question', function(t) {
@@ -729,8 +713,7 @@ test('handleIncomingPacket sends packet for each question', function(t) {
     [dnsController.RESPONSE_WAIT_MIN, dnsController.RESPONSE_WAIT_MAX]
   );
 
-  t.end();
-  resetDnsController();
+  end(t);
 });
 
 test('handleIncomingPacket does not send if no records found', function(t) {
@@ -765,8 +748,7 @@ test('handleIncomingPacket does not send if no records found', function(t) {
   // Make sure we never sent something.
   t.equal(sendSpy.callCount, 0);
 
-  resetDnsController();
-  t.end();
+  end(t);
 });
 
 test('handleIncomingPacket sends to multicast address', function(t) {
@@ -796,7 +778,8 @@ test('createResponsePacket correct', function(t) {
   );
   let actual = dnsController.createResponsePacket(expected);
   t.deepEqual(actual, expected);
-  t.end();
+
+  end(t);
 });
 
 test('getResourcesForQuery respects ANY in type', function(t) {
@@ -820,8 +803,8 @@ test('getResourcesForQuery respects ANY in type', function(t) {
   let actual = dnsController.getResourcesForQuery(qName, qType, qClass);
 
   t.deepEqual(actual, expected);
-  t.end();
-  resetDnsController();
+  
+  end(t);
 });
 
 test('getResourcesForQuery respects class', function(t) {
@@ -845,8 +828,8 @@ test('getResourcesForQuery respects class', function(t) {
   let actual = dnsController.getResourcesForQuery(qName, qType, qClass);
 
   t.deepEqual(actual, expected);
-  t.end();
-  resetDnsController();
+  
+  end(t);
 });
 
 test('getResourcesForQuery respects type', function(t) {
@@ -871,8 +854,8 @@ test('getResourcesForQuery respects type', function(t) {
   let actual = dnsController.getResourcesForQuery(qName, qType, qClass);
 
   t.deepEqual(actual, expected);
-  t.end();
-  resetDnsController();
+
+  end(t);
 });
 
 test('getResourcesForQuery returns empty array if no records', function(t) {
@@ -885,8 +868,8 @@ test('getResourcesForQuery returns empty array if no records', function(t) {
   let actual = dnsController.getResourcesForQuery(qName, qType, qClass);
 
   t.deepEqual(actual, expected);
-  t.end();
-  resetDnsController();
+
+  end(t);
 });
 
 test('getResourcesForQuery performs service type enumeration', function(t) {
@@ -926,30 +909,25 @@ test('getResourcesForQuery performs service type enumeration', function(t) {
   let record2Index = actual.indexOf(record2);
   t.deepEqual(actual[record1Index], record1);
   t.deepEqual(actual[record2Index], record2);
-  t.end();
-  resetDnsController();
+
+  end(t);
 });
 
 test('onReceiveListener calls to send', function(t) {
+  let data = Buffer.from('yo');
   let handleIncomingPacketSpy = sinon.spy();
-  let byteArrayConstructorStub = sinon.stub().returns(
-    {
-      getReader: sinon.stub()
-    }
-  );
   let packetMock = 'fake packet';
-  let createPacketStub = sinon.stub().returns(packetMock);
+  let fromStub = sinon.stub();
+  fromStub.withArgs(data).returns(packetMock);
 
   proxyquireDnsController({
-    './byte-array': {
-      ByteArray: byteArrayConstructorStub
-    },
     './dns-packet': {
-      createPacketFromReader: createPacketStub
+      from: fromStub
     }
   });
 
   let incomingInfo = {
+    data: data,
     remoteAddress: 'remote addr',
     remotePort: 4433
   };
@@ -964,8 +942,8 @@ test('onReceiveListener calls to send', function(t) {
   t.equal(handleIncomingPacketSpy.args[0][0], packetMock);
   t.equal(handleIncomingPacketSpy.args[0][1], incomingInfo.remoteAddress);
   t.equal(handleIncomingPacketSpy.args[0][2], incomingInfo.remotePort);
-  t.end();
-  resetDnsController();
+  
+  end(t);
 });
 
 test('filterResourcesForQuery respects ANY in type', function(t) {
@@ -988,8 +966,8 @@ test('filterResourcesForQuery respects ANY in type', function(t) {
   );
 
   t.deepEqual(actual, expected);
-  t.end();
-  resetDnsController();
+  
+  end(t);
 });
 
 test('filterResourcesForQuery respects class', function(t) {
@@ -1013,8 +991,8 @@ test('filterResourcesForQuery respects class', function(t) {
   );
 
   t.deepEqual(actual, expected);
-  t.end();
-  resetDnsController();
+  
+  end(t);
 });
 
 test('filterResourcesForQuery respects type', function(t) {
@@ -1038,8 +1016,8 @@ test('filterResourcesForQuery respects type', function(t) {
   );
 
   t.deepEqual(actual, expected);
-  t.end();
-  resetDnsController();
+  
+  end(t);
 });
 
 test('filterResourcesForQuery returns empty array if no records', function(t) {
@@ -1052,8 +1030,8 @@ test('filterResourcesForQuery returns empty array if no records', function(t) {
   let actual = dnsController.filterResourcesForQuery([], qName, qType, qClass);
 
   t.deepEqual(actual, expected);
-  t.end();
-  resetDnsController();
+  
+  end(t);
 });
 
 test('clearAllRecords removes all records', function(t) {
@@ -1071,7 +1049,8 @@ test('clearAllRecords removes all records', function(t) {
   dnsController.clearAllRecords();
 
   t.deepEqual(dnsController.getRecords(), {});
-  t.end();
+  
+  end(t);
 });
 
 test('stop clears state', function(t) {
@@ -1102,6 +1081,5 @@ test('stop clears state', function(t) {
 
   t.equal(dnsController.socket, null);
 
-  t.end();
-  resetDnsController();
+  end(t);
 });

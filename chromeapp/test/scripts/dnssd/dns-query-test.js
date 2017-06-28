@@ -2,8 +2,6 @@
 
 const test = require('tape');
 
-const byteArray = require('../../../app/scripts/dnssd/byte-array');
-
 let dnsQuery = require('../../../app/scripts/dnssd/dns-query');
 
 
@@ -38,9 +36,7 @@ test('serializes and deserializes correctly', function(t) {
 
 test('createQueryFromByteArray succeeds when startByte != 0', function(t) {
   let expected = new dnsQuery.DnsQuery('mydomain.local', 1, 2);
-  let serialized = expected.serialize();
-
-  let byteArr = new byteArray.ByteArray();
+  let serialized = expected.asBuffer();
 
   // Add 5 meaningless bytes.
   let offset = 5;

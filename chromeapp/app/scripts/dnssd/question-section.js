@@ -1,12 +1,9 @@
-/* global exports, require */
 'use strict';
 
-const byteArray = require('./byte-array');
+const SmartBuffer = require('smart-buffer').SmartBuffer;
+
 const dnsUtil = require('./dns-util');
 
-
-const NUM_OCTETS_QUERY_TYPE = 2;
-const NUM_OCTETS_QUERY_CLASS = 2;
 
 const MAX_QUERY_TYPE = 65535;
 const MAX_QUERY_CLASS = 65535;
@@ -61,16 +58,17 @@ exports.QuestionSection = function QuestionSection(qName, qType, qClass) {
  *
  * @return {ByteArray}
  */
-exports.QuestionSection.prototype.convertToByteArray = function() {
-  let result = new byteArray.ByteArray();
+exports.QuestionSection.prototype.asBuffer = function() {
+  let sBuff = new SmartBuffer();
   
-  let queryAsBytes = dnsUtil.getDomainAsByteArray(this.queryName);
-  result.append(queryAsBytes);
+  let queryBuff = dnsUtil.getDomainAsBuffer(this.queryName);
+  sBuff.writeBuffer(queryBuff);
 
-  result.push(this.queryType, NUM_OCTETS_QUERY_TYPE);
-  result.push(this.queryClass, NUM_OCTETS_QUERY_CLASS);
+  // 2 octets
+  sBuff.writeUInt16BE(this.queryType);
+  sBuff.writeUInt16BE(this.queryClass);
 
-  return result;
+  return sBuff.toBuffer();
 };
 
 /**
@@ -85,22 +83,22 @@ exports.QuestionSection.prototype.unicastResponseRequested = function() {
 };
 
 /**
- * Create a QuestionSection from a ByteArrayReader as serialized by
- * convertToByteArray().
+ * Create a QuestionSection from a SmartBuffer as returned by asBuffer().
  *
- * @param {ByteArrayReader} reader
+ * @param {SmartBuffer} sBuff
  *
  * @return {QuestionSection}
  */
-exports.createQuestionFromReader = function(reader) {
-  let queryName = dnsUtil.getDomainFromByteArrayReader(reader);
+exports.createQuestionFromSmartBuffer = function(sBuff) {
+  let queryName = dnsUtil.getDomainFromSmartBuffer(sBuff);
 
-  let queryType = reader.getValue(NUM_OCTETS_QUERY_TYPE);
+  // 2 octets
+  let queryType = sBuff.readUInt16BE();
   if (queryType < 0 || queryType > MAX_QUERY_TYPE) {
     throw new Error('deserialized query type out of range: ' + queryType);
   }
 
-  let queryClass = reader.getValue(NUM_OCTETS_QUERY_CLASS);
+  let queryClass = sBuff.readUInt16BE();
   if (queryClass < 0 || queryClass > MAX_QUERY_CLASS) {
     throw new Error('deserialized query class out of range: ' + queryClass);
   }

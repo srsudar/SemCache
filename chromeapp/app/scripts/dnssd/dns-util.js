@@ -1,6 +1,6 @@
 'use strict';
 
-const byteArray = require('./byte-array');
+const SmartBuffer = require('smart-buffer').SmartBuffer;
 
 
 /**
@@ -8,7 +8,6 @@ const byteArray = require('./byte-array');
  */
 
 const MAX_LABEL_LENGTH = 63;
-const OCTET_LABEL_LENGTH = 1;
 
 exports.DEBUG = false;
 
@@ -44,11 +43,10 @@ exports.getLocalSuffix = function() {
  *
  * @param {string} domain
  *
- * @return {ByteArray} a ByteArray containing the serialized domain
+ * @return {Buffer} a ByteArray containing the serialized domain
  */
-exports.getDomainAsByteArray = function(domain) {
-  let result = new byteArray.ByteArray();
-
+exports.getDomainAsBuffer = function(domain) {
+  let sBuff = new SmartBuffer();
   let labels = domain.split('.');
 
   labels.forEach(label => {
@@ -59,55 +57,28 @@ exports.getDomainAsByteArray = function(domain) {
 
     // A label is serialized as a single byte for its length, followed by the
     // character code of each component.
-    result.push(length, OCTET_LABEL_LENGTH);
+    sBuff.writeUInt8(length);
 
     for (let i = 0; i < label.length; i++) {
-      result.push(label.charCodeAt(i), 1);
+      sBuff.writeUInt8(label.charCodeAt(i));
     }
   });
 
   // The label is terminated by a 0 byte.
-  result.push(0, OCTET_LABEL_LENGTH);
+  sBuff.writeUInt8(0);
 
-  return result;
+  return sBuff.toBuffer();
 };
 
 /**
- * Convert a serialized domain name from its DNS representation to a string.
- * The byteArray should contain bytes as output by getDomainAsByteArray.
+ * Retrieve a domain from the SmartBuffer. Consumes the SmartBuffer and
+ * advances the cursor.
  *
- * @param {ByteArray} byteArr the ByteArray containing the serialized labels
- * @param {integer} startByte an optional index indicating the start point of
- * the serialization. If not present, assumes a starting index ov 0.
+ * @param {SmartBuffer} sBuff
  *
  * @return {string}
  */
-exports.getDomainFromByteArray = function(byteArr, startByte) {
-  if (!(byteArr instanceof byteArray.ByteArray)) {
-    throw new Error('byteArr is not type of ByteArray');
-  }
-
-  if (!startByte) {
-    // If a start byte hasn't been specified, we start at the beginning.
-    startByte = 0;
-  }
-
-  let reader = byteArr.getReader(startByte);
-  
-  let result = exports.getDomainFromByteArrayReader(reader, 0);
-  return result;
-};
-
-/**
- * Convert a serialized domain name from its DNS representation to a string.
- * The reader should contain bytes as output from getDomainAsByteArray.
- *
- * @param {ByteArrayReader} reader a ByteArrayReader containing the bytes to be
- * deserialized. The reader will have all the domain bytes consumed.
- *
- * @return {string}
- */
-exports.getDomainFromByteArrayReader = function(reader) {
+exports.getDomainFromSmartBuffer = function(sBuff) {
   let result = '';
 
   // We expect a series of length charCode pairs, ending when the final length
@@ -123,7 +94,7 @@ exports.getDomainFromByteArrayReader = function(reader) {
     }
 
     // Get the first length, consuming the first byte of the reader.
-    lengthOfCurrentLabel = reader.getValue(1);
+    lengthOfCurrentLabel = sBuff.readUInt8();
 
     if (lengthOfCurrentLabel > MAX_LABEL_LENGTH) {
       // This check will try to alert callers when they have an off by one or
@@ -133,8 +104,11 @@ exports.getDomainFromByteArrayReader = function(reader) {
       );
     }
 
+    // NB: We could maybe be using sBurr.readString(), but I am going to keep
+    // this logic in hopes that if we move to support unicode this will be more
+    // straightforward.
     for (let i = 0; i < lengthOfCurrentLabel; i++) {
-      let currentCharCode = reader.getValue(1);
+      let currentCharCode = sBuff.readUInt8();
       let currentChar = String.fromCharCode(currentCharCode);
       result += currentChar;
     }
@@ -158,48 +132,71 @@ exports.getDomainFromByteArrayReader = function(reader) {
 };
 
 /**
+ * Convert a serialized domain name from its DNS representation to a string.
+ * The byteArray should contain bytes as output by getDomainAsByteArray.
+ *
+ * @param {Buffer} buff the Buffer containing the serialized labels
+ * @param {integer} startByte an optional index indicating the start point of
+ * the serialization. If not present, assumes a starting index of 0.
+ *
+ * @return {string}
+ */
+exports.getDomainFromBuffer = function(buff, startByte) {
+  if (!(buff instanceof Buffer)) {
+    throw new Error('buff is not type of Buffer');
+  }
+
+  // If a start byte hasn't been specified, we start at the beginning.
+  startByte = startByte || 0;
+
+  let sBuff = SmartBuffer.fromBuffer(buff.slice(startByte));
+
+  return exports.getDomainFromSmartBuffer(sBuff);
+};
+
+/**
  * Convert a string representation of an IP address to a ByteArray.
  * '155.33.17.68' would return a ByteArray with length 4, corresponding to the
  * bytes 155, 33, 17, 68.
  *
  * @param {string} ipAddress
  *
- * @return {ByteArray}
+ * @return {Buffer}
  */
-exports.getIpStringAsByteArray = function(ipAddress) {
+exports.getIpStringAsBuffer = function(ipAddress) {
   let parts = ipAddress.split('.');
 
   if (parts.length !== 4) {
     throw new Error('IP string does not have 4 parts: ' + ipAddress);
   }
 
-  let result = new byteArray.ByteArray();
+  let sBuff = new SmartBuffer();
   
   parts.forEach(part => {
     let intValue = parseInt(part);
     if (intValue < 0 || intValue > 255) {
       throw new Error('A byte of the IP address < 0 or > 255: ' + ipAddress);
     }
-    result.push(intValue, 1);
+    sBuff.writeUInt8(intValue);
   });
 
-  return result;
+  return sBuff.toBuffer();
 };
 
 /**
  * Recover an IP address in string representation from the ByteArrayReader.
  *
- * @param {ByteArrayReader} reader
+ * @param {SmartBuffer} sBuff
  *
  * @return {string}
  */
-exports.getIpStringFromByteArrayReader = function(reader) {
+exports.getIpStringFromSmartBuffer = function(sBuff) {
   // We assume a single byte representing each string.
   let parts = [];
 
   let numParts = 4;
   for (let i = 0; i < numParts; i++) {
-    let intValue = reader.getValue(1);
+    let intValue = sBuff.readUInt8();
     let stringValue = intValue.toString();
     parts.push(stringValue);
   }

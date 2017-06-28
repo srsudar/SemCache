@@ -1,15 +1,11 @@
 /* global exports, require */
 'use strict';
 
-const byteArray = require('./byte-array');
+const SmartBuffer = require('smart-buffer').SmartBuffer;
+
 const dnsCodes = require('./dns-codes');
 const dnsUtil = require('./dns-util');
 
-
-const NUM_OCTETS_TYPE = 2;
-const NUM_OCTETS_CLASS = 2;
-const NUM_OCTETS_TTL = 4;
-const NUM_OCTETS_RESOURCE_DATA_LENGTH = 2;
 
 /** An A Record has four bytes, all representing an IP address. */
 const NUM_OCTETS_RESOURCE_DATA_A_RECORD = 4;
@@ -82,50 +78,52 @@ exports.ARecord = function ARecord(
 };
 
 /**
- * Get the A Record as a ByteArray object.
+ * Get the A Record as a Buffer.
  *
  * The DNS spec indicates that an A Record is represented in byte form as
  * follows.
  *
- * The common fields as indicated in getCommonFieldsAsByteArray.
+ * The common fields as indicated in getCommonFieldsAsBuffer.
  *
  * 2 octets representing the number 4, to indicate that 4 bytes follow.
  *
  * 4 octets representing a 4-byte IP address
  *
- * @return {ByteArray}
+ * @return {Buffer}
  */
-exports.ARecord.prototype.convertToByteArray = function() {
-  let result = exports.getCommonFieldsAsByteArray(
+exports.ARecord.prototype.asBuffer = function() {
+  let sBuff = new SmartBuffer();
+
+  let commonFieldsBuff = exports.getCommonFieldsAsBuffer(
     this.domainName,
     this.recordType,
     this.recordClass,
     this.ttl
   );
 
+  sBuff.writeBuffer(commonFieldsBuff);
+
   // First we add the length of the resource data.
-  result.push(
-    NUM_OCTETS_RESOURCE_DATA_A_RECORD, 
-    NUM_OCTETS_RESOURCE_DATA_LENGTH
-  );
+  // 2 octets
+  sBuff.writeUInt16BE(NUM_OCTETS_RESOURCE_DATA_A_RECORD);
 
   // Then add the IP address itself.
-  let ipStringAsBytes = dnsUtil.getIpStringAsByteArray(this.ipAddress);
-  result.append(ipStringAsBytes);
+  let ipStringAsBuff = dnsUtil.getIpStringAsBuffer(this.ipAddress);
+  sBuff.writeBuffer(ipStringAsBuff);
 
-  return result;
+  return sBuff.toBuffer();
 };
 
 /**
- * Create an A Record from a ByteArrayReader object. The reader should be at
- * the correct cursor position, at the domain name of the A Record.
+ * Create an A Record from a SmartBuffer. The SmartBuffer should be at the
+ * correct cursor position, at the domain name of the A Record.
  *
- * @param {ByteArrayReader} reader
+ * @param {SmartBuffer} sBuff
  *
  * @return {ARecord}
  */
-exports.createARecordFromReader = function(reader) {
-  let commonFields = exports.getCommonFieldsFromByteArrayReader(reader);
+exports.createARecordFromSmartBuffer = function(sBuff) {
+  let commonFields = exports.getCommonFieldsFromSmartBuffer(sBuff);
 
   if (commonFields.rrType !== dnsCodes.RECORD_TYPES.A) {
     throw new Error(
@@ -135,7 +133,8 @@ exports.createARecordFromReader = function(reader) {
   }
 
   // And now we recover just the resource length and resource data.
-  let resourceLength = reader.getValue(NUM_OCTETS_RESOURCE_DATA_LENGTH);
+  // 2 octets
+  let resourceLength = sBuff.readUInt16BE();
 
   // For an A Record this should always be 4.
   if (resourceLength !== NUM_OCTETS_RESOURCE_DATA_A_RECORD) {
@@ -146,7 +145,7 @@ exports.createARecordFromReader = function(reader) {
     );
   }
 
-  let ipString = dnsUtil.getIpStringFromByteArrayReader(reader);
+  let ipString = dnsUtil.getIpStringFromSmartBuffer(sBuff);
 
   let result = new exports.ARecord(
     commonFields.domainName,
@@ -159,15 +158,15 @@ exports.createARecordFromReader = function(reader) {
 };
 
 /**
- * Create a PTR Record from a ByteArrayReader object. The reader should be at
- * the correct cursor position, at the service type query of the PTR Record.
+ * Create a PTR Record from a SmartBuffer. The SmartBuffer should be at the
+ * correct cursor position, at the service type query of the PTR Record.
  *
- * @param {ByteArrayReader} reader
+ * @param {SmartBuffer} sBuff
  *
  * @return {PtrRecord}
  */
-exports.createPtrRecordFromReader = function(reader) {
-  let commonFields = exports.getCommonFieldsFromByteArrayReader(reader);
+exports.createPtrRecordFromSmartBuffer = function(sBuff) {
+  let commonFields = exports.getCommonFieldsFromSmartBuffer(sBuff);
 
   if (commonFields.rrType !== dnsCodes.RECORD_TYPES.PTR) {
     throw new Error(
@@ -177,7 +176,8 @@ exports.createPtrRecordFromReader = function(reader) {
   }
 
   // And now we recover just the resource length and resource data.
-  let resourceLength = reader.getValue(NUM_OCTETS_RESOURCE_DATA_LENGTH);
+  // 2 octets
+  let resourceLength = sBuff.readUInt16BE();
   if (resourceLength < 0 || resourceLength > 65535) {
     throw new Error(
       'Illegal length of PTR Record resource data: ' +
@@ -187,7 +187,7 @@ exports.createPtrRecordFromReader = function(reader) {
   // In a PTR Record, the domain name field of the RR is actually the service
   // type (at least for mDNS).
   let serviceType = commonFields.domainName;
-  let serviceName = dnsUtil.getDomainFromByteArrayReader(reader);
+  let serviceName = dnsUtil.getDomainFromSmartBuffer(sBuff);
 
   let result = new exports.PtrRecord(
     serviceType,
@@ -200,15 +200,15 @@ exports.createPtrRecordFromReader = function(reader) {
 };
 
 /**
- * Create an SRV Record from a ByteArrayReader object. The reader should be at
- * the correct cursor position, at the service type query of the SRV Record.
+ * Create an SRV Record from a SmartBuffer. The SmartBuffer should be at the
+ * correct cursor position, at the service type query of the SRV Record.
  *
- * @param {ByteArrayReader} reader
+ * @param {SmartBuffer} sBuff
  *
  * @return {SrvRecord}
  */
-exports.createSrvRecordFromReader = function(reader) {
-  let commonFields = exports.getCommonFieldsFromByteArrayReader(reader);
+exports.createSrvRecordFromSmartBuffer = function(sBuff) {
+  let commonFields = exports.getCommonFieldsFromSmartBuffer(sBuff);
 
   if (commonFields.rrType !== dnsCodes.RECORD_TYPES.SRV) {
     throw new Error(
@@ -218,7 +218,8 @@ exports.createSrvRecordFromReader = function(reader) {
   }
 
   // And now we recover just the resource length and resource data.
-  let resourceLength = reader.getValue(NUM_OCTETS_RESOURCE_DATA_LENGTH);
+  // 2 octets
+  let resourceLength = sBuff.readUInt16BE();
   if (resourceLength < 0 || resourceLength > 65535) {
     throw new Error(
       'Illegal length of SRV Record resource data: ' +
@@ -230,22 +231,25 @@ exports.createSrvRecordFromReader = function(reader) {
   let serviceInstanceName = commonFields.domainName;
   
   // After the common fields, we expect priority, weight, port, target name.
-  let priority = reader.getValue(NUM_OCTETS_PRIORITY);
+  // 2 octets
+  let priority = sBuff.readUInt16BE();
   if (priority < 0 || priority > 65535) {
     throw new Error('Illegal length of SRV Record priority: ' + priority);
   }
 
-  let weight = reader.getValue(NUM_OCTETS_WEIGHT);
+  // 2 octets
+  let weight = sBuff.readUInt16BE();
   if (weight < 0 || weight > 65535) {
     throw new Error('Illegal length of SRV Record priority: ' + weight);
   }
 
-  let port = reader.getValue(NUM_OCTETS_PORT);
+  // 2 octets
+  let port = sBuff.readUInt16BE();
   if (port < 0 || port > 65535) {
     throw new Error('Illegal length of SRV Record priority: ' + port);
   }
 
-  let targetName = dnsUtil.getDomainFromByteArrayReader(reader);
+  let targetName = dnsUtil.getDomainFromSmartBuffer(sBuff);
 
   let result = new exports.SrvRecord(
     serviceInstanceName,
@@ -306,7 +310,7 @@ exports.PtrRecord = function PtrRecord(
 };
 
 /**
- * Get the PTR Record as a ByteArray object.
+ * Get the PTR Record as a Buffer.
  *
  * The DNS spec indicates that an PTR Record is represented in byte form as
  * follows. (Using this and section 3.3.12 as a guide:
@@ -321,29 +325,31 @@ exports.PtrRecord = function PtrRecord(
  * be the name of the instance that actually provides the service that is being
  * queried for.
  *
- * @return {ByteArray}
+ * @return {Buffer}
  */
-exports.PtrRecord.prototype.convertToByteArray = function() {
-  let result = exports.getCommonFieldsAsByteArray(
+exports.PtrRecord.prototype.asBuffer = function() {
+  let sBuff = new SmartBuffer();
+
+  let commonFieldsBuff = exports.getCommonFieldsAsBuffer(
     this.serviceType,
     this.recordType,
     this.recordClass,
     this.ttl
   );
 
-  let instanceNameAsBytes = dnsUtil.getDomainAsByteArray(this.instanceName);
-  let resourceDataLength = instanceNameAsBytes.length;
+  sBuff.writeBuffer(commonFieldsBuff);
+
+  let instanceNameBuff = dnsUtil.getDomainAsBuffer(this.instanceName);
+  let resourceDataLength = instanceNameBuff.length;
 
   // First we add the length of the resource data.
-  result.push(
-    resourceDataLength, 
-    NUM_OCTETS_RESOURCE_DATA_LENGTH
-  );
+  // 2 octets
+  sBuff.writeUInt16BE(resourceDataLength);
 
   // Then add the instance name itself.
-  result.append(instanceNameAsBytes);
+  sBuff.writeBuffer(instanceNameBuff);
 
-  return result;
+  return sBuff.toBuffer();
 };
 
 /**
@@ -390,14 +396,14 @@ exports.SrvRecord = function SrvRecord(
 };
 
 /**
- * Get the SRV Record as a ByteArray object.
+ * Get the SRV Record as a Buffer object.
  *
  * According to this document (https://tools.ietf.org/html/rfc2782) and more
  * explicitly this document
  * (http://www.tahi.org/dns/packages/RFC2782_S4-1_0_0/SV/SV_RFC2782_SRV_rdata.html),
  * the layout of the SRV RR is as follows:
  *
- * The common fields as indicated in getCommonFieldsAsByteArray.
+ * The common fields as indicated in getCommonFieldsAsBuffer.
  *
  * 2 octets representing the length of the following component, in bytes.
  *
@@ -410,41 +416,44 @@ exports.SrvRecord = function SrvRecord(
  * A variable number of octets encoding the target name (e.g.
  * PrintsALot.local), encoded as a domain name.
  *
- * @return {ByteArray}
+ * @return {Buffer}
  */
-exports.SrvRecord.prototype.convertToByteArray = function() {
-  let result = exports.getCommonFieldsAsByteArray(
+exports.SrvRecord.prototype.asBuffer = function() {
+  let sBuff = new SmartBuffer();
+
+  let commonFieldsBuff = exports.getCommonFieldsAsBuffer(
     this.instanceTypeDomain,
     this.recordType,
     this.recordClass,
     this.ttl
   );
 
-  let targetNameAsBytes = dnsUtil.getDomainAsByteArray(this.targetDomain);
+  sBuff.writeBuffer(commonFieldsBuff);
+
+  let targetNameBuff = dnsUtil.getDomainAsBuffer(this.targetDomain);
 
   let resourceDataLength = NUM_OCTETS_PRIORITY +
     NUM_OCTETS_WEIGHT +
     NUM_OCTETS_PORT +
-    targetNameAsBytes.length;
+    targetNameBuff.length;
 
   // First we add the length of the resource data.
-  result.push(
-    resourceDataLength, 
-    NUM_OCTETS_RESOURCE_DATA_LENGTH
-  );
+  // 2 octets
+  sBuff.writeUInt16BE(resourceDataLength);
 
   // Then add the priority, weight, and port.
-  result.push(this.priority, NUM_OCTETS_PRIORITY);
-  result.push(this.weight, NUM_OCTETS_WEIGHT);
-  result.push(this.port, NUM_OCTETS_PORT);
+  // 2 octets
+  sBuff.writeUInt16BE(this.priority);
+  sBuff.writeUInt16BE(this.weight);
+  sBuff.writeUInt16BE(this.port);
 
-  result.append(targetNameAsBytes);
+  sBuff.writeBuffer(targetNameBuff);
 
-  return result;
+  return sBuff.toBuffer();
 };
 
 /**
- * Get the common components of a RR as a ByteArray. As specified by the DNS
+ * Get the common components of a RR as a Buffer. As specified by the DNS
  * spec and 'TCP/IP Illustrated, Volume 1' by Stevens, the format is as
  * follows:
  *
@@ -462,40 +471,45 @@ exports.SrvRecord.prototype.convertToByteArray = function() {
  * @param {integer} rrClass
  * @param {integer} ttl
  *
- * @return {ByteArray}
+ * @return {Buffer}
  */
-exports.getCommonFieldsAsByteArray = function(
+exports.getCommonFieldsAsBuffer = function(
   domainName,
   rrType,
   rrClass,
   ttl
 ) {
-  let result = new byteArray.ByteArray();
+  let sBuff = new SmartBuffer();
 
-  let domainNameAsBytes = dnsUtil.getDomainAsByteArray(domainName);
-  result.append(domainNameAsBytes);
+  let domainNameAsBuff = dnsUtil.getDomainAsBuffer(domainName);
+  sBuff.writeBuffer(domainNameAsBuff);
 
-  result.push(rrType, NUM_OCTETS_TYPE);
-  result.push(rrClass, NUM_OCTETS_CLASS);
-  result.push(ttl, NUM_OCTETS_TTL);
+  // 2 octets
+  sBuff.writeUInt16BE(rrType);
+  sBuff.writeUInt16BE(rrClass);
+  // 4 octets
+  sBuff.writeUInt32BE(ttl);
 
-  return result;
+  return sBuff.toBuffer();
 };
 
 /**
  * Extract the common fields from the reader as encoded by
  * getCommonFieldsAsByteArray.
  *
- * @param {ByteArrayReader} reader
+ * @param {SmartBuffer} sBuff
  *
  * @return {Object} Returns an object with fields: domainName, rrType, rrClass,
  * and ttl.
  */
-exports.getCommonFieldsFromByteArrayReader = function(reader) {
-  let domainName = dnsUtil.getDomainFromByteArrayReader(reader);
-  let rrType = reader.getValue(NUM_OCTETS_TYPE);
-  let rrClass = reader.getValue(NUM_OCTETS_CLASS);
-  let ttl = reader.getValue(NUM_OCTETS_TTL);
+exports.getCommonFieldsFromSmartBuffer = function(sBuff) {
+  let domainName = dnsUtil.getDomainFromSmartBuffer(sBuff);
+
+  // 2 octets
+  let rrType = sBuff.readUInt16BE();
+  let rrClass = sBuff.readUInt16BE();
+  // 4 octets
+  let ttl = sBuff.readUInt32BE(); 
 
   let result = {
     domainName: domainName,
@@ -511,21 +525,22 @@ exports.getCommonFieldsFromByteArrayReader = function(reader) {
  * Return type of the Resource Record queued up in the reader. Peaking does not
  * affect the position of the underlying reader.
  *
- * @param {ByteArrayReader} reader
+ * @param {SmartBuffer} sBuff
  *
  * @return {integer}
  */
-exports.peekTypeInReader = function(reader) {
-  // Getting values from the reader normally consumes bytes. Create a defensive
-  // copy to work with instead.
-  let byteArr = reader.byteArray;
-  let startByte = reader.cursor;
-  let safeReader = byteArr.getReader(startByte);
+exports.peekTypeInSmartBuffer = function(sBuff) {
+  // Save our current read offset to we can move it back.
+  let readOffset = sBuff.readOffset;
 
   // Consume an encoded domain name. Note this means we're computing domain
   // names twice, which isn't optimal.
-  dnsUtil.getDomainFromByteArrayReader(safeReader);
+  dnsUtil.getDomainFromSmartBuffer(sBuff);
   // After the domain, the type is next.
-  let result = safeReader.getValue(NUM_OCTETS_TYPE);
+  // 2 octets
+  let result = sBuff.readUInt16BE();
+
+  // Restore state
+  sBuff.moveTo(readOffset);
   return result;
 };

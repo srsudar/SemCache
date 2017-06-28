@@ -2,7 +2,6 @@
 /* globals Promise */
 'use strict';
 
-const byteArray = require('./byte-array');
 const chromeUdp = require('../chrome-apis/udp');
 const dnsCodes = require('./dns-codes');
 const dnsPacket = require('./dns-packet');
@@ -181,15 +180,12 @@ exports.onReceiveListener = function(info) {
     chromeUdp.logSocketInfo(info);
   }
 
+  let buff = Buffer.from(info.data);
+  let packet = dnsPacket.from(buff);
+
   if (exports.DEBUG) {
-    // Before we do anything else, parse the packet. This will let us try to
-    // see if we are getting the packet and ignoring it or just never getting
-    // the packet.
-    let byteArrImmediate = new byteArray.ByteArray(info.data);
-    let packetImmediate =
-      dnsPacket.createPacketFromReader(byteArrImmediate.getReader());
-    console.log('Got packet: ', packetImmediate);
-    console.log('  packet id: ', packetImmediate.id);
+    console.log('Got packet: ', packet);
+    console.log('  packet id: ', packet.id);
   }
 
   if (!exports.socket) {
@@ -207,10 +203,6 @@ exports.onReceiveListener = function(info) {
   if (dnsUtil.DEBUG) {
     console.log('Message is for us, parsing');
   }
-  
-  // Create a DNS packet.
-  let byteArr = new byteArray.ByteArray(info.data);
-  let packet = dnsPacket.createPacketFromReader(byteArr.getReader());
 
   exports.handleIncomingPacket(packet, info.remoteAddress, info.remotePort);
 };
@@ -559,10 +551,10 @@ exports.sendPacket = function(packet, address, port) {
   packet.id = exports.NEXT_PACKET_ID;
   exports.NEXT_PACKET_ID += 1;
 
-  let byteArr = packet.convertToByteArray();
+  let buff = packet.asBuffer();
   // And now we need the underlying buffer of the byteArray, truncated to the
   // correct size.
-  let uint8Arr = byteArray.getByteArrayAsUint8Array(byteArr);
+  // let uint8Arr = byteArray.getByteArrayAsUint8Array(byteArr);
 
   exports.getSocket().then(socket => {
     if (exports.DEBUG) {
@@ -571,7 +563,7 @@ exports.sendPacket = function(packet, address, port) {
       console.log('  address: ', address);
       console.log('  port: ', port);
     }
-    socket.send(uint8Arr.buffer, address, port);
+    socket.send(buff, address, port);
   });
 };
 

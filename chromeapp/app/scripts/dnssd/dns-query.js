@@ -10,12 +10,10 @@
  * | the 2-octet query class
  */
 
-const byteArray = require('./byte-array');
+const SmartBuffer = require('smart-buffer').SmartBuffer;
+
 const dnsUtil = require('./dns-util');
 
-
-const OCTETS_QUERY_TYPE = 2;
-const OCTETS_QUERY_CLASS = 2;
 
 /**
  * Creates a DNSQuery object.
@@ -37,45 +35,48 @@ exports.DnsQuery = function DnsQuery(domainName, queryType, queryClass) {
 };
 
 /**
- * Serialize the query to accommodate the DNS spec. Returns a ByteArray
- * object.
+ * Serialize the query to accommodate the DNS spec. Returns a Buffer object.
  *
- * @return {ByteArray} 
+ * @return {Buffer} 
  */
-exports.DnsQuery.prototype.serialize = function() {
-    // The serialization is just the query name in label format, followed by a
-    // 2-octet query type and a 2-octet query class.
-    let result = new byteArray.ByteArray(); 
+exports.DnsQuery.prototype.asBuffer = function() {
+  // The serialization is just the query name in label format, followed by a
+  // 2-octet query type and a 2-octet query class.
 
-    let domainAsLabel = dnsUtil.getDomainAsByteArray(this.domainName);
+  let domainAsLabel = dnsUtil.getDomainAsBuffer(this.domainName);
 
-    result.append(domainAsLabel);
-    result.push(this.queryType, OCTETS_QUERY_TYPE);
-    result.push(this.queryClass, OCTETS_QUERY_CLASS);
+  let sBuff = new SmartBuffer();
 
-    return result;
+  sBuff.writeBuffer(domainAsLabel);
+
+  // 2 octets
+  sBuff.writeUInt16BE(this.queryType);
+  sBuff.writeUInt16BE(this.queryClass);
+
+  return sBuff.toBuffer();
 };
 
 /**
- * Create a DnsQuery object from a byteArray as output by DnsQuery.serialize().
+ * Create a DnsQuery object from a byteArray as output by DnsQuery.asBuffer().
  *
- * @param {ByteArray} byteArr the ByteArray object from which to construct the
- * DnsQuery
+ * @param {Buffer} buff the Buffer object from which to construct the DnsQuery
  * @param {integer} startByte the offset into byteArr from which to start
  * reconstruction
  *
  * @return {DnsQuery}
  */
-exports.createQueryFromByteArray = function(byteArr, startByte) {
+exports.createQueryFromBuffer = function(buff, startByte) {
   if (!startByte) {
     startByte = 0;
   }
 
-  let reader = byteArr.getReader(startByte);
+  let sBuff = SmartBuffer.from(buff.slice(startByte));
 
-  let domainName = dnsUtil.getDomainFromByteArrayReader(reader);
-  let queryType = reader.getValue(OCTETS_QUERY_TYPE);
-  let queryClass = reader.getValue(OCTETS_QUERY_CLASS);
+  let domainName = dnsUtil.getDomainFromSmartBuffer(sBuff);
+
+  // 2 octets
+  let queryType = sBuff.readUInt16BE();
+  let queryClass = sBuff.readUInt16BE();
 
   let result = new exports.DnsQuery(domainName, queryType, queryClass);
   return result;

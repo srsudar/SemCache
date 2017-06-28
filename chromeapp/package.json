@@ -16,6 +16,7 @@
     "npm": "^5.0.4",
     "sanitize-filename": "^1.6.1",
     "smart-buffer": "^3.0.3",
+    "text-encoding": "^0.6.4",
     "to-arraybuffer": "^1.0.1",
     "underscore": "^1.8.3",
     "urijs": "^1.18.10",

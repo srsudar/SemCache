@@ -8,7 +8,8 @@
  */
 'use strict';
 
-const byteArray = require('./byte-array');
+const SmartBuffer = require('smart-buffer').SmartBuffer;
+
 const dnsCodes = require('./dns-codes');
 const qSection = require('./question-section');
 const resRec = require('./resource-record');
@@ -30,41 +31,41 @@ const MAX_OPCODE = 15;
 /** The maximum RCODE is defined by the 4 bits allowed in the spec. */
 const MAX_RETURN_CODE = 15;
 
-/** The number of octets in the ID of the DNS Packet as defined in the spec. */
-const NUM_OCTETS_ID = 2;
-
-/** The number of octets in the ID of the DNS Packet as defined in the spec. */
-const NUM_OCTETS_FLAGS = 2;
-
-/** The number of octets in the ID of the DNS Packet as defined in the spec. */
-const NUM_OCTETS_SECTION_LENGTHS = 2;
+/**
+ * Various octet information:
+ *
+ * 2 octets in the id
+ * 2 octets for the flags
+ * 2 octets for section lengths
+ */
 
 /**
  * Parse numRecords Resource Records from a ByteArrayReader object. Returns an
  * array of resource record objects.
  *
- * @param {ByteArrayReader} reader the reader from which to construct resource
- * records. reader should have been moved to the correct cursor position
+ * @param {SmartBuffer} sBuff the SmartBuffer from which to construct resource
+ * records. Should have been moved to the correct cursor position
  * @param {integer} numRecords the number of records to parse
  *
  * @return {Array<ARecord|PtrRecord|SrvRecord>} an Array of the parsed resource
  * records
  */
-exports.parseResourceRecordsFromReader = function(reader, numRecords) {
+exports.parseRecordsFromSmartBuffer = function(sBuff, numRecords) {
   let result = [];
+
   for (let i = 0; i < numRecords; i++) {
-    let recordType = resRec.peekTypeInReader(reader);
+    let recordType = resRec.peekTypeInSmartBuffer(sBuff);
 
     let record = null;
     switch (recordType) {
       case dnsCodes.RECORD_TYPES.A:
-        record = resRec.createARecordFromReader(reader);
+        record = resRec.createARecordFromSmartBuffer(sBuff);
         break;
       case dnsCodes.RECORD_TYPES.PTR:
-        record = resRec.createPtrRecordFromReader(reader);
+        record = resRec.createPtrRecordFromSmartBuffer(sBuff);
         break;
       case dnsCodes.RECORD_TYPES.SRV:
-        record = resRec.createSrvRecordFromReader(reader);
+        record = resRec.createSrvRecordFromSmartBuffer(sBuff);
         break;
       default:
         throw new Error('Unsupported record type: ' + recordType);
@@ -79,7 +80,7 @@ exports.parseResourceRecordsFromReader = function(reader, numRecords) {
 /**
  * Create a DNS packet. This creates the packet with various flag values. The
  * packet is not converted to byte format until a call is made to
- * getAsByteArray().
+ * getAsBuffer().
  *
  * @constructor
  *
@@ -149,7 +150,7 @@ exports.DnsPacket = function DnsPacket(
 };
 
 /**
- * Convert the DnsPacket to a ByteArray object. The format of a DNS Packet is
+ * Convert the DnsPacket to a Buffer. The format of a DNS Packet is
  * as specified in 'TCP/IP Illustrated, Volume 1' by Stevens, as follows:
  *
  * 2 octet ID
@@ -172,12 +173,13 @@ exports.DnsPacket = function DnsPacket(
  *
  * Variable number of bytes representing additional info
  *
- * @return {ByteArray}
+ * @return {Buffer}
  */
-exports.DnsPacket.prototype.convertToByteArray = function() {
-  let result = new byteArray.ByteArray();
+exports.DnsPacket.prototype.asBuffer = function() {
+  let sBuff = new SmartBuffer();
 
-  result.push(this.id, NUM_OCTETS_ID);
+  // 2 octets
+  sBuff.writeUInt16BE(this.id);
 
   // Prepare flags to be passed to getFlagsAsValue
   let qr = this.isQuery ? 0 : 1;  // 0 means query, 1 means response
@@ -189,59 +191,64 @@ exports.DnsPacket.prototype.convertToByteArray = function() {
   let rcode = this.returnCode;
 
   let flagValue = exports.getFlagsAsValue(qr, opcode, aa, tc, rd, ra, rcode);
-  result.push(flagValue, NUM_OCTETS_FLAGS);
 
-  result.push(this.questions.length, NUM_OCTETS_SECTION_LENGTHS);
-  result.push(this.answers.length, NUM_OCTETS_SECTION_LENGTHS);
-  result.push(this.authority.length, NUM_OCTETS_SECTION_LENGTHS);
-  result.push(this.additionalInfo.length, NUM_OCTETS_SECTION_LENGTHS);
+  // 2 octets
+  sBuff.writeUInt16BE(flagValue);
+  
+  // 2 octets
+  sBuff.writeUInt16BE(this.questions.length);
+  sBuff.writeUInt16BE(this.answers.length);
+  sBuff.writeUInt16BE(this.authority.length);
+  sBuff.writeUInt16BE(this.additionalInfo.length);
 
   // We should have now met the requirement of adding 12 bytes to a DNS header.
-  if (result.length !== 12) {
+  if (sBuff.length !== 12) {
     throw new Error(
       'Problem serializing DNS packet. Header length != 12 bytes'
     );
   }
 
   this.questions.forEach(question => {
-    let byteArr = question.convertToByteArray();
-    result.append(byteArr);
+    let buff = question.asBuffer();
+    sBuff.writeBuffer(buff);
   });
 
   this.answers.forEach(answer => {
-    let byteArr = answer.convertToByteArray();
-    result.append(byteArr);
+    let buff = answer.asBuffer();
+    sBuff.writeBuffer(buff);
   });
 
   this.authority.forEach(authority => {
-    let byteArr = authority.convertToByteArray();
-    result.append(byteArr);
+    let buff = authority.asBuffer();
+    sBuff.writeBuffer(buff);
   });
 
   this.additionalInfo.forEach(info => {
-    let byteArr = info.convertToByteArray();
-    result.append(byteArr);
+    let buff = info.asBuffer();
+    sBuff.writeBuffer(buff);
   });
 
-  return result;
+  return sBuff.toBuffer();
 };
 
 /**
  * Create a DNS Packet from a ByteArrayReader object. The contents of the
  * reader are as expected to be output from convertToByteArray().
  *
- * @param {ByteArrayReader} reader the reader from which to construct the
- * DnsPacket. Should be moved to the correct cursor position
+ * @param {Buffer} buff Buffer from which to create the packet
  *
  * @return {DnsPacket} the packet constructed
  */
-exports.createPacketFromReader = function(reader) {
-  let id = reader.getValue(NUM_OCTETS_ID);
-  let flagsAsValue = reader.getValue(NUM_OCTETS_FLAGS);
-  let numQuestions = reader.getValue(NUM_OCTETS_SECTION_LENGTHS);
-  let numAnswers = reader.getValue(NUM_OCTETS_SECTION_LENGTHS);
-  let numAuthority = reader.getValue(NUM_OCTETS_SECTION_LENGTHS);
-  let numAdditionalInfo = reader.getValue(NUM_OCTETS_SECTION_LENGTHS);
+exports.fromBuffer = function(buff) {
+  let sBuff = SmartBuffer.fromBuffer(buff);
+  
+  // 2 octets
+  let id = sBuff.readUInt16BE();
+  let flagsAsValue = sBuff.readUInt16BE();
+  let numQuestions = sBuff.readUInt16BE();
+  let numAnswers = sBuff.readUInt16BE();
+  let numAuthority = sBuff.readUInt16BE();
+  let numAdditionalInfo = sBuff.readUInt16BE();
 
   let flags = exports.getValueAsFlags(flagsAsValue);
 
@@ -275,16 +282,16 @@ exports.createPacketFromReader = function(reader) {
   );
 
   for (let i = 0; i < numQuestions; i++) {
-    let question = qSection.createQuestionFromReader(reader);
+    let question = qSection.createQuestionFromSmartBuffer(sBuff);
     result.addQuestion(question);
   }
 
-  let answers = exports.parseResourceRecordsFromReader(reader, numAnswers);
-  let authorities = exports.parseResourceRecordsFromReader(
-    reader, numAuthority
+  let answers = exports.parseRecordsFromSmartBuffer(sBuff, numAnswers);
+  let authorities = exports.parseRecordsFromSmartBuffer(
+    sBuff, numAuthority
   );
-  let infos = exports.parseResourceRecordsFromReader(
-    reader, numAdditionalInfo
+  let infos = exports.parseRecordsFromSmartBuffer(
+    sBuff, numAdditionalInfo
   );
 
   answers.forEach(answer => {

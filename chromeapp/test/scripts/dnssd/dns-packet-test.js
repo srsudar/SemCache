@@ -1,5 +1,6 @@
 'use strict';
 
+const SmartBuffer = require('smart-buffer').SmartBuffer;
 const test = require('tape');
 
 const dnsCodes = require('../../../app/scripts/dnssd/dns-codes');
@@ -213,11 +214,10 @@ test('can serialize and deserialize DnsPacket', function(t) {
 
   packet.addAdditionalInfo(srvRecord);
 
-  let byteArr = packet.convertToByteArray();
-  let reader = byteArr.getReader();
+  let buff = packet.asBuffer();
 
-  let recovered = dnsPacket.createPacketFromReader(reader);
-  t.deepEqual(recovered, packet);
+  let actual = dnsPacket.fromBuffer(buff);
+  t.deepEqual(actual, packet);
 
   t.end();
 });
@@ -323,56 +323,69 @@ test('getFlagsAsValue for max values', function(t) {
   t.end();
 });
 
-test('parseResourceRecordsFromReader succeeds for single', function(t) {
+test('parseRecordsFromSmartBuffer succeeds for single', function(t) {
   // Test that we can parse and recover a single record.
   let expected = getARecord();
-  let byteArr = expected.convertToByteArray();
-  let reader = byteArr.getReader();
+  let buff = expected.asBuffer();
+  let sBuff = SmartBuffer.fromBuffer(buff);
 
-  let actual = dnsPacket.parseResourceRecordsFromReader(reader, 1);
+  let actual = dnsPacket.parseRecordsFromSmartBuffer(sBuff, 1);
   t.deepEqual(actual, [expected]);
   t.end();
 });
 
-test('parseResourceRecordsFromReader succeeds for multiple', function(t) {
+test('parseRecordsFromSmartBuffer succeeds for multiple', function(t) {
   let aRec1 = getARecord();
   let aRec2 = getARecord('www.howdy.ch');
 
-  let byteArr = aRec1.convertToByteArray();
-  byteArr.append(aRec2.convertToByteArray());
-  let reader = byteArr.getReader();
+  let buff1 = aRec1.asBuffer();
+  let buff2 = aRec2.asBuffer();
+  
+  let writingSmartBuffer = new SmartBuffer();
+  writingSmartBuffer.writeBuffer(buff1);
+  writingSmartBuffer.writeBuffer(buff2);
 
-  let actual = dnsPacket.parseResourceRecordsFromReader(reader, 2);
+  let readingBuff = writingSmartBuffer.toBuffer();
+  let sBuff = SmartBuffer.fromBuffer(readingBuff);
+
+  let actual = dnsPacket.parseRecordsFromSmartBuffer(sBuff, 2);
   t.deepEqual(actual, [aRec1, aRec2]);
   t.end();
 });
 
-test('parseResourceRecordsFromReader succeeds for all types', function(t) {
+test('parseRecordsFromSmartBuffer succeeds for all types', function(t) {
   // We are supporting deserialization of A, PTR, and SRV records.
   let aRec = getARecord();
   let srvRec = getSrvRecord();
   let ptrRec = getPtrRecord();
 
-  let byteArr = aRec.convertToByteArray();
-  byteArr.append(srvRec.convertToByteArray());
-  byteArr.append(ptrRec.convertToByteArray());
-  let reader = byteArr.getReader();
+  let aBuff = aRec.asBuffer();
+  let srvBuff = srvRec.asBuffer();
+  let ptrBuff = ptrRec.asBuffer();
 
-  let actual = dnsPacket.parseResourceRecordsFromReader(reader, 3);
+  let writingSmartBuffer = new SmartBuffer();
+  writingSmartBuffer.writeBuffer(aBuff);
+  writingSmartBuffer.writeBuffer(srvBuff);
+  writingSmartBuffer.writeBuffer(ptrBuff);
+
+  let readingBuff = writingSmartBuffer.toBuffer();
+  let sBuff = SmartBuffer.fromBuffer(readingBuff);
+
+  let actual = dnsPacket.parseRecordsFromSmartBuffer(sBuff, 3);
   t.deepEqual(actual, [aRec, srvRec, ptrRec]);
   t.end();
 });
 
-test('parseResourceRecordsFromReader throws for unsupported type', function(t) {
+test('parseRecordsFromSmartBuffer throws for unsupported type', function(t) {
   // We will pretend to be a TXT record.
   let fakeTxtRecord = getARecord();
   fakeTxtRecord.recordType = dnsCodes.RECORD_TYPES.TXT;
 
-  let byteArr = fakeTxtRecord.convertToByteArray();
-  let reader = byteArr.getReader();
+  let buff = fakeTxtRecord.asBuffer();
+  let sBuff = SmartBuffer.fromBuffer(buff);
 
   let shouldThrow = function() {
-    dnsPacket.parseResourceRecordsFromReader(reader, 1);
+    dnsPacket.parseRecordsFromSmartBuffer(sBuff, 1);
   };
 
   t.throws(shouldThrow, Error);

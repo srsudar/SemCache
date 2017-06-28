@@ -48,7 +48,6 @@ module.exports = function (grunt) {
       options: {
         require: [
           './<%= config.app %>/scripts/chrome-apis/udp:chromeUdp',
-          './<%= config.app %>/scripts/dnssd/binary-utils:binaryUtils',
           './<%= config.app %>/scripts/dnssd/dns-sd:dnssd',
           './<%= config.app %>/scripts/dnssd/dns-sd-semcache:dnsSem',
           './<%= config.app %>/scripts/dnssd/dns-controller:dnsc',

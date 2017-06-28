@@ -1,7 +1,8 @@
 'use strict';
 
+const TextDecoder = require('text-encoding').TextDecoder;
+
 const api = require('../server/server-api');
-const binUtil = require('../dnssd/binary-utils').BinaryUtils;
 const bufferedChannel = require('./buffered-channel');
 const fileSystem = require('../persistence/file-system');
 const message = require('./message');
@@ -34,7 +35,7 @@ exports.onDataChannelHandler = function(event) {
 exports.onDataChannelMessageHandler = function(channel, event) {
   // We expect ArrayBuffers containing JSON objects as messages.
   let jsonBin = event.data;
-  let jsonStr = binUtil.arrayBufferToString(jsonBin);
+  let jsonStr = new TextDecoder().decode(jsonBin);
   let msg = JSON.parse(jsonStr);
 
   if (message.isList(msg)) {
