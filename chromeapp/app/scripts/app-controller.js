@@ -16,6 +16,7 @@ const ifCommon = require('./peer-interface/common');
 const peerIfMgr = require('./peer-interface/manager');
 const settings = require('./settings');
 const serverApi = require('./server/server-api');
+const webrtcCxnMgr = require('./webrtc/connection-manager');
 
 
 let ABS_PATH_TO_BASE_DIR = null;
@@ -343,6 +344,7 @@ exports.startServersAndRegister = function() {
  */
 exports.stopServers = function() {
   coalMgr.reset();
+  webrtcCxnMgr.reset();
   exports.getServerController().stop();
   dnsController.stop();
   exports.LISTENING_HTTP_INTERFACE = null;

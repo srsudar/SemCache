@@ -32,8 +32,19 @@ class PeerConnection extends EventEmitter {
     this.rawConnection = rawConnection;
 
     let self = this;
-    this.rawConnection.onclose = function() {
-      self.emitClose();
+
+    // MDN says there should be an 'onconnectionstatechange' event. However
+    // that doesn't seem to be implemented in Chrome. Instead, the wisdom of
+    // the internet says to use oniceconnectionstatechange and monitor
+    // iceConnectionState. 'closed' indicates that the peer itself has shut
+    // down.
+    this.rawConnection.oniceconnectionstatechange = function() {
+      switch (self.rawConnection.iceConnectionState) {
+        case 'closed':
+          // Emit an event indicating that we are closed.
+          self.emitClose();
+          break;
+      }
     };
   }
 
@@ -182,17 +193,25 @@ class PeerConnection extends EventEmitter {
   sendAndGetResponse(msg) {
     let self = this;
     return new Promise(function(resolve, reject) {
-      let client = exports.createClient(self.rawConnection, msg);
+      Promise.resolve()
+      .then(() => {
+        let client = exports.createClient(self.rawConnection, msg);
 
-      client.on('complete', buff => {
-        resolve(buff);
-      });
+        client.on('complete', buff => {
+          resolve(buff);
+        });
 
-      client.on('error', err => {
+        client.on('error', err => {
+          self.emitClose(err);
+          reject(err);
+        });
+
+        client.start();
+      })
+      .catch(err => {
+        self.emitClose(err);
         reject(err);
       });
-
-      client.start();
     });
   }
 }

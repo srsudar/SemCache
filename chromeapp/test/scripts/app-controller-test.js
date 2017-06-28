@@ -687,6 +687,7 @@ test('stopServers restores state', function(t) {
   let stopSpy = sinon.spy();
   let stopDnsControllerSpy = sinon.spy();
   let resetCoalStub = sinon.stub();
+  let resetCxnMgrStub = sinon.stub();
 
   proxyquireAppc({
     './dnssd/dns-controller': {
@@ -694,6 +695,9 @@ test('stopServers restores state', function(t) {
     },
     './coalescence/manager': {
       reset: resetCoalStub
+    },
+    './webrtc/connection-manager': {
+      reset: resetCxnMgrStub
     }
   });
   appc.getServerController = sinon.stub().returns({
@@ -706,6 +710,7 @@ test('stopServers restores state', function(t) {
   t.deepEqual(stopSpy.args[0], []);
 
   t.true(resetCoalStub.calledOnce);
+  t.true(resetCxnMgrStub.calledOnce);
 
   t.equal(appc.LISTENING_HTTP_INTERFACE, null);
 

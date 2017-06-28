@@ -121,6 +121,11 @@ class BaseClient extends EventEmitter {
       self.sendStartMessage();
     };
 
+    channel.onerror = function(e) {
+      console.log('Received error via raw data channel:', e);
+      self.emitError(e);
+    };
+
     channel.onmessage = function(event) {
       const eventBuff = Buffer.from(event.data);
       const msg = protocol.from(eventBuff);

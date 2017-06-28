@@ -21,6 +21,14 @@ function resetCmgr() {
   cmgr = require('../../../app/scripts/webrtc/connection-manager');
 }
 
+function getIpPortCxn() {
+  let ipaddr = '12.34.56.78';
+  let port = 8888;
+  let cxn = sinon.stub();
+  cxn.on = sinon.stub();
+  return { ipaddr, port, cxn };
+}
+
 /**
  * Proxyquire the cmgr object with proxies passed as the proxied modules.
  */
@@ -29,6 +37,12 @@ function proxyquireCmgr(proxies) {
     '../../../app/scripts/webrtc/connection-manager',
     proxies
   );
+}
+
+function end(t) {
+  if (!t) { throw new Error('You forgot to pass tape'); }
+  t.end();
+  resetCmgr();
 }
 
 /**
@@ -153,13 +167,11 @@ function createConnectionAssertionHelper(
         port
       ]
     );
-    t.end();
-    resetCmgr();
+    end(t);
   })
   .catch(err => {
     t.fail(err);
-    t.end();
-    resetCmgr();
+    end(t);
   });
 }
 
@@ -297,13 +309,11 @@ function sendOfferAssertionHelper(fetchError, createDescError, t) {
     );
     t.deepEqual(cmgr.addConnection.args[0], [ipaddr, port, peerConnection]);
 
-    resetCmgr();
-    t.end();
+    end(t);
   })
   .catch(err => {
     t.fail(err);
-    t.end();
-    resetCmgr();
+    end(t);
   });
 }
 
@@ -317,8 +327,7 @@ test('addConnection and getConnection correct in base case', function(t) {
   let actual = cmgr.getConnection(ipaddr, port, cxn);
 
   t.equal(actual, cxn);
-  t.end();
-  resetCmgr();
+  end(t);
 });
 
 test('connection is removed after close event', function(t) {
@@ -331,13 +340,13 @@ test('connection is removed after close event', function(t) {
   t.equal(cmgr.getConnection(ipaddr, port), cxn);
   cxn.emitClose();
   t.equal(cmgr.getConnection(ipaddr, port), null);
-  t.end();
+  end(t);
 });
 
 test('getConnection returns null if not present', function(t) {
   let actual = cmgr.getConnection('foo', 11);
   t.equal(actual, null);
-  t.end();
+  end(t);
 });
 
 test('removeConnection deletes connection if present', function(t) {
@@ -351,14 +360,14 @@ test('removeConnection deletes connection if present', function(t) {
 
   let actual = cmgr.getConnection(ipaddr, port);
   t.equal(actual, null);
-  t.end();
+  end(t);
 });
 
 test('removeConnection deletes safely if not present', function(t) {
   t.doesNotThrow(() => {
     cmgr.removeConnection('alpha', 111);
   });
-  t.end();
+  end(t);
 });
 
 test('createConnection resolves with PeerConnection on success', function(t) {
@@ -372,13 +381,11 @@ test('createConnection rejects if createOffer rejects', function(t) {
   cmgr.createConnection()
   .then(res => {
     t.fail(res);
-    t.end();
-    resetCmgr();
+    end(t);
   })
   .catch(actual => {
     t.equal(actual, expected);
-    t.end();
-    resetCmgr();
+    end(t);
   });
 });
 
@@ -389,13 +396,11 @@ test('createConnection rejects if setLocalDescription rejects', function(t) {
   cmgr.createConnection()
   .then(res => {
     t.fail(res);
-    t.end();
-    resetCmgr();
+    end(t);
   })
   .catch(actual => {
     t.equal(actual, expected);
-    t.end();
-    resetCmgr();
+    end(t);
   });
 });
 
@@ -406,13 +411,11 @@ test('createConnection rejects if sendOffer rejects', function(t) {
   cmgr.createConnection()
   .then(res => {
     t.fail(res);
-    t.end();
-    resetCmgr();
+    end(t);
   })
   .catch(actual => {
     t.equal(actual, expected);
-    t.end();
-    resetCmgr();
+    end(t);
   });
 });
 
@@ -423,13 +426,11 @@ test('createConnection rejects if createDataChannel throws', function(t) {
   cmgr.createConnection()
   .then(res => {
     t.fail(res);
-    t.end();
-    resetCmgr();
+    end(t);
   })
   .catch(actual => {
     t.equal(actual, expected);
-    t.end();
-    resetCmgr();
+    end(t);
   });
 });
 
@@ -444,13 +445,11 @@ test('sendOffer rejects if fetch rejects', function(t) {
   wrappedCall()
   .then(res => {
     t.fail(res);
-    t.end();
-    resetCmgr();
+    end(t);
   })
   .catch(actual => {
     t.equal(actual, expected);
-    t.end();
-    resetCmgr();
+    end(t);
   });
 });
 
@@ -461,12 +460,64 @@ test('sendOffer rejects if setRemoteDescription rejects', function(t) {
   wrappedCall()
   .then(res => {
     t.fail(res);
-    t.end();
-    resetCmgr();
+    end(t);
   })
   .catch(actual => {
     t.equal(actual, expected);
-    t.end();
-    resetCmgr();
+    end(t);
+  });
+});
+
+test('reset clears state', function(t) {
+  let ipaddr = '12.3.4.5';
+  let port = 1234;
+  let cxn = sinon.stub();
+  cxn.on = sinon.stub();
+
+  cmgr.addConnection(ipaddr, port, cxn);
+
+  // Make sure we can retrieve it
+  t.equal(cmgr.getConnection(ipaddr, port), cxn);
+
+  cmgr.reset();
+  t.deepEqual(cmgr.getConnection(ipaddr, port), null);
+
+  end(t);
+});
+
+test('getOrCreateConnection retrieves existing connection', function(t) {
+  let { ipaddr, port, cxn } = getIpPortCxn();
+
+  cmgr.addConnection(ipaddr, port, cxn);
+
+  cmgr.getOrCreateConnection(ipaddr, port)
+  .then(actual => {
+    t.equal(actual, cxn);
+    end(t);
+  })
+  .catch(err => {
+    t.fail(err);
+    end(t);
+  });
+});
+
+test('getOrCreateConnection creates and adds connection', function(t) {
+  let { ipaddr, port, cxn } = getIpPortCxn();
+
+  let createStub = sinon.stub();
+  createStub.withArgs(ipaddr, port).resolves(cxn);
+
+  cmgr.createConnection = createStub;
+
+  cmgr.getOrCreateConnection(ipaddr, port)
+  .then(actual => {
+    t.equal(actual, cxn);
+    // and we added it to the cache
+    t.equal(cmgr.getConnection(ipaddr, port), cxn);
+    end(t);
+  })
+  .catch(err => {
+    t.fail(err);
+    end(t);
   });
 });

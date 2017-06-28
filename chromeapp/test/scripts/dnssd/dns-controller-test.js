@@ -429,15 +429,20 @@ test('sendPacket gets socket and sends', function(t) {
     0
   );
 
-  let buff = packet.asBuffer();
+  // We're using a stub, not serializing it in the test, because we are
+  // modifying the packet number in the send to benefit debugging. Until we
+  // stop doing this, it is simplest to just stub this out.
+  let buff = Buffer.from('i am standing in as a packet');
+  packet.asBuffer = sinon.stub().returns(buff);
+
   let address = 'hello';
   let port = '6789';
 
   // getSocket() should resolve with an object that exposes the 'send'
   // function.
   let sendSpy = {
-    send: function(bufferParam, addressParam, portParam) {
-      t.deepEqual(bufferParam, buff);
+    send: function(abParam, addressParam, portParam) {
+      t.deepEqual(abParam, buff.buffer);
       t.deepEqual(addressParam, address);
       t.deepEqual(portParam, port);
       end(t);
@@ -922,7 +927,7 @@ test('onReceiveListener calls to send', function(t) {
 
   proxyquireDnsController({
     './dns-packet': {
-      from: fromStub
+      fromBuffer: fromStub
     }
   });
 

@@ -74,6 +74,10 @@ Example:
         height: 32px;
       }
 
+      paper-toast.error {
+        --paper-toast-background-color: rgba(244,67,54,.8);
+      }
+
     </style>
 
     <div class="card">
@@ -109,8 +113,8 @@ Example:
 
         <paper-toast
           id="toasterror"
-          duration="5"
-          class="fit-bottom"
+          duration="10000"
+          class="fit-bottom error"
           text="Could not open">
         </paper-toast>
 
@@ -216,9 +220,7 @@ Example:
           Promise.resolve()
           .then(() => {
             var appController = thisEl.getAppController();
-            var toast = thisEl.$.toastopening;
-            toast.fitInto = thisEl.$.actioncontainer;
-            toast.open();
+            thisEl.$.toastopening.open();
             return appController.saveMhtmlAndOpen(
               thisEl.serviceName,
               thisEl.captureHref
@@ -229,8 +231,13 @@ Example:
             resolve();
           })
           .catch(err => {
-            thisEl.$.toastopening.close();
-            thisEl.$.toasterror.open();
+            let msg = err;
+            if (msg instanceof Error) {
+              msg = err.message;
+            }
+            let toast = thisEl.$.toasterror;
+            toast.text = msg;
+            toast.open();
             resolve();
           });
         });
@@ -255,6 +262,9 @@ Example:
         // This is a good place to perform any work related to your element's
         // visual state or active behavior (measuring sizes, beginning animations,
         // loading resources, etc).
+        let container = this.$.actioncontainer;
+        this.$.toastopening.fitInto = container;
+        this.$.toasterror.fitInto = container;
       },
 
       detached: function() {

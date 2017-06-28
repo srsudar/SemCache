@@ -181,11 +181,10 @@ exports.onReceiveListener = function(info) {
   }
 
   let buff = Buffer.from(info.data);
-  let packet = dnsPacket.from(buff);
+  let packet = dnsPacket.fromBuffer(buff);
 
   if (exports.DEBUG) {
     console.log('Got packet: ', packet);
-    console.log('  packet id: ', packet.id);
   }
 
   if (!exports.socket) {
@@ -552,9 +551,7 @@ exports.sendPacket = function(packet, address, port) {
   exports.NEXT_PACKET_ID += 1;
 
   let buff = packet.asBuffer();
-  // And now we need the underlying buffer of the byteArray, truncated to the
-  // correct size.
-  // let uint8Arr = byteArray.getByteArrayAsUint8Array(byteArr);
+  let arrayBuffer = buff.buffer;
 
   exports.getSocket().then(socket => {
     if (exports.DEBUG) {
@@ -563,7 +560,7 @@ exports.sendPacket = function(packet, address, port) {
       console.log('  address: ', address);
       console.log('  port: ', port);
     }
-    socket.send(buff, address, port);
+    socket.send(arrayBuffer, address, port);
   });
 };
 

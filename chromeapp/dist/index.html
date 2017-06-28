@@ -3139,6 +3139,10 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
         height: 32px;
       }
 
+      paper-toast.error {
+        --paper-toast-background-color: rgba(244,67,54,.8);
+      }
+
     </style>
 
     <div class="card">
@@ -3167,7 +3171,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
         <paper-toast id="toastopening" duration="0" class="fit-bottom" text="Opening">
         </paper-toast>
 
-        <paper-toast id="toasterror" duration="5" class="fit-bottom" text="Could not open">
+        <paper-toast id="toasterror" duration="10000" class="fit-bottom error" text="Could not open">
         </paper-toast>
 
       </div>

@@ -35,6 +35,15 @@ function createKey(ipaddr, port) {
 }
 
 /**
+ * Reset the state of the manager.
+ */
+exports.reset = function() {
+  for (let key in CONNECTIONS) {
+    delete CONNECTIONS[key];
+  }
+};
+
+/**
  * Add a connection to the known pool of connection.
  *
  * PeerConnections added via this method will be automatically removed when

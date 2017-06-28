@@ -39,6 +39,12 @@ function end(t) {
   resetPeerConn();
 }
 
+function getRawCxnAndMsg() {
+  let rawCxn = sinon.stub();
+  let msg = { msg: 'do something for me' };
+  return { rawCxn, msg };
+}
+
 test('getRawConnection returns constructor arg', function(t) {
   let expected = { foo: 'bar' };
   let pc = new peerConn.PeerConnection(expected);
@@ -49,7 +55,7 @@ test('getRawConnection returns constructor arg', function(t) {
   t.end();
 });
 
-test('emits close event when rawConnection onclose invoked', function(t) {
+test('emits close event when rawConnection closed', function(t) {
   let rawConnection = sinon.stub();
   let pc = new peerConn.PeerConnection(rawConnection);
 
@@ -58,7 +64,10 @@ test('emits close event when rawConnection onclose invoked', function(t) {
     t.end();
   });
 
-  rawConnection.onclose();
+  // Set our state to closed
+  rawConnection.iceConnectionState = 'closed';
+
+  rawConnection.oniceconnectionstatechange();
 });
 
 test('getList issues call to peer', function(t) {
@@ -335,10 +344,9 @@ test('getCachedPage rejects on error', function(t) {
 });
 
 test('sendAndGetResponse resolves on success', function(t) {
-  let rawConnection = { iam: 'RTCPeerConnection' };
-  let msg = { msg: 'get me a file' };
+  let { rawCxn, msg } = getRawCxnAndMsg();
 
-  let clientStub = new commonChannel.BaseClient(rawConnection, msg);
+  let clientStub = new commonChannel.BaseClient(rawCxn, msg);
   let expected = Buffer.from('a response');
   clientStub.chunks = [expected];
   // Override start() to immediately emit a complete event.
@@ -347,10 +355,10 @@ test('sendAndGetResponse resolves on success', function(t) {
   };
 
   let createClientStub = sinon.stub();
-  createClientStub.withArgs(rawConnection, msg).returns(clientStub);
+  createClientStub.withArgs(rawCxn, msg).returns(clientStub);
   peerConn.createClient = createClientStub;
 
-  let pc = new peerConn.PeerConnection(rawConnection);
+  let pc = new peerConn.PeerConnection(rawCxn);
 
   pc.sendAndGetResponse(msg)
   .then(actual => {
@@ -364,10 +372,10 @@ test('sendAndGetResponse resolves on success', function(t) {
 });
 
 test('sendAndGetResponse rejects on error', function(t) {
-  let rawConnection = { iam: 'RTCPeerConnection' };
-  let msg = { msg: 'get me a file' };
+  let { rawCxn, msg } = getRawCxnAndMsg();
 
-  let clientStub = new commonChannel.BaseClient(rawConnection, msg);
+  let clientStub = new commonChannel.BaseClient(rawCxn, msg);
+  let emitCloseStub = sinon.stub();
   let expected = { err: 'trouble' };
   // Override start() to immediately emit an error.
   clientStub.start = function() {
@@ -375,10 +383,11 @@ test('sendAndGetResponse rejects on error', function(t) {
   };
 
   let createClientStub = sinon.stub();
-  createClientStub.withArgs(rawConnection, msg).returns(clientStub);
+  createClientStub.withArgs(rawCxn, msg).returns(clientStub);
   peerConn.createClient = createClientStub;
 
-  let pc = new peerConn.PeerConnection(rawConnection);
+  let pc = new peerConn.PeerConnection(rawCxn);
+  pc.emitClose = emitCloseStub;
 
   pc.sendAndGetResponse(msg)
   .then(result => {
@@ -386,7 +395,38 @@ test('sendAndGetResponse rejects on error', function(t) {
     end(t);
   })
   .catch(actual => {
+    t.deepEqual(emitCloseStub.args[0], [expected]);
+    t.equal(emitCloseStub.callCount, 1);
     t.deepEqual(actual, expected);
+    end(t);
+  });
+});
+
+test('sendAndGetResponse rejects if createClient throws', function(t) {
+  // In the wild we are seeing errors if createClient() throws. In this case it
+  // seems like we should emit a close event to indicate that the connection is
+  // not useful, allowing things like the connection manager to stop caching
+  // the connection.
+  let { rawCxn, msg } = getRawCxnAndMsg();
+
+  let expected = { err: 'createClient threw' };
+
+  let createClientStub = sinon.stub();
+  createClientStub.withArgs(rawCxn, msg).throws(expected);
+  peerConn.createClient = createClientStub;
+
+  let emitCloseStub = sinon.stub();
+  let pc = new peerConn.PeerConnection(rawCxn);
+  pc.emitClose = emitCloseStub;
+
+  pc.sendAndGetResponse(msg)
+  .then(res => {
+    t.fail(res);
+    end(t);
+  })
+  .catch(actual => {
+    t.deepEqual(actual, expected);
+    t.deepEqual(emitCloseStub.args[0], [expected]);
     end(t);
   });
 });

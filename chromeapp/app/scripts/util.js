@@ -356,7 +356,7 @@ exports.objToBuff = function(obj) {
     if (Buffer.isBuffer(value)) {
       // We will add Buffers as [string, buffer_length, Buffer].
       sBuff.writeStringNT(prop);
-      sBuff.writeUInt32LE(value.length);
+      sBuff.writeUInt32BE(value.length);
       sBuff.writeBuffer(value);
     } else {
       json[prop] = value;
@@ -366,7 +366,7 @@ exports.objToBuff = function(obj) {
   let resultSb = SmartBuffer.fromBuffer(new Buffer(DEFAULT_BUFFER_SIZE));
   let jsonStr = JSON.stringify(json);
 
-  resultSb.writeUInt32LE(jsonStr.length);
+  resultSb.writeUInt32BE(jsonStr.length);
   resultSb.writeString(jsonStr);
   resultSb.writeBuffer(sBuff.toBuffer());
 
@@ -384,7 +384,7 @@ exports.buffToObj = function(buff) {
   // We expect:
   // [length, jsonString, (null-terminated string, buff length, buff) * n]
   let sBuff = SmartBuffer.fromBuffer(buff);
-  let jsonLength = sBuff.readUInt32LE();
+  let jsonLength = sBuff.readUInt32BE();
   let jsonStr = sBuff.readString(jsonLength);
 
   let result = JSON.parse(jsonStr);
@@ -392,7 +392,7 @@ exports.buffToObj = function(buff) {
   // No reclaim the buffers.
   while (sBuff.remaining() > 0) {
     let propName = sBuff.readStringNT();
-    let buffLength = sBuff.readUInt32LE();
+    let buffLength = sBuff.readUInt32BE();
     let buff = sBuff.readBuffer(buffLength);
     result[propName] = buff;
   }

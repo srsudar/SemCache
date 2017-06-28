@@ -2,7 +2,8 @@
 
 const test = require('tape');
 
-const byteArray = require('../../../app/scripts/dnssd/byte-array');
+const SmartBuffer = require('smart-buffer').SmartBuffer;
+
 const dnsCodes = require('../../../app/scripts/dnssd/dns-codes');
 
 let resRec = require('../../../app/scripts/dnssd/resource-record');
@@ -78,15 +79,15 @@ test('can encode and decode common RR fields', function(t) {
   let rrClass = 4;
   let ttl = 36000;
 
-  let byteArr = resRec.getCommonFieldsAsByteArray(
+  let buff = resRec.getCommonFieldsAsBuffer(
     domainName,
     rrType,
     rrClass,
     ttl
   );
 
-  let recovered = resRec.getCommonFieldsFromByteArrayReader(
-    byteArr.getReader()
+  let recovered = resRec.getCommonFieldsFromSmartBuffer(
+    SmartBuffer.fromBuffer(buff)
   );
 
   t.equal(recovered.domainName, domainName);
@@ -105,11 +106,13 @@ test('can encode and decode A Record', function(t) {
 
   let aRecord = new resRec.ARecord(domainName, ttl, ipAddress, rrClass);
 
-  let byteArr = aRecord.convertToByteArray();
+  let buff = aRecord.asBuffer();
 
-  let recovered = resRec.createARecordFromReader(byteArr.getReader());
+  let actual = resRec.createARecordFromSmartBuffer(
+    SmartBuffer.fromBuffer(buff)
+  );
 
-  t.deepEqual(recovered, aRecord);
+  t.deepEqual(actual, aRecord);
 
   t.end();
 });
@@ -127,11 +130,13 @@ test('can encode and decode PTR Record', function(t) {
     rrClass
   );
 
-  let byteArr = ptrRecord.convertToByteArray();
+  let buff = ptrRecord.asBuffer();
 
-  let recovered = resRec.createPtrRecordFromReader(byteArr.getReader());
+  let expected = resRec.createPtrRecordFromSmartBuffer(
+    SmartBuffer.fromBuffer(buff)
+  );
 
-  t.deepEqual(recovered, ptrRecord);
+  t.deepEqual(expected, ptrRecord);
 
   t.end();
 });
@@ -153,11 +158,13 @@ test('can encode and decode SRV Record', function(t) {
     targetDomain
   );
 
-  let byteArr = srvRecord.convertToByteArray();
+  let buff = srvRecord.asBuffer();
 
-  let recovered = resRec.createSrvRecordFromReader(byteArr.getReader());
+  let actual = resRec.createSrvRecordFromSmartBuffer(
+    SmartBuffer.fromBuffer(buff)
+  );
 
-  t.deepEqual(recovered, srvRecord);
+  t.deepEqual(actual, srvRecord);
 
   t.end();
 });
@@ -173,24 +180,23 @@ test('peek type in reader correct', function(t) {
   let aRecord1 = new resRec.ARecord(domainName, ttl, ipAddress);
   let aRecord2 = new resRec.ARecord(domainName2, ttl, ipAddress);
 
-  let byteArr1 = aRecord1.convertToByteArray();
-  let byteArr2 = aRecord2.convertToByteArray();
+  let buff1 = aRecord1.asBuffer();
+  let buff2 = aRecord2.asBuffer();
 
-  let byteArr = new byteArray.ByteArray();
+  let sBuff = new SmartBuffer();
 
-  byteArr.append(byteArr1);
-  byteArr.append(byteArr2);
-  let reader = byteArr.getReader();
+  sBuff.writeBuffer(buff1);
+  sBuff.writeBuffer(buff2);
 
-  let recovered1 = resRec.createARecordFromReader(reader);
+  let recovered1 = resRec.createARecordFromSmartBuffer(sBuff);
   t.deepEqual(recovered1, aRecord1);
 
   let expected = dnsCodes.RECORD_TYPES.A;
-  let actual = resRec.peekTypeInReader(reader);
+  let actual = resRec.peekTypeInSmartBuffer(sBuff);
   t.equal(actual, expected);
 
   // And make sure we didn't change the position of the reader.
-  let recovered2 = resRec.createARecordFromReader(reader);
+  let recovered2 = resRec.createARecordFromSmartBuffer(sBuff);
   t.deepEqual(recovered2, aRecord2);
 
   t.end();

@@ -4,7 +4,7 @@ const proxyquire = require('proxyquire');
 const sinon = require('sinon');
 const test = require('tape');
 
-const binUtil = require('../../../app/scripts/dnssd/binary-utils').BinaryUtils;
+const TextEncoder = require('text-encoding').TextEncoder;
 
 let util = require('../../../app/scripts/persistence/file-system-util');
 
@@ -401,8 +401,8 @@ test('getFileContents resolves with full contents', function(t) {
   util.createFileReader = sinon.stub().returns(fileReaderStub);
 
   // We write ArrayBuffer objects.
-  let buff1 = binUtil.stringToArrayBuffer('Tyrion ');
-  let buff2 = binUtil.stringToArrayBuffer('Lannister');
+  let buff1 = new TextEncoder().encode('Tyrion ');
+  let buff2 = new TextEncoder().encode('Lannister');
   let expectedResult = Buffer.from('Tyrion Lannister');
 
   let file = { stubType: 'file' };

@@ -2,6 +2,8 @@
 
 const test = require('tape');
 
+const SmartBuffer = require('smart-buffer').SmartBuffer;
+
 let qRec = require('../../../app/scripts/dnssd/question-section');
 
 
@@ -26,9 +28,11 @@ test('can serialize and deserialize a QuestionSection', function(t) {
   
   let expected = new qRec.QuestionSection(queryName, queryType, queryClass);
 
-  let byteArr = expected.convertToByteArray();
+  let buff = expected.asBuffer();
 
-  let recovered = qRec.createQuestionFromReader(byteArr.getReader());
+  let recovered = qRec.createQuestionFromSmartBuffer(
+    SmartBuffer.fromBuffer(buff)
+  );
 
   t.deepEqual(recovered, expected);
 

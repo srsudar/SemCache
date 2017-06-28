@@ -13,6 +13,7 @@ const qSection = require('../../../app/scripts/dnssd/question-section');
 const resRec = require('../../../app/scripts/dnssd/resource-record');
 
 let dnssd = require('../../../app/scripts/dnssd/dns-sd');
+dnssd.DEBUG = false;
 
 
 /**
@@ -25,6 +26,7 @@ function resetDnsSd() {
     require.resolve('../../../app/scripts/dnssd/dns-sd')
   ];
   dnssd = require('../../../app/scripts/dnssd/dns-sd');
+  dnssd.DEBUG = false;
 }
 
 /**
@@ -35,6 +37,13 @@ function proxyquireDnsSd(proxies) {
     '../../../app/scripts/dnssd/dns-sd',
     proxies
   );
+  dnssd.DEBUG = false;
+}
+
+function end(t) {
+  if (!t) { throw new Error('You forgot to pass tape'); }
+  t.end();
+  resetDnsSd();
 }
 
 /**
@@ -49,7 +58,7 @@ function proxyquireDnsSd(proxies) {
 function verifyUserFriendlyNameHelper(instanceTypeDomain, expected, t) {
   let actual = dnssd.getUserFriendlyName(instanceTypeDomain);
   t.equal(actual, expected);
-  t.end();
+  end(t);
 }
 
 /**
@@ -66,7 +75,7 @@ function verifyUserFriendlyNameHelper(instanceTypeDomain, expected, t) {
 
   let actual = dnssdSem.getUserFriendlyName(instanceTypeDomain);
   t.equal(actual, expected);
-  t.end();
+  end(t);
 }
 
 /**
@@ -116,14 +125,12 @@ function callsQueryForResponsesHelper(
     t.equal(timeoutArg, timeout);
     t.equal(numRetriesArg, numRetries);
     t.deepEqual(services, result);
-    t.end();
 
-    resetDnsSd();
+    end(t);
   })
   .catch(err => {
     t.fail(err);
-    t.end();
-    resetDnsSd();
+    end(t);
   });
 }
 
@@ -182,8 +189,7 @@ function queryForResponsesNoPacketsHelper(numRetries, t) {
   })
   .catch(err => {
     t.fail(err);
-    t.end();
-    resetDnsSd();
+    end(t);
   });
 }
 
@@ -222,8 +228,6 @@ function queryForResponsesSinglePacketHelper(numRetries, resolveOnNum, t) {
   let numQueryCalls = 0;
   let querySpy = sinon.spy(function() {
     numQueryCalls += 1;
-    console.log('calling query');
-    console.log('numQueryCalls: ', numQueryCalls);
     if (numQueryCalls === resolveOnNum) {
       callback(packet1);
     }
@@ -263,8 +267,7 @@ function queryForResponsesSinglePacketHelper(numRetries, resolveOnNum, t) {
   })
   .catch(err => {
     t.fail(err);
-    t.end();
-    resetDnsSd();
+    end(t);
   });
 }
 
@@ -304,8 +307,7 @@ function probeRejectsHelper(returnTrueAfterCall, t) {
   dnssd.issueProbe('queryname', 4, 5)
   .then(res => {
     t.fail(res);
-    t.end();
-    resetDnsSd();
+    end(t);
   })
   .catch(function failure() {
     // our promise didn't resolve, meaning we failed.
@@ -314,8 +316,7 @@ function probeRejectsHelper(returnTrueAfterCall, t) {
     t.equal(returnTrueAfterCall + 1, receivedResponsePacketCallCount);
     t.equal(addOnReceiveCallbackSpy.callCount, 1);
     t.equal(removeOnReceiveCallbackSpy.callCount, 1);
-    t.end();
-    resetDnsSd();
+    end(t);
   });
 }
 
@@ -410,13 +411,11 @@ test('issueProbe succeeds correctly', function(t) {
     t.equal(receivedResponsePacketSpy.callCount, 3);
     t.true(addOnReceiveCallbackSpy.calledOnce);
     t.true(removeOnReceiveCallbackSpy.calledOnce);
-    resetDnsSd();
-    t.end();
+    end(t);
   })
   .catch(err => {
     t.fail(err);
-    t.end();
-    resetDnsSd();
+    end(t);
   });
 });
 
@@ -460,7 +459,7 @@ test('packetIsForQuery true if appropriate resource', function(t) {
   t.equal(filterSpy.args[0][1], qName);
   t.equal(filterSpy.args[0][2], aRecord.recordType);
   t.equal(filterSpy.args[0][3], qClass);
-  t.end();
+  end(t);
 });
 
 test('packetIsForQuery false if resource does not match query', function(t) {
@@ -490,7 +489,7 @@ test('packetIsForQuery false if resource does not match query', function(t) {
   t.equal(filterSpy.args[0][1], qName);
   t.equal(filterSpy.args[0][2], aRecord.recordType);
   t.equal(filterSpy.args[0][3], qClass);
-  t.end();
+  end(t);
 });
 
 test('receivedPacket calls packetIsForQuery on each packet', function(t) {
@@ -514,9 +513,8 @@ test('receivedPacket calls packetIsForQuery on each packet', function(t) {
   t.true(packetIsForQuerySpy.calledWith(first, qName, qType, qClass));
   t.true(packetIsForQuerySpy.calledWith(second, qName, qType, qClass));
   t.true(packetIsForQuerySpy.calledWith(third, qName, qType, qClass));
-  t.end();
 
-  resetDnsSd();
+  end(t);
 });
 
 test('receivedResponsePacket true based on resources', function(t) {
@@ -548,9 +546,8 @@ test('receivedResponsePacket true based on resources', function(t) {
   t.equal(packetIsForQuerySpy.args[0][1], qName);
   t.equal(packetIsForQuerySpy.args[0][2], qType);
   t.equal(packetIsForQuerySpy.args[0][3], qClass);
-  t.end();
 
-  resetDnsSd();
+  end(t);
 });
 
 test('receivedResponsePacket false correctly', function(t) {
@@ -618,8 +615,7 @@ test('receivedResponsePacket false correctly', function(t) {
   );
   t.false(actualForQuestion);
 
-  t.end();
-  resetDnsSd();
+  end(t);
 });
 
 test('register rejects if host taken', function(t) {
@@ -645,8 +641,7 @@ test('register rejects if host taken', function(t) {
   dnssd.register(host, instanceName, type, port)
   .then(res => {
     t.fail(res);
-    t.end();
-    resetDnsSd();
+    end(t);
   })
   .catch(failObj => {
     // We rejected, as expected because the host was taken.
@@ -659,8 +654,7 @@ test('register rejects if host taken', function(t) {
     t.equal(createHostRecordsSpy.callCount, 0);
     t.equal(createServiceRecordsSpy.callCount, 0);
     t.true(true);
-    t.end();
-    resetDnsSd();
+    end(t);
   });
 });
 
@@ -678,8 +672,7 @@ test('register rejects if instance taken', function(t) {
   dnssd.register(host, instanceName, type, port)
   .then(res => {
     t.fail(res);
-    t.end();
-    resetDnsSd();
+    end(t);
   })
   .catch(failObj => {
     // We rejected, as expected because the instance was taken.
@@ -690,8 +683,7 @@ test('register rejects if instance taken', function(t) {
     // We should issue two probes.
     t.equal(issueProbeSpy.callCount, 2);
     t.true(true);
-    t.end();
-    resetDnsSd();
+    end(t);
   });
 });
 
@@ -741,8 +733,7 @@ test('createServiceRecords creates and returns', function(t) {
   t.equal(secondArgs[0], type);
   t.deepEqual(secondArgs[1], expectedPtrRecord);
 
-  t.end();
-  resetDnsSd();
+  end(t);
 });
 
 test('createHostRecords calls to create records correctly', function(t) {
@@ -777,8 +768,7 @@ test('createHostRecords calls to create records correctly', function(t) {
   let actualReturn = dnssd.createHostRecords(host);
   let expectedReturn = [expectedRecord];
   t.deepEqual(actualReturn, expectedReturn);
-  t.end();
-  resetDnsSd();
+  end(t);
 });
 
 test('register resolves if name and host probe succeed', function(t) {
@@ -835,13 +825,11 @@ test('register resolves if name and host probe succeed', function(t) {
     t.true(advertiseServiceSpy.calledOnce);
     t.deepEqual(advertiseServiceSpy.args[0][0], allRecords);
 
-    resetDnsSd();
-    t.end();
+    end(t);
   })
   .catch(err => {
     t.fail(err);
-    t.end();
-    resetDnsSd();
+    end(t);
   });
 });
 
@@ -887,9 +875,8 @@ test('advertiseService advertises', function(t) {
   ];
 
   t.deepEqual(sendPacketSpy.args[0], expectedArgs);
-  t.end();
   
-  resetDnsSd();
+  end(t);
 });
 
 test('queryForResponses times out for if no responses', function(t) {
@@ -899,8 +886,7 @@ test('queryForResponses times out for if no responses', function(t) {
   // 3 retries
   queryForResponsesNoPacketsHelper(3, t);
 
-  t.end();
-  resetDnsSd();
+  end(t);
 });
 
 test('queryForResponses handles retry attempts for single', function(t) {
@@ -913,8 +899,7 @@ test('queryForResponses handles retry attempts for single', function(t) {
   // Ask for 4 retries, but resolve after the 1st.
   queryForResponsesSinglePacketHelper(4, 1, t);
 
-  t.end();
-  resetDnsSd();
+  end(t);
 });
 
 test('queryForResponses correct for multiple', function(t) {
@@ -971,13 +956,11 @@ test('queryForResponses correct for multiple', function(t) {
     t.equal(waitSpy.args[0][0], qTime);
     t.equal(packetIsForQuerySpy.callCount, 2);
     t.deepEqual(records, expectedPackets);
-    t.end();
-    resetDnsSd();
+    end(t);
   })
   .catch(err => {
     t.fail(err);
-    t.end();
-    resetDnsSd();
+    end(t);
   });
 });
 
@@ -1031,8 +1014,6 @@ test('queryForServiceInstances correct', function(t) {
   getUserFriendlyNameSpy.withArgs(serviceName1).returns(friendlyName1);
   getUserFriendlyNameSpy.withArgs(serviceName2).returns(friendlyName2);
 
-  console.log(expected);
-
   callsQueryForResponsesHelper(
     serviceType,
     dnsCodes.RECORD_TYPES.PTR,
@@ -1054,13 +1035,11 @@ test('queryForServiceInstances rejects if error', function(t) {
   dnssd.queryForServiceInstances()
   .then(res => {
     t.fail(res);
-    t.end();
-    resetDnsSd();
+    end(t);
   })
   .catch(actual => {
     t.equal(actual, expected);
-    t.end();
-    resetDnsSd();
+    end(t);
   });
 });
 
@@ -1110,13 +1089,11 @@ test('queryForIpAddress rejects if error', function(t) {
   dnssd.queryForIpAddress()
   .then(res => {
     t.fail(res);
-    t.end();
-    resetDnsSd();
+    end(t);
   })
   .catch(actual => {
     t.equal(actual, expected);
-    t.end();
-    resetDnsSd();
+    end(t);
   });
 });
 
@@ -1167,13 +1144,11 @@ test('queryForInstanceInfo rejects if error', function(t) {
   dnssd.queryForInstanceInfo()
   .then(res => {
     t.fail(res);
-    t.end();
-    resetDnsSd();
+    end(t);
   })
   .catch(actual => {
     t.equal(actual, expected);
-    t.end();
-    resetDnsSd();
+    end(t);
   });
 });
 
@@ -1273,13 +1248,11 @@ test('browseServiceInstances handles dropped SRV', function(t) {
 
     // Result promise resolves with the correct objects.
     t.deepEqual(instances, [records[0].expected, records[2].expected]);
-    resetDnsSd();
-    t.end();
+    end(t);
   })
   .catch(err => {
     t.fail(err);
-    t.end();
-    resetDnsSd();
+    end(t);
   });
 });
 
@@ -1380,13 +1353,11 @@ test('browseServiceInstances handles dropped A', function(t) {
 
     // Result promise resolves with the correct objects.
     t.deepEqual(instances, [records[0].expected, records[1].expected]);
-    resetDnsSd();
-    t.end();
+    end(t);
   })
   .catch(err => {
     t.fail(err);
-    t.end();
-    resetDnsSd();
+    end(t);
   });
 });
 
@@ -1469,13 +1440,11 @@ test('browseServiceInstances queries all types and returns', function(t) {
 
     // Result promise resolves with the correct objects.
     t.deepEqual(instances, [records[0].expected, records[1].expected]);
-    resetDnsSd();
-    t.end();
+    end(t);
   })
   .catch(err => {
     t.fail(err);
-    t.end();
-    resetDnsSd();
+    end(t);
   });
 });
 
@@ -1510,7 +1479,7 @@ test('getUserFriendlyName handles multi-level domains', function(t) {
 
   let actual = dnssd.getUserFriendlyName(instanceTypeDomain);
   t.equal(actual, name);
-  t.end();
+  end(t);
 });
 
 test('resolveService resolves if all correct', function(t) {
@@ -1575,13 +1544,11 @@ test('resolveService resolves if all correct', function(t) {
 
     // Result promise resolves with the correct objects.
     t.deepEqual(operationalInfo, expected);
-    resetDnsSd();
-    t.end();
+    end(t);
   })
   .catch(err => {
     t.fail(err);
-    t.end();
-    resetDnsSd();
+    end(t);
   });
 });
 
@@ -1602,8 +1569,7 @@ test('resolveService rejects if missing SRV', function(t) {
   dnssd.resolveService(serviceName)
   .then(res => {
     t.fail(res);
-    t.end();
-    resetDnsSd();
+    end(t);
   })
   .catch(actual => {
     t.equal(queryForInstanceInfoSpy.callCount, 1);
@@ -1619,9 +1585,7 @@ test('resolveService rejects if missing SRV', function(t) {
     );
 
     t.deepEqual(actual, expected);
-    console.log(actual);
-    resetDnsSd();
-    t.end();
+    end(t);
   });
 });
 
@@ -1649,8 +1613,7 @@ test('resolveService rejects if missing A', function(t) {
   dnssd.resolveService(serviceName)
   .then(res => {
     t.fail(res);
-    t.end();
-    resetDnsSd();
+    end(t);
   })
   .catch(actual => {
     // Each spy called the appropriate number of times with the appropriate
@@ -1681,9 +1644,7 @@ test('resolveService rejects if missing A', function(t) {
 
     // Result promise resolves with the correct objects.
     t.deepEqual(actual, expected);
-    console.log(actual);
-    resetDnsSd();
-    t.end();
+    end(t);
   });
 });
 
@@ -1720,5 +1681,5 @@ test('getUserFriendlyName handles multi-level domains', function(t) {
 
   let actual = dnssdSem.getUserFriendlyName(instanceTypeDomain);
   t.equal(actual, name);
-  t.end();
+  end(t);
 });

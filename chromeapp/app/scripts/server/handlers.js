@@ -2,7 +2,10 @@
 'use strict';
 
 const _ = require('underscore');
+const textEncoding = require('text-encoding');
+
 const TextDecoder = require('text-encoding').TextDecoder;
+const TextEncoder = require('text-encoding').TextEncoder;
 
 const api = require('./server-api');
 const fileSystem = require('../persistence/file-system');
@@ -181,7 +184,7 @@ _.extend(exports.WebRtcOfferHandler.prototype,
             iceCandidates: iceCandidates
           };
           let respStr = JSON.stringify(respJson);
-          let respBin = binUtil.stringToArrayBuffer(respStr);
+          let respBin = new TextEncoder().encode(respStr);
           that.write(respBin);
         }
       }

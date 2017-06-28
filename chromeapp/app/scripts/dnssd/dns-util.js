@@ -85,9 +85,9 @@ exports.getDomainFromSmartBuffer = function(sBuff) {
   // field is a 0. We'll do this by examining a single label at a time.
   let lengthOfCurrentLabel = -1;
   let iteration = 0;
-  // Sanity check because while loops are dangerous when faced with outside
+  // Sanity check because while loops are dangerous when faced with external
   // data.
-  let maxIterations = 10;
+  let maxIterations = 15;
   while (lengthOfCurrentLabel !== 0) {
     if (iteration > maxIterations) {
       throw new Error('Exceeded max iterations, likely malformed data');
@@ -129,29 +129,6 @@ exports.getDomainFromSmartBuffer = function(sBuff) {
   }
 
   return result;
-};
-
-/**
- * Convert a serialized domain name from its DNS representation to a string.
- * The byteArray should contain bytes as output by getDomainAsByteArray.
- *
- * @param {Buffer} buff the Buffer containing the serialized labels
- * @param {integer} startByte an optional index indicating the start point of
- * the serialization. If not present, assumes a starting index of 0.
- *
- * @return {string}
- */
-exports.getDomainFromBuffer = function(buff, startByte) {
-  if (!(buff instanceof Buffer)) {
-    throw new Error('buff is not type of Buffer');
-  }
-
-  // If a start byte hasn't been specified, we start at the beginning.
-  startByte = startByte || 0;
-
-  let sBuff = SmartBuffer.fromBuffer(buff.slice(startByte));
-
-  return exports.getDomainFromSmartBuffer(sBuff);
 };
 
 /**

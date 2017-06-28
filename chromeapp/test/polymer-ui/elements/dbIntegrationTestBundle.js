@@ -1156,16 +1156,15 @@ const MAX_RETURN_CODE = 15;
  * Parse numRecords Resource Records from a ByteArrayReader object. Returns an
  * array of resource record objects.
  *
- * @param {Buffer} buff the Buffer from which to construct resource
- * records. reader should have been moved to the correct cursor position
+ * @param {SmartBuffer} sBuff the SmartBuffer from which to construct resource
+ * records. Should have been moved to the correct cursor position
  * @param {integer} numRecords the number of records to parse
  *
  * @return {Array<ARecord|PtrRecord|SrvRecord>} an Array of the parsed resource
  * records
  */
-exports.parseResourceRecordsFromBuffer = function(buff, numRecords) {
+exports.parseRecordsFromSmartBuffer = function(sBuff, numRecords) {
   let result = [];
-  let sBuff = SmartBuffer.fromBuffer(buff);
 
   for (let i = 0; i < numRecords; i++) {
     let recordType = resRec.peekTypeInSmartBuffer(sBuff);
@@ -1194,7 +1193,7 @@ exports.parseResourceRecordsFromBuffer = function(buff, numRecords) {
 /**
  * Create a DNS packet. This creates the packet with various flag values. The
  * packet is not converted to byte format until a call is made to
- * getAsByteArray().
+ * getAsBuffer().
  *
  * @constructor
  *
@@ -1308,9 +1307,6 @@ exports.DnsPacket.prototype.asBuffer = function() {
 
   // 2 octets
   sBuff.writeUInt16BE(flagValue);
-
-  // 2 octets
-  sBuff.writeUInt16BE(flagValue);
   
   // 2 octets
   sBuff.writeUInt16BE(this.questions.length);
@@ -1403,11 +1399,11 @@ exports.fromBuffer = function(buff) {
     result.addQuestion(question);
   }
 
-  let answers = exports.parseResourceRecordsFromSmartBuffer(sBuff, numAnswers);
-  let authorities = exports.parseResourceRecordsFromSmartBuffer(
+  let answers = exports.parseRecordsFromSmartBuffer(sBuff, numAnswers);
+  let authorities = exports.parseRecordsFromSmartBuffer(
     sBuff, numAuthority
   );
-  let infos = exports.parseResourceRecordsFromSmartBuffer(
+  let infos = exports.parseRecordsFromSmartBuffer(
     sBuff, numAdditionalInfo
   );
 
@@ -1552,7 +1548,6 @@ exports.getFlagsAsValue = function(qr, opcode, aa, tc, rd, ra, rcode) {
 };
 
 },{"./dns-codes":9,"./question-section":12,"./resource-record":13,"smart-buffer":53}],11:[function(require,module,exports){
-(function (Buffer){
 'use strict';
 
 const SmartBuffer = require('smart-buffer').SmartBuffer;
@@ -1600,7 +1595,7 @@ exports.getLocalSuffix = function() {
  *
  * @return {Buffer} a ByteArray containing the serialized domain
  */
-exports.getDomainAsByteArray = function(domain) {
+exports.getDomainAsBuffer = function(domain) {
   let sBuff = new SmartBuffer();
   let labels = domain.split('.');
 
@@ -1640,9 +1635,9 @@ exports.getDomainFromSmartBuffer = function(sBuff) {
   // field is a 0. We'll do this by examining a single label at a time.
   let lengthOfCurrentLabel = -1;
   let iteration = 0;
-  // Sanity check because while loops are dangerous when faced with outside
+  // Sanity check because while loops are dangerous when faced with external
   // data.
-  let maxIterations = 10;
+  let maxIterations = 15;
   while (lengthOfCurrentLabel !== 0) {
     if (iteration > maxIterations) {
       throw new Error('Exceeded max iterations, likely malformed data');
@@ -1687,29 +1682,6 @@ exports.getDomainFromSmartBuffer = function(sBuff) {
 };
 
 /**
- * Convert a serialized domain name from its DNS representation to a string.
- * The byteArray should contain bytes as output by getDomainAsByteArray.
- *
- * @param {Buffer} buff the Buffer containing the serialized labels
- * @param {integer} startByte an optional index indicating the start point of
- * the serialization. If not present, assumes a starting index of 0.
- *
- * @return {string}
- */
-exports.getDomainFromBuffer = function(buff, startByte) {
-  if (!(buff instanceof Buffer)) {
-    throw new Error('buff is not type of Buffer');
-  }
-
-  // If a start byte hasn't been specified, we start at the beginning.
-  startByte = startByte || 0;
-
-  let sBuff = SmartBuffer.fromBuffer(buff.slice(startByte));
-
-  return exports.getDomainFromSmartBuffer(sBuff);
-};
-
-/**
  * Convert a string representation of an IP address to a ByteArray.
  * '155.33.17.68' would return a ByteArray with length 4, corresponding to the
  * bytes 155, 33, 17, 68.
@@ -1741,15 +1713,13 @@ exports.getIpStringAsBuffer = function(ipAddress) {
 /**
  * Recover an IP address in string representation from the ByteArrayReader.
  *
- * @param {Buffer} buff
+ * @param {SmartBuffer} sBuff
  *
  * @return {string}
  */
-exports.getIpStringFromBuffer = function(buff) {
+exports.getIpStringFromSmartBuffer = function(sBuff) {
   // We assume a single byte representing each string.
   let parts = [];
-
-  let sBuff = SmartBuffer.fromBuffer(buff);
 
   let numParts = 4;
   for (let i = 0; i < numParts; i++) {
@@ -1762,8 +1732,7 @@ exports.getIpStringFromBuffer = function(buff) {
   return result;
 };
 
-}).call(this,require("buffer").Buffer)
-},{"buffer":34,"smart-buffer":53}],12:[function(require,module,exports){
+},{"smart-buffer":53}],12:[function(require,module,exports){
 'use strict';
 
 const SmartBuffer = require('smart-buffer').SmartBuffer;
@@ -1884,8 +1853,6 @@ const dnsCodes = require('./dns-codes');
 const dnsUtil = require('./dns-util');
 
 
-const NUM_OCTETS_RESOURCE_DATA_LENGTH = 2;
-
 /** An A Record has four bytes, all representing an IP address. */
 const NUM_OCTETS_RESOURCE_DATA_A_RECORD = 4;
 
@@ -1957,50 +1924,52 @@ exports.ARecord = function ARecord(
 };
 
 /**
- * Get the A Record as a ByteArray object.
+ * Get the A Record as a Buffer.
  *
  * The DNS spec indicates that an A Record is represented in byte form as
  * follows.
  *
- * The common fields as indicated in getCommonFieldsAsByteArray.
+ * The common fields as indicated in getCommonFieldsAsBuffer.
  *
  * 2 octets representing the number 4, to indicate that 4 bytes follow.
  *
  * 4 octets representing a 4-byte IP address
  *
- * @return {ByteArray}
+ * @return {Buffer}
  */
-exports.ARecord.prototype.convertToByteArray = function() {
-  let result = exports.getCommonFieldsAsByteArray(
+exports.ARecord.prototype.asBuffer = function() {
+  let sBuff = new SmartBuffer();
+
+  let commonFieldsBuff = exports.getCommonFieldsAsBuffer(
     this.domainName,
     this.recordType,
     this.recordClass,
     this.ttl
   );
 
+  sBuff.writeBuffer(commonFieldsBuff);
+
   // First we add the length of the resource data.
-  result.push(
-    NUM_OCTETS_RESOURCE_DATA_A_RECORD, 
-    NUM_OCTETS_RESOURCE_DATA_LENGTH
-  );
+  // 2 octets
+  sBuff.writeUInt16BE(NUM_OCTETS_RESOURCE_DATA_A_RECORD);
 
   // Then add the IP address itself.
-  let ipStringAsBytes = dnsUtil.getIpStringAsByteArray(this.ipAddress);
-  result.append(ipStringAsBytes);
+  let ipStringAsBuff = dnsUtil.getIpStringAsBuffer(this.ipAddress);
+  sBuff.writeBuffer(ipStringAsBuff);
 
-  return result;
+  return sBuff.toBuffer();
 };
 
 /**
- * Create an A Record from a ByteArrayReader object. The reader should be at
- * the correct cursor position, at the domain name of the A Record.
+ * Create an A Record from a SmartBuffer. The SmartBuffer should be at the
+ * correct cursor position, at the domain name of the A Record.
  *
- * @param {ByteArrayReader} reader
+ * @param {SmartBuffer} sBuff
  *
  * @return {ARecord}
  */
-exports.createARecordFromReader = function(reader) {
-  let commonFields = exports.getCommonFieldsFromByteArrayReader(reader);
+exports.createARecordFromSmartBuffer = function(sBuff) {
+  let commonFields = exports.getCommonFieldsFromSmartBuffer(sBuff);
 
   if (commonFields.rrType !== dnsCodes.RECORD_TYPES.A) {
     throw new Error(
@@ -2010,7 +1979,8 @@ exports.createARecordFromReader = function(reader) {
   }
 
   // And now we recover just the resource length and resource data.
-  let resourceLength = reader.getValue(NUM_OCTETS_RESOURCE_DATA_LENGTH);
+  // 2 octets
+  let resourceLength = sBuff.readUInt16BE();
 
   // For an A Record this should always be 4.
   if (resourceLength !== NUM_OCTETS_RESOURCE_DATA_A_RECORD) {
@@ -2021,7 +1991,7 @@ exports.createARecordFromReader = function(reader) {
     );
   }
 
-  let ipString = dnsUtil.getIpStringFromByteArrayReader(reader);
+  let ipString = dnsUtil.getIpStringFromSmartBuffer(sBuff);
 
   let result = new exports.ARecord(
     commonFields.domainName,
@@ -2034,15 +2004,15 @@ exports.createARecordFromReader = function(reader) {
 };
 
 /**
- * Create a PTR Record from a ByteArrayReader object. The reader should be at
- * the correct cursor position, at the service type query of the PTR Record.
+ * Create a PTR Record from a SmartBuffer. The SmartBuffer should be at the
+ * correct cursor position, at the service type query of the PTR Record.
  *
- * @param {ByteArrayReader} reader
+ * @param {SmartBuffer} sBuff
  *
  * @return {PtrRecord}
  */
-exports.createPtrRecordFromReader = function(reader) {
-  let commonFields = exports.getCommonFieldsFromByteArrayReader(reader);
+exports.createPtrRecordFromSmartBuffer = function(sBuff) {
+  let commonFields = exports.getCommonFieldsFromSmartBuffer(sBuff);
 
   if (commonFields.rrType !== dnsCodes.RECORD_TYPES.PTR) {
     throw new Error(
@@ -2052,7 +2022,8 @@ exports.createPtrRecordFromReader = function(reader) {
   }
 
   // And now we recover just the resource length and resource data.
-  let resourceLength = reader.getValue(NUM_OCTETS_RESOURCE_DATA_LENGTH);
+  // 2 octets
+  let resourceLength = sBuff.readUInt16BE();
   if (resourceLength < 0 || resourceLength > 65535) {
     throw new Error(
       'Illegal length of PTR Record resource data: ' +
@@ -2062,7 +2033,7 @@ exports.createPtrRecordFromReader = function(reader) {
   // In a PTR Record, the domain name field of the RR is actually the service
   // type (at least for mDNS).
   let serviceType = commonFields.domainName;
-  let serviceName = dnsUtil.getDomainFromByteArrayReader(reader);
+  let serviceName = dnsUtil.getDomainFromSmartBuffer(sBuff);
 
   let result = new exports.PtrRecord(
     serviceType,
@@ -2075,15 +2046,15 @@ exports.createPtrRecordFromReader = function(reader) {
 };
 
 /**
- * Create an SRV Record from a ByteArrayReader object. The reader should be at
- * the correct cursor position, at the service type query of the SRV Record.
+ * Create an SRV Record from a SmartBuffer. The SmartBuffer should be at the
+ * correct cursor position, at the service type query of the SRV Record.
  *
- * @param {ByteArrayReader} reader
+ * @param {SmartBuffer} sBuff
  *
  * @return {SrvRecord}
  */
-exports.createSrvRecordFromReader = function(reader) {
-  let commonFields = exports.getCommonFieldsFromByteArrayReader(reader);
+exports.createSrvRecordFromSmartBuffer = function(sBuff) {
+  let commonFields = exports.getCommonFieldsFromSmartBuffer(sBuff);
 
   if (commonFields.rrType !== dnsCodes.RECORD_TYPES.SRV) {
     throw new Error(
@@ -2093,7 +2064,8 @@ exports.createSrvRecordFromReader = function(reader) {
   }
 
   // And now we recover just the resource length and resource data.
-  let resourceLength = reader.getValue(NUM_OCTETS_RESOURCE_DATA_LENGTH);
+  // 2 octets
+  let resourceLength = sBuff.readUInt16BE();
   if (resourceLength < 0 || resourceLength > 65535) {
     throw new Error(
       'Illegal length of SRV Record resource data: ' +
@@ -2105,22 +2077,25 @@ exports.createSrvRecordFromReader = function(reader) {
   let serviceInstanceName = commonFields.domainName;
   
   // After the common fields, we expect priority, weight, port, target name.
-  let priority = reader.getValue(NUM_OCTETS_PRIORITY);
+  // 2 octets
+  let priority = sBuff.readUInt16BE();
   if (priority < 0 || priority > 65535) {
     throw new Error('Illegal length of SRV Record priority: ' + priority);
   }
 
-  let weight = reader.getValue(NUM_OCTETS_WEIGHT);
+  // 2 octets
+  let weight = sBuff.readUInt16BE();
   if (weight < 0 || weight > 65535) {
     throw new Error('Illegal length of SRV Record priority: ' + weight);
   }
 
-  let port = reader.getValue(NUM_OCTETS_PORT);
+  // 2 octets
+  let port = sBuff.readUInt16BE();
   if (port < 0 || port > 65535) {
     throw new Error('Illegal length of SRV Record priority: ' + port);
   }
 
-  let targetName = dnsUtil.getDomainFromByteArrayReader(reader);
+  let targetName = dnsUtil.getDomainFromSmartBuffer(sBuff);
 
   let result = new exports.SrvRecord(
     serviceInstanceName,
@@ -2181,7 +2156,7 @@ exports.PtrRecord = function PtrRecord(
 };
 
 /**
- * Get the PTR Record as a ByteArray object.
+ * Get the PTR Record as a Buffer.
  *
  * The DNS spec indicates that an PTR Record is represented in byte form as
  * follows. (Using this and section 3.3.12 as a guide:
@@ -2196,29 +2171,31 @@ exports.PtrRecord = function PtrRecord(
  * be the name of the instance that actually provides the service that is being
  * queried for.
  *
- * @return {ByteArray}
+ * @return {Buffer}
  */
-exports.PtrRecord.prototype.convertToByteArray = function() {
-  let result = exports.getCommonFieldsAsByteArray(
+exports.PtrRecord.prototype.asBuffer = function() {
+  let sBuff = new SmartBuffer();
+
+  let commonFieldsBuff = exports.getCommonFieldsAsBuffer(
     this.serviceType,
     this.recordType,
     this.recordClass,
     this.ttl
   );
 
-  let instanceNameAsBytes = dnsUtil.getDomainAsByteArray(this.instanceName);
-  let resourceDataLength = instanceNameAsBytes.length;
+  sBuff.writeBuffer(commonFieldsBuff);
+
+  let instanceNameBuff = dnsUtil.getDomainAsBuffer(this.instanceName);
+  let resourceDataLength = instanceNameBuff.length;
 
   // First we add the length of the resource data.
-  result.push(
-    resourceDataLength, 
-    NUM_OCTETS_RESOURCE_DATA_LENGTH
-  );
+  // 2 octets
+  sBuff.writeUInt16BE(resourceDataLength);
 
   // Then add the instance name itself.
-  result.append(instanceNameAsBytes);
+  sBuff.writeBuffer(instanceNameBuff);
 
-  return result;
+  return sBuff.toBuffer();
 };
 
 /**
@@ -2265,14 +2242,14 @@ exports.SrvRecord = function SrvRecord(
 };
 
 /**
- * Get the SRV Record as a ByteArray object.
+ * Get the SRV Record as a Buffer object.
  *
  * According to this document (https://tools.ietf.org/html/rfc2782) and more
  * explicitly this document
  * (http://www.tahi.org/dns/packages/RFC2782_S4-1_0_0/SV/SV_RFC2782_SRV_rdata.html),
  * the layout of the SRV RR is as follows:
  *
- * The common fields as indicated in getCommonFieldsAsByteArray.
+ * The common fields as indicated in getCommonFieldsAsBuffer.
  *
  * 2 octets representing the length of the following component, in bytes.
  *
@@ -2285,37 +2262,40 @@ exports.SrvRecord = function SrvRecord(
  * A variable number of octets encoding the target name (e.g.
  * PrintsALot.local), encoded as a domain name.
  *
- * @return {ByteArray}
+ * @return {Buffer}
  */
-exports.SrvRecord.prototype.convertToByteArray = function() {
-  let result = exports.getCommonFieldsAsByteArray(
+exports.SrvRecord.prototype.asBuffer = function() {
+  let sBuff = new SmartBuffer();
+
+  let commonFieldsBuff = exports.getCommonFieldsAsBuffer(
     this.instanceTypeDomain,
     this.recordType,
     this.recordClass,
     this.ttl
   );
 
-  let targetNameAsBytes = dnsUtil.getDomainAsByteArray(this.targetDomain);
+  sBuff.writeBuffer(commonFieldsBuff);
+
+  let targetNameBuff = dnsUtil.getDomainAsBuffer(this.targetDomain);
 
   let resourceDataLength = NUM_OCTETS_PRIORITY +
     NUM_OCTETS_WEIGHT +
     NUM_OCTETS_PORT +
-    targetNameAsBytes.length;
+    targetNameBuff.length;
 
   // First we add the length of the resource data.
-  result.push(
-    resourceDataLength, 
-    NUM_OCTETS_RESOURCE_DATA_LENGTH
-  );
+  // 2 octets
+  sBuff.writeUInt16BE(resourceDataLength);
 
   // Then add the priority, weight, and port.
-  result.push(this.priority, NUM_OCTETS_PRIORITY);
-  result.push(this.weight, NUM_OCTETS_WEIGHT);
-  result.push(this.port, NUM_OCTETS_PORT);
+  // 2 octets
+  sBuff.writeUInt16BE(this.priority);
+  sBuff.writeUInt16BE(this.weight);
+  sBuff.writeUInt16BE(this.port);
 
-  result.append(targetNameAsBytes);
+  sBuff.writeBuffer(targetNameBuff);
 
-  return result;
+  return sBuff.toBuffer();
 };
 
 /**
@@ -2368,7 +2348,7 @@ exports.getCommonFieldsAsBuffer = function(
  * @return {Object} Returns an object with fields: domainName, rrType, rrClass,
  * and ttl.
  */
-exports.getCommonFieldsFromByteArrayReader = function(sBuff) {
+exports.getCommonFieldsFromSmartBuffer = function(sBuff) {
   let domainName = dnsUtil.getDomainFromSmartBuffer(sBuff);
 
   // 2 octets
@@ -2397,7 +2377,7 @@ exports.getCommonFieldsFromByteArrayReader = function(sBuff) {
  */
 exports.peekTypeInSmartBuffer = function(sBuff) {
   // Save our current read offset to we can move it back.
-  let readOffset = sBuff.readOffset();
+  let readOffset = sBuff.readOffset;
 
   // Consume an encoded domain name. Note this means we're computing domain
   // names twice, which isn't optimal.
@@ -3112,7 +3092,10 @@ _.extend(exports.EvaluationHandler.prototype, {
 'use strict';
 
 const _ = require('underscore');
+const textEncoding = require('text-encoding');
+
 const TextDecoder = require('text-encoding').TextDecoder;
+const TextEncoder = require('text-encoding').TextEncoder;
 
 const api = require('./server-api');
 const fileSystem = require('../persistence/file-system');
@@ -3291,7 +3274,7 @@ _.extend(exports.WebRtcOfferHandler.prototype,
             iceCandidates: iceCandidates
           };
           let respStr = JSON.stringify(respJson);
-          let respBin = binUtil.stringToArrayBuffer(respStr);
+          let respBin = new TextEncoder().encode(respStr);
           that.write(respBin);
         }
       }
@@ -3976,7 +3959,7 @@ exports.objToBuff = function(obj) {
     if (Buffer.isBuffer(value)) {
       // We will add Buffers as [string, buffer_length, Buffer].
       sBuff.writeStringNT(prop);
-      sBuff.writeUInt32LE(value.length);
+      sBuff.writeUInt32BE(value.length);
       sBuff.writeBuffer(value);
     } else {
       json[prop] = value;
@@ -3986,7 +3969,7 @@ exports.objToBuff = function(obj) {
   let resultSb = SmartBuffer.fromBuffer(new Buffer(DEFAULT_BUFFER_SIZE));
   let jsonStr = JSON.stringify(json);
 
-  resultSb.writeUInt32LE(jsonStr.length);
+  resultSb.writeUInt32BE(jsonStr.length);
   resultSb.writeString(jsonStr);
   resultSb.writeBuffer(sBuff.toBuffer());
 
@@ -4004,7 +3987,7 @@ exports.buffToObj = function(buff) {
   // We expect:
   // [length, jsonString, (null-terminated string, buff length, buff) * n]
   let sBuff = SmartBuffer.fromBuffer(buff);
-  let jsonLength = sBuff.readUInt32LE();
+  let jsonLength = sBuff.readUInt32BE();
   let jsonStr = sBuff.readString(jsonLength);
 
   let result = JSON.parse(jsonStr);
@@ -4012,7 +3995,7 @@ exports.buffToObj = function(buff) {
   // No reclaim the buffers.
   while (sBuff.remaining() > 0) {
     let propName = sBuff.readStringNT();
-    let buffLength = sBuff.readUInt32LE();
+    let buffLength = sBuff.readUInt32BE();
     let buff = sBuff.readBuffer(buffLength);
     result[propName] = buff;
   }
@@ -4278,6 +4261,11 @@ class BaseClient extends EventEmitter {
 
     channel.onopen = function() {
       self.sendStartMessage();
+    };
+
+    channel.onerror = function(e) {
+      console.log('Received error via raw data channel:', e);
+      self.emitError(e);
     };
 
     channel.onmessage = function(event) {
@@ -4652,8 +4640,19 @@ class PeerConnection extends EventEmitter {
     this.rawConnection = rawConnection;
 
     let self = this;
-    this.rawConnection.onclose = function() {
-      self.emitClose();
+
+    // MDN says there should be an 'onconnectionstatechange' event. However
+    // that doesn't seem to be implemented in Chrome. Instead, the wisdom of
+    // the internet says to use oniceconnectionstatechange and monitor
+    // iceConnectionState. 'closed' indicates that the peer itself has shut
+    // down.
+    this.rawConnection.oniceconnectionstatechange = function() {
+      switch (self.rawConnection.iceConnectionState) {
+        case 'closed':
+          // Emit an event indicating that we are closed.
+          self.emitClose();
+          break;
+      }
     };
   }
 
@@ -4802,17 +4801,25 @@ class PeerConnection extends EventEmitter {
   sendAndGetResponse(msg) {
     let self = this;
     return new Promise(function(resolve, reject) {
-      let client = exports.createClient(self.rawConnection, msg);
+      Promise.resolve()
+      .then(() => {
+        let client = exports.createClient(self.rawConnection, msg);
 
-      client.on('complete', buff => {
-        resolve(buff);
-      });
+        client.on('complete', buff => {
+          resolve(buff);
+        });
 
-      client.on('error', err => {
+        client.on('error', err => {
+          self.emitClose(err);
+          reject(err);
+        });
+
+        client.start();
+      })
+      .catch(err => {
+        self.emitClose(err);
         reject(err);
       });
-
-      client.start();
     });
   }
 }
@@ -45057,6 +45064,7 @@ const ifCommon = require('./peer-interface/common');
 const peerIfMgr = require('./peer-interface/manager');
 const settings = require('./settings');
 const serverApi = require('./server/server-api');
+const webrtcCxnMgr = require('./webrtc/connection-manager');
 
 
 let ABS_PATH_TO_BASE_DIR = null;
@@ -45384,6 +45392,7 @@ exports.startServersAndRegister = function() {
  */
 exports.stopServers = function() {
   coalMgr.reset();
+  webrtcCxnMgr.reset();
   exports.getServerController().stop();
   dnsController.stop();
   exports.LISTENING_HTTP_INTERFACE = null;
@@ -45503,7 +45512,7 @@ exports.saveMhtmlAndOpen = function(serviceName, href) {
   });
 };
 
-},{"./coalescence/manager":"coalMgr","./constants":8,"./dnssd/dns-controller":"dnsc","./dnssd/dns-sd-semcache":"dnsSem","./evaluation":"eval","./extension-bridge/messaging":"extBridge","./peer-interface/common":15,"./peer-interface/manager":17,"./persistence/datastore":19,"./persistence/file-system":"fileSystem","./server/server-api":22,"./server/server-controller":"serverController","./settings":"settings"}],"chromeUdp":[function(require,module,exports){
+},{"./coalescence/manager":"coalMgr","./constants":8,"./dnssd/dns-controller":"dnsc","./dnssd/dns-sd-semcache":"dnsSem","./evaluation":"eval","./extension-bridge/messaging":"extBridge","./peer-interface/common":15,"./peer-interface/manager":17,"./persistence/datastore":19,"./persistence/file-system":"fileSystem","./server/server-api":22,"./server/server-controller":"serverController","./settings":"settings","./webrtc/connection-manager":"cmgr"}],"chromeUdp":[function(require,module,exports){
 /* globals chrome */
 'use strict';
 
@@ -45763,6 +45772,15 @@ function createKey(ipaddr, port) {
   }
   return ipaddr + ':' + port;
 }
+
+/**
+ * Reset the state of the manager.
+ */
+exports.reset = function() {
+  for (let key in CONNECTIONS) {
+    delete CONNECTIONS[key];
+  }
+};
 
 /**
  * Add a connection to the known pool of connection.
@@ -46458,6 +46476,7 @@ exports.browseForSemCacheInstances = function() {
 };
 
 },{"../server/server-api":22,"./dns-sd":"dnssd"}],"dnsc":[function(require,module,exports){
+(function (Buffer){
 /*jshint esnext:true*/
 /* globals Promise */
 'use strict';
@@ -46640,15 +46659,11 @@ exports.onReceiveListener = function(info) {
     chromeUdp.logSocketInfo(info);
   }
 
+  let buff = Buffer.from(info.data);
+  let packet = dnsPacket.fromBuffer(buff);
+
   if (exports.DEBUG) {
-    // Before we do anything else, parse the packet. This will let us try to
-    // see if we are getting the packet and ignoring it or just never getting
-    // the packet.
-    let byteArrImmediate = new byteArray.ByteArray(info.data);
-    let packetImmediate =
-      dnsPacket.createPacketFromReader(byteArrImmediate.getReader());
-    console.log('Got packet: ', packetImmediate);
-    console.log('  packet id: ', packetImmediate.id);
+    console.log('Got packet: ', packet);
   }
 
   if (!exports.socket) {
@@ -46666,10 +46681,6 @@ exports.onReceiveListener = function(info) {
   if (dnsUtil.DEBUG) {
     console.log('Message is for us, parsing');
   }
-  
-  // Create a DNS packet.
-  let byteArr = new byteArray.ByteArray(info.data);
-  let packet = dnsPacket.createPacketFromReader(byteArr.getReader());
 
   exports.handleIncomingPacket(packet, info.remoteAddress, info.remotePort);
 };
@@ -47018,10 +47029,8 @@ exports.sendPacket = function(packet, address, port) {
   packet.id = exports.NEXT_PACKET_ID;
   exports.NEXT_PACKET_ID += 1;
 
-  let byteArr = packet.convertToByteArray();
-  // And now we need the underlying buffer of the byteArray, truncated to the
-  // correct size.
-  let uint8Arr = byteArray.getByteArrayAsUint8Array(byteArr);
+  let buff = packet.asBuffer();
+  let arrayBuffer = buff.buffer;
 
   exports.getSocket().then(socket => {
     if (exports.DEBUG) {
@@ -47030,7 +47039,7 @@ exports.sendPacket = function(packet, address, port) {
       console.log('  address: ', address);
       console.log('  port: ', port);
     }
-    socket.send(uint8Arr.buffer, address, port);
+    socket.send(arrayBuffer, address, port);
   });
 };
 
@@ -47134,7 +47143,8 @@ exports.addRecord = function(name, record) {
   existingRecords.push(record);
 };
 
-},{"../chrome-apis/udp":"chromeUdp","../util":23,"./dns-codes":9,"./dns-packet":10,"./dns-util":11,"./question-section":12}],"dnssd":[function(require,module,exports){
+}).call(this,require("buffer").Buffer)
+},{"../chrome-apis/udp":"chromeUdp","../util":23,"./dns-codes":9,"./dns-packet":10,"./dns-util":11,"./question-section":12,"buffer":34}],"dnssd":[function(require,module,exports){
 /*jshint esnext:true*/
 /* globals Promise */
 'use strict';
