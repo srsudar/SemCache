@@ -433,7 +433,7 @@ test('sendPacket gets socket and sends', function(t) {
   // modifying the packet number in the send to benefit debugging. Until we
   // stop doing this, it is simplest to just stub this out.
   let buff = Buffer.from('i am standing in as a packet');
-  packet.asBuffer = sinon.stub().returns(buff);
+  packet.toBuffer = sinon.stub().returns(buff);
 
   let address = 'hello';
   let port = '6789';

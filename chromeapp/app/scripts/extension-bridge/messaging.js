@@ -153,7 +153,7 @@ exports.handleOpenRequest = function(message) {
  * @return {Promise.<Object, Error>} the result of the query. We expect an
  * object like:
  * {
- *   url: [ CPInfo.asJSON(), ... ]
+ *   url: [ CPInfo.toJSON(), ... ]
  * }
  * This should mirror the API of queryLocalNetworkForUrls.
  */

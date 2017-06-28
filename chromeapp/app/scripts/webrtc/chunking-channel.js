@@ -63,7 +63,7 @@ class ChunkingChannelServer extends commonChannel.BaseServer {
         this.chunksSent++;
         let chunk = item.value;
         let chunkMsg = protocol.createSuccessMessage(chunk);
-        this.channel.send(chunkMsg.asBuffer());
+        this.channel.send(chunkMsg.toBuffer());
       } catch (err) {
         console.log('Error sending chunk: ', err);
       }

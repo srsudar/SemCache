@@ -99,7 +99,7 @@ exports.ProtocolMessage.prototype.getStatusCode = function() {
  *
  * @return {Buffer}
  */
-exports.ProtocolMessage.prototype.asBuffer = function() {
+exports.ProtocolMessage.prototype.toBuffer = function() {
   /*
    * The data structure is outlined as follows, but is not part of the public
    * API. The first 4 bytes correspond to an integer. This integer denotes the

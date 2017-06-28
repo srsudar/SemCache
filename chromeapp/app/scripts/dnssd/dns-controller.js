@@ -550,7 +550,7 @@ exports.sendPacket = function(packet, address, port) {
   packet.id = exports.NEXT_PACKET_ID;
   exports.NEXT_PACKET_ID += 1;
 
-  let buff = packet.asBuffer();
+  let buff = packet.toBuffer();
   let arrayBuffer = buff.buffer;
 
   exports.getSocket().then(socket => {

@@ -214,7 +214,7 @@ test('can serialize and deserialize DnsPacket', function(t) {
 
   packet.addAdditionalInfo(srvRecord);
 
-  let buff = packet.asBuffer();
+  let buff = packet.toBuffer();
 
   let actual = dnsPacket.fromBuffer(buff);
   t.deepEqual(actual, packet);
@@ -326,7 +326,7 @@ test('getFlagsAsValue for max values', function(t) {
 test('parseRecordsFromSmartBuffer succeeds for single', function(t) {
   // Test that we can parse and recover a single record.
   let expected = getARecord();
-  let buff = expected.asBuffer();
+  let buff = expected.toBuffer();
   let sBuff = SmartBuffer.fromBuffer(buff);
 
   let actual = dnsPacket.parseRecordsFromSmartBuffer(sBuff, 1);
@@ -338,8 +338,8 @@ test('parseRecordsFromSmartBuffer succeeds for multiple', function(t) {
   let aRec1 = getARecord();
   let aRec2 = getARecord('www.howdy.ch');
 
-  let buff1 = aRec1.asBuffer();
-  let buff2 = aRec2.asBuffer();
+  let buff1 = aRec1.toBuffer();
+  let buff2 = aRec2.toBuffer();
   
   let writingSmartBuffer = new SmartBuffer();
   writingSmartBuffer.writeBuffer(buff1);
@@ -359,9 +359,9 @@ test('parseRecordsFromSmartBuffer succeeds for all types', function(t) {
   let srvRec = getSrvRecord();
   let ptrRec = getPtrRecord();
 
-  let aBuff = aRec.asBuffer();
-  let srvBuff = srvRec.asBuffer();
-  let ptrBuff = ptrRec.asBuffer();
+  let aBuff = aRec.toBuffer();
+  let srvBuff = srvRec.toBuffer();
+  let ptrBuff = ptrRec.toBuffer();
 
   let writingSmartBuffer = new SmartBuffer();
   writingSmartBuffer.writeBuffer(aBuff);
@@ -381,7 +381,7 @@ test('parseRecordsFromSmartBuffer throws for unsupported type', function(t) {
   let fakeTxtRecord = getARecord();
   fakeTxtRecord.recordType = dnsCodes.RECORD_TYPES.TXT;
 
-  let buff = fakeTxtRecord.asBuffer();
+  let buff = fakeTxtRecord.toBuffer();
   let sBuff = SmartBuffer.fromBuffer(buff);
 
   let shouldThrow = function() {

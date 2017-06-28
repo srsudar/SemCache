@@ -58,7 +58,7 @@ exports.QuestionSection = function QuestionSection(qName, qType, qClass) {
  *
  * @return {ByteArray}
  */
-exports.QuestionSection.prototype.asBuffer = function() {
+exports.QuestionSection.prototype.toBuffer = function() {
   let sBuff = new SmartBuffer();
   
   let queryBuff = dnsUtil.getDomainAsBuffer(this.queryName);
@@ -83,7 +83,7 @@ exports.QuestionSection.prototype.unicastResponseRequested = function() {
 };
 
 /**
- * Create a QuestionSection from a SmartBuffer as returned by asBuffer().
+ * Create a QuestionSection from a SmartBuffer as returned by toBuffer().
  *
  * @param {SmartBuffer} sBuff
  *

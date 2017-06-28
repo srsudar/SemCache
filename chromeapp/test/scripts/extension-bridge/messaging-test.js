@@ -321,7 +321,7 @@ test('queryLocalMachineForUrls returns all matches', function(t) {
   // We'll say that 5 pages are saved locally. We'll query for two of those.
   let num = 5;
   let cpinfos = [...putil.genCPInfos(num)];
-  cpinfos = cpinfos.map(info => info.asJSON());
+  cpinfos = cpinfos.map(info => info.toJSON());
 
   // We expect { url: [ cachedpage, ... ] } to keep the API the same with local
   // network queries.

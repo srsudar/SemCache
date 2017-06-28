@@ -214,7 +214,7 @@ class BaseServer extends EventEmitter {
    */
   sendError(err) {
     const msg = protocol.createErrorMessage(err);
-    this.channel.send(msg.asBuffer());
+    this.channel.send(msg.toBuffer());
   }
 
   sendFirstMessage() {
@@ -222,7 +222,7 @@ class BaseServer extends EventEmitter {
     let streamInfoMsg = protocol.createSuccessMessage(
       Buffer.from(JSON.stringify(this.streamInfo))
     );
-    this.channel.send(streamInfoMsg.asBuffer());
+    this.channel.send(streamInfoMsg.toBuffer());
   }
 
   /**

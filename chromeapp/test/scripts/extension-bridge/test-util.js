@@ -6,7 +6,7 @@ const putil = require('../persistence/persistence-util');
 
 exports.getAddPageMessage = function(from) {
   from = from || 'popup';
-  let cpdiskJson = putil.genCPDisks(1).next().value.asJSON();
+  let cpdiskJson = putil.genCPDisks(1).next().value.toJSON();
   return common.createAddPageMessage(from, cpdiskJson);
 };
 
@@ -15,7 +15,7 @@ exports.getAddPageMessage = function(from) {
  * @return {Object} { i: initiator message, r: responder message }
  */
 exports.getAddPageMsgs = function() {
-  let cpdiskJson = putil.genCPDisks(1).next().value.asJSON();
+  let cpdiskJson = putil.genCPDisks(1).next().value.toJSON();
   let initiator = common.createAddPageMessage('popup', cpdiskJson);
   let responder = common.createAddPageResponse();
   return {

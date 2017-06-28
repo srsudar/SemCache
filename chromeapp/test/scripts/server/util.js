@@ -33,7 +33,7 @@ exports.getListResponseObj = function() {
  */
 exports.getListResponseJson = function() {
   let json = exports.getListResponseObj();
-  json.cachedPages = json.cachedPages.map(cpsum => cpsum.asJSON());
+  json.cachedPages = json.cachedPages.map(cpsum => cpsum.toJSON());
   return json;
 };
 
@@ -51,7 +51,7 @@ exports.getCachedPageResponseObj = function() {
 };
 
 exports.getCachedPageResponseBuff = function() {
-  return exports.getCachedPageResponseObj().asBuffer();
+  return exports.getCachedPageResponseObj().toBuffer();
 };
 
 exports.getDigestResponseJson = function() {

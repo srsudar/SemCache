@@ -91,7 +91,7 @@ exports.ARecord = function ARecord(
  *
  * @return {Buffer}
  */
-exports.ARecord.prototype.asBuffer = function() {
+exports.ARecord.prototype.toBuffer = function() {
   let sBuff = new SmartBuffer();
 
   let commonFieldsBuff = exports.getCommonFieldsAsBuffer(
@@ -327,7 +327,7 @@ exports.PtrRecord = function PtrRecord(
  *
  * @return {Buffer}
  */
-exports.PtrRecord.prototype.asBuffer = function() {
+exports.PtrRecord.prototype.toBuffer = function() {
   let sBuff = new SmartBuffer();
 
   let commonFieldsBuff = exports.getCommonFieldsAsBuffer(
@@ -418,7 +418,7 @@ exports.SrvRecord = function SrvRecord(
  *
  * @return {Buffer}
  */
-exports.SrvRecord.prototype.asBuffer = function() {
+exports.SrvRecord.prototype.toBuffer = function() {
   let sBuff = new SmartBuffer();
 
   let commonFieldsBuff = exports.getCommonFieldsAsBuffer(

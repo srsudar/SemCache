@@ -30,7 +30,7 @@ function end(t) {
  * @param {ProtocolMessage} msg
  */
 function serializeDeserializeHelper(msg, t) {
-  let serialized = msg.asBuffer();
+  let serialized = msg.toBuffer();
   let recovered = protocol.from(serialized);
 
   t.notEqual(null, serialized);

@@ -110,7 +110,7 @@ exports.getResponseForAllCachedPages = function() {
     .then(cpsums => {
       let result = {};
       result.metadata = exports.createMetadatObj();
-      result.cachedPages = cpsums.map(cpsum => cpsum.asJSON());
+      result.cachedPages = cpsums.map(cpsum => cpsum.toJSON());
       resolve(Buffer.from(JSON.stringify(result)));
     })
     .catch(err => {
@@ -135,7 +135,7 @@ exports.getResponseForCachedPage = function(params) {
         // No matching pages.
         resolve(null);
       } else {
-        resolve(cpdiskArr[0].asBuffer());
+        resolve(cpdiskArr[0].toBuffer());
       }
     })
     .catch(err => {

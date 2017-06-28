@@ -186,7 +186,7 @@ test('constructor initializes correctly', function(t) {
 
 test('sendError sends buffer', function(t) {
   const err = 'error msg';
-  const expected = protocol.createErrorMessage(err).asBuffer();
+  const expected = protocol.createErrorMessage(err).toBuffer();
 
   const sendStub = sinon.stub();
   const channel = {
@@ -203,7 +203,7 @@ test('sendFirstMessage sends stream info', function(t) {
   const streamInfo = { numChunks: 45 };
   const expected = protocol.createSuccessMessage(
     Buffer.from(JSON.stringify(streamInfo))
-  ).asBuffer();
+  ).toBuffer();
 
   const sendStub = sinon.stub();
   const channel = {

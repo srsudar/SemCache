@@ -175,7 +175,7 @@ exports.DnsPacket = function DnsPacket(
  *
  * @return {Buffer}
  */
-exports.DnsPacket.prototype.asBuffer = function() {
+exports.DnsPacket.prototype.toBuffer = function() {
   let sBuff = new SmartBuffer();
 
   // 2 octets
@@ -209,22 +209,22 @@ exports.DnsPacket.prototype.asBuffer = function() {
   }
 
   this.questions.forEach(question => {
-    let buff = question.asBuffer();
+    let buff = question.toBuffer();
     sBuff.writeBuffer(buff);
   });
 
   this.answers.forEach(answer => {
-    let buff = answer.asBuffer();
+    let buff = answer.toBuffer();
     sBuff.writeBuffer(buff);
   });
 
   this.authority.forEach(authority => {
-    let buff = authority.asBuffer();
+    let buff = authority.toBuffer();
     sBuff.writeBuffer(buff);
   });
 
   this.additionalInfo.forEach(info => {
-    let buff = info.asBuffer();
+    let buff = info.toBuffer();
     sBuff.writeBuffer(buff);
   });
 

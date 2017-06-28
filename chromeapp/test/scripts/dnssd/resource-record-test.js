@@ -106,7 +106,7 @@ test('can encode and decode A Record', function(t) {
 
   let aRecord = new resRec.ARecord(domainName, ttl, ipAddress, rrClass);
 
-  let buff = aRecord.asBuffer();
+  let buff = aRecord.toBuffer();
 
   let actual = resRec.createARecordFromSmartBuffer(
     SmartBuffer.fromBuffer(buff)
@@ -130,7 +130,7 @@ test('can encode and decode PTR Record', function(t) {
     rrClass
   );
 
-  let buff = ptrRecord.asBuffer();
+  let buff = ptrRecord.toBuffer();
 
   let expected = resRec.createPtrRecordFromSmartBuffer(
     SmartBuffer.fromBuffer(buff)
@@ -158,7 +158,7 @@ test('can encode and decode SRV Record', function(t) {
     targetDomain
   );
 
-  let buff = srvRecord.asBuffer();
+  let buff = srvRecord.toBuffer();
 
   let actual = resRec.createSrvRecordFromSmartBuffer(
     SmartBuffer.fromBuffer(buff)
@@ -180,8 +180,8 @@ test('peek type in reader correct', function(t) {
   let aRecord1 = new resRec.ARecord(domainName, ttl, ipAddress);
   let aRecord2 = new resRec.ARecord(domainName2, ttl, ipAddress);
 
-  let buff1 = aRecord1.asBuffer();
-  let buff2 = aRecord2.asBuffer();
+  let buff1 = aRecord1.toBuffer();
+  let buff2 = aRecord2.toBuffer();
 
   let sBuff = new SmartBuffer();
 

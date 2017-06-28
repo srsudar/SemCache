@@ -95,27 +95,27 @@ test('canBePersisted correct', function(t) {
   end(t);
 });
 
-test('CPInfo.asJSON and fromJSON correct', function(t) {
+test('CPInfo.toJSON and fromJSON correct', function(t) {
   let expected = putil.genCPInfos(1).next().value;
 
-  let json = expected.asJSON();
+  let json = expected.toJSON();
   let actual = CPInfo.fromJSON(json);
 
   t.deepEqual(actual, expected);
   end(t);
 });
 
-test('CPSummary.asJSON and fromJSON correct', function(t) {
+test('CPSummary.toJSON and fromJSON correct', function(t) {
   let expected = putil.genCPSummaries(1).next().value;
   
-  let json = expected.asJSON();
+  let json = expected.toJSON();
   let actual = CPSummary.fromJSON(json);
 
   t.deepEqual(actual, expected);
   end(t);
 });
 
-test('CPDisk.asJSON correct', function(t) {
+test('CPDisk.toJSON correct', function(t) {
   let params = getSingleParams();
   let dataUrl = 'data: blob';
 
@@ -139,17 +139,17 @@ test('CPDisk.asJSON correct', function(t) {
     mhtml: dataUrl
   };
 
-  let actual = cp.asJSON();
+  let actual = cp.toJSON();
   t.deepEqual(actual, expected);
   end(t);
 });
 
-test('CPDisk.asBuffer and fromBuffer correct', function(t) {
+test('CPDisk.toBuffer and fromBuffer correct', function(t) {
   // Taking an integration test approach here to avoid trying to assert things
   // about the Buffer itself.
   let expected = [...putil.genCPDisks(1)][0];
   
-  let buff = putil.genCPDisks(1).next().value.asBuffer();
+  let buff = putil.genCPDisks(1).next().value.toBuffer();
   let actual = CPDisk.fromBuffer(buff);
 
   t.deepEqual(actual, expected);

@@ -239,7 +239,7 @@ test('getResponseForCachedPage resolves on success', function(t) {
   let disk1 = disks[0];
   let disk2 = disks[1];
 
-  let expected = disk1.asBuffer();
+  let expected = disk1.toBuffer();
 
   let getSpy = sinon.stub();
   getSpy.withArgs(href).resolves([ disk1, disk2 ]);

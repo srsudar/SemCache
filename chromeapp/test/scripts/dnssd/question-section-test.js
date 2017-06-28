@@ -28,7 +28,7 @@ test('can serialize and deserialize a QuestionSection', function(t) {
   
   let expected = new qRec.QuestionSection(queryName, queryType, queryClass);
 
-  let buff = expected.asBuffer();
+  let buff = expected.toBuffer();
 
   let recovered = qRec.createQuestionFromSmartBuffer(
     SmartBuffer.fromBuffer(buff)

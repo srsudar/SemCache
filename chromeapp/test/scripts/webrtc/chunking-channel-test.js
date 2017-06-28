@@ -43,7 +43,7 @@ function createMessageEvent(data) {
 function wrapChunksAsSuccessMsg(chunks) {
   let result = [];
   chunks.forEach(chunk => {
-    result.push(protocol.createSuccessMessage(chunk).asBuffer());
+    result.push(protocol.createSuccessMessage(chunk).toBuffer());
   });
   return result;
 }
@@ -97,7 +97,7 @@ function integrationHelper(t, cacheChunks, expectedChunks, chunkSize) {
         )
       )
     )
-    .asBuffer()
+    .toBuffer()
   ];
   expectedServerSent.push(...wrapChunksAsSuccessMsg(expectedChunks));
 
