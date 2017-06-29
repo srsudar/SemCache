@@ -438,3 +438,4 @@ exports.getFlagsAsValue = function(qr, opcode, aa, tc, rd, ra, rcode) {
 };
 
 exports.DnsPacket = DnsPacket;
+exports.fromBuffer = DnsPacket.fromBuffer;

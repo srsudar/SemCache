@@ -141,7 +141,7 @@ exports.sendMessageToOpenPage = function(from, serviceName, href, timeout) {
  * Save a page as MHTML by calling the extension.
  *
  * @param {string} from
- * @param {Object} cpdiskJson CPDisk.asJSON() result
+ * @param {Object} cpdiskJson CPDisk.toJSON() result
  * @param {number} timeout
  *
  * @return {Promise.<Object, Error>} Promise that resolves with the response

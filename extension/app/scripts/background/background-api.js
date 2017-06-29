@@ -63,7 +63,7 @@ exports.queryForPage = function(tabId, url) {
     console.log(url);
     appMessaging.queryForPagesLocally('background', [url])
     .then(result => {
-      // We expect { url: [ CPInfo.asJSON(), ... ] }
+      // We expect { url: [ CPInfo.toJSON(), ... ] }
       if (Object.keys(result).length === 0) {
         // No page saved.
         console.log('did not find saved copy of page: ', url);

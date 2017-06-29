@@ -164,7 +164,7 @@ exports.saveTab = function(from, tab) {
       params.screenshot = snapshotUrl;
       params.mhtml = mhtmlBuff;
       let cpdisk = new CPDisk(params);
-      let json = cpdisk.asJSON();
+      let json = cpdisk.toJSON();
 
       return messaging.savePage(from, json);
     })

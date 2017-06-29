@@ -1480,6 +1480,7 @@ exports.getFlagsAsValue = function(qr, opcode, aa, tc, rd, ra, rcode) {
 };
 
 exports.DnsPacket = DnsPacket;
+exports.fromBuffer = DnsPacket.fromBuffer;
 
 },{"./dns-codes":9,"./question-section":12,"./resource-record":13,"smart-buffer":54}],11:[function(require,module,exports){
 'use strict';
@@ -1817,13 +1818,89 @@ const NUM_OCTETS_PORT = 2;
  * https://developer.apple.com/library/mac/documentation/Cocoa/Conceptual/NetServices/Articles/NetServicesArchitecture.html#//apple_ref/doc/uid/20001074-SW1
  */
 
+class ResourceRecord {
+  constructor(name, recordType, recordClass, ttl) {
+    if ((typeof name) !== 'string') {
+      throw new Error('name must be a String:', name);
+    }
+    // name is a common way to refer to the first part of the message.
+    this.name = name;
+    this.recordType = recordType;
+    this.recordClass = recordClass;
+    this.ttl = ttl;
+  }
+
+  /**
+   * Get the common components of a RR as a Buffer.
+   *
+   * @return {Buffer}
+   */
+  toBuffer() {
+    // Take care of the common components of a resource records as a Buffer. As
+    // specified by the DNS spec and 'TCP/IP Illustrated, Volume 1' by Stevens,
+    // the format is as follows:
+    //
+    // Variable number of octets encoding the domain name to which the RR is
+    // responding
+    //
+    // 2 octets representing the type
+    //
+    // 2 octets representing the class
+    //
+    // 4 octets representing the TTL
+    let sBuff = new SmartBuffer();
+
+    let nameAsBuff = dnsUtil.getDomainAsBuffer(this.name);
+    sBuff.writeBuffer(nameAsBuff);
+
+    // 2 octets
+    sBuff.writeUInt16BE(this.recordType);
+    sBuff.writeUInt16BE(this.recordClass);
+    // 4 octets
+    sBuff.writeUInt32BE(this.ttl);
+
+    return sBuff.toBuffer();
+  }
+
+  /**
+   * Extract the common fields from the reader as encoded by
+   * getCommonFieldsAsByteArray.
+   *
+   * @param {SmartBuffer} sBuff
+   *
+   * @return {Object} Returns an object like:
+   * {
+   *   name: string,
+   *   recordType: number,
+   *   recordClass: number,
+   *   ttl: number
+   * }
+   */
+  static fromSmartBuffer(sBuff) {
+    let name = dnsUtil.getDomainFromSmartBuffer(sBuff);
+
+    // 2 octets
+    let rrType = sBuff.readUInt16BE();
+    let rrClass = sBuff.readUInt16BE();
+    // 4 octets
+    let ttl = sBuff.readUInt32BE(); 
+
+    let result = {
+      name: name,
+      recordType: rrType,
+      recordClass: rrClass,
+      ttl: ttl
+    };
+
+    return result;
+  }
+}
+
 /**
  * An A record. A records respond to queries for a domain name to an IP
  * address.
- *
- * @constructor
  */
-class ARecord {
+class ARecord extends ResourceRecord {
   /*
    * @param {string} domainName the domain name, e.g. www.example.com
    * @param {integer} ttl the time to live
@@ -1833,20 +1910,11 @@ class ARecord {
    * and if not present or is not truthy will be set as IN for internet traffic.
    */
   constructor(domainName, ttl, ipAddress, recordClass) {
-    if ((typeof ipAddress) !== 'string') {
-      throw new Error('ipAddress must be a String: ' + ipAddress);
-    }
-    
     if (!recordClass) {
       recordClass = dnsCodes.CLASS_CODES.IN;
     }
-
-    this.recordType = dnsCodes.RECORD_TYPES.A;
-    this.recordClass = recordClass;
-
+    super(domainName, dnsCodes.RECORD_TYPES.A, recordClass, ttl);
     this.domainName = domainName;
-    this.name = domainName;
-    this.ttl = ttl;
     this.ipAddress = ipAddress;
   }
 
@@ -1867,14 +1935,8 @@ class ARecord {
   toBuffer() {
     let sBuff = new SmartBuffer();
 
-    let commonFieldsBuff = exports.getCommonFieldsAsBuffer(
-      this.domainName,
-      this.recordType,
-      this.recordClass,
-      this.ttl
-    );
-
-    sBuff.writeBuffer(commonFieldsBuff);
+    let rrBuff = super.toBuffer();
+    sBuff.writeBuffer(rrBuff);
 
     // First we add the length of the resource data.
     // 2 octets
@@ -1896,11 +1958,11 @@ class ARecord {
    * @return {ARecord}
    */
   static fromSmartBuffer(sBuff) {
-    let commonFields = exports.getCommonFieldsFromSmartBuffer(sBuff);
+    let commonFields = ResourceRecord.fromSmartBuffer(sBuff);
 
-    if (commonFields.rrType !== dnsCodes.RECORD_TYPES.A) {
+    if (commonFields.recordType !== dnsCodes.RECORD_TYPES.A) {
       throw new Error(
-        'De-serialized A Record does not have A Record type: ' + 
+        'De-serialized A Record does not have A Record type:',
           commonFields.rrType
       );
     }
@@ -1912,7 +1974,7 @@ class ARecord {
     // For an A Record this should always be 4.
     if (resourceLength !== NUM_OCTETS_RESOURCE_DATA_A_RECORD) {
       throw new Error(
-        'Recovered resource length does not match expected value for A ' +
+        'Recovered resource length does not match expected value for A',
           '  Record: ' +
           resourceLength
       );
@@ -1921,10 +1983,10 @@ class ARecord {
     let ipString = dnsUtil.getIpStringFromSmartBuffer(sBuff);
 
     let result = new ARecord(
-      commonFields.domainName,
+      commonFields.name,
       commonFields.ttl,
       ipString,
-      commonFields.rrClass
+      commonFields.recordClass
     );
 
     return result;
@@ -1935,11 +1997,8 @@ class ARecord {
  * A PTR record. PTR records respond to a query for a service type (eg
  * '_printer._tcp.local'. They return the name of an instance offering the
  * service (eg 'Printsalot._printer._tcp.local').
- *
- * @constructor
- *
  */
-class PtrRecord {
+class PtrRecord extends ResourceRecord {
   /*
    * @param {string} serviceType the string representation of the service that
    * has been queried for.
@@ -1949,25 +2008,21 @@ class PtrRecord {
    * @param {integer} rrClass the class of the record. If not truthy, will be
    * set to IN for internet traffic.
    */
-  constructor(serviceType, ttl, instanceName, rrClass) {
+  constructor(serviceType, ttl, instanceName, recordClass) {
     if ((typeof serviceType) !== 'string') {
-      throw new Error('serviceType must be a String: ' + serviceType);
+      throw new Error('serviceType must be a String:', serviceType);
     }
     
     if ((typeof instanceName) !== 'string') {
-      throw new Error('instanceName must be a String: ' + instanceName);
+      throw new Error('instanceName must be a String:', instanceName);
     }
 
-    if (!rrClass) {
-      rrClass = dnsCodes.CLASS_CODES.IN;
+    if (!recordClass) {
+      recordClass = dnsCodes.CLASS_CODES.IN;
     }
-    
-    this.recordType = dnsCodes.RECORD_TYPES.PTR;
-    this.recordClass = rrClass;
 
+    super(serviceType, dnsCodes.RECORD_TYPES.PTR, recordClass, ttl);
     this.serviceType = serviceType;
-    this.name = serviceType;
-    this.ttl = ttl;
     this.instanceName = instanceName;
   }
 
@@ -1992,14 +2047,9 @@ class PtrRecord {
   toBuffer() {
     let sBuff = new SmartBuffer();
 
-    let commonFieldsBuff = exports.getCommonFieldsAsBuffer(
-      this.serviceType,
-      this.recordType,
-      this.recordClass,
-      this.ttl
-    );
+    let rrBuff = super.toBuffer();
 
-    sBuff.writeBuffer(commonFieldsBuff);
+    sBuff.writeBuffer(rrBuff);
 
     let instanceNameBuff = dnsUtil.getDomainAsBuffer(this.instanceName);
     let resourceDataLength = instanceNameBuff.length;
@@ -2023,12 +2073,12 @@ class PtrRecord {
    * @return {PtrRecord}
    */
   static fromSmartBuffer(sBuff) {
-    let commonFields = exports.getCommonFieldsFromSmartBuffer(sBuff);
+    let commonFields = ResourceRecord.fromSmartBuffer(sBuff);
 
-    if (commonFields.rrType !== dnsCodes.RECORD_TYPES.PTR) {
+    if (commonFields.recordType !== dnsCodes.RECORD_TYPES.PTR) {
       throw new Error(
-        'De-serialized PTR Record does not have PTR Record type: ' + 
-          commonFields.rrType
+        'De-serialized PTR Record does not have PTR Record type:',
+          commonFields.recordType
       );
     }
 
@@ -2037,20 +2087,20 @@ class PtrRecord {
     let resourceLength = sBuff.readUInt16BE();
     if (resourceLength < 0 || resourceLength > 65535) {
       throw new Error(
-        'Illegal length of PTR Record resource data: ' +
+        'Illegal length of PTR Record resource data:',
           resourceLength);
     }
 
     // In a PTR Record, the domain name field of the RR is actually the service
     // type (at least for mDNS).
-    let serviceType = commonFields.domainName;
+    let serviceType = commonFields.name;
     let serviceName = dnsUtil.getDomainFromSmartBuffer(sBuff);
 
-    let result = new exports.PtrRecord(
+    let result = new PtrRecord(
       serviceType,
       commonFields.ttl,
       serviceName,
-      commonFields.rrClass
+      commonFields.recordClass
     );
 
     return result;
@@ -2060,11 +2110,8 @@ class PtrRecord {
 /**
  * An SRV record. SRV records map the name of a service instance to the
  * information needed to connect to the service. 
- *
- * @constructor
- *
  */
-class SrvRecord {
+class SrvRecord extends ResourceRecord {
   /*
    * @param {string} instanceTypeDomain: the name being queried for, e.g.
    * 'PrintsALot._printer._tcp.local'
@@ -2079,14 +2126,16 @@ class SrvRecord {
    * 'blackhawk.local')
    */
   constructor(instanceTypeDomain, ttl, priority, weight, port, targetDomain) {
-    this.recordType = dnsCodes.RECORD_TYPES.SRV;
     // Note that we're not exposing rrClass as a caller-specified variable,
     // because according to the spec SRV records occur in the IN class.
-    this.recordClass = dnsCodes.CLASS_CODES.IN;
+    super(
+      instanceTypeDomain,
+      dnsCodes.RECORD_TYPES.SRV, 
+      dnsCodes.CLASS_CODES.IN,
+      ttl
+    );
 
     this.instanceTypeDomain = instanceTypeDomain;
-    this.name = instanceTypeDomain;
-    this.ttl = ttl;
     this.priority = priority;
     this.weight = weight;
     this.port = port;
@@ -2119,14 +2168,8 @@ class SrvRecord {
   toBuffer() {
     let sBuff = new SmartBuffer();
 
-    let commonFieldsBuff = exports.getCommonFieldsAsBuffer(
-      this.instanceTypeDomain,
-      this.recordType,
-      this.recordClass,
-      this.ttl
-    );
-
-    sBuff.writeBuffer(commonFieldsBuff);
+    let rrBuff = super.toBuffer();
+    sBuff.writeBuffer(rrBuff);
 
     let targetNameBuff = dnsUtil.getDomainAsBuffer(this.targetDomain);
 
@@ -2159,12 +2202,12 @@ class SrvRecord {
    * @return {SrvRecord}
    */
   static fromSmartBuffer(sBuff) {
-    let commonFields = exports.getCommonFieldsFromSmartBuffer(sBuff);
+    let commonFields = ResourceRecord.fromSmartBuffer(sBuff);
 
-    if (commonFields.rrType !== dnsCodes.RECORD_TYPES.SRV) {
+    if (commonFields.recordType !== dnsCodes.RECORD_TYPES.SRV) {
       throw new Error(
-        'De-serialized SRV Record does not have SRV Record type: ' + 
-          commonFields.rrType
+        'De-serialized SRV Record does not have SRV Record type:',
+          commonFields.recordType
       );
     }
 
@@ -2173,36 +2216,36 @@ class SrvRecord {
     let resourceLength = sBuff.readUInt16BE();
     if (resourceLength < 0 || resourceLength > 65535) {
       throw new Error(
-        'Illegal length of SRV Record resource data: ' +
+        'Illegal length of SRV Record resource data:',
           resourceLength);
     }
 
     // In a SRV Record, the domain name field of the RR is actually the service
     // proto name.
-    let serviceInstanceName = commonFields.domainName;
+    let serviceInstanceName = commonFields.name;
     
     // After the common fields, we expect priority, weight, port, target name.
     // 2 octets
     let priority = sBuff.readUInt16BE();
     if (priority < 0 || priority > 65535) {
-      throw new Error('Illegal length of SRV Record priority: ' + priority);
+      throw new Error('Illegal length of SRV Record priority:', priority);
     }
 
     // 2 octets
     let weight = sBuff.readUInt16BE();
     if (weight < 0 || weight > 65535) {
-      throw new Error('Illegal length of SRV Record priority: ' + weight);
+      throw new Error('Illegal length of SRV Record priority:', weight);
     }
 
     // 2 octets
     let port = sBuff.readUInt16BE();
     if (port < 0 || port > 65535) {
-      throw new Error('Illegal length of SRV Record priority: ' + port);
+      throw new Error('Illegal length of SRV Record priority:', port);
     }
 
     let targetName = dnsUtil.getDomainFromSmartBuffer(sBuff);
 
-    let result = new exports.SrvRecord(
+    let result = new SrvRecord(
       serviceInstanceName,
       commonFields.ttl,
       priority,
@@ -2214,75 +2257,6 @@ class SrvRecord {
     return result;
   }
 }
-
-/**
- * Get the common components of a RR as a Buffer. As specified by the DNS
- * spec and 'TCP/IP Illustrated, Volume 1' by Stevens, the format is as
- * follows:
- *
- * Variable number of octets encoding the domain name to which the RR is
- *   responding.
- *
- * 2 octets representing the RR type
- *
- * 2 octets representing the RR class
- *
- * 4 octets representing the TTL
- *
- * @param {string} domainName
- * @param {integer} rrType
- * @param {integer} rrClass
- * @param {integer} ttl
- *
- * @return {Buffer}
- */
-exports.getCommonFieldsAsBuffer = function(
-  domainName,
-  rrType,
-  rrClass,
-  ttl
-) {
-  let sBuff = new SmartBuffer();
-
-  let domainNameAsBuff = dnsUtil.getDomainAsBuffer(domainName);
-  sBuff.writeBuffer(domainNameAsBuff);
-
-  // 2 octets
-  sBuff.writeUInt16BE(rrType);
-  sBuff.writeUInt16BE(rrClass);
-  // 4 octets
-  sBuff.writeUInt32BE(ttl);
-
-  return sBuff.toBuffer();
-};
-
-/**
- * Extract the common fields from the reader as encoded by
- * getCommonFieldsAsByteArray.
- *
- * @param {SmartBuffer} sBuff
- *
- * @return {Object} Returns an object with fields: domainName, rrType, rrClass,
- * and ttl.
- */
-exports.getCommonFieldsFromSmartBuffer = function(sBuff) {
-  let domainName = dnsUtil.getDomainFromSmartBuffer(sBuff);
-
-  // 2 octets
-  let rrType = sBuff.readUInt16BE();
-  let rrClass = sBuff.readUInt16BE();
-  // 4 octets
-  let ttl = sBuff.readUInt32BE(); 
-
-  let result = {
-    domainName: domainName,
-    rrType: rrType,
-    rrClass: rrClass,
-    ttl: ttl
-  };
-
-  return result;
-};
 
 /**
  * Return type of the Resource Record queued up in the reader. Peaking does not
@@ -2310,6 +2284,7 @@ exports.peekTypeInSmartBuffer = function(sBuff) {
 
 exports.ARecord = ARecord;
 exports.PtrRecord = PtrRecord;
+exports.ResourceRecord = ResourceRecord;
 exports.SrvRecord = SrvRecord;
 
 },{"./dns-codes":9,"./dns-util":11,"smart-buffer":54}],14:[function(require,module,exports){
@@ -45268,7 +45243,7 @@ let DEBUG = false;
 class ChromeUdpSocket {
   constructor(socketInfo) {
     this.socketInfo = socketInfo;
-    this.socketId = socketInfo.id;
+    this.socketId = socketInfo.socketId;
   }
 
   /**

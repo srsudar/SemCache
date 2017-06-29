@@ -9,7 +9,7 @@ let DEBUG = false;
 class ChromeUdpSocket {
   constructor(socketInfo) {
     this.socketInfo = socketInfo;
-    this.socketId = socketInfo.id;
+    this.socketId = socketInfo.socketId;
   }
 
   /**

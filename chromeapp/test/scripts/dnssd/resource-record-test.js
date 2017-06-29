@@ -10,7 +10,32 @@ let resRec = require('../../../app/scripts/dnssd/resource-record');
 
 let ARecord = resRec.ARecord;
 let PtrRecord = resRec.PtrRecord;
+let ResourceRecord = resRec.ResourceRecord;
 let SrvRecord = resRec.SrvRecord;
+
+test('ResourceRecord constructor succeeds', function(t) {
+  let name = 'foo';
+  let type = 1234;
+  let clazz = 14;
+  let ttl = 1;
+
+  let rr = new ResourceRecord(name, type, clazz, ttl);
+
+  t.equal(rr.name, name);
+  t.equal(rr.recordType, type);
+  t.equal(rr.recordClass, clazz);
+  t.equal(rr.ttl, ttl);
+  t.end();
+});
+
+test('ResourceRecord constructor fails if not string', function(t) {
+  let shouldThrow = function() {
+    new ResourceRecord(1);
+  };
+
+  t.throws(shouldThrow);
+  t.end();
+});
 
 
 test('create an ARecord', function(t) {
@@ -83,20 +108,15 @@ test('can encode and decode common RR fields', function(t) {
   let rrClass = 4;
   let ttl = 36000;
 
-  let buff = resRec.getCommonFieldsAsBuffer(
-    domainName,
-    rrType,
-    rrClass,
-    ttl
-  );
+  let rr = new ResourceRecord(domainName, rrType, rrClass, ttl);
 
-  let recovered = resRec.getCommonFieldsFromSmartBuffer(
-    SmartBuffer.fromBuffer(buff)
-  );
+  let buff = rr.toBuffer();
 
-  t.equal(recovered.domainName, domainName);
-  t.equal(recovered.rrType, rrType);
-  t.equal(recovered.rrClass, rrClass);
+  let recovered = ResourceRecord.fromSmartBuffer(SmartBuffer.fromBuffer(buff));
+
+  t.equal(recovered.name, domainName);
+  t.equal(recovered.recordType, rrType);
+  t.equal(recovered.recordClass, rrClass);
   t.equal(recovered.ttl, ttl);
 
   t.end();

@@ -204,7 +204,7 @@ test('saveTab resolves with response', function(t) {
   cpdisk.filePath = null;
   cpdiskCopy.filePath = null;
 
-  let expectedJson = cpdiskCopy.asJSON();
+  let expectedJson = cpdiskCopy.toJSON();
 
   let tab = util.genTabs(1).next().value;
   tab.url = cpdisk.captureHref;
