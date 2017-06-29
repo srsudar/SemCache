@@ -8,13 +8,17 @@ const dnsCodes = require('../../../app/scripts/dnssd/dns-codes');
 
 let resRec = require('../../../app/scripts/dnssd/resource-record');
 
+let ARecord = resRec.ARecord;
+let PtrRecord = resRec.PtrRecord;
+let SrvRecord = resRec.SrvRecord;
+
 
 test('create an ARecord', function(t) {
   let domainName = 'www.example.com';
   let ttl = 10;
   let ipAddress = '155.33.17.68';
   
-  let result = new resRec.ARecord(domainName, ttl, ipAddress);
+  let result = new ARecord(domainName, ttl, ipAddress);
 
   t.equal(result.domainName, domainName);
   t.equal(result.name, domainName);
@@ -31,7 +35,7 @@ test('create a PtrRecord', function(t) {
   let ttl = 10;
   let instanceName = 'PrintsALot._printer._tcp._local';
   
-  let result = new resRec.PtrRecord(serviceType, ttl, instanceName);
+  let result = new PtrRecord(serviceType, ttl, instanceName);
 
   t.equal(result.serviceType, serviceType);
   t.equal(result.name, serviceType);
@@ -51,7 +55,7 @@ test('create an SrvRecord', function(t) {
   let port = 8889;
   let targetDomain = 'fisherman.local';
   
-  let result = new resRec.SrvRecord(
+  let result = new SrvRecord(
     serviceInstanceName,
     ttl,
     priority,
@@ -104,13 +108,11 @@ test('can encode and decode A Record', function(t) {
   let rrClass = 4;
   let ttl = 123456;
 
-  let aRecord = new resRec.ARecord(domainName, ttl, ipAddress, rrClass);
+  let aRecord = new ARecord(domainName, ttl, ipAddress, rrClass);
 
   let buff = aRecord.toBuffer();
 
-  let actual = resRec.createARecordFromSmartBuffer(
-    SmartBuffer.fromBuffer(buff)
-  );
+  let actual = ARecord.fromSmartBuffer(SmartBuffer.fromBuffer(buff));
 
   t.deepEqual(actual, aRecord);
 
@@ -123,7 +125,7 @@ test('can encode and decode PTR Record', function(t) {
   let rrClass = 3;
   let ttl = 1000;
 
-  let ptrRecord = new resRec.PtrRecord(
+  let ptrRecord = new PtrRecord(
     serviceType,
     ttl,
     instanceName,
@@ -132,9 +134,7 @@ test('can encode and decode PTR Record', function(t) {
 
   let buff = ptrRecord.toBuffer();
 
-  let expected = resRec.createPtrRecordFromSmartBuffer(
-    SmartBuffer.fromBuffer(buff)
-  );
+  let expected = PtrRecord.fromSmartBuffer(SmartBuffer.fromBuffer(buff));
 
   t.deepEqual(expected, ptrRecord);
 
@@ -149,7 +149,7 @@ test('can encode and decode SRV Record', function(t) {
   let weight = 60;
   let port = 8888;
 
-  let srvRecord = new resRec.SrvRecord(
+  let srvRecord = new SrvRecord(
     instanceName,
     ttl,
     priority,
@@ -160,9 +160,7 @@ test('can encode and decode SRV Record', function(t) {
 
   let buff = srvRecord.toBuffer();
 
-  let actual = resRec.createSrvRecordFromSmartBuffer(
-    SmartBuffer.fromBuffer(buff)
-  );
+  let actual = SrvRecord.fromSmartBuffer(SmartBuffer.fromBuffer(buff));
 
   t.deepEqual(actual, srvRecord);
 
@@ -177,8 +175,8 @@ test('peek type in reader correct', function(t) {
   let ipAddress = '155.33.17.68';
   let domainName2 = 'www.fancy.com';
   
-  let aRecord1 = new resRec.ARecord(domainName, ttl, ipAddress);
-  let aRecord2 = new resRec.ARecord(domainName2, ttl, ipAddress);
+  let aRecord1 = new ARecord(domainName, ttl, ipAddress);
+  let aRecord2 = new ARecord(domainName2, ttl, ipAddress);
 
   let buff1 = aRecord1.toBuffer();
   let buff2 = aRecord2.toBuffer();
@@ -188,7 +186,7 @@ test('peek type in reader correct', function(t) {
   sBuff.writeBuffer(buff1);
   sBuff.writeBuffer(buff2);
 
-  let recovered1 = resRec.createARecordFromSmartBuffer(sBuff);
+  let recovered1 = ARecord.fromSmartBuffer(sBuff);
   t.deepEqual(recovered1, aRecord1);
 
   let expected = dnsCodes.RECORD_TYPES.A;
@@ -196,7 +194,7 @@ test('peek type in reader correct', function(t) {
   t.equal(actual, expected);
 
   // And make sure we didn't change the position of the reader.
-  let recovered2 = resRec.createARecordFromSmartBuffer(sBuff);
+  let recovered2 = ARecord.fromSmartBuffer(sBuff);
   t.deepEqual(recovered2, aRecord2);
 
   t.end();

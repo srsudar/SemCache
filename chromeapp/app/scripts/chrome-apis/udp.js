@@ -6,30 +6,26 @@ const util = require('./util');
 
 let DEBUG = false;
 
-/**
- * @constructor
- */
-exports.ChromeUdpSocket = function ChromeUdpSocket(socketInfo) {
-  if (!(this instanceof ChromeUdpSocket)) {
-    throw new Error('ChromeUdpSocket must be called with new');
+class ChromeUdpSocket {
+  constructor(socketInfo) {
+    this.socketInfo = socketInfo;
+    this.socketId = socketInfo.id;
   }
-  this.socketInfo = socketInfo;
-  this.socketId = socketInfo.socketId;
-};
 
-/**
- * Send data over the port and return a promise with the sendInfo result.
- * Behaves as a thin wrapper around chromeUdp.send.
- *
- * @param {ArrayBuffer} arrayBuffer
- * @param {string} address
- * @param {integer} port
- *
- * @return {Promise.<any, Error>}
- */
-exports.ChromeUdpSocket.prototype.send = function(arrayBuffer, address, port) {
-  return exports.send(this.socketId, arrayBuffer, address, port);
-};
+  /**
+   * Send data over the port and return a promise with the sendInfo result.
+   * Behaves as a thin wrapper around chromeUdp.send.
+   *
+   * @param {ArrayBuffer} arrayBuffer
+   * @param {string} address
+   * @param {integer} port
+   *
+   * @return {Promise.<any, Error>}
+   */
+  send(arrayBuffer, address, port) {
+    return exports.send(this.socketId, arrayBuffer, address, port);
+  }
+}
 
 /**
  * Add listener via call to util.getUdp().onReceive.addListener.
@@ -219,3 +215,5 @@ exports.getNetworkInterfaces = function() {
     });
   });
 };
+
+exports.ChromeUdpSocket = ChromeUdpSocket;

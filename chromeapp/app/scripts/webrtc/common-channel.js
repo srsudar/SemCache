@@ -4,6 +4,8 @@ const EventEmitter = require('events').EventEmitter;
 
 const protocol = require('./protocol');
 
+const ProtocolMessage = protocol.ProtocolMessage;
+
 
 const EV_CHUNK = 'chunk';
 const EV_COMPLETE = 'complete';
@@ -128,7 +130,7 @@ class BaseClient extends EventEmitter {
 
     channel.onmessage = function(event) {
       const eventBuff = Buffer.from(event.data);
-      const msg = protocol.from(eventBuff);
+      const msg = ProtocolMessage.fromBuffer(eventBuff);
       self.handleMessageFromServer(msg);
     };
   }

@@ -4,6 +4,8 @@ const test = require('tape');
 
 let protocol = require('../../../app/scripts/webrtc/protocol');
 
+const ProtocolMessage = protocol.ProtocolMessage;
+
 
 /**
  * Manipulating the object directly leads to polluting the require cache. Any
@@ -31,7 +33,7 @@ function end(t) {
  */
 function serializeDeserializeHelper(msg, t) {
   let serialized = msg.toBuffer();
-  let recovered = protocol.from(serialized);
+  let recovered = ProtocolMessage.fromBuffer(serialized);
 
   t.notEqual(null, serialized);
   t.notEqual(undefined, serialized);

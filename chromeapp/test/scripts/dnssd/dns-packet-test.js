@@ -9,6 +9,8 @@ const qSection = require('../../../app/scripts/dnssd/question-section');
 
 let dnsPacket = require('../../../app/scripts/dnssd/dns-packet');
 
+let DnsPacket = dnsPacket.DnsPacket;
+
 
 /**
  * Create an ARecord for use in testing. This is the same object on every call
@@ -216,7 +218,7 @@ test('can serialize and deserialize DnsPacket', function(t) {
 
   let buff = packet.toBuffer();
 
-  let actual = dnsPacket.fromBuffer(buff);
+  let actual = DnsPacket.fromBuffer(buff);
   t.deepEqual(actual, packet);
 
   t.end();

@@ -267,226 +267,220 @@ const util = require('./util');
  * An implementation of the coalescence strategy API.
  *
  * The Bloom filter strategy is to check a Bloom filter for URLs.
- * @constructor
  */
-exports.BloomStrategy = function BloomStrategy() {
-  if (!(this instanceof BloomStrategy)) {
-    throw new Error('BloomStrategy must be called with new');
+class BloomStrategy {
+  constructor() {
+    /**
+     * This is the data structure in which we're storing the Bloom filters from
+     * peers.
+     *
+     * Contains objects 
+     */
+    this.BLOOM_FILTERS = [];
+
+    this.IS_INITIALIZED = false;
+    this.IS_INITIALIZING = false;
   }
-  // Don't like that we are basically exposing module-level state that isn't
-  // tied to this object, but going to leave it for now. This is basically
-  // giving an object-based API onto the global state, which is a bit ugly but
-  // I'm going to allow it for the near-term.
 
   /**
-   * This is the data structure in which we're storing the Bloom filters from
-   * peers.
-   *
-   * Contains objects 
+   * Reset any state saved by this module
    */
-  this.BLOOM_FILTERS = [];
-
-  this.IS_INITIALIZED = false;
-  this.IS_INITIALIZING = false;
-};
-
-/**
- * Reset any state saved by this module
- */
-exports.BloomStrategy.prototype.reset = function() {
-  this.setBloomFilters([]);
-  this.IS_INITIALIZED = false;
-  // If an initialization is in progress, this could not be a complete reset.
-  this.IS_INITIALIZING = false;
-};
-
-/**
- * Replace the saved Digest state with this new information.
- *
- * @param {Array.<PeerBloomFilter>} digests
- */
-exports.BloomStrategy.prototype.setBloomFilters = function(filters) {
-  this.BLOOM_FILTERS = filters;
-};
-
-/**
- * Indicates if the module is ready to perform queries.
- *
- * @return {boolean} true if queries can be performed
- */
-exports.BloomStrategy.prototype.isInitialized = function() {
-  return this.IS_INITIALIZED;
-};
-
-/**
- * Indicates if we are currently initializing.
- *
- * @return {boolean}
- */
-exports.BloomStrategy.prototype.isInitializing = function() {
-  return this.IS_INITIALIZING;
-};
-
-/**
- * Initialize the strategy.
- *
- * @return {Promise.<undefined, Error>} Promise that resolves when
- * initialization is complete.
- */
-exports.BloomStrategy.prototype.initialize = function() {
-  if (this.isInitializing()) {
-    // no-op
-    return Promise.resolve();
+  reset() {
+    this.setBloomFilters([]);
+    this.IS_INITIALIZED = false;
+    // If an initialization is in progress, this could not be a complete reset.
+    this.IS_INITIALIZING = false;
   }
-  if (this.isInitialized()) {
-    // We're already initialized, just no-op.
-    return Promise.resolve();
+
+  /**
+   * Replace the saved Digest state with this new information.
+   *
+   * @param {Array.<PeerBloomFilter>} digests
+   */
+  setBloomFilters(filters) {
+    this.BLOOM_FILTERS = filters;
   }
-  // Initialization consists of the following steps:
-  // 1) Query the network for peers
-  // 2) For each peer, get their digest
-  // 3) Process the digests
-  // 4) Update our module data structures with this information
-  // 5) Declare that we are initialized
-  this.IS_INITIALIZING = true;
-  let self = this;
 
-  return new Promise(function(resolve, reject) {
-    // Changing this for evaluation.
-    // console.warn('COALESCENCE IS IN EVALUATION MODE');
-    // This code is for the real mode.
-    dnssdSem.browseForSemCacheInstances()
-    .then(peerInfos => {
-      return util.removeOwnInfo(peerInfos);
-    }).then(peerInfos => {
-      let peerAccessor = peerIfMgr.getPeerAccessor();
-      return self.getAndProcessBloomFilters(peerAccessor, peerInfos);
-    })
-    // This code is for evaluation mode.
-    // Promise.resolve()
-    // .then(() => {
-    //   return evaluation.generateDummyPeerBloomFilters(
-    //     EVAL_NUM_DIGESTS, EVAL_NUM_PAGES_IN_DIGEST
-    //   );
-    // })
-    .then(bloomFilters => {
-      self.setBloomFilters(bloomFilters);
-      self.IS_INITIALIZING = false;
-      self.IS_INITIALIZED = true;
-      resolve();
-    })
-    .catch(err => {
-      self.IS_INITIALIZING = false;
-      reject(err);
-    });
-  });
-};
+  /**
+   * Indicates if the module is ready to perform queries.
+   *
+   * @return {boolean} true if queries can be performed
+   */
+  isInitialized() {
+    return this.IS_INITIALIZED;
+  }
 
-/**
- * Obtain digests from the peers indicated in peerInfos and process them. If
- * any peers could not be connected to, an error is logged but the process is
- * not terminated. Does not update any of the module's data structures.
- *
- * @param {WebrtcPeerAccessor|HttpPeerAccessor} peerInterface a peer interface
- * for the given transport protocol
- * @param {Array.<Object>} peerInfos the objects containing information to
- * connect to peers as returned from the browse service functions
- *
- * @return {Promise.<Array<PeerBloomFilter>>}
- */
-exports.BloomStrategy.prototype.getAndProcessBloomFilters = function(
-  peerInterface, peerInfos
-) {
-  // Query them, create digests for those that succeed.
-  // Note that there is some trickiness here about the best strategy by which
-  // to do this. If we want to avoid congestion, we might want to query them
-  // serially, not worrying if something has rejected. We need to tolerate
-  // rejection in case a peer leaves while we are issuing the query. That is
-  // ok and should be tolerated. The fulfillPromises in the evaluation module
-  // could work for this.
-  //
-  // For now we are just going to countdown waiting for the promises to settle.
-  return new Promise(function(resolve) {
-    if (peerInfos.length === 0) {
-      resolve([]);
-      return;
+  /**
+   * Indicates if we are currently initializing.
+   *
+   * @return {boolean}
+   */
+  isInitializing() {
+    return this.IS_INITIALIZING;
+  }
+
+  /**
+   * Initialize the strategy.
+   *
+   * @return {Promise.<undefined, Error>} Promise that resolves when
+   * initialization is complete.
+   */
+  initialize() {
+    if (this.isInitializing()) {
+      // no-op
+      return Promise.resolve();
     }
-    let pendingResponses = peerInfos.length;
-    let result = [];
-    peerInfos.forEach(peerInfo => {
-      let params = peerIf.createListParams(
-        peerInfo.ipAddress, peerInfo.port, null
-      );
-      peerInterface.getCacheBloomFilter(params)
-      .then(bloomFilter => {
-        pendingResponses--;
-        let peerBf = new objects.PeerBloomFilter(peerInfo, bloomFilter);
-        result.push(peerBf);
-        if (pendingResponses === 0) {
-          resolve(result);
-        }
+    if (this.isInitialized()) {
+      // We're already initialized, just no-op.
+      return Promise.resolve();
+    }
+    // Initialization consists of the following steps:
+    // 1) Query the network for peers
+    // 2) For each peer, get their digest
+    // 3) Process the digests
+    // 4) Update our module data structures with this information
+    // 5) Declare that we are initialized
+    this.IS_INITIALIZING = true;
+    let self = this;
+
+    return new Promise(function(resolve, reject) {
+      // Changing this for evaluation.
+      // console.warn('COALESCENCE IS IN EVALUATION MODE');
+      // This code is for the real mode.
+      dnssdSem.browseForSemCacheInstances()
+      .then(peerInfos => {
+        return util.removeOwnInfo(peerInfos);
+      }).then(peerInfos => {
+        let peerAccessor = peerIfMgr.getPeerAccessor();
+        return self.getAndProcessBloomFilters(peerAccessor, peerInfos);
+      })
+      // This code is for evaluation mode.
+      // Promise.resolve()
+      // .then(() => {
+      //   return evaluation.generateDummyPeerBloomFilters(
+      //     EVAL_NUM_DIGESTS, EVAL_NUM_PAGES_IN_DIGEST
+      //   );
+      // })
+      .then(bloomFilters => {
+        self.setBloomFilters(bloomFilters);
+        self.IS_INITIALIZING = false;
+        self.IS_INITIALIZED = true;
+        resolve();
       })
       .catch(err => {
-        // Swallow this one, as we expect some errors
-        console.log('Ignoreable error fetching digest: ', err);
-        pendingResponses--;
-        if (pendingResponses === 0) {
-          resolve(result);
-        }
+        self.IS_INITIALIZING = false;
+        reject(err);
       });
     });
-  });
-};
-
-/**
- * Obtain access information for the given array of URLs. The result will be an
- * array of length <= urls.length. Only those that are available will be
- * present.
- *
- * Note that this strategy cannot set capture dates.
- *
- * @param {Array.<string>} urls Array of URLs for which to query
- *
- * @return {Promise.<Object, Error>} Promise that resolves with an Object of
- * information about the urls or rejects with an Error. The Object is like the
- * following:
- *   {
- *     url: [NetworkCachedPage, NetworkCachedPage],
- *   }
- */
-exports.BloomStrategy.prototype.performQuery = function(urls) {
-  if (!this.isInitialized()) {
-    console.warn('digest-strategy was queried but is not initialized');
   }
-  let self = this;
-  return new Promise(function(resolve, reject) {
-    Promise.resolve()
-    .then(() => {
-      let result = {};
-      urls.forEach(url => {
-        let copiesForUrl = [];
-        self.BLOOM_FILTERS.forEach(bloomFilter => {
-          let isPresent = bloomFilter.performQueryForPage(url);
-          if (isPresent) {
-            let info = {
-              friendlyName: bloomFilter.peerInfo.friendlyName,
-              serviceName: bloomFilter.peerInfo.instanceName,
-              captureHref: url
-            };
-            copiesForUrl.push(info);
+
+  /**
+   * Obtain digests from the peers indicated in peerInfos and process them. If
+   * any peers could not be connected to, an error is logged but the process is
+   * not terminated. Does not update any of the module's data structures.
+   *
+   * @param {WebrtcPeerAccessor|HttpPeerAccessor} peerInterface a peer interface
+   * for the given transport protocol
+   * @param {Array.<Object>} peerInfos the objects containing information to
+   * connect to peers as returned from the browse service functions
+   *
+   * @return {Promise.<Array<PeerBloomFilter>>}
+   */
+  getAndProcessBloomFilters(peerInterface, peerInfos) {
+    // Query them, create digests for those that succeed.  Note that there is
+    // some trickiness here about the best strategy by which to do this. If we
+    // want to avoid congestion, we might want to query them serially, not
+    // worrying if something has rejected. We need to tolerate rejection in
+    // case a peer leaves while we are issuing the query. That is ok and should
+    // be tolerated. The fulfillPromises in the evaluation module could work
+    // for this.
+    //
+    // For now we are just going to countdown waiting for the promises to
+    // settle.
+    return new Promise(function(resolve) {
+      if (peerInfos.length === 0) {
+        resolve([]);
+        return;
+      }
+      let pendingResponses = peerInfos.length;
+      let result = [];
+      peerInfos.forEach(peerInfo => {
+        let params = peerIf.createListParams(
+          peerInfo.ipAddress, peerInfo.port, null
+        );
+        peerInterface.getCacheBloomFilter(params)
+        .then(bloomFilter => {
+          pendingResponses--;
+          let peerBf = new objects.PeerBloomFilter(peerInfo, bloomFilter);
+          result.push(peerBf);
+          if (pendingResponses === 0) {
+            resolve(result);
+          }
+        })
+        .catch(err => {
+          // Swallow this one, as we expect some errors
+          console.log('Ignoreable error fetching digest: ', err);
+          pendingResponses--;
+          if (pendingResponses === 0) {
+            resolve(result);
           }
         });
-        if (copiesForUrl.length > 0) {
-          result[url] = copiesForUrl;
-        }
       });
-      resolve(result);
-    })
-    .catch(err => {
-      reject(err);
     });
-  });
-};
+  }
+
+  /**
+   * Obtain access information for the given array of URLs. The result will be
+   * an array of length <= urls.length. Only those that are available will be
+   * present.
+   *
+   * Note that this strategy cannot set capture dates.
+   *
+   * @param {Array.<string>} urls Array of URLs for which to query
+   *
+   * @return {Promise.<Object, Error>} Promise that resolves with an Object of
+   * information about the urls or rejects with an Error. The Object is like
+   * the following:
+   *   {
+   *     url: [NetworkCachedPage, NetworkCachedPage],
+   *   }
+   */
+  performQuery(urls) {
+    if (!this.isInitialized()) {
+      console.warn('digest-strategy was queried but is not initialized');
+    }
+    let self = this;
+    return new Promise(function(resolve, reject) {
+      Promise.resolve()
+      .then(() => {
+        let result = {};
+        urls.forEach(url => {
+          let copiesForUrl = [];
+          self.BLOOM_FILTERS.forEach(bloomFilter => {
+            let isPresent = bloomFilter.performQueryForPage(url);
+            if (isPresent) {
+              let info = {
+                friendlyName: bloomFilter.peerInfo.friendlyName,
+                serviceName: bloomFilter.peerInfo.instanceName,
+                captureHref: url
+              };
+              copiesForUrl.push(info);
+            }
+          });
+          if (copiesForUrl.length > 0) {
+            result[url] = copiesForUrl;
+          }
+        });
+        resolve(result);
+      })
+      .catch(err => {
+        reject(err);
+      });
+    });
+  }
+}
+
+exports.BloomStrategy = BloomStrategy;
 
 },{"../dnssd/dns-sd-semcache":"dnsSem","../peer-interface/common":15,"../peer-interface/manager":17,"./objects":6,"./util":7}],5:[function(require,module,exports){
 'use strict';
@@ -507,223 +501,217 @@ const util = require('./util');
  *
  * The digest strategy is to obtain a list of all the available pages from
  * peers and check those lists.
- * @constructor
  */
-exports.DigestStrategy = function DigestStrategy() {
-  if (!(this instanceof DigestStrategy)) {
-    throw new Error('DigestStrategy must be called with new');
+class DigestStrategy {
+  constructor() {
+    /**
+     * This is the data structure in which we're storing the digests from peers.
+     *
+     * Contains objects 
+     */
+    this.DIGESTS = [];
+
+    this.IS_INITIALIZED = false;
+    this.IS_INITIALIZING = false;
   }
-  // Don't like that we are basically exposing module-level state that isn't
-  // tied to this object, but going to leave it for now. This is basically
-  // giving an object-based API onto the global state, which is a bit ugly but
-  // I'm going to allow it for the near-term.
 
   /**
-   * This is the data structure in which we're storing the digests from peers.
-   *
-   * Contains objects 
+   * Reset any state saved by this module
    */
-  this.DIGESTS = [];
-
-  this.IS_INITIALIZED = false;
-  this.IS_INITIALIZING = false;
-};
-
-/**
- * Reset any state saved by this module
- */
-exports.DigestStrategy.prototype.reset = function() {
-  this.setDigests([]);
-  this.IS_INITIALIZED = false;
-  // If an initialization is in progress, this could not be a complete reset.
-  this.IS_INITIALIZING = false;
-};
-
-/**
- * Replace the saved Digest state with this new information.
- *
- * @param {Array.<Digest>} digests
- */
-exports.DigestStrategy.prototype.setDigests = function(digests) {
-  this.DIGESTS = digests;
-};
-
-/**
- * Indicates if the module is ready to perform queries.
- *
- * @return {boolean} true if queries can be performed
- */
-exports.DigestStrategy.prototype.isInitialized = function() {
-  return this.IS_INITIALIZED;
-};
-
-/**
- * Indicates if we are currently initializing.
- *
- * @return {boolean}
- */
-exports.DigestStrategy.prototype.isInitializing = function() {
-  return this.IS_INITIALIZING;
-};
-
-/**
- * Initialize the strategy.
- *
- * @return {Promise.<undefined, Error>} Promise that resolves when
- * initialization is complete.
- */
-exports.DigestStrategy.prototype.initialize = function() {
-  if (this.isInitializing()) {
-    // no-op
-    return Promise.resolve();
+  reset() {
+    this.setDigests([]);
+    this.IS_INITIALIZED = false;
+    // If an initialization is in progress, this could not be a complete reset.
+    this.IS_INITIALIZING = false;
   }
-  if (this.isInitialized()) {
-    // We're already initialized, just no-op.
-    return Promise.resolve();
+
+  /**
+   * Replace the saved Digest state with this new information.
+   *
+   * @param {Array.<Digest>} digests
+   */
+  setDigests(digests) {
+    this.DIGESTS = digests;
   }
-  // Initialization consists of the following steps:
-  // 1) Query the network for peers
-  // 2) For each peer, get their digest
-  // 3) Process the digests
-  // 4) Update our module data structures with this information
-  // 5) Declare that we are initialized
-  this.IS_INITIALIZING = true;
-  let self = this;
 
-  return new Promise(function(resolve, reject) {
-    dnssdSem.browseForSemCacheInstances()
-    .then(peerInfos => {
-      return util.removeOwnInfo(peerInfos);
-    }).then(peerInfos => {
-      let peerAccessor = peerIfMgr.getPeerAccessor();
-      return self.getAndProcessDigests(peerAccessor, peerInfos);
-    })
-    .then(digests => {
-      self.setDigests(digests);
-      self.IS_INITIALIZING = false;
-      self.IS_INITIALIZED = true;
-      resolve();
-    })
-    .catch(err => {
-      self.IS_INITIALIZING = false;
-      reject(err);
-    });
-  });
-};
+  /**
+   * Indicates if the module is ready to perform queries.
+   *
+   * @return {boolean} true if queries can be performed
+   */
+  isInitialized() {
+    return this.IS_INITIALIZED;
+  }
 
-/**
- * Obtain digests from the peers indicated in peerInfos and process them. If
- * any peers could not be connected to, an error is logged but the process is
- * not terminated. Does not update any of the module's data structures.
- *
- * @param {WebrtcPeerAccessor|HttpPeerAccessor} peerInterface a peer interface
- * for the given transport protocol
- * @param {Array.<Object>} peerInfos the objects containing information to
- * connect to peers as returned from the browse service functions
- *
- * @return {Promise.<Array<Digest>>}
- */
-exports.DigestStrategy.prototype.getAndProcessDigests = function(
-  peerInterface, peerInfos
-) {
-  // Query them, create digests for those that succeed.
-  // Note that there is some trickiness here about the best strategy by which
-  // to do this. If we want to avoid congestion, we might want to query them
-  // serially, not worrying if something has rejected. We need to tolerate
-  // rejection in case a peer leaves while we are issuing the query. That is
-  // ok and should be tolerated. The fulfillPromises in the evaluation module
-  // could work for this.
-  //
-  // For now we are just going to countdown waiting for the promises to settle.
-  return new Promise(function(resolve) {
-    if (peerInfos.length === 0) {
-      resolve([]);
-      return;
+  /**
+   * Indicates if we are currently initializing.
+   *
+   * @return {boolean}
+   */
+  isInitializing() {
+    return this.IS_INITIALIZING;
+  }
+
+  /**
+   * Initialize the strategy.
+   *
+   * @return {Promise.<undefined, Error>} Promise that resolves when
+   * initialization is complete.
+   */
+  initialize() {
+    if (this.isInitializing()) {
+      // no-op
+      return Promise.resolve();
     }
-    let pendingResponses = peerInfos.length;
-    let result = [];
-    peerInfos.forEach(peerInfo => {
-      let params = peerIf.createListParams(
-        peerInfo.ipAddress, peerInfo.port, null
-      );
-      peerInterface.getCacheDigest(params)
-      .then(digestResponse => {
-        let rawDigest = digestResponse.digest;
-        pendingResponses--;
-        let digest = new objects.Digest(peerInfo, rawDigest);
-        result.push(digest);
-        if (pendingResponses === 0) {
-          resolve(result);
-        }
+    if (this.isInitialized()) {
+      // We're already initialized, just no-op.
+      return Promise.resolve();
+    }
+    // Initialization consists of the following steps:
+    // 1) Query the network for peers
+    // 2) For each peer, get their digest
+    // 3) Process the digests
+    // 4) Update our module data structures with this information
+    // 5) Declare that we are initialized
+    this.IS_INITIALIZING = true;
+    let self = this;
+
+    return new Promise(function(resolve, reject) {
+      dnssdSem.browseForSemCacheInstances()
+      .then(peerInfos => {
+        return util.removeOwnInfo(peerInfos);
+      }).then(peerInfos => {
+        let peerAccessor = peerIfMgr.getPeerAccessor();
+        return self.getAndProcessDigests(peerAccessor, peerInfos);
+      })
+      .then(digests => {
+        self.setDigests(digests);
+        self.IS_INITIALIZING = false;
+        self.IS_INITIALIZED = true;
+        resolve();
       })
       .catch(err => {
-        // Swallow this one, as we expect some errors
-        console.log('Ignoreable error fetching digest: ', err);
-        pendingResponses--;
-        if (pendingResponses === 0) {
-          resolve(result);
-        }
+        self.IS_INITIALIZING = false;
+        reject(err);
       });
     });
-  });
-};
-
-/**
- * Obtain access information for the given array of URLs. The result will be an
- * array of length <= urls.length. Only those that are available will be
- * present.
- *
- * @param {Array.<string>} urls Array of URLs for which to query
- *
- * @return {Promise.<Object, Error>} Promise that resolves with an Object of
- * information about the urls or rejects with an Error. The Object is like the
- * following:
- *   {
- *     url: [ Object, ... ]
- *   }
- *
- * The Object is like:
- * {
- *   friendlyName: 'Sam Cache',
- *   serviceName: 'Sam Cache._semcache._tcp.local',
- *   href: 'http://foo.org',
- *   captureDate: iso date string
- * }
- */
-exports.DigestStrategy.prototype.performQuery = function(urls) {
-  let self = this;
-  if (!this.isInitialized()) {
-    console.warn('digest-strategy was queried but is not initialized');
   }
-  return new Promise(function(resolve, reject) {
-    Promise.resolve()
-    .then(() => {
-      let result = {};
-      urls.forEach(url => {
-        let copiesForUrl = [];
-        self.DIGESTS.forEach(digest => {
-          let captureDate = digest.performQueryForPage(url);
-          if (captureDate) {
-            let page = {
-              friendlyName: digest.peerInfo.friendlyName,
-              serviceName: digest.peerInfo.instanceName,
-              captureHref: url,
-              captureDate: captureDate
-            };
-            copiesForUrl.push(page);
+
+  /**
+   * Obtain digests from the peers indicated in peerInfos and process them. If
+   * any peers could not be connected to, an error is logged but the process is
+   * not terminated. Does not update any of the module's data structures.
+   *
+   * @param {WebrtcPeerAccessor|HttpPeerAccessor} peerInterface a peer
+   * interface for the given transport protocol
+   * @param {Array.<Object>} peerInfos the objects containing information to
+   * connect to peers as returned from the browse service functions
+   *
+   * @return {Promise.<Array<Digest>>}
+   */
+  getAndProcessDigests(peerInterface, peerInfos) {
+    // Query them, create digests for those that succeed.
+    // Note that there is some trickiness here about the best strategy by which
+    // to do this. If we want to avoid congestion, we might want to query them
+    // serially, not worrying if something has rejected. We need to tolerate
+    // rejection in case a peer leaves while we are issuing the query. That is
+    // ok and should be tolerated. The fulfillPromises in the evaluation module
+    // could work for this.
+    //
+    // For now we are just going to countdown waiting for the promises to
+    // settle.
+    return new Promise(function(resolve) {
+      if (peerInfos.length === 0) {
+        resolve([]);
+        return;
+      }
+      let pendingResponses = peerInfos.length;
+      let result = [];
+      peerInfos.forEach(peerInfo => {
+        let params = peerIf.createListParams(
+          peerInfo.ipAddress, peerInfo.port, null
+        );
+        peerInterface.getCacheDigest(params)
+        .then(digestResponse => {
+          let rawDigest = digestResponse.digest;
+          pendingResponses--;
+          let digest = new objects.Digest(peerInfo, rawDigest);
+          result.push(digest);
+          if (pendingResponses === 0) {
+            resolve(result);
+          }
+        })
+        .catch(err => {
+          // Swallow this one, as we expect some errors
+          console.log('Ignoreable error fetching digest: ', err);
+          pendingResponses--;
+          if (pendingResponses === 0) {
+            resolve(result);
           }
         });
-        if (copiesForUrl.length > 0) {
-          result[url] = copiesForUrl;
-        }
       });
-      resolve(result);
-    })
-    .catch(err => {
-      reject(err);
     });
-  });
-};
+  }
+
+  /**
+   * Obtain access information for the given array of URLs. The result will be
+   * an array of length <= urls.length. Only those that are available will be
+   * present.
+   *
+   * @param {Array.<string>} urls Array of URLs for which to query
+   *
+   * @return {Promise.<Object, Error>} Promise that resolves with an Object of
+   * information about the urls or rejects with an Error. The Object is like
+   * the following:
+   *   {
+   *     url: [ Object, ... ]
+   *   }
+   *
+   * The Object is like:
+   * {
+   *   friendlyName: 'Sam Cache',
+   *   serviceName: 'Sam Cache._semcache._tcp.local',
+   *   href: 'http://foo.org',
+   *   captureDate: iso date string
+   * }
+   */
+  performQuery(urls) {
+    let self = this;
+    if (!this.isInitialized()) {
+      console.warn('digest-strategy was queried but is not initialized');
+    }
+    return new Promise(function(resolve, reject) {
+      Promise.resolve()
+      .then(() => {
+        let result = {};
+        urls.forEach(url => {
+          let copiesForUrl = [];
+          self.DIGESTS.forEach(digest => {
+            let captureDate = digest.performQueryForPage(url);
+            if (captureDate) {
+              let page = {
+                friendlyName: digest.peerInfo.friendlyName,
+                serviceName: digest.peerInfo.instanceName,
+                captureHref: url,
+                captureDate: captureDate
+              };
+              copiesForUrl.push(page);
+            }
+          });
+          if (copiesForUrl.length > 0) {
+            result[url] = copiesForUrl;
+          }
+        });
+        resolve(result);
+      })
+      .catch(err => {
+        reject(err);
+      });
+    });
+  }
+}
+
+exports.DigestStrategy = DigestStrategy;
 
 },{"../dnssd/dns-sd-semcache":"dnsSem","../peer-interface/common":15,"../peer-interface/manager":17,"./objects":6,"./util":7}],6:[function(require,module,exports){
 (function (Buffer){
@@ -739,139 +727,79 @@ const BloomFilter = bloomFilter.BloomFilter;
  */
 
 /**
- * This object represents a cached page that is available on the local network.
- * It is related but not identical to the CachedPage object in the persistence
- * module, incorporating a notion of probabilistic availability.
- *
- * There are several considerations when interacting with a coalesced page. The
- * first is that the page can exist in several states. In SemCache this is
- * referred to as availability.
- *
- * If the page is available on the local machine, we are certain that the page
- * exists and that a request to open that page will succeed (assuming the page
- * isn't deleted after a query is made, that there are no errors, etc). 
- *
- * If another peer responds that they have the page, we are certain that the
- * page exists at the time of the query, but we are not sure that an eventual
- * fetch will succeed. Perhaps when an attempt to open the page is made the
- * client will have left the network, or an error will occur because the
- * network goes down.
- *
- * It is also possible that set inclusion (and thus local availability) is a
- * probabilistic operation, eg if Bloom filters are used to lower network
- * traffic.
- *
- * We refer to the first state as "available". Both the second states we will
- * lump together to refer to as "probable". The third state is simply
- * "unavailable".
- *
- * These states might not be important to the caller, but we want to provide
- * the information all the same.
- *
- * @param {String} availability A string enum representing various types of
- * availability on the local network. This is expected to be on of "available",
- * meaning access is highly available (eg on the local machine) and access will
- * succeed. "probable" means that the page was likely available at the time of
- * the query. This uncertainty might stem from the potential the machine will
- * leave the network by the time the page is requested or because inclusion was
- * determined to do a probabilistic operation like a Bloom filter. The last
- * option is "unavailable", indicating that a cached copy of the page is not
- * available.
- * @param {Object} queryInfo information about the query of the page. This
- * might include the URL, etc
- * @param {Object} accessInfo information about how to access the page. If this
- * is a locally available page, this might be a CachedPage object from the
- * persistence module, eg. Otherwise it will depend on the type of
- * availability.
- *
- * @constructor
- */
-exports.NetworkCachedPage = function NetworkCachedPage(
-  availability,
-  queryInfo,
-  accessInfo
-) {
-  if (!(this instanceof NetworkCachedPage)) {
-    throw new Error('NetworkCachedPage must be called with new');
-  }
-  this.availability = availability;
-  this.queryInfo = queryInfo;
-  this.accessInfo = accessInfo;
-};
-
-/**
  * Create a Digest object from a list of pages saved on a peer. This
  * associates information about the peer as well as access information.
  *
  * @constructor
  */
-exports.Digest = function Digest(peerInfo, pageInfos) {
-  if (!(this instanceof Digest)) {
-    throw new Error('Digest must be called with new');
-  }
-  this.peerInfo = peerInfo;
+class Digest {
+  constructor(peerInfo, pageInfos) {
+    this.peerInfo = peerInfo;
 
-  // Now process the pageInfos.
-  this.digestInfo = {};
-  pageInfos.forEach(pageInfo => {
-    this.digestInfo[pageInfo.fullUrl] = pageInfo.captureDate;
-  });
-};
+    // Now process the pageInfos.
+    this.digestInfo = {};
+    pageInfos.forEach(pageInfo => {
+      this.digestInfo[pageInfo.fullUrl] = pageInfo.captureDate;
+    });
+  }
+
+  /**
+   * Query the digest to see if the page contains the given URL.
+   *
+   * @param {string} url
+   *
+   * @return {string|null} null if the digest does not contain the page,
+   * otherwise the timestamp of the page
+   */
+  performQueryForPage(url) {
+    let captureDate = this.digestInfo[url];
+    if (captureDate) {
+      return captureDate;
+    } else {
+      return null;
+    }
+  }
+}
 
 /**
- * Query the digest to see if the page contains the given URL.
- *
- * @param {string} url
- *
- * @return {string|null} null if the digest does not contain the page,
- * otherwise the timestamp of the page
+ * Wrapper around the pure Bloom filter implementation that includes
+ * information about the peer itself.
  */
-exports.Digest.prototype.performQueryForPage = function(url) {
-  let captureDate = this.digestInfo[url];
-  if (captureDate) {
-    return captureDate;
-  } else {
-    return null;
-  }
-};
+class PeerBloomFilter {
+  /**
+   * @param {Object} peerInfo
+   * @param {BloomFilter|Buffer} bloom
+   */
+  constructor(peerInfo, bloom) {
+    this.peerInfo = peerInfo;
 
-/**
- * Create a Bloom filter to use for coalescence. This is a wrapper around the
- * pure Bloom filter implementation and includes information about the peer
- * itself.
- *
- * @param {Object} peerInfo
- * @param {BloomFilter|Buffer} bloom
- */
-exports.PeerBloomFilter = function PeerBloomFilter(peerInfo, bloom) {
-  if (!(this instanceof PeerBloomFilter)) {
-    throw new Error('PeerBloomFilter must be called with new');
+    // Now process the pageInfos.
+    if (Buffer.isBuffer(bloom)) {
+      this.bloomFilter = BloomFilter.fromBuffer(bloom);
+    } else if (bloom instanceof BloomFilter) {
+      this.bloomFilter = bloom;
+    } else {
+      console.log(bloom);
+      throw new Error('bloom must be Buffer or BloomFilter');
+    }
   }
-  this.peerInfo = peerInfo;
 
-  // Now process the pageInfos.
-  if (Buffer.isBuffer(bloom)) {
-    this.bloomFilter = BloomFilter.fromBuffer(bloom);
-  } else if (bloom instanceof BloomFilter) {
-    this.bloomFilter = bloom;
-  } else {
-    console.log(bloom);
-    throw new Error('bloom must be Buffer or BloomFilter');
+  /**
+   * Query the Bloom filter to see if it contains the given url.
+   *
+   * @param {string} url
+   *
+   * @return {boolean} true if the peer likely has the URL, else false. Note
+   * that we cannot return a capture date with the Bloom filter strategy, so we
+   * do not have complete API parity with the Digest strategy.
+   */
+  performQueryForPage(url) {
+    return this.bloomFilter.test(url);
   }
-};
+}
 
-/**
- * Query the Bloom filter to see if it contains the given url.
- *
- * @param {string} url
- *
- * @return {boolean} true if the peer likely has the URL, else false. Note that
- * we cannot return a capture date with the Bloom filter strategy, so we do not
- * have complete API parity with the Digest strategy.
- */
-exports.PeerBloomFilter.prototype.performQueryForPage = function(url) {
-  return this.bloomFilter.test(url);
-};
+exports.Digest = Digest;
+exports.PeerBloomFilter = PeerBloomFilter;
 
 }).call(this,{"isBuffer":require("../../../node_modules/is-buffer/index.js")})
 },{"../../../node_modules/is-buffer/index.js":42,"./bloom-filter":3}],7:[function(require,module,exports){
@@ -1128,6 +1056,11 @@ const dnsCodes = require('./dns-codes');
 const qSection = require('./question-section');
 const resRec = require('./resource-record');
 
+const ARecord = resRec.ARecord;
+const PtrRecord = resRec.PtrRecord;
+const QuestionSection = qSection.QuestionSection;
+const SrvRecord = resRec.SrvRecord;
+
 
 // These constants are defined by the number of bits allowed for each value in
 // the DNS spec. Section 4.1.1 of RFC 1035 has a good summary.
@@ -1173,13 +1106,13 @@ exports.parseRecordsFromSmartBuffer = function(sBuff, numRecords) {
     let record = null;
     switch (recordType) {
       case dnsCodes.RECORD_TYPES.A:
-        record = resRec.createARecordFromSmartBuffer(sBuff);
+        record = ARecord.fromSmartBuffer(sBuff);
         break;
       case dnsCodes.RECORD_TYPES.PTR:
-        record = resRec.createPtrRecordFromSmartBuffer(sBuff);
+        record = PtrRecord.fromSmartBuffer(sBuff);
         break;
       case dnsCodes.RECORD_TYPES.SRV:
-        record = resRec.createSrvRecordFromSmartBuffer(sBuff);
+        record = SrvRecord.fromSmartBuffer(sBuff);
         break;
       default:
         throw new Error('Unsupported record type: ' + recordType);
@@ -1193,198 +1126,24 @@ exports.parseRecordsFromSmartBuffer = function(sBuff, numRecords) {
 
 /**
  * Create a DNS packet. This creates the packet with various flag values. The
- * packet is not converted to byte format until a call is made to
- * getAsBuffer().
- *
- * @constructor
- *
- * @param {integer} id a 2-octet identifier for the packet
- * @param {boolean} isQuery true if packet is a query, false if it is a
- * response
- * @param {integer} opCode a 4-bit field. 0 is a standard query
- * @param {boolea} isAuthoritativeAnswer true if the response is authoritative
- * for the domain in the question section
- * @param {boolean} isTruncated true if the reply is truncated
- * @param {boolean} recursionIsDesired true if recursion is desired
- * @param {boolean} recursionAvailable true or recursion is available
- * @param {integer} returnCode a 4-bit field. 0 is no error and 3 is a name
- * error. Name errors are returned only from the authoritative name server and
- * means the domain name specified does not exist
+ * packet is not converted to byte format until a call is made to toBuffer().
  */
-exports.DnsPacket = function DnsPacket(
-  id,
-  isQuery,
-  opCode,
-  isAuthorativeAnswer,
-  isTruncated,
-  recursionDesired,
-  recursionAvailable,
-  returnCode
-) {
-  if (!(this instanceof DnsPacket)) {
-    throw new Error('DnsPacket must be called with new');
-  }
-
-  // The ID must fit in two bytes.
-  if (id < 0 || id > MAX_ID) {
-    throw new Error('DNS Packet ID is < 0 or > ' + MAX_ID +': ' + id);
-  }
-  this.id = id;
-
-  this.isQuery = isQuery ? true : false;
-
-  if (opCode < 0 || opCode > MAX_OPCODE) {
-    throw new Error(
-      'DNS Packet opCode is < 0 or > ' +
-        MAX_OPCODE +
-        ': ' +
-        opCode
-    );
-  }
-  this.opCode = opCode;
-
-  this.isAuthorativeAnswer = isAuthorativeAnswer ? true : false;
-  this.isTruncated = isTruncated ? true : false;
-  this.recursionDesired = recursionDesired ? true : false;
-  this.recursionAvailable = recursionAvailable ? true : false;
-
-  if (returnCode < 0 || returnCode > MAX_RETURN_CODE) {
-    throw new Error('DNS Packet returnCode is < 0 or > ' +
-      MAX_RETURN_CODE +
-      ': ' +
-      returnCode
-    );
-  }
-  this.returnCode = returnCode;
-
-  this.questions = [];
-  this.answers = [];
-  this.authority = [];
-  this.additionalInfo = [];
-};
-
-/**
- * Convert the DnsPacket to a Buffer. The format of a DNS Packet is
- * as specified in 'TCP/IP Illustrated, Volume 1' by Stevens, as follows:
- *
- * 2 octet ID
- *
- * 2 octet flags (see dns-util)
- *
- * 2 octet number of question sections
- *
- * 2 octet number of answer Resource Records (RRs)
- *
- * 2 octet number of authority RRs
- *
- * 2 octet number of additional info RRs
- *
- * Variable number of bytes representing the questions
- *
- * Variable number of bytes representing the answers
- *
- * Variable number of bytes representing authorities
- *
- * Variable number of bytes representing additional info
- *
- * @return {Buffer}
- */
-exports.DnsPacket.prototype.toBuffer = function() {
-  let sBuff = new SmartBuffer();
-
-  // 2 octets
-  sBuff.writeUInt16BE(this.id);
-
-  // Prepare flags to be passed to getFlagsAsValue
-  let qr = this.isQuery ? 0 : 1;  // 0 means query, 1 means response
-  let opcode = this.opCode;
-  let aa = this.isAuthorativeAnswer ? 1 : 0;
-  let tc = this.isTruncated ? 1 : 0;
-  let rd = this.recursionDesired ? 1 : 0;
-  let ra = this.recursionAvailable ? 1 : 0;
-  let rcode = this.returnCode;
-
-  let flagValue = exports.getFlagsAsValue(qr, opcode, aa, tc, rd, ra, rcode);
-
-  // 2 octets
-  sBuff.writeUInt16BE(flagValue);
-  
-  // 2 octets
-  sBuff.writeUInt16BE(this.questions.length);
-  sBuff.writeUInt16BE(this.answers.length);
-  sBuff.writeUInt16BE(this.authority.length);
-  sBuff.writeUInt16BE(this.additionalInfo.length);
-
-  // We should have now met the requirement of adding 12 bytes to a DNS header.
-  if (sBuff.length !== 12) {
-    throw new Error(
-      'Problem serializing DNS packet. Header length != 12 bytes'
-    );
-  }
-
-  this.questions.forEach(question => {
-    let buff = question.toBuffer();
-    sBuff.writeBuffer(buff);
-  });
-
-  this.answers.forEach(answer => {
-    let buff = answer.toBuffer();
-    sBuff.writeBuffer(buff);
-  });
-
-  this.authority.forEach(authority => {
-    let buff = authority.toBuffer();
-    sBuff.writeBuffer(buff);
-  });
-
-  this.additionalInfo.forEach(info => {
-    let buff = info.toBuffer();
-    sBuff.writeBuffer(buff);
-  });
-
-  return sBuff.toBuffer();
-};
-
-/**
- * Create a DNS Packet from a ByteArrayReader object. The contents of the
- * reader are as expected to be output from convertToByteArray().
- *
- * @param {Buffer} buff Buffer from which to create the packet
- *
- * @return {DnsPacket} the packet constructed
- */
-exports.fromBuffer = function(buff) {
-  let sBuff = SmartBuffer.fromBuffer(buff);
-  
-  // 2 octets
-  let id = sBuff.readUInt16BE();
-  let flagsAsValue = sBuff.readUInt16BE();
-  let numQuestions = sBuff.readUInt16BE();
-  let numAnswers = sBuff.readUInt16BE();
-  let numAuthority = sBuff.readUInt16BE();
-  let numAdditionalInfo = sBuff.readUInt16BE();
-
-  let flags = exports.getValueAsFlags(flagsAsValue);
-
-  let opCode = flags.opcode;
-  let returnCode = flags.rcode;
-
-  // 0 means it is a query, 1 means it is a response.
-  let isQuery;
-  if (flags.qr === 0) {
-    isQuery = true;
-  } else {
-    isQuery = false;
-  }
-
-  // The non-QR flags map more readily to 0/1 = false/true, so we will use
-  // ternary operators.
-  let isAuthorativeAnswer = flags.aa ? true : false;
-  let isTruncated = flags.tc ? true : false;
-  let recursionDesired = flags.rd ? true : false;
-  let recursionAvailable = flags.ra ? true : false;
-
-  let result = new exports.DnsPacket(
+class DnsPacket {
+  /*
+   * @param {integer} id a 2-octet identifier for the packet
+   * @param {boolean} isQuery true if packet is a query, false if it is a
+   * response
+   * @param {integer} opCode a 4-bit field. 0 is a standard query
+   * @param {boolea} isAuthoritativeAnswer true if the response is authoritative
+   * for the domain in the question section
+   * @param {boolean} isTruncated true if the reply is truncated
+   * @param {boolean} recursionIsDesired true if recursion is desired
+   * @param {boolean} recursionAvailable true or recursion is available
+   * @param {integer} returnCode a 4-bit field. 0 is no error and 3 is a name
+   * error. Name errors are returned only from the authoritative name server
+   * and means the domain name specified does not exist
+   */
+  constructor(
     id,
     isQuery,
     opCode,
@@ -1393,75 +1152,247 @@ exports.fromBuffer = function(buff) {
     recursionDesired,
     recursionAvailable,
     returnCode
-  );
+  ) {
+    // The ID must fit in two bytes.
+    if (id < 0 || id > MAX_ID) {
+      throw new Error('DNS Packet ID is < 0 or > ' + MAX_ID +': ' + id);
+    }
+    this.id = id;
 
-  for (let i = 0; i < numQuestions; i++) {
-    let question = qSection.createQuestionFromSmartBuffer(sBuff);
-    result.addQuestion(question);
+    this.isQuery = isQuery ? true : false;
+
+    if (opCode < 0 || opCode > MAX_OPCODE) {
+      throw new Error(
+        'DNS Packet opCode is < 0 or > ' +
+          MAX_OPCODE +
+          ': ' +
+          opCode
+      );
+    }
+    this.opCode = opCode;
+
+    this.isAuthorativeAnswer = isAuthorativeAnswer ? true : false;
+    this.isTruncated = isTruncated ? true : false;
+    this.recursionDesired = recursionDesired ? true : false;
+    this.recursionAvailable = recursionAvailable ? true : false;
+
+    if (returnCode < 0 || returnCode > MAX_RETURN_CODE) {
+      throw new Error('DNS Packet returnCode is < 0 or > ' +
+        MAX_RETURN_CODE +
+        ': ' +
+        returnCode
+      );
+    }
+    this.returnCode = returnCode;
+
+    this.questions = [];
+    this.answers = [];
+    this.authority = [];
+    this.additionalInfo = [];
   }
 
-  let answers = exports.parseRecordsFromSmartBuffer(sBuff, numAnswers);
-  let authorities = exports.parseRecordsFromSmartBuffer(
-    sBuff, numAuthority
-  );
-  let infos = exports.parseRecordsFromSmartBuffer(
-    sBuff, numAdditionalInfo
-  );
+  /**
+   * Convert the DnsPacket to a Buffer. The format of a DNS Packet is
+   * as specified in 'TCP/IP Illustrated, Volume 1' by Stevens, as follows:
+   *
+   * 2 octet ID
+   *
+   * 2 octet flags (see dns-util)
+   *
+   * 2 octet number of question sections
+   *
+   * 2 octet number of answer Resource Records (RRs)
+   *
+   * 2 octet number of authority RRs
+   *
+   * 2 octet number of additional info RRs
+   *
+   * Variable number of bytes representing the questions
+   *
+   * Variable number of bytes representing the answers
+   *
+   * Variable number of bytes representing authorities
+   *
+   * Variable number of bytes representing additional info
+   *
+   * @return {Buffer}
+   */
+  toBuffer() {
+    let sBuff = new SmartBuffer();
 
-  answers.forEach(answer => {
-    result.addAnswer(answer);
-  });
-  authorities.forEach(authority => {
-    result.addAuthority(authority);
-  });
-  infos.forEach(info => {
-    result.addAdditionalInfo(info);
-  });
+    // 2 octets
+    sBuff.writeUInt16BE(this.id);
 
-  return result;
-};
+    // Prepare flags to be passed to getFlagsAsValue
+    let qr = this.isQuery ? 0 : 1;  // 0 means query, 1 means response
+    let opcode = this.opCode;
+    let aa = this.isAuthorativeAnswer ? 1 : 0;
+    let tc = this.isTruncated ? 1 : 0;
+    let rd = this.recursionDesired ? 1 : 0;
+    let ra = this.recursionAvailable ? 1 : 0;
+    let rcode = this.returnCode;
 
-/**
- * Add a question resource to the DNS Packet.
- *
- * @param {QuestionSection} question the question to add to this packet 
- */
-exports.DnsPacket.prototype.addQuestion = function(question) {
-  if (!(question instanceof qSection.QuestionSection)) {
-    throw new Error('question must be a QuestionSection but was: ' + question);
+    let flagValue = exports.getFlagsAsValue(qr, opcode, aa, tc, rd, ra, rcode);
+
+    // 2 octets
+    sBuff.writeUInt16BE(flagValue);
+    
+    // 2 octets
+    sBuff.writeUInt16BE(this.questions.length);
+    sBuff.writeUInt16BE(this.answers.length);
+    sBuff.writeUInt16BE(this.authority.length);
+    sBuff.writeUInt16BE(this.additionalInfo.length);
+
+    // We should have now met the requirement of adding 12 bytes to a DNS header.
+    if (sBuff.length !== 12) {
+      throw new Error(
+        'Problem serializing DNS packet. Header length != 12 bytes'
+      );
+    }
+
+    this.questions.forEach(question => {
+      let buff = question.toBuffer();
+      sBuff.writeBuffer(buff);
+    });
+
+    this.answers.forEach(answer => {
+      let buff = answer.toBuffer();
+      sBuff.writeBuffer(buff);
+    });
+
+    this.authority.forEach(authority => {
+      let buff = authority.toBuffer();
+      sBuff.writeBuffer(buff);
+    });
+
+    this.additionalInfo.forEach(info => {
+      let buff = info.toBuffer();
+      sBuff.writeBuffer(buff);
+    });
+
+    return sBuff.toBuffer();
   }
-  this.questions.push(question);
-};
 
-/**
- * Add a Resource Record to the answer section.
- *
- * @param {ARecord|PtrRecord|SrvRecord} resourceRecord the record to add to the
- * answer section
- */
-exports.DnsPacket.prototype.addAnswer = function(resourceRecord) {
-  this.answers.push(resourceRecord);
-};
+  /**
+   * Create a DNS Packet from a ByteArrayReader object. The contents of the
+   * reader are as expected to be output from convertToByteArray().
+   *
+   * @param {Buffer} buff Buffer from which to create the packet
+   *
+   * @return {DnsPacket} the packet constructed
+   */
+  static fromBuffer(buff) {
+    let sBuff = SmartBuffer.fromBuffer(buff);
+    
+    // 2 octets
+    let id = sBuff.readUInt16BE();
+    let flagsAsValue = sBuff.readUInt16BE();
+    let numQuestions = sBuff.readUInt16BE();
+    let numAnswers = sBuff.readUInt16BE();
+    let numAuthority = sBuff.readUInt16BE();
+    let numAdditionalInfo = sBuff.readUInt16BE();
 
-/**
- * Add a Resource Record to the authority section.
- *
- * @param {ARecord|PtrRecord|SrvRecord} resourceRecord the record to add to the
- * authority section
- */
-exports.DnsPacket.prototype.addAuthority = function(resourceRecord) {
-  this.authority.push(resourceRecord);
-};
+    let flags = exports.getValueAsFlags(flagsAsValue);
 
-/**
- * Add a Resource Record to the additional info section.
- *
- * @param {ARecord|PtrRecord|SrvRecord} resourceRecord the record to add to the
- * additional info section
- */
-exports.DnsPacket.prototype.addAdditionalInfo = function(resourceRecord) {
-  this.additionalInfo.push(resourceRecord);
-};
+    let opCode = flags.opcode;
+    let returnCode = flags.rcode;
+
+    // 0 means it is a query, 1 means it is a response.
+    let isQuery;
+    if (flags.qr === 0) {
+      isQuery = true;
+    } else {
+      isQuery = false;
+    }
+
+    // The non-QR flags map more readily to 0/1 = false/true, so we will use
+    // ternary operators.
+    let isAuthorativeAnswer = flags.aa ? true : false;
+    let isTruncated = flags.tc ? true : false;
+    let recursionDesired = flags.rd ? true : false;
+    let recursionAvailable = flags.ra ? true : false;
+
+    let result = new exports.DnsPacket(
+      id,
+      isQuery,
+      opCode,
+      isAuthorativeAnswer,
+      isTruncated,
+      recursionDesired,
+      recursionAvailable,
+      returnCode
+    );
+
+    for (let i = 0; i < numQuestions; i++) {
+      let question = QuestionSection.fromSmartBuffer(sBuff);
+      result.addQuestion(question);
+    }
+
+    let answers = exports.parseRecordsFromSmartBuffer(sBuff, numAnswers);
+    let authorities = exports.parseRecordsFromSmartBuffer(
+      sBuff, numAuthority
+    );
+    let infos = exports.parseRecordsFromSmartBuffer(
+      sBuff, numAdditionalInfo
+    );
+
+    answers.forEach(answer => {
+      result.addAnswer(answer);
+    });
+    authorities.forEach(authority => {
+      result.addAuthority(authority);
+    });
+    infos.forEach(info => {
+      result.addAdditionalInfo(info);
+    });
+
+    return result;
+  }
+
+  /**
+   * Add a question resource to the DNS Packet.
+   *
+   * @param {QuestionSection} question the question to add to this packet 
+   */
+  addQuestion(question) {
+    if (!(question instanceof qSection.QuestionSection)) {
+      throw new Error(
+        'question must be a QuestionSection but was: ', question
+      );
+    }
+    this.questions.push(question);
+  }
+
+  /**
+   * Add a Resource Record to the answer section.
+   *
+   * @param {ARecord|PtrRecord|SrvRecord} resourceRecord the record to add to
+   * the answer section
+   */
+  addAnswer(resourceRecord) {
+    this.answers.push(resourceRecord);
+  }
+
+  /**
+   * Add a Resource Record to the authority section.
+   *
+   * @param {ARecord|PtrRecord|SrvRecord} resourceRecord the record to add to the
+   * authority section
+   */
+  addAuthority(resourceRecord) {
+    this.authority.push(resourceRecord);
+  }
+
+  /**
+   * Add a Resource Record to the additional info section.
+   *
+   * @param {ARecord|PtrRecord|SrvRecord} resourceRecord the record to add to the
+   * additional info section
+   */
+  addAdditionalInfo(resourceRecord) {
+    this.additionalInfo.push(resourceRecord);
+  }
+}
 
 /**
  * Convert the given value (in 16 bits) to an object containing the DNS header
@@ -1547,6 +1478,8 @@ exports.getFlagsAsValue = function(qr, opcode, aa, tc, rd, ra, rcode) {
 
   return value;
 };
+
+exports.DnsPacket = DnsPacket;
 
 },{"./dns-codes":9,"./question-section":12,"./resource-record":13,"smart-buffer":53}],11:[function(require,module,exports){
 'use strict';
@@ -1746,103 +1679,103 @@ const MAX_QUERY_CLASS = 65535;
 
 /**
  * A DNS Question section.
- *
- * @constructor
- *
- * @param {string} qName the name of the query
- * @param {integer} qType the type of the query
- * @param {integer} qClass the class of the query
  */
-exports.QuestionSection = function QuestionSection(qName, qType, qClass) {
-  if (!(this instanceof QuestionSection)) {
-    throw new Error('QuestionSection must be called with new');
+class QuestionSection {
+  /*
+   *
+   * @param {string} qName the name of the query
+   * @param {integer} qType the type of the query
+   * @param {integer} qClass the class of the query
+   */
+  constructor(qName, qType, qClass) {
+    if (qType < 0 || qType > MAX_QUERY_TYPE) {
+      throw new Error(
+        'query type must be > 0 and < ' +
+          MAX_QUERY_TYPE +
+          ': ' +
+          qType
+      );
+    }
+
+    if (qClass < 0 || qClass > MAX_QUERY_CLASS) {
+      throw new Error(
+        'query class must be > 0 and < ' +
+          MAX_QUERY_CLASS +
+          ': ' +
+          qClass
+      );
+    }
+
+    this.queryName = qName;
+    this.queryType = qType;
+    this.queryClass = qClass;
   }
 
-  if (qType < 0 || qType > MAX_QUERY_TYPE) {
-    throw new Error(
-      'query type must be > 0 and < ' +
-        MAX_QUERY_TYPE +
-        ': ' +
-        qType
-    );
+  /**
+   * Convert the QuestionSection to a ByteArray object. According to 'TCP/IP
+   * Illustrated, Volume 1' by Stevens, the format of the question section is
+   * as follows:
+   *
+   * variable number of octets representing the query name
+   *
+   * 2 octets representing the query type
+   *
+   * 2 octets representing the query class
+   *
+   * @return {ByteArray}
+   */
+  toBuffer() {
+    let sBuff = new SmartBuffer();
+    
+    let queryBuff = dnsUtil.getDomainAsBuffer(this.queryName);
+    sBuff.writeBuffer(queryBuff);
+
+    // 2 octets
+    sBuff.writeUInt16BE(this.queryType);
+    sBuff.writeUInt16BE(this.queryClass);
+
+    return sBuff.toBuffer();
   }
 
-  if (qClass < 0 || qClass > MAX_QUERY_CLASS) {
-    throw new Error(
-      'query class must be > 0 and < ' +
-        MAX_QUERY_CLASS +
-        ': ' +
-        qClass
-    );
+  /**
+   * Returns true if the question has requested a unicast response, else false.
+   *
+   * @return {boolean}
+   */
+  unicastResponseRequested() {
+    // For now, since we can't share a port in Chrome, we will assume that
+    // unicast responses are always requested.
+    return true;
   }
 
-  this.queryName = qName;
-  this.queryType = qType;
-  this.queryClass = qClass;
-};
+  /**
+   * Create a QuestionSection from a SmartBuffer as returned by toBuffer().
+   *
+   * @param {SmartBuffer} sBuff
+   *
+   * @return {QuestionSection}
+   */
+  static fromSmartBuffer(sBuff) {
+    let queryName = dnsUtil.getDomainFromSmartBuffer(sBuff);
 
-/**
- * Convert the QuestionSection to a ByteArray object. According to 'TCP/IP
- * Illustrated, Volume 1' by Stevens, the format of the question section is as
- * follows:
- *
- * variable number of octets representing the query name
- *
- * 2 octets representing the query type
- *
- * 2 octets representing the query class
- *
- * @return {ByteArray}
- */
-exports.QuestionSection.prototype.toBuffer = function() {
-  let sBuff = new SmartBuffer();
-  
-  let queryBuff = dnsUtil.getDomainAsBuffer(this.queryName);
-  sBuff.writeBuffer(queryBuff);
+    // 2 octets
+    let queryType = sBuff.readUInt16BE();
+    if (queryType < 0 || queryType > MAX_QUERY_TYPE) {
+      throw new Error('deserialized query type out of range: ' + queryType);
+    }
 
-  // 2 octets
-  sBuff.writeUInt16BE(this.queryType);
-  sBuff.writeUInt16BE(this.queryClass);
+    let queryClass = sBuff.readUInt16BE();
+    if (queryClass < 0 || queryClass > MAX_QUERY_CLASS) {
+      throw new Error('deserialized query class out of range: ' + queryClass);
+    }
 
-  return sBuff.toBuffer();
-};
+    let result = new QuestionSection(queryName, queryType, queryClass);
 
-/**
- * Returns true if the question has requested a unicast response, else false.
- *
- * @return {boolean}
- */
-exports.QuestionSection.prototype.unicastResponseRequested = function() {
-  // For now, since we can't share a port in Chrome, we will assume that
-  // unicast responses are always requested.
-  return true;
-};
-
-/**
- * Create a QuestionSection from a SmartBuffer as returned by toBuffer().
- *
- * @param {SmartBuffer} sBuff
- *
- * @return {QuestionSection}
- */
-exports.createQuestionFromSmartBuffer = function(sBuff) {
-  let queryName = dnsUtil.getDomainFromSmartBuffer(sBuff);
-
-  // 2 octets
-  let queryType = sBuff.readUInt16BE();
-  if (queryType < 0 || queryType > MAX_QUERY_TYPE) {
-    throw new Error('deserialized query type out of range: ' + queryType);
+    return result;
   }
+}
 
-  let queryClass = sBuff.readUInt16BE();
-  if (queryClass < 0 || queryClass > MAX_QUERY_CLASS) {
-    throw new Error('deserialized query class out of range: ' + queryClass);
-  }
-
-  let result = new exports.QuestionSection(queryName, queryType, queryClass);
-
-  return result;
-};
+exports.QuestionSection = QuestionSection;
 
 },{"./dns-util":11,"smart-buffer":53}],13:[function(require,module,exports){
 /* global exports, require */
@@ -1889,226 +1822,114 @@ const NUM_OCTETS_PORT = 2;
  * address.
  *
  * @constructor
- *
- * @param {string} domainName the domain name, e.g. www.example.com
- * @param {integer} ttl the time to live
- * @param {string} ipAddress the IP address of the domainName. This must be a
- * string (e.g. '192.3.34.17').
- * @param {integer} recordClass the class of the record type. This is optional,
- * and if not present or is not truthy will be set as IN for internet traffic.
  */
-exports.ARecord = function ARecord(
-  domainName,
-  ttl,
-  ipAddress,
-  recordClass
-) {
-  if (!(this instanceof ARecord)) {
-    throw new Error('ARecord must be called with new');
+class ARecord {
+  /*
+   * @param {string} domainName the domain name, e.g. www.example.com
+   * @param {integer} ttl the time to live
+   * @param {string} ipAddress the IP address of the domainName. This must be a
+   * string (e.g. '192.3.34.17').
+   * @param {integer} recordClass the class of the record type. This is optional,
+   * and if not present or is not truthy will be set as IN for internet traffic.
+   */
+  constructor(domainName, ttl, ipAddress, recordClass) {
+    if ((typeof ipAddress) !== 'string') {
+      throw new Error('ipAddress must be a String: ' + ipAddress);
+    }
+    
+    if (!recordClass) {
+      recordClass = dnsCodes.CLASS_CODES.IN;
+    }
+
+    this.recordType = dnsCodes.RECORD_TYPES.A;
+    this.recordClass = recordClass;
+
+    this.domainName = domainName;
+    this.name = domainName;
+    this.ttl = ttl;
+    this.ipAddress = ipAddress;
   }
 
-  if ((typeof ipAddress) !== 'string') {
-    throw new Error('ipAddress must be a String: ' + ipAddress);
-  }
-  
-  if (!recordClass) {
-    recordClass = dnsCodes.CLASS_CODES.IN;
-  }
+  /**
+   * Get the A Record as a Buffer.
+   *
+   * The DNS spec indicates that an A Record is represented in byte form as
+   * follows.
+   *
+   * The common fields as indicated in getCommonFieldsAsBuffer.
+   *
+   * 2 octets representing the number 4, to indicate that 4 bytes follow.
+   *
+   * 4 octets representing a 4-byte IP address
+   *
+   * @return {Buffer}
+   */
+  toBuffer() {
+    let sBuff = new SmartBuffer();
 
-  this.recordType = dnsCodes.RECORD_TYPES.A;
-  this.recordClass = recordClass;
-
-  this.domainName = domainName;
-  this.name = domainName;
-  this.ttl = ttl;
-  this.ipAddress = ipAddress;
-};
-
-/**
- * Get the A Record as a Buffer.
- *
- * The DNS spec indicates that an A Record is represented in byte form as
- * follows.
- *
- * The common fields as indicated in getCommonFieldsAsBuffer.
- *
- * 2 octets representing the number 4, to indicate that 4 bytes follow.
- *
- * 4 octets representing a 4-byte IP address
- *
- * @return {Buffer}
- */
-exports.ARecord.prototype.toBuffer = function() {
-  let sBuff = new SmartBuffer();
-
-  let commonFieldsBuff = exports.getCommonFieldsAsBuffer(
-    this.domainName,
-    this.recordType,
-    this.recordClass,
-    this.ttl
-  );
-
-  sBuff.writeBuffer(commonFieldsBuff);
-
-  // First we add the length of the resource data.
-  // 2 octets
-  sBuff.writeUInt16BE(NUM_OCTETS_RESOURCE_DATA_A_RECORD);
-
-  // Then add the IP address itself.
-  let ipStringAsBuff = dnsUtil.getIpStringAsBuffer(this.ipAddress);
-  sBuff.writeBuffer(ipStringAsBuff);
-
-  return sBuff.toBuffer();
-};
-
-/**
- * Create an A Record from a SmartBuffer. The SmartBuffer should be at the
- * correct cursor position, at the domain name of the A Record.
- *
- * @param {SmartBuffer} sBuff
- *
- * @return {ARecord}
- */
-exports.createARecordFromSmartBuffer = function(sBuff) {
-  let commonFields = exports.getCommonFieldsFromSmartBuffer(sBuff);
-
-  if (commonFields.rrType !== dnsCodes.RECORD_TYPES.A) {
-    throw new Error(
-      'De-serialized A Record does not have A Record type: ' + 
-        commonFields.rrType
+    let commonFieldsBuff = exports.getCommonFieldsAsBuffer(
+      this.domainName,
+      this.recordType,
+      this.recordClass,
+      this.ttl
     );
+
+    sBuff.writeBuffer(commonFieldsBuff);
+
+    // First we add the length of the resource data.
+    // 2 octets
+    sBuff.writeUInt16BE(NUM_OCTETS_RESOURCE_DATA_A_RECORD);
+
+    // Then add the IP address itself.
+    let ipStringAsBuff = dnsUtil.getIpStringAsBuffer(this.ipAddress);
+    sBuff.writeBuffer(ipStringAsBuff);
+
+    return sBuff.toBuffer();
   }
 
-  // And now we recover just the resource length and resource data.
-  // 2 octets
-  let resourceLength = sBuff.readUInt16BE();
+  /**
+   * Create an A Record from a SmartBuffer. The SmartBuffer should be at the
+   * correct cursor position, at the domain name of the A Record.
+   *
+   * @param {SmartBuffer} sBuff
+   *
+   * @return {ARecord}
+   */
+  static fromSmartBuffer(sBuff) {
+    let commonFields = exports.getCommonFieldsFromSmartBuffer(sBuff);
 
-  // For an A Record this should always be 4.
-  if (resourceLength !== NUM_OCTETS_RESOURCE_DATA_A_RECORD) {
-    throw new Error(
-      'Recovered resource length does not match expected value for A ' +
-        '  Record: ' +
-        resourceLength
+    if (commonFields.rrType !== dnsCodes.RECORD_TYPES.A) {
+      throw new Error(
+        'De-serialized A Record does not have A Record type: ' + 
+          commonFields.rrType
+      );
+    }
+
+    // And now we recover just the resource length and resource data.
+    // 2 octets
+    let resourceLength = sBuff.readUInt16BE();
+
+    // For an A Record this should always be 4.
+    if (resourceLength !== NUM_OCTETS_RESOURCE_DATA_A_RECORD) {
+      throw new Error(
+        'Recovered resource length does not match expected value for A ' +
+          '  Record: ' +
+          resourceLength
+      );
+    }
+
+    let ipString = dnsUtil.getIpStringFromSmartBuffer(sBuff);
+
+    let result = new ARecord(
+      commonFields.domainName,
+      commonFields.ttl,
+      ipString,
+      commonFields.rrClass
     );
+
+    return result;
   }
-
-  let ipString = dnsUtil.getIpStringFromSmartBuffer(sBuff);
-
-  let result = new exports.ARecord(
-    commonFields.domainName,
-    commonFields.ttl,
-    ipString,
-    commonFields.rrClass
-  );
-
-  return result;
-};
-
-/**
- * Create a PTR Record from a SmartBuffer. The SmartBuffer should be at the
- * correct cursor position, at the service type query of the PTR Record.
- *
- * @param {SmartBuffer} sBuff
- *
- * @return {PtrRecord}
- */
-exports.createPtrRecordFromSmartBuffer = function(sBuff) {
-  let commonFields = exports.getCommonFieldsFromSmartBuffer(sBuff);
-
-  if (commonFields.rrType !== dnsCodes.RECORD_TYPES.PTR) {
-    throw new Error(
-      'De-serialized PTR Record does not have PTR Record type: ' + 
-        commonFields.rrType
-    );
-  }
-
-  // And now we recover just the resource length and resource data.
-  // 2 octets
-  let resourceLength = sBuff.readUInt16BE();
-  if (resourceLength < 0 || resourceLength > 65535) {
-    throw new Error(
-      'Illegal length of PTR Record resource data: ' +
-        resourceLength);
-  }
-
-  // In a PTR Record, the domain name field of the RR is actually the service
-  // type (at least for mDNS).
-  let serviceType = commonFields.domainName;
-  let serviceName = dnsUtil.getDomainFromSmartBuffer(sBuff);
-
-  let result = new exports.PtrRecord(
-    serviceType,
-    commonFields.ttl,
-    serviceName,
-    commonFields.rrClass
-  );
-
-  return result;
-};
-
-/**
- * Create an SRV Record from a SmartBuffer. The SmartBuffer should be at the
- * correct cursor position, at the service type query of the SRV Record.
- *
- * @param {SmartBuffer} sBuff
- *
- * @return {SrvRecord}
- */
-exports.createSrvRecordFromSmartBuffer = function(sBuff) {
-  let commonFields = exports.getCommonFieldsFromSmartBuffer(sBuff);
-
-  if (commonFields.rrType !== dnsCodes.RECORD_TYPES.SRV) {
-    throw new Error(
-      'De-serialized SRV Record does not have SRV Record type: ' + 
-        commonFields.rrType
-    );
-  }
-
-  // And now we recover just the resource length and resource data.
-  // 2 octets
-  let resourceLength = sBuff.readUInt16BE();
-  if (resourceLength < 0 || resourceLength > 65535) {
-    throw new Error(
-      'Illegal length of SRV Record resource data: ' +
-        resourceLength);
-  }
-
-  // In a SRV Record, the domain name field of the RR is actually the service
-  // proto name.
-  let serviceInstanceName = commonFields.domainName;
-  
-  // After the common fields, we expect priority, weight, port, target name.
-  // 2 octets
-  let priority = sBuff.readUInt16BE();
-  if (priority < 0 || priority > 65535) {
-    throw new Error('Illegal length of SRV Record priority: ' + priority);
-  }
-
-  // 2 octets
-  let weight = sBuff.readUInt16BE();
-  if (weight < 0 || weight > 65535) {
-    throw new Error('Illegal length of SRV Record priority: ' + weight);
-  }
-
-  // 2 octets
-  let port = sBuff.readUInt16BE();
-  if (port < 0 || port > 65535) {
-    throw new Error('Illegal length of SRV Record priority: ' + port);
-  }
-
-  let targetName = dnsUtil.getDomainFromSmartBuffer(sBuff);
-
-  let result = new exports.SrvRecord(
-    serviceInstanceName,
-    commonFields.ttl,
-    priority,
-    weight,
-    port,
-    targetName
-  );
-
-  return result;
-};
+}
 
 /**
  * A PTR record. PTR records respond to a query for a service type (eg
@@ -2117,87 +1938,124 @@ exports.createSrvRecordFromSmartBuffer = function(sBuff) {
  *
  * @constructor
  *
- * @param {string} serviceType the string representation of the service that
- * has been queried for.
- * @param {integer} ttl the time to live
- * @param {string} instanceName the name of the instance providing the
- * serviceType
- * @param {integer} rrClass the class of the record. If not truthy, will be set
- * to IN for internet traffic.
  */
-exports.PtrRecord = function PtrRecord(
-  serviceType,
-  ttl,
-  instanceName,
-  rrClass
-) {
-  if (!(this instanceof PtrRecord)) {
-    throw new Error('PtrRecord must be called with new');
+class PtrRecord {
+  /*
+   * @param {string} serviceType the string representation of the service that
+   * has been queried for.
+   * @param {integer} ttl the time to live
+   * @param {string} instanceName the name of the instance providing the
+   * serviceType
+   * @param {integer} rrClass the class of the record. If not truthy, will be
+   * set to IN for internet traffic.
+   */
+  constructor(serviceType, ttl, instanceName, rrClass) {
+    if ((typeof serviceType) !== 'string') {
+      throw new Error('serviceType must be a String: ' + serviceType);
+    }
+    
+    if ((typeof instanceName) !== 'string') {
+      throw new Error('instanceName must be a String: ' + instanceName);
+    }
+
+    if (!rrClass) {
+      rrClass = dnsCodes.CLASS_CODES.IN;
+    }
+    
+    this.recordType = dnsCodes.RECORD_TYPES.PTR;
+    this.recordClass = rrClass;
+
+    this.serviceType = serviceType;
+    this.name = serviceType;
+    this.ttl = ttl;
+    this.instanceName = instanceName;
   }
 
-  if ((typeof serviceType) !== 'string') {
-    throw new Error('serviceType must be a String: ' + serviceType);
+  /**
+   * Get the PTR Record as a Buffer.
+   *
+   * The DNS spec indicates that an PTR Record is represented in byte form as
+   * follows. (Using this and section 3.3.12 as a guide:
+   * https://www.ietf.org/rfc/rfc1035.txt).
+   *
+   * The common fields as indicated in getCommonFieldsAsByteArray.
+   *
+   * 2 octets representing the length of the following component, in bytes.
+   *
+   * A variable number of octets representing "the domain-name, which points to
+   * some location in the domain name space". In the context of mDNS, this
+   * would be the name of the instance that actually provides the service that
+   * is being queried for.
+   *
+   * @return {Buffer}
+   */
+  toBuffer() {
+    let sBuff = new SmartBuffer();
+
+    let commonFieldsBuff = exports.getCommonFieldsAsBuffer(
+      this.serviceType,
+      this.recordType,
+      this.recordClass,
+      this.ttl
+    );
+
+    sBuff.writeBuffer(commonFieldsBuff);
+
+    let instanceNameBuff = dnsUtil.getDomainAsBuffer(this.instanceName);
+    let resourceDataLength = instanceNameBuff.length;
+
+    // First we add the length of the resource data.
+    // 2 octets
+    sBuff.writeUInt16BE(resourceDataLength);
+
+    // Then add the instance name itself.
+    sBuff.writeBuffer(instanceNameBuff);
+
+    return sBuff.toBuffer();
   }
-  
-  if ((typeof instanceName) !== 'string') {
-    throw new Error('instanceName must be a String: ' + instanceName);
+
+  /**
+   * Create a PTR Record from a SmartBuffer. The SmartBuffer should be at the
+   * correct cursor position, at the service type query of the PTR Record.
+   *
+   * @param {SmartBuffer} sBuff
+   *
+   * @return {PtrRecord}
+   */
+  static fromSmartBuffer(sBuff) {
+    let commonFields = exports.getCommonFieldsFromSmartBuffer(sBuff);
+
+    if (commonFields.rrType !== dnsCodes.RECORD_TYPES.PTR) {
+      throw new Error(
+        'De-serialized PTR Record does not have PTR Record type: ' + 
+          commonFields.rrType
+      );
+    }
+
+    // And now we recover just the resource length and resource data.
+    // 2 octets
+    let resourceLength = sBuff.readUInt16BE();
+    if (resourceLength < 0 || resourceLength > 65535) {
+      throw new Error(
+        'Illegal length of PTR Record resource data: ' +
+          resourceLength);
+    }
+
+    // In a PTR Record, the domain name field of the RR is actually the service
+    // type (at least for mDNS).
+    let serviceType = commonFields.domainName;
+    let serviceName = dnsUtil.getDomainFromSmartBuffer(sBuff);
+
+    let result = new exports.PtrRecord(
+      serviceType,
+      commonFields.ttl,
+      serviceName,
+      commonFields.rrClass
+    );
+
+    return result;
   }
-
-  if (!rrClass) {
-    rrClass = dnsCodes.CLASS_CODES.IN;
-  }
-  
-  this.recordType = dnsCodes.RECORD_TYPES.PTR;
-  this.recordClass = rrClass;
-
-  this.serviceType = serviceType;
-  this.name = serviceType;
-  this.ttl = ttl;
-  this.instanceName = instanceName;
-};
-
-/**
- * Get the PTR Record as a Buffer.
- *
- * The DNS spec indicates that an PTR Record is represented in byte form as
- * follows. (Using this and section 3.3.12 as a guide:
- * https://www.ietf.org/rfc/rfc1035.txt).
- *
- * The common fields as indicated in getCommonFieldsAsByteArray.
- *
- * 2 octets representing the length of the following component, in bytes.
- *
- * A variable number of octets representing "the domain-name, which points to
- * some location in the domain name space". In the context of mDNS, this would
- * be the name of the instance that actually provides the service that is being
- * queried for.
- *
- * @return {Buffer}
- */
-exports.PtrRecord.prototype.toBuffer = function() {
-  let sBuff = new SmartBuffer();
-
-  let commonFieldsBuff = exports.getCommonFieldsAsBuffer(
-    this.serviceType,
-    this.recordType,
-    this.recordClass,
-    this.ttl
-  );
-
-  sBuff.writeBuffer(commonFieldsBuff);
-
-  let instanceNameBuff = dnsUtil.getDomainAsBuffer(this.instanceName);
-  let resourceDataLength = instanceNameBuff.length;
-
-  // First we add the length of the resource data.
-  // 2 octets
-  sBuff.writeUInt16BE(resourceDataLength);
-
-  // Then add the instance name itself.
-  sBuff.writeBuffer(instanceNameBuff);
-
-  return sBuff.toBuffer();
-};
+}
 
 /**
  * An SRV record. SRV records map the name of a service instance to the
@@ -2205,99 +2063,157 @@ exports.PtrRecord.prototype.toBuffer = function() {
  *
  * @constructor
  *
- * @param {string} instanceTypeDomain: the name being queried for, e.g.
- * 'PrintsALot._printer._tcp.local'
- * @param {integer} ttl: the time to live
- * @param {integer} priority: the priority of this record if multiple records
- * are found. This must be a number from 0 to 65535.
- * @param {integer} weight: the weight of the record if two records have the
- * same priority. This must be a number from 0 to 65535.
- * @param {integer} port: the port number on which to find the service. This
- * must be a number from 0 to 65535.
- * @param {string} targetDomain: the domain hosting the service (e.g.
- * 'blackhawk.local')
  */
-exports.SrvRecord = function SrvRecord(
-  instanceTypeDomain,
-  ttl,
-  priority,
-  weight,
-  port,
-  targetDomain
-) {
-  if (!(this instanceof SrvRecord)) {
-    throw new Error('SrvRecord must be called with new');
+class SrvRecord {
+  /*
+   * @param {string} instanceTypeDomain: the name being queried for, e.g.
+   * 'PrintsALot._printer._tcp.local'
+   * @param {integer} ttl: the time to live
+   * @param {integer} priority: the priority of this record if multiple records
+   * are found. This must be a number from 0 to 65535.
+   * @param {integer} weight: the weight of the record if two records have the
+   * same priority. This must be a number from 0 to 65535.
+   * @param {integer} port: the port number on which to find the service. This
+   * must be a number from 0 to 65535.
+   * @param {string} targetDomain: the domain hosting the service (e.g.
+   * 'blackhawk.local')
+   */
+  constructor(instanceTypeDomain, ttl, priority, weight, port, targetDomain) {
+    this.recordType = dnsCodes.RECORD_TYPES.SRV;
+    // Note that we're not exposing rrClass as a caller-specified variable,
+    // because according to the spec SRV records occur in the IN class.
+    this.recordClass = dnsCodes.CLASS_CODES.IN;
+
+    this.instanceTypeDomain = instanceTypeDomain;
+    this.name = instanceTypeDomain;
+    this.ttl = ttl;
+    this.priority = priority;
+    this.weight = weight;
+    this.port = port;
+    this.targetDomain = targetDomain;
   }
-  this.recordType = dnsCodes.RECORD_TYPES.SRV;
-  // Note that we're not exposing rrClass as a caller-specified variable,
-  // because according to the spec SRV records occur in the IN class.
-  this.recordClass = dnsCodes.CLASS_CODES.IN;
 
-  this.instanceTypeDomain = instanceTypeDomain;
-  this.name = instanceTypeDomain;
-  this.ttl = ttl;
-  this.priority = priority;
-  this.weight = weight;
-  this.port = port;
-  this.targetDomain = targetDomain;
-};
+  /**
+   * Get the SRV Record as a Buffer object.
+   *
+   * According to this document (https://tools.ietf.org/html/rfc2782) and more
+   * explicitly this document
+   * (http://www.tahi.org/dns/packages/RFC2782_S4-1_0_0/SV/SV_RFC2782_SRV_rdata.html),
+   * the layout of the SRV RR is as follows:
+   *
+   * The common fields as indicated in getCommonFieldsAsBuffer.
+   *
+   * 2 octets representing the length of the following component, in bytes.
+   *
+   * 2 octets indicating the priority
+   *
+   * 2 octets indicating the weight
+   *
+   * 2 octets indicating the port
+   *
+   * A variable number of octets encoding the target name (e.g.
+   * PrintsALot.local), encoded as a domain name.
+   *
+   * @return {Buffer}
+   */
+  toBuffer() {
+    let sBuff = new SmartBuffer();
 
-/**
- * Get the SRV Record as a Buffer object.
- *
- * According to this document (https://tools.ietf.org/html/rfc2782) and more
- * explicitly this document
- * (http://www.tahi.org/dns/packages/RFC2782_S4-1_0_0/SV/SV_RFC2782_SRV_rdata.html),
- * the layout of the SRV RR is as follows:
- *
- * The common fields as indicated in getCommonFieldsAsBuffer.
- *
- * 2 octets representing the length of the following component, in bytes.
- *
- * 2 octets indicating the priority
- *
- * 2 octets indicating the weight
- *
- * 2 octets indicating the port
- *
- * A variable number of octets encoding the target name (e.g.
- * PrintsALot.local), encoded as a domain name.
- *
- * @return {Buffer}
- */
-exports.SrvRecord.prototype.toBuffer = function() {
-  let sBuff = new SmartBuffer();
+    let commonFieldsBuff = exports.getCommonFieldsAsBuffer(
+      this.instanceTypeDomain,
+      this.recordType,
+      this.recordClass,
+      this.ttl
+    );
 
-  let commonFieldsBuff = exports.getCommonFieldsAsBuffer(
-    this.instanceTypeDomain,
-    this.recordType,
-    this.recordClass,
-    this.ttl
-  );
+    sBuff.writeBuffer(commonFieldsBuff);
 
-  sBuff.writeBuffer(commonFieldsBuff);
+    let targetNameBuff = dnsUtil.getDomainAsBuffer(this.targetDomain);
 
-  let targetNameBuff = dnsUtil.getDomainAsBuffer(this.targetDomain);
+    let resourceDataLength = NUM_OCTETS_PRIORITY +
+      NUM_OCTETS_WEIGHT +
+      NUM_OCTETS_PORT +
+      targetNameBuff.length;
 
-  let resourceDataLength = NUM_OCTETS_PRIORITY +
-    NUM_OCTETS_WEIGHT +
-    NUM_OCTETS_PORT +
-    targetNameBuff.length;
+    // First we add the length of the resource data.
+    // 2 octets
+    sBuff.writeUInt16BE(resourceDataLength);
 
-  // First we add the length of the resource data.
-  // 2 octets
-  sBuff.writeUInt16BE(resourceDataLength);
+    // Then add the priority, weight, and port.
+    // 2 octets
+    sBuff.writeUInt16BE(this.priority);
+    sBuff.writeUInt16BE(this.weight);
+    sBuff.writeUInt16BE(this.port);
 
-  // Then add the priority, weight, and port.
-  // 2 octets
-  sBuff.writeUInt16BE(this.priority);
-  sBuff.writeUInt16BE(this.weight);
-  sBuff.writeUInt16BE(this.port);
+    sBuff.writeBuffer(targetNameBuff);
 
-  sBuff.writeBuffer(targetNameBuff);
+    return sBuff.toBuffer();
+  }
 
-  return sBuff.toBuffer();
-};
+  /**
+   * Create an SRV Record from a SmartBuffer. The SmartBuffer should be at the
+   * correct cursor position, at the service type query of the SRV Record.
+   *
+   * @param {SmartBuffer} sBuff
+   *
+   * @return {SrvRecord}
+   */
+  static fromSmartBuffer(sBuff) {
+    let commonFields = exports.getCommonFieldsFromSmartBuffer(sBuff);
+
+    if (commonFields.rrType !== dnsCodes.RECORD_TYPES.SRV) {
+      throw new Error(
+        'De-serialized SRV Record does not have SRV Record type: ' + 
+          commonFields.rrType
+      );
+    }
+
+    // And now we recover just the resource length and resource data.
+    // 2 octets
+    let resourceLength = sBuff.readUInt16BE();
+    if (resourceLength < 0 || resourceLength > 65535) {
+      throw new Error(
+        'Illegal length of SRV Record resource data: ' +
+          resourceLength);
+    }
+
+    // In a SRV Record, the domain name field of the RR is actually the service
+    // proto name.
+    let serviceInstanceName = commonFields.domainName;
+    
+    // After the common fields, we expect priority, weight, port, target name.
+    // 2 octets
+    let priority = sBuff.readUInt16BE();
+    if (priority < 0 || priority > 65535) {
+      throw new Error('Illegal length of SRV Record priority: ' + priority);
+    }
+
+    // 2 octets
+    let weight = sBuff.readUInt16BE();
+    if (weight < 0 || weight > 65535) {
+      throw new Error('Illegal length of SRV Record priority: ' + weight);
+    }
+
+    // 2 octets
+    let port = sBuff.readUInt16BE();
+    if (port < 0 || port > 65535) {
+      throw new Error('Illegal length of SRV Record priority: ' + port);
+    }
+
+    let targetName = dnsUtil.getDomainFromSmartBuffer(sBuff);
+
+    let result = new exports.SrvRecord(
+      serviceInstanceName,
+      commonFields.ttl,
+      priority,
+      weight,
+      port,
+      targetName
+    );
+
+    return result;
+  }
+}
 
 /**
  * Get the common components of a RR as a Buffer. As specified by the DNS
@@ -2391,6 +2307,10 @@ exports.peekTypeInSmartBuffer = function(sBuff) {
   sBuff.moveTo(readOffset);
   return result;
 };
+
+exports.ARecord = ARecord;
+exports.PtrRecord = PtrRecord;
+exports.SrvRecord = SrvRecord;
 
 },{"./dns-codes":9,"./dns-util":11,"smart-buffer":53}],14:[function(require,module,exports){
 'use strict';
@@ -2678,99 +2598,93 @@ const serverApi = require('../server/server-api');
 const util = require('../util');
 
 
-/**
- * @constructor
- */
-exports.HttpPeerAccessor = function HttpPeerAccessor() {
-  if (!(this instanceof HttpPeerAccessor)) {
-    throw new Error('PeerAccessor must be called with new');
+class HttpPeerAccessor {
+  /**
+   * Retrieve a blob from the peer.
+   *
+   * @param {Object} params parameter object as created by peer-interface/common
+   *
+   * @return {Promise.<Blob, Error>}
+   */
+  getFileBlob(params) {
+    return new Promise(function(resolve, reject) {
+      return util.fetch(params.fileUrl)
+      .then(response => {
+        return response.blob();
+      })
+      .then(blob => {
+        resolve(blob);
+      })
+      .catch(err => {
+        reject(err);
+      });
+    });
   }
-  
-};
 
-/**
- * Retrieve a blob from the peer.
- *
- * @param {Object} params parameter object as created by peer-interface/common
- *
- * @return {Promise.<Blob, Error>}
- */
-exports.HttpPeerAccessor.prototype.getFileBlob = function(params) {
-  return new Promise(function(resolve, reject) {
-    return util.fetch(params.fileUrl)
-    .then(response => {
-      return response.blob();
-    })
-    .then(blob => {
-      resolve(blob);
-    })
-    .catch(err => {
-      reject(err);
+  /**
+   * Retrieve the list of pages in the peer's cache.
+   *
+   * @param {Object} params parameter object as created by peer-interface/common
+   *
+   * @return {Promise.<Object, Error>}
+   */
+  getList(params) {
+    return new Promise(function(resolve, reject) {
+      util.fetch(params.listUrl)
+      .then(response => {
+        return response.json();
+      })
+      .then(json => {
+        resolve(json);
+      })
+      .catch(err => {
+        reject(err);
+      });
     });
-  });
-};
+  }
 
-/**
- * Retrieve the list of pages in the peer's cache.
- *
- * @param {Object} params parameter object as created by peer-interface/common
- *
- * @return {Promise.<Object, Error>}
- */
-exports.HttpPeerAccessor.prototype.getList = function(params) {
-  return new Promise(function(resolve, reject) {
-    util.fetch(params.listUrl)
-    .then(response => {
-      return response.json();
-    })
-    .then(json => {
-      resolve(json);
-    })
-    .catch(err => {
-      reject(err);
+  /**
+   * Retrieve the list of cached pages available in this cache.
+   *
+   * @param {Object} params parameter object as created by peer-interface/common
+   *
+   * @return {Promise.<Object, Error>} Promise that resolves with the digest
+   * response or rejects with an Error.
+   */
+  getCacheDigest(params) {
+    return new Promise(function(resolve, reject) {
+      util.fetch(params.digestUrl)
+      .then(response => {
+        return response.json();
+      })
+      .then(json => {
+        resolve(json);
+      })
+      .catch(err => {
+        reject(err);
+      });
     });
-  });
-};
+  }
 
-/**
- * Retrieve the list of cached pages available in this cache.
- *
- * @param {Object} params parameter object as created by peer-interface/common
- *
- * @return {Promise.<Object, Error>} Promise that resolves with the digest
- * response or rejects with an Error.
- */
-exports.HttpPeerAccessor.prototype.getCacheDigest = function(params) {
-  return new Promise(function(resolve, reject) {
-    util.fetch(params.digestUrl)
+  /**
+   * @param {Object} params
+   *
+   * @return {Promise.<BloomFilter, Error>}
+   */
+  getCacheBloomFilter(params) {
+    return util.fetch(params.bloomUrl)
     .then(response => {
-      return response.json();
+      return response.arrayBuffer();
     })
-    .then(json => {
-      resolve(json);
-    })
-    .catch(err => {
-      reject(err);
+    .then(arrayBuffer => {
+      let buff = Buffer.from(arrayBuffer);
+      let result = serverApi.parseResponseForBloomFilter(buff);
+      return result;
     });
-  });
-};
+  }
+}
 
-/**
- * @param {Object} params
- *
- * @return {Promise.<BloomFilter, Error>}
- */
-exports.HttpPeerAccessor.prototype.getCacheBloomFilter = function(params) {
-  return util.fetch(params.bloomUrl)
-  .then(response => {
-    return response.arrayBuffer();
-  })
-  .then(arrayBuffer => {
-    let buff = Buffer.from(arrayBuffer);
-    let result = serverApi.parseResponseForBloomFilter(buff);
-    return result;
-  });
-};
+exports.HttpPeerAccessor = HttpPeerAccessor;
 
 }).call(this,require("buffer").Buffer)
 },{"../server/server-api":22,"../util":23,"buffer":34}],17:[function(require,module,exports){
@@ -4147,6 +4061,8 @@ const EventEmitter = require('events').EventEmitter;
 
 const protocol = require('./protocol');
 
+const ProtocolMessage = protocol.ProtocolMessage;
+
 
 const EV_CHUNK = 'chunk';
 const EV_COMPLETE = 'complete';
@@ -4271,7 +4187,7 @@ class BaseClient extends EventEmitter {
 
     channel.onmessage = function(event) {
       const eventBuff = Buffer.from(event.data);
-      const msg = protocol.from(eventBuff);
+      const msg = ProtocolMessage.fromBuffer(eventBuff);
       self.handleMessageFromServer(msg);
     };
   }
@@ -4869,131 +4785,128 @@ exports.STATUS_CODES = {
   ok: 200
 };
 
-/**
- * @constructor
- * 
- * @param {Object} header
- * @param {Buffer} buff
- */
-exports.ProtocolMessage = function ProtocolMessage(header, buff) {
-  if (!(this instanceof ProtocolMessage)) {
-    throw new Error('ProtocolMessage must be called with new');
-  }
-  this.header = header;
-
-  // Distinguishing between 0 length Buffers and null is problematic for
-  // serialization. To ensure we have consistent behavior, we'll default to an
-  // empty buffer.
-  if (!buff) {
-    buff = Buffer.alloc(0);
-  }
-  this.data = buff;
-};
-
-/**
- * @return {boolean} true if is an OK message, else false
- */
-exports.ProtocolMessage.prototype.isOk = function() {
-  let statusCode = this.getStatusCode();
-  return statusCode === exports.STATUS_CODES.ok;
-};
-
-/**
- * @return {boolean} true if is an Error message, else false
- */
-exports.ProtocolMessage.prototype.isError = function() {
-  let statusCode = this.getStatusCode();
-  return statusCode === exports.STATUS_CODES.error;
-};
-
-/**
- * @return {Object} the header object from the message
- */
-exports.ProtocolMessage.prototype.getHeader = function() {
-  return this.header;
-};
-
-/**
- * @return {Buffer} the Buffer representing the payload of the message
- */
-exports.ProtocolMessage.prototype.getData = function() {
-  return this.data;
-};
-
-/**
- * @return {integer|null} the integer status code of the message. If no header
- * or status code is included, returns null.
- */
-exports.ProtocolMessage.prototype.getStatusCode = function() {
-  if (!this.header) {
-    return null;
-  }
-  if (!this.header.status) {
-    return null;
-  }
-  return this.header.status;
-};
-
-/**
- * Get this ProtocolMessage as a Buffer, serializing the method. This Buffer
- * can then be deserialized using the from() method.
- *
- * @return {Buffer}
- */
-exports.ProtocolMessage.prototype.toBuffer = function() {
-  /*
-   * The data structure is outlined as follows, but is not part of the public
-   * API. The first 4 bytes correspond to an integer. This integer denotes the
-   * length of the JSON header information. All remaining bytes are data bytes.
+class ProtocolMessage {
+  /**
+   * @param {Object} header
+   * @param {Buffer} buff
    */
-  let metadataLength = NUM_BYTES_HEADER_LENGTH;
-  let headerStr = '';
-  let headerLength = 0;
-  if (this.header) {
-    headerStr = JSON.stringify(this.header);
-    headerLength = headerStr.length;
-    metadataLength += headerLength;
+  constructor(header, buff) {
+    this.header = header;
+
+    // Distinguishing between 0 length Buffers and null is problematic for
+    // serialization. To ensure we have consistent behavior, we'll default to an
+    // empty buffer.
+    if (!buff) {
+      buff = Buffer.alloc(0);
+    }
+    this.data = buff;
   }
 
-  let metadataBuff = Buffer.alloc(metadataLength);
-
-  let offset = 0;
-  metadataBuff.writeUInt32BE(headerLength);
-  offset += NUM_BYTES_HEADER_LENGTH;
-
-  metadataBuff.write(headerStr, offset, headerLength);
-
-  let buffsToJoin = [ metadataBuff ];
-  if (this.data) {
-    buffsToJoin.push(this.data);
+  /**
+   * @return {boolean} true if is an OK message, else false
+   */
+  isOk() {
+    let statusCode = this.getStatusCode();
+    return statusCode === exports.STATUS_CODES.ok;
   }
 
-  let result = Buffer.concat(buffsToJoin);
-  return result;
-};
-
-/**
- * Recover a ProtocolMessage from a Buffer.
- *
- * @param {Buffer} buff
- *
- * @return {ProtocolMessage}
- */
-exports.from = function(buff) {
-  let headerLength = buff.readUInt32BE(0);
-  let offset = NUM_BYTES_HEADER_LENGTH;
-  let headerStr = buff.toString('utf8', offset, offset + headerLength);
-  offset += headerLength;
-
-  let header = null;
-  if (headerLength > 0) {
-    header = JSON.parse(headerStr);
+  /**
+   * @return {boolean} true if is an Error message, else false
+   */
+  isError() {
+    let statusCode = this.getStatusCode();
+    return statusCode === exports.STATUS_CODES.error;
   }
-  let data = buff.slice(offset, buff.length);
 
-  let result = new exports.ProtocolMessage(header, data);
-  return result;
-};
+  /**
+   * @return {Object} the header object from the message
+   */
+  getHeader() {
+    return this.header;
+  }
+
+  /**
+   * @return {Buffer} the Buffer representing the payload of the message
+   */
+  getData() {
+    return this.data;
+  }
+
+  /**
+   * @return {integer|null} the integer status code of the message. If no header
+   * or status code is included, returns null.
+   */
+  getStatusCode() {
+    if (!this.header) {
+      return null;
+    }
+    if (!this.header.status) {
+      return null;
+    }
+    return this.header.status;
+  }
+
+  /**
+   * Get this ProtocolMessage as a Buffer, serializing the method. This Buffer
+   * can then be deserialized using the from() method.
+   *
+   * @return {Buffer}
+   */
+  toBuffer() {
+    /*
+     * The data structure is outlined as follows, but is not part of the public
+     * API. The first 4 bytes correspond to an integer. This integer denotes the
+     * length of the JSON header information. All remaining bytes are data bytes.
+     */
+    let metadataLength = NUM_BYTES_HEADER_LENGTH;
+    let headerStr = '';
+    let headerLength = 0;
+    if (this.header) {
+      headerStr = JSON.stringify(this.header);
+      headerLength = headerStr.length;
+      metadataLength += headerLength;
+    }
+
+    let metadataBuff = Buffer.alloc(metadataLength);
+
+    let offset = 0;
+    metadataBuff.writeUInt32BE(headerLength);
+    offset += NUM_BYTES_HEADER_LENGTH;
+
+    metadataBuff.write(headerStr, offset, headerLength);
+
+    let buffsToJoin = [ metadataBuff ];
+    if (this.data) {
+      buffsToJoin.push(this.data);
+    }
+
+    let result = Buffer.concat(buffsToJoin);
+    return result;
+  }
+
+  /**
+   * Recover a ProtocolMessage from a Buffer.
+   *
+   * @param {Buffer} buff
+   *
+   * @return {ProtocolMessage}
+   */
+  static fromBuffer(buff) {
+    let headerLength = buff.readUInt32BE(0);
+    let offset = NUM_BYTES_HEADER_LENGTH;
+    let headerStr = buff.toString('utf8', offset, offset + headerLength);
+    offset += headerLength;
+
+    let header = null;
+    if (headerLength > 0) {
+      header = JSON.parse(headerStr);
+    }
+    let data = buff.slice(offset, buff.length);
+
+    let result = new exports.ProtocolMessage(header, data);
+    return result;
+  }
+}
 
 /**
  * Create a rudimentary header object.
@@ -5028,6 +4941,8 @@ exports.createErrorMessage = function(reason) {
   header.message = reason;
   return new exports.ProtocolMessage(header, null);
 };
+
+exports.ProtocolMessage = ProtocolMessage;
 
 }).call(this,require("buffer").Buffer)
 },{"buffer":34}],29:[function(require,module,exports){
@@ -45522,30 +45437,26 @@ const util = require('./util');
 
 let DEBUG = false;
 
-/**
- * @constructor
- */
-exports.ChromeUdpSocket = function ChromeUdpSocket(socketInfo) {
-  if (!(this instanceof ChromeUdpSocket)) {
-    throw new Error('ChromeUdpSocket must be called with new');
+class ChromeUdpSocket {
+  constructor(socketInfo) {
+    this.socketInfo = socketInfo;
+    this.socketId = socketInfo.id;
   }
-  this.socketInfo = socketInfo;
-  this.socketId = socketInfo.socketId;
-};
 
-/**
- * Send data over the port and return a promise with the sendInfo result.
- * Behaves as a thin wrapper around chromeUdp.send.
- *
- * @param {ArrayBuffer} arrayBuffer
- * @param {string} address
- * @param {integer} port
- *
- * @return {Promise.<any, Error>}
- */
-exports.ChromeUdpSocket.prototype.send = function(arrayBuffer, address, port) {
-  return exports.send(this.socketId, arrayBuffer, address, port);
-};
+  /**
+   * Send data over the port and return a promise with the sendInfo result.
+   * Behaves as a thin wrapper around chromeUdp.send.
+   *
+   * @param {ArrayBuffer} arrayBuffer
+   * @param {string} address
+   * @param {integer} port
+   *
+   * @return {Promise.<any, Error>}
+   */
+  send(arrayBuffer, address, port) {
+    return exports.send(this.socketId, arrayBuffer, address, port);
+  }
+}
 
 /**
  * Add listener via call to util.getUdp().onReceive.addListener.
@@ -45735,6 +45646,8 @@ exports.getNetworkInterfaces = function() {
     });
   });
 };
+
+exports.ChromeUdpSocket = ChromeUdpSocket;
 
 },{"./util":2}],"cmgr":[function(require,module,exports){
 (function (Buffer){

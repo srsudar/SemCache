@@ -31,18 +31,6 @@ function createPageInfos() {
   return [pageInfo1, pageInfo2];
 }
 
-test('NetworkCachedPage constructor succeeds', function(t) {
-  let availability = 'probable';
-  let queryInfo = { url: 'hidyho.com' };
-  let accessInfo = { info: 'come get some' };
-  let ncp = new objects.NetworkCachedPage(availability, queryInfo, accessInfo);
-
-  t.equal(ncp.availability, availability);
-  t.equal(ncp.queryInfo, queryInfo);
-  t.equal(ncp.accessInfo, accessInfo);
-  t.end();
-});
-
 test('Digest consructor succeeds', function(t) {
   let peerInfo = createPeerInfo();
   let pageInfos = [];
