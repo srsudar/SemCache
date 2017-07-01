@@ -41,22 +41,21 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
         };
 
         // An example result we might expect from listUrl
-        var cacheJson = {
-          metadata: { version: 0 },
-          cachedPages: [
-            {
-              captureHref: 'url0.com',
-              captureDate: 'date0',
-            },
-            {
-              captureHref: 'url1.com',
-              captureDate: 'date1',
-            }
-          ]
-        };
+        var cachedPages = [
+          {
+            captureHref: 'url0.com',
+            captureDate: 'date0',
+          },
+          {
+            captureHref: 'url1.com',
+            captureDate: 'date1',
+          }
+        ]
 
-        var getListFromServiceSpy = sinon.stub().withArgs(serviceName)
-          .returns(Promise.resolve(cacheJson));
+        var getListFromServiceSpy = sinon.stub();
+        getListFromServiceSpy
+          .withArgs(serviceName)
+          .returns(Promise.resolve(cachedPages));
 
         var getAppControllerModuleSpy = sinon.stub().returns({
           getListFromService: getListFromServiceSpy
@@ -93,7 +92,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
               var repeatedEls = Polymer.dom(myEl.root).querySelectorAll(
                 'cached-page-summary'
               );
-              var expectedPages = cacheJson.cachedPages;
+              let expectedPages = cachedPages;
 
               // We expect one for each summary.
               assert.equal(repeatedEls.length, expectedPages.length);

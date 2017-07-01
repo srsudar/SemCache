@@ -18172,12 +18172,14 @@ Polymer({
           return appc.getListFromService(thisEl.serviceName);
         })
         .then(pageList => {
-          thisEl.pageList = pageList.cachedPages;
+          thisEl.pageList = pageList;
           thisEl.hideLoading();
           resolve();
         })
         .catch(err => {
-          console.log('refresh went wrong: ' + err);
+          console.log('refresh went wrong:', err);
+          console.log(err);
+          console.log(err.message);
           thisEl.hideLoading();
           thisEl.showError(err);
           resolve();
