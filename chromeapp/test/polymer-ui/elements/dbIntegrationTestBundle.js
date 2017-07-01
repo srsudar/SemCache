@@ -48869,6 +48869,7 @@ exports.queryLocalMachineForUrls = function(message) {
     datastore.getAllCachedPages()
     .then(cpinfos => {
       cpinfos.forEach(cpinfo => {
+        cpinfo = cpinfo.toJSON();
         urls.forEach(url => {
           if (url === cpinfo.captureHref) {
             let copies = result[url];
