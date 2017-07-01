@@ -330,6 +330,8 @@ exports.startServersAndRegister = function() {
       console.log('REGISTERED: ', registerResult);
       exports.getServerController().start(httpIface, serverPort);
       exports.SERVERS_STARTED = true;
+      // Also initialize the coalescence manager.
+      coalMgr.initialize();
       resolve(registerResult);
     })
     .catch(rejected => {
@@ -1104,6 +1106,7 @@ exports.DigestStrategy = DigestStrategy;
 
 const stratBloom = require('./bloom-strategy');
 const stratDig = require('./digest-strategy');
+const util = require('../util');
 
 
 /**
@@ -1125,6 +1128,11 @@ exports.STRATEGIES = {
 };
 
 /**
+ * The amount of time to wait between refreshing the coalescence strategy.
+ */
+exports.REFRESH_CYCLE_MILLIS = 60000;
+
+/**
  * The current startegy for resolving coalescence requests.
  */
 exports.CURRENT_STRATEGY = exports.STRATEGIES.digest;
@@ -1135,8 +1143,41 @@ exports.ACTIVE_SRAT_OBJECT = null;
  * Restore state for the coalescence module.
  */
 exports.reset = function() {
+  if (exports.ACTIVE_SRAT_OBJECT) {
+    exports.ACTIVE_SRAT_OBJECT.reset();
+  }
   exports.ACTIVE_SRAT_OBJECT = null;
 };
+
+/**
+ * Start the coalescence manager.
+ */
+exports.initialize = function() {
+  let strategy = exports.getStrategy();
+  strategy.initialize();
+};
+
+/**
+ * Initialize a refresh cycle for the active strategy. Stops when there is no
+ * active strategy object.
+ */
+exports.enqueueRefresh = function() {
+  return new Promise(function(resolve) {
+    util.wait(exports.REFRESH_CYCLE_MILLIS)
+    .then(() => {
+      console.log('Refreshing');
+      if (exports.ACTIVE_SRAT_OBJECT) {
+        exports.ACTIVE_SRAT_OBJECT.refresh();
+        exports.enqueueRefresh();
+        resolve();
+      } else {
+        console.log('No active coalescence strategy, stopping refresh');
+        resolve();
+      }
+    });
+  });
+};
+
 
 /**
  * Obtain access information for the given array of URLs. The result will be an
@@ -1185,7 +1226,7 @@ exports.getStrategy = function() {
   return result;
 };
 
-},{"./bloom-strategy":6,"./digest-strategy":7}],9:[function(require,module,exports){
+},{"../util":37,"./bloom-strategy":6,"./digest-strategy":7}],9:[function(require,module,exports){
 (function (Buffer){
 'use strict';
 
@@ -6074,6 +6115,7 @@ exports.queryLocalMachineForUrls = function(message) {
     datastore.getAllCachedPages()
     .then(cpinfos => {
       cpinfos.forEach(cpinfo => {
+        cpinfo = cpinfo.toJSON();
         urls.forEach(url => {
           if (url === cpinfo.captureHref) {
             let copies = result[url];
@@ -10222,7 +10264,7 @@ exports.onBloomFilter = function(channel) {
 
 exports.onCachedPage = function(channel, msg) {
   return new Promise(function(resolve, reject) {
-    serverApi.getResponseForCachedPage(msg.request)
+    serverApi.getResponseForCachedPage(msg.request.href)
     .then(buff => {
       return exports.sendBufferOverChannel(channel, buff);   
     })

@@ -44939,6 +44939,8 @@ exports.startServersAndRegister = function() {
       console.log('REGISTERED: ', registerResult);
       exports.getServerController().start(httpIface, serverPort);
       exports.SERVERS_STARTED = true;
+      // Also initialize the coalescence manager.
+      coalMgr.initialize();
       resolve(registerResult);
     })
     .catch(rejected => {
@@ -45596,6 +45598,7 @@ exports.createRTCSessionDescription = function(descJson) {
 
 const stratBloom = require('./bloom-strategy');
 const stratDig = require('./digest-strategy');
+const util = require('../util');
 
 
 /**
@@ -45617,6 +45620,11 @@ exports.STRATEGIES = {
 };
 
 /**
+ * The amount of time to wait between refreshing the coalescence strategy.
+ */
+exports.REFRESH_CYCLE_MILLIS = 60000;
+
+/**
  * The current startegy for resolving coalescence requests.
  */
 exports.CURRENT_STRATEGY = exports.STRATEGIES.digest;
@@ -45627,8 +45635,41 @@ exports.ACTIVE_SRAT_OBJECT = null;
  * Restore state for the coalescence module.
  */
 exports.reset = function() {
+  if (exports.ACTIVE_SRAT_OBJECT) {
+    exports.ACTIVE_SRAT_OBJECT.reset();
+  }
   exports.ACTIVE_SRAT_OBJECT = null;
 };
+
+/**
+ * Start the coalescence manager.
+ */
+exports.initialize = function() {
+  let strategy = exports.getStrategy();
+  strategy.initialize();
+};
+
+/**
+ * Initialize a refresh cycle for the active strategy. Stops when there is no
+ * active strategy object.
+ */
+exports.enqueueRefresh = function() {
+  return new Promise(function(resolve) {
+    util.wait(exports.REFRESH_CYCLE_MILLIS)
+    .then(() => {
+      console.log('Refreshing');
+      if (exports.ACTIVE_SRAT_OBJECT) {
+        exports.ACTIVE_SRAT_OBJECT.refresh();
+        exports.enqueueRefresh();
+        resolve();
+      } else {
+        console.log('No active coalescence strategy, stopping refresh');
+        resolve();
+      }
+    });
+  });
+};
+
 
 /**
  * Obtain access information for the given array of URLs. The result will be an
@@ -45677,7 +45718,7 @@ exports.getStrategy = function() {
   return result;
 };
 
-},{"./bloom-strategy":4,"./digest-strategy":5}],"db":[function(require,module,exports){
+},{"../util":23,"./bloom-strategy":4,"./digest-strategy":5}],"db":[function(require,module,exports){
 'use strict';
 
 const Dexie = require('dexie');

@@ -328,6 +328,7 @@ test('startServersAndRegister resolves if register resolves', function(t) {
   let dnsControllerStartSpy = sinon.stub().resolves();
   let getIPv4InterfacesSpy = sinon.stub().returns([iface]);
   let updateCachesForSettingsSpy = sinon.stub();
+  let coalMgrInitStub = sinon.stub();
 
   proxyquireAppc({
     './settings': {
@@ -342,7 +343,10 @@ test('startServersAndRegister resolves if register resolves', function(t) {
     './dnssd/dns-controller': {
       start: dnsControllerStartSpy,
       getIPv4Interfaces: getIPv4InterfacesSpy
-    }
+    },
+    './coalescence/manager': {
+      initialize: coalMgrInitStub
+    },
   });
   appc.getServerController = sinon.stub().returns({
     start: httpStartSpy
@@ -363,6 +367,7 @@ test('startServersAndRegister resolves if register resolves', function(t) {
     t.deepEqual(httpStartSpy.args[0], ['0.0.0.0', port]);
     t.deepEqual(appc.LISTENING_HTTP_INTERFACE, iface);
     
+    t.true(coalMgrInitStub.calledOnce);
     t.true(updateCachesForSettingsSpy.calledOnce);
     t.true(dnsControllerStartSpy.calledOnce);
     t.true(appc.networkIsActive());

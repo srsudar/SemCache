@@ -1,5 +1,6 @@
 'use strict';
 
+const proxyquire = require('proxyquire');
 const sinon = require('sinon');
 const test = require('tape');
 
@@ -25,6 +26,10 @@ function end(t) {
   if (!t) { throw new Error('You forgot to pass t'); }
   reset();
   t.end();
+}
+
+function proxyquireManager(proxies) {
+  mgr = proxyquire('../../../app/scripts/coalescence/manager', proxies);
 }
 
 test('getStrategy returns digest strategy', function(t) {
@@ -110,5 +115,92 @@ test('reset calls reset on device', function(t) {
 
   mgr.reset();
   t.equal(mgr.ACTIVE_SRAT_OBJECT, null);
+  t.equal(resetStub.callCount, 1);
+  end(t);
+});
+
+test('enqueueRefresh calls a timeout and refreshes', function(t) {
+  let actualMillis = null;
+  let waitStub = function(millisParam) {
+    actualMillis = millisParam;
+    return Promise.resolve();
+  };
+
+  let refreshStub = sinon.stub();
+  let stratStub = {
+    refresh: refreshStub
+  };
+
+  proxyquireManager({
+    '../util': {
+      wait: waitStub
+    }
+  });
+  mgr.ACTIVE_SRAT_OBJECT = stratStub;
+
+  // This is a bit tricky because we expect our function to invoke ourselves,
+  // creating cycles during testing. To get around this we are going to save a
+  // reference to the function and then replace the function on a module with
+  // the stub.
+
+  let originalEnqueueRefresh = mgr.enqueueRefresh;
+
+  let enqueueRefreshStub = sinon.stub();
+  // We want to do the real thing the first time, acting like an original
+  // invocation.
+  enqueueRefreshStub
+    .onCall(0)
+    .returns(originalEnqueueRefresh());
+
+  mgr.enqueueRefresh = enqueueRefreshStub;
+
+  mgr.enqueueRefresh()
+  .then(actual => {
+    t.equal(actual, undefined);
+    t.equal(actualMillis, mgr.REFRESH_CYCLE_MILLIS);
+    // We should have called enqueueRefresh twice--once ourselves, once after
+    // the wait resolved.
+    t.equal(enqueueRefreshStub.callCount, 2);
+    t.equal(refreshStub.callCount, 1);
+    end(t);
+  })
+  .catch(err => {
+    t.fail(err);
+    end(t);
+  });
+});
+
+test('enqueueRefresh does not enqueueRefresh if no strategy', function(t) {
+  proxyquireManager({
+    '../util': {
+      wait: sinon.stub().resolves()
+    }
+  });
+
+  let enqueueRefreshSpy = sinon.spy(mgr.enqueueRefresh);
+
+  enqueueRefreshSpy()
+  .then(actual => {
+    t.equal(actual, undefined);
+    t.equal(enqueueRefreshSpy.callCount, 1);
+    end(t);
+  })
+  .catch(err => {
+    t.fail(err);
+    end(t);
+  });
+});
+
+test('initialize gets strategy and initializes', function(t) {
+  let initStub = sinon.stub().resolves();
+  let stratStub = {
+    initialize: initStub
+  };
+
+  mgr.getStrategy = sinon.stub().returns(stratStub);
+
+  mgr.initialize();
+
+  t.equal(initStub.callCount, 1);
   end(t);
 });

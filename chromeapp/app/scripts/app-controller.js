@@ -329,6 +329,8 @@ exports.startServersAndRegister = function() {
       console.log('REGISTERED: ', registerResult);
       exports.getServerController().start(httpIface, serverPort);
       exports.SERVERS_STARTED = true;
+      // Also initialize the coalescence manager.
+      coalMgr.initialize();
       resolve(registerResult);
     })
     .catch(rejected => {
