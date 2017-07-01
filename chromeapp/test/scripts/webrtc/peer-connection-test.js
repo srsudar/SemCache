@@ -233,60 +233,6 @@ test('getCacheBloomFilter rejects', function(t) {
   });
 });
 
-test('getFile resolves with response from server', function(t) {
-  let rawConnection = sinon.stub();
-  rawConnection.on = sinon.stub();
-  let msg = 'file message';
-
-  let expected = Buffer.from('response from server');
-
-  proxyquirePeerConn({
-    './message': {
-      createFileMessage: sinon.stub().returns(msg)
-    }
-  });
-
-  let pc = new peerConn.PeerConnection(rawConnection);
-  pc.sendAndGetResponse = sinon.stub();
-  pc.sendAndGetResponse.withArgs(msg).resolves(expected);
-  
-
-  pc.getFile()
-  .then(actual => {
-    t.deepEqual(actual, expected);
-    end(t);
-  })
-  .catch(err => {
-    t.fail(err);
-    end(t);
-  });
-});
-
-test('getFile rejects if error', function(t) {
-  let rawConnection = sinon.stub();
-  rawConnection.on = sinon.stub();
-
-  let expected = { error: 'error during getFile' };
-
-  proxyquirePeerConn({
-    './message': {
-      createFileMessage: sinon.stub().throws(expected)
-    }
-  });
-  
-  let pc = new peerConn.PeerConnection(rawConnection);
-
-  pc.getFile()
-  .then(res => {
-    t.fail(res);
-    end(t);
-  })
-  .catch(actual => {
-    t.deepEqual(actual, expected);
-    end(t);
-  });
-});
-
 test('getCachedPage resolves with CPDisk', function(t) {
   let rawConnection = sinon.stub();
   rawConnection.on = sinon.stub();

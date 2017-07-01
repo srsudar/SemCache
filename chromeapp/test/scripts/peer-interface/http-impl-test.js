@@ -3,6 +3,7 @@
 const proxyquire = require('proxyquire');
 const sinon = require('sinon');
 const test = require('tape');
+const toArrayBuffer = require('to-arraybuffer');
 
 const serverApi = require('../../../app/scripts/server/server-api');
 const sutil = require('../server/util');
@@ -45,22 +46,19 @@ test('can create PeerAccessor', function(t) {
   end(t);
 });
 
-test.only('getList resolves with json', function(t) {
+test('getList resolves with json', function(t) {
   let { ipAddress, port } = tutil.getIpPort();
   let listUrl = serverApi.getListPageUrlForCache(ipAddress, port);
 
   let expected = sutil.getListResponseParsed();
-  let response = sinon.stub();
 
   let responseBuff = sutil.getListResponseBuff();
-  console.log(responseBuff.length);
-  console.log(responseBuff);
-  console.log(responseBuff.buffer);
   // The buffer property is not truncated by default.
-  let arrayBuffer = responseBuff.buffer.slice(0, responseBuff.length);
-  console.log(arrayBuffer);
+  let arrayBuffer = toArrayBuffer(responseBuff);
 
-  response.arrayBuffer = sinon.stub().resolves(arrayBuffer);
+  let response = {
+    arrayBuffer: sinon.stub().resolves(arrayBuffer)
+  };
 
   let fetchSpy = sinon.stub();
   fetchSpy.withArgs(listUrl).resolves(response);
@@ -111,10 +109,11 @@ test('getCacheDigest resolves with json', function(t) {
   let digestUrl = serverApi.getUrlForDigest(ipAddress, port);
 
   let expected = sutil.getDigestResponseParsed();
-  let response = sinon.stub();
-  response.arrayBuffer = sinon.stub().resolves(
-    sutil.getDigestResponseBuff().buffer
-  );
+  let arrayBuffer = toArrayBuffer(sutil.getDigestResponseBuff());
+
+  let response = {
+    arrayBuffer: sinon.stub().resolves(arrayBuffer)
+  };
 
   let fetchSpy = sinon.stub();
   fetchSpy.withArgs(digestUrl).resolves(response);
@@ -128,7 +127,7 @@ test('getCacheDigest resolves with json', function(t) {
   let peerAccessor = new httpImpl.HttpPeerAccessor({ ipAddress, port });
   peerAccessor.getCacheDigest()
   .then(actual => {
-    t.equal(actual, expected);
+    t.deepEqual(actual, expected);
     end(t);
   })
   .catch(err => {
@@ -165,7 +164,7 @@ test('getCacheBloomFilter resolves on success', function(t) {
   let bloomUrl = serverApi.getUrlForBloomFilter(ipAddress, port);
   // We need to return an ArrayBuffer from fetch and then pass a Buffer to our
   // parse method.
-  let arrayBuff = sutil.getBloomResponseBuff().buffer;
+  let arrayBuff = toArrayBuffer(sutil.getBloomResponseBuff());
   let expected = sutil.getBloomResponseParsed();
 
   let responseStub = {
@@ -216,11 +215,57 @@ test('getCacheBloomFilter rejects on error', function(t) {
 });
 
 test('getCachedPage resolves on success', function(t) {
-  t.fail();
-  t.end();
+  let { ipAddress, port } = tutil.getIpPort();
+  let href = 'foobar';
+  let cpUrl = serverApi.getAccessUrlForCachedPage(ipAddress, port, href);
+  // We need to return an ArrayBuffer from fetch and then pass a Buffer to our
+  // parse method.
+  let arrayBuff = toArrayBuffer(sutil.getCachedPageResponseBuff());
+  let expected = sutil.getCachedPageResponseParsed();
+
+  let responseStub = {
+    arrayBuffer: sinon.stub().resolves(arrayBuff)
+  };
+
+  let fetchStub = sinon.stub();
+  fetchStub.withArgs(cpUrl).resolves(responseStub);
+
+  proxyquireHttpImpl({
+    '../util': {
+      fetch: fetchStub
+    }
+  });
+
+  let peerAccessor = new httpImpl.HttpPeerAccessor({ ipAddress, port });
+  peerAccessor.getCachedPage(href)
+  .then(actual => {
+    tutil.assertBloomFiltersEqual(t, actual, expected);
+    end(t);
+  })
+  .catch(err => {
+    t.fail(err);
+    end(t);
+  });
 });
 
 test('getCachedPage rejects on error', function(t) {
-  t.fail();
-  t.end();
+  let { ipAddress, port } = tutil.getIpPort();
+  let expected = { err: 'wrongo' };
+  
+  proxyquireHttpImpl({
+    '../util': {
+      fetch: sinon.stub().rejects(expected)
+    }
+  });
+
+  let accessor = new httpImpl.HttpPeerAccessor({ ipAddress, port });
+  accessor.getCachedPage('href')
+  .then(result => {
+    t.fail(result);
+    end(t);
+  })
+  .catch(actual => {
+    t.deepEqual(actual, expected);
+    end(t);
+  });
 });

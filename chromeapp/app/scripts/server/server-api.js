@@ -259,11 +259,6 @@ exports.getResponseForBloomFilter = function() {
  * @return {Array.<CPSummary>}
  */
 exports.parseResponseForList = function(buff) {
-  console.log(buff.length);
-  console.log(buff);
-  let strReclaimed = buff.toString();
-  console.log('length of reclaimed', strReclaimed.length);
-  console.log('reclaimed:', strReclaimed);
   let result = JSON.parse(buff.toString());
   result.cachedPages = result.cachedPages.map(
     cpsumJson => objects.CPSummary.fromJSON(cpsumJson)

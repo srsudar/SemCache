@@ -1,7 +1,5 @@
 'use strict';
 
-const Buffer = require('buffer/').Buffer;
-
 const api = require('../../../app/scripts/server/server-api');
 const bloomFilter = require('../../../app/scripts/coalescence/bloom-filter');
 const putil = require('../persistence/persistence-util');
@@ -48,9 +46,7 @@ exports.getListResponseJson = function() {
  * @return {Buffer}
  */
 exports.getListResponseBuff = function() {
-  let str = JSON.stringify([]);
-  console.log(str);
-  console.log(str.length);
+  let str = JSON.stringify(exports.getListResponseJson());
   return Buffer.from(str);
 };
 

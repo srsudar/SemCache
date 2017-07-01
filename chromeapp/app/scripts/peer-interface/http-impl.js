@@ -16,7 +16,21 @@ class HttpPeerAccessor extends PeerAccessor {
    * @return {Promise.<CPDisk, Error>}
    */
   getCachedPage(href) {
-    throw new Error('unimplemented');
+    let self = this;
+    return Promise.resolve()
+    .then(() => {
+      let cpUrl = serverApi.getAccessUrlForCachedPage(
+        self.getIpAddress(), self.getPort(), href
+      );
+      return util.fetch(cpUrl);
+    })
+    .then(response => {
+      return response.arrayBuffer();
+    })
+    .then(arrayBuffer => {
+      let buffer = Buffer.from(arrayBuffer);
+      return serverApi.parseResponseForCachedPage(buffer);
+    });
   }
 
   /**
@@ -37,11 +51,7 @@ class HttpPeerAccessor extends PeerAccessor {
         return response.arrayBuffer();
       })
       .then(arrayBuffer => {
-        console.log(arrayBuffer);
         let buff = Buffer.from(arrayBuffer);
-        console.log('should be a buffer:', buff);
-        console.log(buff.length);
-        console.log('GOIGN TO PARSE');
         resolve(serverApi.parseResponseForList(buff));
       })
       .catch(err => {
@@ -66,10 +76,11 @@ class HttpPeerAccessor extends PeerAccessor {
       );
       util.fetch(digestUrl)
       .then(response => {
-        return response.json();
+        return response.arrayBuffer();
       })
-      .then(json => {
-        resolve(json);
+      .then(arrayBuffer => {
+        let buffer = Buffer.from(arrayBuffer);
+        resolve(serverApi.parseResponseForDigest(buffer));
       })
       .catch(err => {
         reject(err);

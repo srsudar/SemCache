@@ -44718,18 +44718,18 @@ exports.applyArgsCheckLastError = function(fn, callArgs) {
 'use strict';
 
 /**
+ * The library we are wrapping.
+ */
+const lib = require('bloomfilter');
+const toArrayBuffer = require('to-arraybuffer');
+
+/**
  * Provides a Bloom filter API.
  *
  * We're using this rather than a bare library because I can't find a great
  * library that meets all of our requirements. For that reason we're going to
  * wrap them in case we need to swap one.
  */
-
-/**
- * The library we are wrapping.
- */
-const lib = require('bloomfilter');
-const toArrayBuffer = require('to-arraybuffer');
 
 
 /**
@@ -44800,181 +44800,23 @@ exports.BloomFilter = BloomFilter;
 },{"bloomfilter":34,"buffer":35,"to-arraybuffer":58}],5:[function(require,module,exports){
 'use strict';
 
-const dnssdSem = require('../dnssd/dns-sd-semcache');
 const objects = require('./objects');
-const peerIf = require('../peer-interface/common');
-const peerIfMgr = require('../peer-interface/manager');
-const util = require('./util');
+const strategy = require('./strategy');
 
-
-/**
- * This module is responsible for the digest strategy of cache coalescence.
- */
+const CoalescenceStrategy = strategy.CoalescenceStrategy;
 
 /**
  * An implementation of the coalescence strategy API.
  *
  * The Bloom filter strategy is to check a Bloom filter for URLs.
  */
-class BloomStrategy {
-  constructor() {
-    /**
-     * This is the data structure in which we're storing the Bloom filters from
-     * peers.
-     *
-     * Contains objects 
-     */
-    this.BLOOM_FILTERS = [];
-
-    this.IS_INITIALIZED = false;
-    this.IS_INITIALIZING = false;
-  }
-
-  /**
-   * Reset any state saved by this module
-   */
-  reset() {
-    this.setBloomFilters([]);
-    this.IS_INITIALIZED = false;
-    // If an initialization is in progress, this could not be a complete reset.
-    this.IS_INITIALIZING = false;
-  }
-
-  /**
-   * Replace the saved Digest state with this new information.
-   *
-   * @param {Array.<PeerBloomFilter>} digests
-   */
-  setBloomFilters(filters) {
-    this.BLOOM_FILTERS = filters;
-  }
-
-  /**
-   * Indicates if the module is ready to perform queries.
-   *
-   * @return {boolean} true if queries can be performed
-   */
-  isInitialized() {
-    return this.IS_INITIALIZED;
-  }
-
-  /**
-   * Indicates if we are currently initializing.
-   *
-   * @return {boolean}
-   */
-  isInitializing() {
-    return this.IS_INITIALIZING;
-  }
-
-  /**
-   * Initialize the strategy.
-   *
-   * @return {Promise.<undefined, Error>} Promise that resolves when
-   * initialization is complete.
-   */
-  initialize() {
-    if (this.isInitializing()) {
-      // no-op
-      return Promise.resolve();
-    }
-    if (this.isInitialized()) {
-      // We're already initialized, just no-op.
-      return Promise.resolve();
-    }
-    // Initialization consists of the following steps:
-    // 1) Query the network for peers
-    // 2) For each peer, get their digest
-    // 3) Process the digests
-    // 4) Update our module data structures with this information
-    // 5) Declare that we are initialized
-    this.IS_INITIALIZING = true;
-    let self = this;
-
-    return new Promise(function(resolve, reject) {
-      // Changing this for evaluation.
-      // console.warn('COALESCENCE IS IN EVALUATION MODE');
-      // This code is for the real mode.
-      dnssdSem.browseForSemCacheInstances()
-      .then(peerInfos => {
-        return util.removeOwnInfo(peerInfos);
-      }).then(peerInfos => {
-        let peerAccessor = peerIfMgr.getPeerAccessor();
-        return self.getAndProcessBloomFilters(peerAccessor, peerInfos);
-      })
-      // This code is for evaluation mode.
-      // Promise.resolve()
-      // .then(() => {
-      //   return evaluation.generateDummyPeerBloomFilters(
-      //     EVAL_NUM_DIGESTS, EVAL_NUM_PAGES_IN_DIGEST
-      //   );
-      // })
-      .then(bloomFilters => {
-        self.setBloomFilters(bloomFilters);
-        self.IS_INITIALIZING = false;
-        self.IS_INITIALIZED = true;
-        resolve();
-      })
-      .catch(err => {
-        self.IS_INITIALIZING = false;
-        reject(err);
+class BloomStrategy extends CoalescenceStrategy {
+  getResourceFromPeer(peerAccessor, peerInfo) {
+    return peerAccessor.getCacheBloomFilter()
+      .then(bloomFilter => {
+        let peerBf = new objects.PeerBloomFilter(peerInfo, bloomFilter);
+        return peerBf;
       });
-    });
-  }
-
-  /**
-   * Obtain digests from the peers indicated in peerInfos and process them. If
-   * any peers could not be connected to, an error is logged but the process is
-   * not terminated. Does not update any of the module's data structures.
-   *
-   * @param {WebrtcPeerAccessor|HttpPeerAccessor} peerInterface a peer interface
-   * for the given transport protocol
-   * @param {Array.<Object>} peerInfos the objects containing information to
-   * connect to peers as returned from the browse service functions
-   *
-   * @return {Promise.<Array<PeerBloomFilter>>}
-   */
-  getAndProcessBloomFilters(peerInterface, peerInfos) {
-    // Query them, create digests for those that succeed.  Note that there is
-    // some trickiness here about the best strategy by which to do this. If we
-    // want to avoid congestion, we might want to query them serially, not
-    // worrying if something has rejected. We need to tolerate rejection in
-    // case a peer leaves while we are issuing the query. That is ok and should
-    // be tolerated. The fulfillPromises in the evaluation module could work
-    // for this.
-    //
-    // For now we are just going to countdown waiting for the promises to
-    // settle.
-    return new Promise(function(resolve) {
-      if (peerInfos.length === 0) {
-        resolve([]);
-        return;
-      }
-      let pendingResponses = peerInfos.length;
-      let result = [];
-      peerInfos.forEach(peerInfo => {
-        let params = peerIf.createListParams(
-          peerInfo.ipAddress, peerInfo.port, null
-        );
-        peerInterface.getCacheBloomFilter(params)
-        .then(bloomFilter => {
-          pendingResponses--;
-          let peerBf = new objects.PeerBloomFilter(peerInfo, bloomFilter);
-          result.push(peerBf);
-          if (pendingResponses === 0) {
-            resolve(result);
-          }
-        })
-        .catch(err => {
-          // Swallow this one, as we expect some errors
-          console.log('Ignoreable error fetching digest: ', err);
-          pendingResponses--;
-          if (pendingResponses === 0) {
-            resolve(result);
-          }
-        });
-      });
-    });
   }
 
   /**
@@ -45004,7 +44846,7 @@ class BloomStrategy {
         let result = {};
         urls.forEach(url => {
           let copiesForUrl = [];
-          self.BLOOM_FILTERS.forEach(bloomFilter => {
+          self.getResources().forEach(bloomFilter => {
             let isPresent = bloomFilter.performQueryForPage(url);
             if (isPresent) {
               let info = {
@@ -45030,14 +44872,13 @@ class BloomStrategy {
 
 exports.BloomStrategy = BloomStrategy;
 
-},{"../dnssd/dns-sd-semcache":"dnsSem","../peer-interface/common":16,"../peer-interface/manager":18,"./objects":7,"./util":8}],6:[function(require,module,exports){
+},{"./objects":7,"./strategy":8}],6:[function(require,module,exports){
 'use strict';
 
-const dnssdSem = require('../dnssd/dns-sd-semcache');
 const objects = require('./objects');
-const peerIf = require('../peer-interface/common');
-const peerIfMgr = require('../peer-interface/manager');
-const util = require('./util');
+const coalescenceStrategy = require('./strategy');
+
+const CoalescenceStrategy = coalescenceStrategy.CoalescenceStrategy;
 
 
 /**
@@ -45050,155 +44891,14 @@ const util = require('./util');
  * The digest strategy is to obtain a list of all the available pages from
  * peers and check those lists.
  */
-class DigestStrategy {
-  constructor() {
-    /**
-     * This is the data structure in which we're storing the digests from peers.
-     *
-     * Contains objects 
-     */
-    this.DIGESTS = [];
-
-    this.IS_INITIALIZED = false;
-    this.IS_INITIALIZING = false;
-  }
-
-  /**
-   * Reset any state saved by this module
-   */
-  reset() {
-    this.setDigests([]);
-    this.IS_INITIALIZED = false;
-    // If an initialization is in progress, this could not be a complete reset.
-    this.IS_INITIALIZING = false;
-  }
-
-  /**
-   * Replace the saved Digest state with this new information.
-   *
-   * @param {Array.<Digest>} digests
-   */
-  setDigests(digests) {
-    this.DIGESTS = digests;
-  }
-
-  /**
-   * Indicates if the module is ready to perform queries.
-   *
-   * @return {boolean} true if queries can be performed
-   */
-  isInitialized() {
-    return this.IS_INITIALIZED;
-  }
-
-  /**
-   * Indicates if we are currently initializing.
-   *
-   * @return {boolean}
-   */
-  isInitializing() {
-    return this.IS_INITIALIZING;
-  }
-
-  /**
-   * Initialize the strategy.
-   *
-   * @return {Promise.<undefined, Error>} Promise that resolves when
-   * initialization is complete.
-   */
-  initialize() {
-    if (this.isInitializing()) {
-      // no-op
-      return Promise.resolve();
-    }
-    if (this.isInitialized()) {
-      // We're already initialized, just no-op.
-      return Promise.resolve();
-    }
-    // Initialization consists of the following steps:
-    // 1) Query the network for peers
-    // 2) For each peer, get their digest
-    // 3) Process the digests
-    // 4) Update our module data structures with this information
-    // 5) Declare that we are initialized
-    this.IS_INITIALIZING = true;
-    let self = this;
-
-    return new Promise(function(resolve, reject) {
-      dnssdSem.browseForSemCacheInstances()
-      .then(peerInfos => {
-        return util.removeOwnInfo(peerInfos);
-      }).then(peerInfos => {
-        let peerAccessor = peerIfMgr.getPeerAccessor();
-        return self.getAndProcessDigests(peerAccessor, peerInfos);
-      })
-      .then(digests => {
-        self.setDigests(digests);
-        self.IS_INITIALIZING = false;
-        self.IS_INITIALIZED = true;
-        resolve();
-      })
-      .catch(err => {
-        self.IS_INITIALIZING = false;
-        reject(err);
+class DigestStrategy extends CoalescenceStrategy {
+  getResourceFromPeer(peerAccessor, peerInfo) {
+    return peerAccessor.getCacheDigest()
+      .then(digestResponse => {
+        let rawDigest = digestResponse;
+        let digest = new objects.Digest(peerInfo, rawDigest);
+        return digest;
       });
-    });
-  }
-
-  /**
-   * Obtain digests from the peers indicated in peerInfos and process them. If
-   * any peers could not be connected to, an error is logged but the process is
-   * not terminated. Does not update any of the module's data structures.
-   *
-   * @param {WebrtcPeerAccessor|HttpPeerAccessor} peerInterface a peer
-   * interface for the given transport protocol
-   * @param {Array.<Object>} peerInfos the objects containing information to
-   * connect to peers as returned from the browse service functions
-   *
-   * @return {Promise.<Array<Digest>>}
-   */
-  getAndProcessDigests(peerInterface, peerInfos) {
-    // Query them, create digests for those that succeed.
-    // Note that there is some trickiness here about the best strategy by which
-    // to do this. If we want to avoid congestion, we might want to query them
-    // serially, not worrying if something has rejected. We need to tolerate
-    // rejection in case a peer leaves while we are issuing the query. That is
-    // ok and should be tolerated. The fulfillPromises in the evaluation module
-    // could work for this.
-    //
-    // For now we are just going to countdown waiting for the promises to
-    // settle.
-    return new Promise(function(resolve) {
-      if (peerInfos.length === 0) {
-        resolve([]);
-        return;
-      }
-      let pendingResponses = peerInfos.length;
-      let result = [];
-      peerInfos.forEach(peerInfo => {
-        let params = peerIf.createListParams(
-          peerInfo.ipAddress, peerInfo.port, null
-        );
-        peerInterface.getCacheDigest(params)
-        .then(digestResponse => {
-          let rawDigest = digestResponse.digest;
-          pendingResponses--;
-          let digest = new objects.Digest(peerInfo, rawDigest);
-          result.push(digest);
-          if (pendingResponses === 0) {
-            resolve(result);
-          }
-        })
-        .catch(err => {
-          // Swallow this one, as we expect some errors
-          console.log('Ignoreable error fetching digest: ', err);
-          pendingResponses--;
-          if (pendingResponses === 0) {
-            resolve(result);
-          }
-        });
-      });
-    });
   }
 
   /**
@@ -45234,7 +44934,7 @@ class DigestStrategy {
         let result = {};
         urls.forEach(url => {
           let copiesForUrl = [];
-          self.DIGESTS.forEach(digest => {
+          self.getResources().forEach(digest => {
             let captureDate = digest.performQueryForPage(url);
             if (captureDate) {
               let page = {
@@ -45261,7 +44961,7 @@ class DigestStrategy {
 
 exports.DigestStrategy = DigestStrategy;
 
-},{"../dnssd/dns-sd-semcache":"dnsSem","../peer-interface/common":16,"../peer-interface/manager":18,"./objects":7,"./util":8}],7:[function(require,module,exports){
+},{"./objects":7,"./strategy":8}],7:[function(require,module,exports){
 (function (Buffer){
 'use strict';
 
@@ -45353,38 +45053,217 @@ exports.PeerBloomFilter = PeerBloomFilter;
 },{"../../../node_modules/is-buffer/index.js":43,"./bloom-filter":4}],8:[function(require,module,exports){
 'use strict';
 
-const settings = require('../settings');
+const dnssdSem = require('../dnssd/dns-sd-semcache');
+const peerIfMgr = require('../peer-interface/manager');
 
 
 /**
- * Remove the peerInfo object that represents our own machine.
- *
- * @param {Array.<Object>} peerInfos the peerInfo objects as returned from 
- * browseForSemCacheInstances
- *
- * @return {Promise.<Array.<Object>, Error>}
+ * Implements shared functionality of our coalescence strategies.
  */
-exports.removeOwnInfo = function(peerInfos) {
-  return new Promise(function(resolve, reject) {
-    settings.init()
-    .then(() => {
-      let result = [];
-      let ourDomain = settings.getHostName();
-      peerInfos.forEach(peerInfo => {
-        if (peerInfo.domainName !== ourDomain) {
-          result.push(peerInfo);
+
+class CoalescenceStrategy {
+  constructor() {
+    this.IS_INITIALIZED = false;
+    this.IS_INITIALIZING = false;
+    this.RESOURCES = [];
+  }
+
+  /**
+   * Reset any state saved by this module
+   */
+  reset() {
+    this.IS_INITIALIZED = false;
+    // If an initialization is in progress, this could not be a complete reset.
+    this.IS_INITIALIZING = false;
+    // Clear the resources
+    this.setResources([]);
+  }
+
+  /**
+   * Indicates if the module is ready to perform queries.
+   *
+   * @return {boolean} true if queries can be performed
+   */
+  isInitialized() {
+    return this.IS_INITIALIZED;
+  }
+
+  /**
+   * Refresh the contents of the digest.
+   *
+   * @return {Promise.<Any>} the result of initialize()
+   */
+  refresh() {
+    // We'll re-initialize.
+    this.reset();
+    return this.initialize();
+  }
+
+  /**
+   * Indicates if we are currently initializing.
+   *
+   * @return {boolean}
+   */
+  isInitializing() {
+    return this.IS_INITIALIZING;
+  }
+
+  /**
+   * Replace the saved resources we've fetched and processed from peers.
+   *
+   * @param {Array.<any>}
+   */
+  setResources(resources) {
+    this.RESOURCES = resources;
+  }
+
+  /**
+   * @return {Array.<any>}
+   */
+  getResources() {
+    return this.RESOURCES;
+  }
+
+  /**
+   * Initialize the strategy.
+   *
+   * @return {Promise.<undefined, Error>} Promise that resolves when
+   * initialization is complete.
+   */
+  initialize() {
+    if (this.isInitializing()) {
+      // no-op
+      return Promise.resolve();
+    }
+    if (this.isInitialized()) {
+      // We're already initialized, just no-op.
+      return Promise.resolve();
+    }
+
+    this.IS_INITIALIZING = true;
+    let self = this;
+
+    return new Promise(function(resolve, reject) {
+      dnssdSem.browseForSemCacheInstances(true)
+      .then(peerInfos => {
+        if (!self.isInitializing()) {
+          // We must have been reset during the fetch
+          resolve();
+          return;
         }
+        return self.getAndProcessResources(peerInfos);
+      })
+      .then(resources => {
+        if (!self.isInitializing()) {
+          // We must have been reset during the fetch
+          resolve();
+          return;
+        }
+        self.setResources(resources);
+        self.IS_INITIALIZING = false;
+        self.IS_INITIALIZED = true;
+        resolve();
+      })
+      .catch(err => {
+        self.IS_INITIALIZING = false;
+        reject(err);
       });
-      resolve(result);
-    })
-    .catch(err => {
-      reject(err);
     });
-  });
-};
+  }
 
+  /**
+   * Obtain access information for the given array of URLs. The result will be
+   * an array of length <= urls.length. Only those that are available will be
+   * present.
+   *
+   * Note that this strategy cannot set capture dates.
+   *
+   * @param {Array.<string>} urls Array of URLs for which to query
+   *
+   * @return {Promise.<Object, Error>} Promise that resolves with an Object of
+   * information about the urls or rejects with an Error.
+   */
+  performQuery(urls) {
+    console.log('performQuery called on CoalescenceStrategy, noop', urls);
+    // No-op. Subclasses should implement.
+  }
 
-},{"../settings":"settings"}],9:[function(require,module,exports){
+  /**
+   *
+   * Obtain resources from the peers indicated in peerInfos and process them.
+   * If any peers could not be connected to, an error is logged but the process
+   * is not terminated. Does not update any of the module's data structures.
+   *
+   * @param {Array.<Object>} peerInfos the objects containing information to
+   * connect to peers as returned from the browse service functions
+   *
+   * @return {Promise.<Array, Error>}
+   */
+  getAndProcessResources(peerInfos) {
+    let self = this;
+    // Query them, create digests for those that succeed.
+    // Note that there is some trickiness here about the best strategy by which
+    // to do this. If we want to avoid congestion, we might want to query them
+    // serially, not worrying if something has rejected. We need to tolerate
+    // rejection in case a peer leaves while we are issuing the query. That is
+    // ok and should be tolerated. The fulfillPromises in the evaluation module
+    // could work for this.
+    //
+    // For now we are just going to countdown waiting for the promises to
+    // settle.
+    return new Promise(function(resolve) {
+      if (peerInfos.length === 0) {
+        resolve([]);
+        return;
+      }
+      let pendingResponses = peerInfos.length;
+      let result = [];
+      peerInfos.forEach(peerInfo => {
+        let peerInterface = peerIfMgr.getPeerAccessor({
+          ipAddress: peerInfo.ipAddress,
+          port: peerInfo.port
+        });
+        self.getResourceFromPeer(peerInterface, peerInfo)
+        .then(resource => {
+          pendingResponses--;
+          result.push(resource);
+          if (pendingResponses === 0) {
+            resolve(result);
+          }
+        })
+        .catch(err => {
+          // Swallow this one, as we expect some errors
+          console.log('Ignoreable error fetching digest: ', err);
+          pendingResponses--;
+          if (pendingResponses === 0) {
+            resolve(result);
+          }
+        });
+      });
+    });
+  }
+
+  /**
+   * Try and fetch a resource from a peer. This should be ready to be added to
+   * the resource array via a call to setResources(). If the interaction with
+   * the peer fails, the Promise should reject to allow the machinery to
+   * swallow the error--if a peer has left the network, the whole fetch should
+   * not fail.
+   *
+   * @param {HttpPeerAccessor|WebrtcPeerAccessor} peerAccessor
+   * @param {Object} peerInfo
+   *
+   * @return {Promise.<Object, Error>}
+   */
+  getResourceFromPeer(peerAccessor, peerInfo) {
+    console.log('getResourceFromPeer called on CoalescenceStrategy, no-op');
+    console.log(peerAccessor);
+  }
+}
+
+exports.CoalescenceStrategy = CoalescenceStrategy;
+
+},{"../dnssd/dns-sd-semcache":"dnsSem","../peer-interface/manager":18}],9:[function(require,module,exports){
 'use strict';
 
 const SELF_SERVICE_SHORTCUT = '_SELF_INSTANCE_NAME_';
@@ -46999,148 +46878,65 @@ exports.createNetworkQueryResponse = function(params, body) {
 },{}],16:[function(require,module,exports){
 'use strict';
 
-const util = require('../util');
-
 
 /**
- * Code shared across the peer-interface implementations.
+ * Base class to be extended by peer interface implementations.
  */
-
-/**
- * The path to the HTTP endpoint that serves the digest. Should match the value
- * in the server/server-api module.
- */
-const PATH_GET_PAGE_DIGEST = 'page_digest';
-const PATH_GET_BLOOM_FILTER = 'bloom_filter';
-
-/**
- * Returns the IP address, extracting if necessary.
- *
- * @param {string} ipaddr
- * @param {string} url
- *
- * @return {string}
- */
-function getIpAddress(ipaddr, url) {
-  let result = ipaddr;
-  if (!result) {
-    result = util.getHostFromUrl(url);
+class PeerAccessor {
+  /**
+   * @param {string} ipAddress
+   * @param {number} port
+   */
+  constructor({ ipAddress, port } = {}) {
+    this.ipAddress = ipAddress;
+    this.port = port;
   }
-  return result;
+
+  getIpAddress() {
+    return this.ipAddress;
+  }
+
+  getPort() {
+    return this.port;
+  }
 }
 
-/**
- * Returns the port, extracting if necessary.
- *
- * @param {integer} port
- * @param {string} url
- *
- * @return {integer}
- */
-function getPort(port, url) {
-  let result = port;
-  if (!result) {
-    result = util.getPortFromUrl(url);
-  }
-  return result;
-}
+exports.PeerAccessor = PeerAccessor;
 
-/**
- * Return the path to the endpoint providing a page digest. Does not include an 
- * IP or port, as well as no leading/trailing slashes.
- */
-exports.getDigestPath = function() {
-  return PATH_GET_PAGE_DIGEST;
-};
-
-exports.getBloomFilterPath = function() {
-  return PATH_GET_BLOOM_FILTER;
-};
-
-/**
- * Create parameters for a PeerAccessor getList call. If ipaddr or port is
- * missing, tries to interpolate them from listUrl.
- *
- * @param {string} ipaddr IP address of the peer
- * @param {integer} port port of the peer
- * @param {string} listUrl the list URL for the peer's list access point. Only
- * needed if the transport method will be HTTP.
- *
- * @return {Object}
- */
-exports.createListParams = function(ipaddr, port, listUrl) {
-  ipaddr = getIpAddress(ipaddr, listUrl);
-  port = getPort(port, listUrl);
-
-  // Create the digest URL.
-  let digestUrl = ['http://', ipaddr, ':', port, '/', exports.getDigestPath()]
-    .join('');
-  let bloomUrl = [
-    'http://',
-    ipaddr,
-    ':',
-    port,
-    '/', exports.getBloomFilterPath()
-  ].join('');
-
-  return {
-    ipAddress: ipaddr,
-    port: port,
-    listUrl: listUrl,
-    digestUrl: digestUrl,
-    bloomUrl: bloomUrl
-  };
-};
-
-/**
- * Create parameters for a PeerAccessor getFile call. If ipaddr or port is
- * missing, tries to interpolate them from listUrl.
- *
- * @param {string} ipaddr IP address of the peer
- * @param {integer} port port of the peer
- * @param {string} fileUrl the list URL for the file's access URL. Only
- * needed if the transport method will be HTTP.
- *
- * @return {Object}
- */
-exports.createFileParams = function(ipaddr, port, fileUrl) {
-  ipaddr = getIpAddress(ipaddr, fileUrl);
-  port = getPort(port, fileUrl);
-  return {
-    ipAddress: ipaddr,
-    port: port,
-    fileUrl: fileUrl
-  };
-};
-
-},{"../util":24}],17:[function(require,module,exports){
+},{}],17:[function(require,module,exports){
 (function (Buffer){
 'use strict';
 
+const common = require('./common');
 const serverApi = require('../server/server-api');
 const util = require('../util');
 
+const PeerAccessor = common.PeerAccessor;
 
-class HttpPeerAccessor {
+
+class HttpPeerAccessor extends PeerAccessor {
   /**
-   * Retrieve a blob from the peer.
+   * Retrieve a cached page from a peer.
    *
-   * @param {Object} params parameter object as created by peer-interface/common
+   * @param {string} href
    *
-   * @return {Promise.<Blob, Error>}
+   * @return {Promise.<CPDisk, Error>}
    */
-  getFileBlob(params) {
-    return new Promise(function(resolve, reject) {
-      return util.fetch(params.fileUrl)
-      .then(response => {
-        return response.blob();
-      })
-      .then(blob => {
-        resolve(blob);
-      })
-      .catch(err => {
-        reject(err);
-      });
+  getCachedPage(href) {
+    let self = this;
+    return Promise.resolve()
+    .then(() => {
+      let cpUrl = serverApi.getAccessUrlForCachedPage(
+        self.getIpAddress(), self.getPort(), href
+      );
+      return util.fetch(cpUrl);
+    })
+    .then(response => {
+      return response.arrayBuffer();
+    })
+    .then(arrayBuffer => {
+      let buffer = Buffer.from(arrayBuffer);
+      return serverApi.parseResponseForCachedPage(buffer);
     });
   }
 
@@ -47151,14 +46947,19 @@ class HttpPeerAccessor {
    *
    * @return {Promise.<Object, Error>}
    */
-  getList(params) {
+  getList() {
+    let self = this;
     return new Promise(function(resolve, reject) {
-      util.fetch(params.listUrl)
+      let listUrl = serverApi.getListPageUrlForCache(
+        self.ipAddress, self.port
+      );
+      util.fetch(listUrl)
       .then(response => {
-        return response.json();
+        return response.arrayBuffer();
       })
-      .then(json => {
-        resolve(json);
+      .then(arrayBuffer => {
+        let buff = Buffer.from(arrayBuffer);
+        resolve(serverApi.parseResponseForList(buff));
       })
       .catch(err => {
         reject(err);
@@ -47174,14 +46975,19 @@ class HttpPeerAccessor {
    * @return {Promise.<Object, Error>} Promise that resolves with the digest
    * response or rejects with an Error.
    */
-  getCacheDigest(params) {
+  getCacheDigest() {
+    let self = this;
     return new Promise(function(resolve, reject) {
-      util.fetch(params.digestUrl)
+      let digestUrl = serverApi.getUrlForDigest(
+        self.getIpAddress(), self.getPort()
+      );
+      util.fetch(digestUrl)
       .then(response => {
-        return response.json();
+        return response.arrayBuffer();
       })
-      .then(json => {
-        resolve(json);
+      .then(arrayBuffer => {
+        let buffer = Buffer.from(arrayBuffer);
+        resolve(serverApi.parseResponseForDigest(buffer));
       })
       .catch(err => {
         reject(err);
@@ -47194,8 +47000,15 @@ class HttpPeerAccessor {
    *
    * @return {Promise.<BloomFilter, Error>}
    */
-  getCacheBloomFilter(params) {
-    return util.fetch(params.bloomUrl)
+  getCacheBloomFilter() {
+    let self = this;
+    return Promise.resolve()
+    .then(() => {
+      let bloomUrl = serverApi.getUrlForBloomFilter(
+        self.getIpAddress(), self.getPort()
+      );
+      return util.fetch(bloomUrl);
+    })
     .then(response => {
       return response.arrayBuffer();
     })
@@ -47210,7 +47023,7 @@ class HttpPeerAccessor {
 exports.HttpPeerAccessor = HttpPeerAccessor;
 
 }).call(this,require("buffer").Buffer)
-},{"../server/server-api":23,"../util":24,"buffer":35}],18:[function(require,module,exports){
+},{"../server/server-api":23,"../util":24,"./common":16,"buffer":35}],18:[function(require,module,exports){
 'use strict';
 
 const ifHttp = require('./http-impl');
@@ -47225,15 +47038,18 @@ const settings = require('../settings');
 /**
  * Create a PeerAccessor based on the configured settings.
  *
+ * @param {string} ipAddress
+ * @param {number} port
+ *
  * @return {HttpPeerAccessor|WebrtcPeerAccessor}
  */
-exports.getPeerAccessor = function(ipaddr, port) {
+exports.getPeerAccessor = function(ipAddress, port) {
   let transportMethod = settings.getTransportMethod();
   console.log(transportMethod);
   if (transportMethod === 'http') {
-    return new ifHttp.HttpPeerAccessor(); 
+    return new ifHttp.HttpPeerAccessor({ ipAddress, port }); 
   } else if (transportMethod === 'webrtc') {
-    return new ifWebrtc.WebrtcPeerAccessor({ ipaddr, port });
+    return new ifWebrtc.WebrtcPeerAccessor({ ipAddress, port });
   } else {
     throw new Error('Unrecognized transport method: ' + transportMethod);
   }
@@ -47243,24 +47059,17 @@ exports.getPeerAccessor = function(ipaddr, port) {
 'use strict';
 
 const cmgr = require('../webrtc/connection-manager');
-const util = require('../util');
+const common = require('./common');
+
+const PeerAccessor = common.PeerAccessor;
 
 
-class WebrtcPeerAccessor {
-  /**
-   * @param {string} ipaddr
-   * @param {number} port
-   */
-  constructor({ ipaddr, port } = {}) {
-    this.ipaddr = ipaddr;
-    this.port = port;
-  }
-
+class WebrtcPeerAccessor extends PeerAccessor {
   /**
    * @return {Promise.<PeerConnection, Error>}
    */
   getConnection() {
-    return cmgr.getOrCreateConnection(this.ipaddr, this.port);
+    return cmgr.getOrCreateConnection(this.getIpAddress(), this.getPort());
   }
 
   /**
@@ -47278,88 +47087,44 @@ class WebrtcPeerAccessor {
   }
 
   /**
-   * Retrieve a blob from the peer.
-   *
-   * @return {Promise.<Blob, Error>}
-   */
-  getFileBlob(params) {
-    return new Promise(function(resolve, reject) {
-      cmgr.getOrCreateConnection(params.ipAddress, params.port)
-      .then(peerConnection => {
-        return peerConnection.getFile(params.fileUrl);
-      })
-      .then(binary => {
-        let blob = util.getBufferAsBlob(binary);
-        resolve(blob);
-      })
-      .catch(err => {
-        reject(err);
-      });
-    });
-  }
-
-  /**
    * Retrieve the list of pages in the peer's cache.
-   *
-   * @param {Object} params parameters for list request, as created by
-   * peer-interface/common.
    *
    * @return {Promise.<Object, Error>}
    */
-  getList(params) {
-    return new Promise(function(resolve, reject) {
-      cmgr.getOrCreateConnection(params.ipAddress, params.port)
+  getList() {
+    return this.getConnection()
       .then(peerConnection => {
         return peerConnection.getList();
-      })
-      .then(json => {
-        resolve(json);
-      })
-      .catch(err => {
-        reject(err);
       });
-    });
   }
 
   /**
    * Retrieve the list of cached pages available in this cache.
    *
-   * @param {Object} params parameter object as created by peer-interface/common
-   *
    * @return {Promise.<Object, Error>} Promise that resolves with the digest
    * response or rejects with an Error.
    */
-  getCacheDigest(params) {
-    return new Promise(function(resolve, reject) {
-      cmgr.getOrCreateConnection(params.ipAddress, params.port)
+  getCacheDigest() {
+    return this.getConnection()
       .then(peerConnection => {
         return peerConnection.getCacheDigest();
-      })
-      .then(json => {
-        resolve(json);
-      })
-      .catch(err => {
-        reject(err);
       });
-    });
   }
 
   /**
-   * @param {Object} params
-   *
    * @return {Promise.<BloomFilter, Error>}
    */
-  getCacheBloomFilter(params) {
-    return cmgr.getOrCreateConnection(params.ipAddress, params.port)
-    .then(peerConnection => {
-      return peerConnection.getCacheBloomFilter();
-    });
+  getCacheBloomFilter() {
+    return this.getConnection()
+      .then(peerConnection => {
+        return peerConnection.getCacheBloomFilter();
+      });
   }
 }
 
 exports.WebrtcPeerAccessor = WebrtcPeerAccessor;
 
-},{"../util":24,"../webrtc/connection-manager":"cmgr"}],20:[function(require,module,exports){
+},{"../webrtc/connection-manager":"cmgr","./common":16}],20:[function(require,module,exports){
 'use strict';
 
 /**
@@ -47614,39 +47379,15 @@ exports.CachedPageHandler = function() {
 _.extend(exports.CachedPageHandler.prototype,
   {
     get: function() {
-      let fileName = api.getCachedFileNameFromPath(this.request.path);
-
-      fileSystem.getDirectoryForCacheEntries()
-      .then(cacheDir => {
-        return fsUtil.getFile(
-          cacheDir, 
-          {
-            create: false,
-            exclusive: false
-          },
-          fileName
-        );
-      })
-      .then(fileEntry => {
-        fileEntry.file(file => {
-          let that = this;
-          let fileReader = new FileReader();
-
-          fileReader.onload = function(evt) {
-            // set mime types etc?
-            that.write(evt.target.result);
-          };
-
-          fileReader.onerror = function(evt) {
-            console.error('error reading', evt.target.error);
-            that.request.connection.close();
-          };
-
-          fileReader.readAsArrayBuffer(file);
-        });
+      let href = api.getCachedPageHrefFromPath(this.request.path);
+      api.getResponseForCachedPage(href)
+      .then(buffer => {
+        this.write(buffer);
       })
       .catch(err => {
-        console.log('Error reading file: ', err);
+        console.log('error retrieving cached page for href:', href);
+        console.log(err);
+        this.request.connection.close();
       });
     }
   },
@@ -47735,40 +47476,7 @@ _.extend(exports.WebRtcOfferHandler.prototype,
 
     get: function() {
       console.log('IN GET');
-      let fileName = api.getCachedFileNameFromPath(this.request.path);
-
-      fileSystem.getDirectoryForCacheEntries()
-      .then(cacheDir => {
-        return fsUtil.getFile(
-          cacheDir, 
-          {
-            create: false,
-            exclusive: false
-          },
-          fileName
-        );
-      })
-      .then(fileEntry => {
-        fileEntry.file(file => {
-          let that = this;
-          let fileReader = new FileReader();
-
-          fileReader.onload = function(evt) {
-            // set mime types etc?
-            that.write(evt.target.result);
-          };
-
-          fileReader.onerror = function(evt) {
-            console.error('error reading', evt.target.error);
-            that.request.connection.close();
-          };
-
-          fileReader.readAsArrayBuffer(file);
-        });
-      })
-      .catch(err => {
-        console.log('Error reading file: ', err);
-      });
+      this.write('Nothing to get here');
     }
   },
   WSC.BaseHandler.prototype
@@ -47785,7 +47493,9 @@ _.extend(exports.WebRtcOfferHandler.prototype,
  * instance. E.g. listing saved pages, providing saved pages, etc.
  */
 
-const appController = require('../app-controller');
+const base64 = require('base-64');
+const URI = require('urijs');
+
 const BloomFilter = require('../coalescence/bloom-filter').BloomFilter;
 const datastore = require('../persistence/datastore');
 const objects = require('../persistence/objects');
@@ -47801,12 +47511,29 @@ const VERSION = 0.0;
 const PATH_LIST_PAGE_CACHE = 'list_pages';
 const PATH_GET_CACHED_PAGE = 'pages';
 const PATH_GET_PAGE_DIGEST = 'page_digest';
+const PATH_GET_BLOOM_FILTER = 'bloom_filter';
 /** The path we use for mimicking the list_pages endpoing during evaluation. */
 const PATH_EVAL_LIST_PAGE_CACHE = 'eval_list';
 const PATH_RECEIVE_WRTC_OFFER = 'receive_wrtc';
 
 const DEFAULT_OFFSET = 0;
 const DEFAULT_LIMIT = 50;
+
+/**
+ * Generate a URL for the given path. Helper for taking care of scheme, etc.
+ *
+ * @param {string} ipAddress
+ * @param {number} port
+ * @param {string} path should NOT being with a trailing slash
+ */
+function createUrlForPath(ipAddress, port, path) {
+  if (!ipAddress || !port || !path) {
+    throw new Error(
+      'ipAddress, port, and path must be specified', ipAddress, port, path
+    );
+  }
+  return `${HTTP_SCHEME}${ipAddress}:${port}/${path}`; 
+}
 
 /**
  * Create the metadata object that is returned in server responses.
@@ -47836,7 +47563,8 @@ exports.getApiEndpoints = function() {
     listPageCache: PATH_LIST_PAGE_CACHE,
     pageDigest: PATH_GET_PAGE_DIGEST,
     evalListPages: PATH_EVAL_LIST_PAGE_CACHE,
-    receiveWrtcOffer: PATH_RECEIVE_WRTC_OFFER
+    receiveWrtcOffer: PATH_RECEIVE_WRTC_OFFER,
+    bloomFilter: PATH_GET_BLOOM_FILTER
   };
 };
 
@@ -47847,29 +47575,66 @@ exports.getApiEndpoints = function() {
  * @param {integer} port the port where the server is listening at ipAddress
  */
 exports.getListPageUrlForCache = function(ipAddress, port) {
-  let scheme = HTTP_SCHEME;
-  let endpoint = exports.getApiEndpoints().listPageCache;
-  
-  let result = scheme + ipAddress + ':' + port + '/' + endpoint;
-  return result;
+  return createUrlForPath(
+    ipAddress, port, exports.getApiEndpoints().listPageCache
+  );
+};
+
+/**
+ * Return the URL where the cache digest can be accessed.
+ *
+ * @param {string} ipAddress the IP address of the cache
+ * @param {integer} port the port where the server is listening at ipAddress
+ */
+exports.getUrlForDigest = function(ipAddress, port) {
+  return createUrlForPath(
+    ipAddress, port, exports.getApiEndpoints().pageDigest
+  );
+};
+
+/**
+ * Return the URL where the cache Bloom filter can be accessed.
+ *
+ * @param {string} ipAddress the IP address of the cache
+ * @param {integer} port the port where the server is listening at ipAddress
+ */
+exports.getUrlForBloomFilter = function(ipAddress, port) {
+  return createUrlForPath(
+    ipAddress, port, exports.getApiEndpoints().bloomFilter
+  );
 };
 
 /**
  * Create the full access path that can be used to access the cached page.
  *
- * @param {string} fullPath the full path of the file that is to be accessed
+ * @param {string} ipAddress the IP address of the cache
+ * @param {integer} port the port where the server is listening at ipAddress
+ * @param {string} href the href of the page to fetch
  *
  * @return {string} a fully qualified and valid URL
  */
-exports.getAccessUrlForCachedPage = function(fullPath) {
-  let scheme = HTTP_SCHEME;
-  // TODO: this might have to strip the path of directory where things are
-  // stored--it basically maps between the two urls.
-  let httpIface = appController.getListeningHttpInterface();
-  let addressAndPort = httpIface.address + ':' + httpIface.port;
-  let apiPath = exports.getApiEndpoints().pageCache;
-  let result = scheme + [addressAndPort, apiPath, fullPath].join('/');
-  return result;
+exports.getAccessUrlForCachedPage = function(ipAddress, port, href) {
+  if (!href) {
+    throw new Error('href not specified', href);
+  }
+  // We'll base 64 encode this.
+  let encoded = base64.encode(href);
+  let path = [exports.getApiEndpoints().pageCache, encoded].join('/');
+  return createUrlForPath(ipAddress, port, path);
+};
+
+/**
+ * Get the file name of the file that is being requested.
+ *
+ * @param {string} path the path of the request
+ *
+ * @return {string} the href of the file being requested
+ */
+exports.getCachedPageHrefFromPath = function(path) {
+  let uri = URI(path);
+  let encoded = uri.filename();
+  let href = base64.decode(encoded);
+  return href;
 };
 
 /**
@@ -47898,15 +47663,13 @@ exports.getResponseForAllCachedPages = function() {
 };
 
 /**
- * @param {Object} params parameters for the request
- * @param {string} params.href the href of the requested page
+ * @param {string} href the href of the requested page
  *
  * @return {Promise.<Buffer, Error>} Promise that resolves with a Buffer
  * representing the CPDisk, or a null value if the page is not found.
  */
-exports.getResponseForCachedPage = function(params) {
+exports.getResponseForCachedPage = function(href) {
   return new Promise(function(resolve, reject) {
-    let href = params.href;
     datastore.getCPDiskForHrefs(href)
     .then(cpdiskArr => {
       if (cpdiskArr.length === 0) {
@@ -47979,16 +47742,14 @@ exports.getResponseForBloomFilter = function() {
 /**
  * @param {Buffer} buff
  *
- * @return {Object}
+ * @return {Array.<CPSummary>}
  */
 exports.parseResponseForList = function(buff) {
-  // This is a pure JSON response. The only thing to do is parse and invoke the
-  // constructors.
   let result = JSON.parse(buff.toString());
   result.cachedPages = result.cachedPages.map(
     cpsumJson => objects.CPSummary.fromJSON(cpsumJson)
   );
-  return result;
+  return result.cachedPages;
 };
 
 /*
@@ -48012,7 +47773,7 @@ exports.parseResponseForCachedPage = function(buff) {
  */
 exports.parseResponseForDigest = function(buff) {
   // This one is pure JSON.
-  return JSON.parse(buff.toString());
+  return JSON.parse(buff.toString()).digest;
 };
 
 /**
@@ -48024,20 +47785,8 @@ exports.parseResponseForBloomFilter = function(buff) {
   return BloomFilter.fromBuffer(buff);
 };
 
-/**
- * Get the file name of the file that is being requested.
- *
- * @param {string} path the path of the request
- */
-exports.getCachedFileNameFromPath = function(path) {
-  let parts = path.split('/');
-  // The file name is the last part of the path.
-  let result = parts[parts.length - 1];
-  return result;
-};
-
 }).call(this,require("buffer").Buffer)
-},{"../app-controller":"appController","../coalescence/bloom-filter":4,"../persistence/datastore":20,"../persistence/objects":"persistenceObjs","buffer":35}],24:[function(require,module,exports){
+},{"../coalescence/bloom-filter":4,"../persistence/datastore":20,"../persistence/objects":"persistenceObjs","base-64":31,"buffer":35,"urijs":64}],24:[function(require,module,exports){
 (function (Buffer){
 'use strict';
 
@@ -48888,7 +48637,7 @@ exports.BaseServer = BaseServer;
  * API:
  * {
  *   channelName: /name of the channel to listen to/
- *   type: { list | file },
+ *   type: { list | etc },
  *   auth: /some object that can later be used for roles permissions/,
  *   request: {
  *     / depends on the object itself. could be a file path, eg /
@@ -48897,7 +48646,6 @@ exports.BaseServer = BaseServer;
  */
 
 exports.TYPE_LIST = 'list';
-exports.TYPE_FILE = 'file';
 exports.TYPE_DIGEST = 'digest';
 exports.TYPE_CACHED_PAGE = 'cachedpage';
 exports.TYPE_BLOOM_FILTER = 'bloomfilter';
@@ -48905,7 +48653,6 @@ exports.TYPE_BLOOM_FILTER = 'bloomfilter';
 /** Valid types of request messages. */
 let VALID_TYPES = [
   exports.TYPE_LIST,
-  exports.TYPE_FILE,
   exports.TYPE_DIGEST,
   exports.TYPE_CACHED_PAGE,
   exports.TYPE_BLOOM_FILTER,
@@ -48970,19 +48717,6 @@ exports.createCachedPageMessage = function(href) {
 };
 
 /**
- * @param {string} filePath
- *
- * @return {Object}
- */
-exports.createFileMessage = function(filePath) {
-  let result = exports.createMessage(exports.TYPE_FILE);
-  let request = {};
-  request.accessPath = filePath;
-  result.request = request;
-  return result;
-};
-
-/**
  * @param {string} type
  *
  * @return {Object}
@@ -49007,15 +48741,6 @@ exports.createMessage = function(type) {
  */
 exports.isList = function(msg) {
   return msg.type && msg.type === exports.TYPE_LIST;
-};
-
-/**
- * @param {Object} msg
- *
- * @return {boolean}
- */
-exports.isFile = function(msg) {
-  return msg.type && msg.type === exports.TYPE_FILE;
 };
 
 /**
@@ -49193,28 +48918,6 @@ class PeerConnection extends EventEmitter {
       .then(buff => {
         let result = serverApi.parseResponseForCachedPage(buff);
         resolve(result);
-      })
-      .catch(err => {
-        reject(err);
-      });
-    });
-  }
-
-  /**
-   * Get a file from the peer.
-   *
-   * @param {string} remotePath the identifier on the remote machine
-   *
-   * @return {Promise.<Buffer, Error>} Promise that resolves when the get is
-   * complete
-   */
-  getFile(remotePath) {
-    let self = this;
-    return new Promise(function(resolve, reject) {
-      let msg = message.createFileMessage(remotePath);
-      self.sendAndGetResponse(msg)
-      .then(buffer => {
-        resolve(buffer);
       })
       .catch(err => {
         reject(err);
@@ -49473,9 +49176,7 @@ exports.ProtocolMessage = ProtocolMessage;
 
 const TextDecoder = require('text-encoding').TextDecoder;
 
-const api = require('../server/server-api');
 const bufferedChannel = require('./buffered-channel');
-const fileSystem = require('../persistence/file-system');
 const message = require('./message');
 const serverApi = require('../server/server-api');
 
@@ -49511,8 +49212,6 @@ exports.onDataChannelMessageHandler = function(channel, event) {
 
   if (message.isList(msg)) {
     exports.onList(channel, msg);
-  } else if (message.isFile(msg)) {
-    exports.onFile(channel, msg);
   } else if (message.isDigest(msg)) {
     exports.onDigest(channel, msg);
   } else if (message.isCachedPage(msg)) {
@@ -49626,34 +49325,6 @@ exports.sendBufferOverChannel = function(channel, buff) {
 };
 
 /**
- * Handler that responds to a request for a file.
- *
- * Sends the contents of the file to the peer.
- *
- * @param {RTCDataChannel} channel the data channel on which to send the
- * response
- * @param {Object} msg the message requesting the information
- *
- * @return {Promise.<undefined, Error>} Promise that returns after sending has
- * begun.
- */
-exports.onFile = function(channel, msg) {
-  return new Promise(function(resolve, reject) {
-    let ccServer = exports.createChannelServer(channel);
-    let fileName = api.getCachedFileNameFromPath(msg.request.accessPath);
-    fileSystem.getFileContentsFromName(fileName)
-    .then(buff => {
-      ccServer.sendBuffer(buff);
-      resolve();
-    })
-    .catch(err => {
-      ccServer.sendError(err);
-      reject(err);
-    });
-  });
-};
-
-/**
  * Factory method for creating a ChunkingChannel.Server object.
  *
  * Exposed for testing.
@@ -49666,7 +49337,7 @@ exports.createChannelServer = function(channel) {
   return new bufferedChannel.BufferedChannelServer(channel);
 };
 
-},{"../persistence/file-system":"fileSystem","../server/server-api":23,"./buffered-channel":25,"./message":27,"text-encoding":55}],31:[function(require,module,exports){
+},{"../server/server-api":23,"./buffered-channel":25,"./message":27,"text-encoding":55}],31:[function(require,module,exports){
 (function (global){
 /*! http://mths.be/base64 v0.1.0 by @mathias | MIT license */
 ;(function(root) {
@@ -89303,7 +88974,6 @@ const dnssdSem = require('./dnssd/dns-sd-semcache');
 const evaluation = require('./evaluation');
 const extBridge = require('./extension-bridge/messaging');
 const fileSystem = require('./persistence/file-system');
-const ifCommon = require('./peer-interface/common');
 const peerIfMgr = require('./peer-interface/manager');
 const settings = require('./settings');
 const serverApi = require('./server/server-api');
@@ -89698,13 +89368,12 @@ exports.getAbsPathToBaseDir = function() {
  */
 exports.getListFromService = function(serviceName) {
   return new Promise(function(resolve, reject) {
-    let peerAccessor = peerIfMgr.getPeerAccessor();
     exports.resolveCache(serviceName)
     .then(cacheInfo => {
-      let listParams = ifCommon.createListParams(
-        cacheInfo.ipAddress, cacheInfo.port, cacheInfo.listUrl
+      let peerAccessor = peerIfMgr.getPeerAccessor(
+        cacheInfo.ipAddress, cacheInfo.port
       );
-      return peerAccessor.getList(listParams);
+      return peerAccessor.getList();
     })
     .then(pageList => {
       resolve(pageList);
@@ -89755,7 +89424,7 @@ exports.saveMhtmlAndOpen = function(serviceName, href) {
   });
 };
 
-},{"./coalescence/manager":"coalMgr","./constants":9,"./dnssd/dns-controller":"dnsc","./dnssd/dns-sd-semcache":"dnsSem","./evaluation":"eval","./extension-bridge/messaging":"extBridge","./peer-interface/common":16,"./peer-interface/manager":18,"./persistence/datastore":20,"./persistence/file-system":"fileSystem","./server/server-api":23,"./server/server-controller":"serverController","./settings":"settings","./webrtc/connection-manager":"cmgr"}],"chromeUdp":[function(require,module,exports){
+},{"./coalescence/manager":"coalMgr","./constants":9,"./dnssd/dns-controller":"dnsc","./dnssd/dns-sd-semcache":"dnsSem","./evaluation":"eval","./extension-bridge/messaging":"extBridge","./peer-interface/manager":18,"./persistence/datastore":20,"./persistence/file-system":"fileSystem","./server/server-api":23,"./server/server-controller":"serverController","./settings":"settings","./webrtc/connection-manager":"cmgr"}],"chromeUdp":[function(require,module,exports){
 /* globals chrome */
 'use strict';
 
@@ -90590,6 +90259,7 @@ exports.getCachedPageSummaries = function(offset, numDesired) {
 
 const dnssd = require('./dns-sd');
 const serverApi = require('../server/server-api');
+const settings = require('../settings');
 
 
 const SEMCACHE_SERVICE_STRING = '_semcache._tcp';
@@ -90700,8 +90370,11 @@ exports.resolveCache = function(fullName) {
  * Browse for SemCache instances on the local network. This is a complete
  * resolution with all operating information.
  *
- * @return {Promise.<Object, Error>} Promise that resolves with a list of
- * objects like the following, or an empty list if no instances are found.
+ * @param {boolean} removeSelf true if the resulting list should remove our own
+ * cache info from the list
+ *
+ * @return {Promise.<Array<Object>, Error>} Promise that resolves with a list
+ * of objects like the following, or an empty list if no instances are found.
  *
  * {
  *   serviceName: "Sam's SemCache",
@@ -90711,12 +90384,53 @@ exports.resolveCache = function(fullName) {
  *   ipAddress: '1.2.3.4'
  * }
  */
-exports.browseForSemCacheInstances = function() {
-  let result = dnssd.browseServiceInstances(SEMCACHE_SERVICE_STRING);
-  return result;
+exports.browseForSemCacheInstances = function(removeSelf) {
+  return new Promise(function(resolve, reject) {
+    dnssd.browseServiceInstances(SEMCACHE_SERVICE_STRING)
+    .then(peerInfos => {
+      if (removeSelf) {
+        return exports.removeOwnInfo(peerInfos);
+      } else {
+        return peerInfos;
+      }
+    })
+    .then(filtered => {
+      resolve(filtered);
+    })
+    .catch(err => {
+      reject(err);
+    });
+  });
 };
 
-},{"../server/server-api":23,"./dns-sd":"dnssd"}],"dnsc":[function(require,module,exports){
+/**
+ * Remove the peerInfo object that represents our own machine.
+ *
+ * @param {Array.<Object>} peerInfos the peerInfo objects as returned from 
+ * browseForSemCacheInstances
+ *
+ * @return {Promise.<Array.<Object>, Error>}
+ */
+exports.removeOwnInfo = function(peerInfos) {
+  return new Promise(function(resolve, reject) {
+    settings.init()
+    .then(() => {
+      let result = [];
+      let ourDomain = settings.getHostName();
+      peerInfos.forEach(peerInfo => {
+        if (peerInfo.domainName !== ourDomain) {
+          result.push(peerInfo);
+        }
+      });
+      resolve(result);
+    })
+    .catch(err => {
+      reject(err);
+    });
+  });
+};
+
+},{"../server/server-api":23,"../settings":"settings","./dns-sd":"dnssd"}],"dnsc":[function(require,module,exports){
 (function (Buffer){
 /*jshint esnext:true*/
 /* globals Promise */

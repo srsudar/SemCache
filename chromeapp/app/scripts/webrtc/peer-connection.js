@@ -153,28 +153,6 @@ class PeerConnection extends EventEmitter {
   }
 
   /**
-   * Get a file from the peer.
-   *
-   * @param {string} remotePath the identifier on the remote machine
-   *
-   * @return {Promise.<Buffer, Error>} Promise that resolves when the get is
-   * complete
-   */
-  getFile(remotePath) {
-    let self = this;
-    return new Promise(function(resolve, reject) {
-      let msg = message.createFileMessage(remotePath);
-      self.sendAndGetResponse(msg)
-      .then(buffer => {
-        resolve(buffer);
-      })
-      .catch(err => {
-        reject(err);
-      });
-    });
-  }
-
-  /**
    * Helper for common functionality of creating a channel, sending a request
    * message, and resolving after a response is received.
    *
