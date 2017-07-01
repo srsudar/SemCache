@@ -202,15 +202,18 @@ test('enqueueRefresh does not enqueueRefresh if no strategy', function(t) {
 });
 
 test('initialize gets strategy and initializes', function(t) {
+  let enqueueRefreshStub = sinon.stub();
   let initStub = sinon.stub().resolves();
   let stratStub = {
     initialize: initStub
   };
 
   mgr.getStrategy = sinon.stub().returns(stratStub);
+  mgr.enqueueRefresh = enqueueRefreshStub;
 
   mgr.initialize();
 
   t.equal(initStub.callCount, 1);
+  t.equal(enqueueRefreshStub.callCount, 1);
   end(t);
 });

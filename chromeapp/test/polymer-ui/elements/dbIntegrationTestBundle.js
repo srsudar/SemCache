@@ -45632,6 +45632,7 @@ exports.reset = function() {
 exports.initialize = function() {
   let strategy = exports.getStrategy();
   strategy.initialize();
+  exports.enqueueRefresh();
 };
 
 /**
