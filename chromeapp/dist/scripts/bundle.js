@@ -3272,6 +3272,8 @@ const dataUrlToBlob = require('dataurl-to-blob');
 
 const DEFAULT_BUFFER_SIZE = 0;
 
+const UTF8 = 'utf8';
+
 /**
  * Helper to fetch and parse JSON from a URL.
  *
@@ -3613,7 +3615,7 @@ exports.objToBuff = function(obj) {
   // Get all the JSON-ifiable properties on their own and add them as a JSON
   // string.
   let json = {};
-  let sBuff = SmartBuffer.fromBuffer(new Buffer(DEFAULT_BUFFER_SIZE));
+  let sBuff = SmartBuffer.fromBuffer(new Buffer(DEFAULT_BUFFER_SIZE), UTF8);
 
   for (let prop of Object.keys(obj)) {
     let value = obj[prop];
@@ -3627,10 +3629,15 @@ exports.objToBuff = function(obj) {
     }
   }
 
-  let resultSb = SmartBuffer.fromBuffer(new Buffer(DEFAULT_BUFFER_SIZE));
+  let resultSb = SmartBuffer.fromBuffer(new Buffer(DEFAULT_BUFFER_SIZE), UTF8);
   let jsonStr = JSON.stringify(json);
+  // We can't use .length, because that is character count. Even more
+  // confusing, character count isn't what we want here. 💩 has .length 2, but
+  // is byte length 4. Instead we use byteLength, since that is what
+  // SmartBuffer/Buffer use to read byte values.
+  let byteLength = Buffer.byteLength(jsonStr, UTF8);
 
-  resultSb.writeUInt32BE(jsonStr.length);
+  resultSb.writeUInt32BE(byteLength);
   resultSb.writeString(jsonStr);
   resultSb.writeBuffer(sBuff.toBuffer());
 

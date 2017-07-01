@@ -1,6 +1,8 @@
 /*jshint esnext:true*/
 'use strict';
 
+const SmartBuffer = require('smart-buffer').SmartBuffer;
+
 const sinon = require('sinon');
 const test = require('tape');
 
@@ -258,6 +260,27 @@ test('objToBuff/bufftoObj correct for mixed properties', function(t) {
     age: 999,
     buff1: Buffer.from('number 1'),
     buff2: Buffer.from('do you even lift')
+  };
+
+  helperAssertCanReclaim(t, obj);
+});
+
+test('objToBuff/bufftoObj correct for unicode', function(t) {
+  let obj = {
+    title: 'Iñtërnâtiônàlizætiøn☃💩',
+    age: 999,
+    buff1: Buffer.from('number 1'),
+    buff2: Buffer.from('do you even lift')
+  };
+
+  helperAssertCanReclaim(t, obj);
+});
+
+test('objToBuff/bufftoObj correct for poo', function(t) {
+  // Keep this very small test because it is easier to debug if you run into
+  // unicode issues
+  let obj = {
+    a: '💩',
   };
 
   helperAssertCanReclaim(t, obj);
