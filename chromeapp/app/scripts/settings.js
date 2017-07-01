@@ -25,6 +25,11 @@ const TRANSPORT_METHOD_STRINGS = {
   webrtc: 'webrtc'
 };
 
+const COALESCENCE_METHOD_STRINGS = {
+  digest: 'digest',
+  bloom: 'bloom'
+};
+
 exports.SETTINGS_OBJ = null;
 
 const userFriendlyKeys = {
@@ -34,7 +39,8 @@ const userFriendlyKeys = {
   baseDirPath: 'baseDirPath',
   serverPort: 'serverPort',
   hostName: 'hostName',
-  transportMethod: 'transportMethod'
+  transportMethod: 'transportMethod',
+  coalescenceStrategy: 'coalescenceStrategy',
 };
 
 /**
@@ -50,7 +56,8 @@ exports.getAllSettingKeys = function() {
     exports.createNameSpacedKey(userFriendlyKeys.baseDirPath),
     exports.createNameSpacedKey(userFriendlyKeys.serverPort),
     exports.createNameSpacedKey(userFriendlyKeys.hostName),
-    exports.createNameSpacedKey(userFriendlyKeys.transportMethod)
+    exports.createNameSpacedKey(userFriendlyKeys.transportMethod),
+    exports.createNameSpacedKey(userFriendlyKeys.coalescenceStrategy),
   ];
 };
 
@@ -231,6 +238,18 @@ exports.getTransportMethod = function() {
 };
 
 /**
+ * @return {string} String representing the coalescence strategy. Defaults to
+ * 'digest'.
+ */
+exports.getCoalescenceStrategy = function() {
+  let result = exports.get(userFriendlyKeys.coalescenceStrategy);
+  if (result === null) {
+    result = COALESCENCE_METHOD_STRINGS.digest;
+  }
+  return result;
+};
+
+/**
  * @param {string} path the absolute path to the base directory of SemCache,
  * which unfortunately cannot be determined via an API
  */
@@ -301,6 +320,30 @@ exports.setTransportHttp = function() {
 exports.setTransportWebrtc = function() {
   return exports.set(
     userFriendlyKeys.transportMethod, TRANSPORT_METHOD_STRINGS.webrtc
+  );
+};
+
+/**
+ * Indicate that digest should be used as the coalescence strategy.
+ *
+ * @return {Promise.<Object, Error>} Promise that resolves with the current
+ * settings object
+ */
+exports.setCoalescenceDigest = function() {
+  return exports.set(
+    userFriendlyKeys.coalescenceStrategy, COALESCENCE_METHOD_STRINGS.digest
+  );
+};
+
+/**
+ * Indicate that bloom should be used as the coalescence strategy.
+ *
+ * @return {Promise.<Object, Error>} Promise that resolves with the current
+ * settings object
+ */
+exports.setCoalescenceBloom = function() {
+  return exports.set(
+    userFriendlyKeys.coalescenceStrategy, COALESCENCE_METHOD_STRINGS.bloom
   );
 };
 

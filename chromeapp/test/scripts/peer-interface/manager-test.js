@@ -43,7 +43,7 @@ test('getPeerAccessor correct for http', function(t) {
   let { ipAddress, port } = tutil.getIpPort();
   proxyquireManager({
     '../settings': {
-      getTransportMethod: sinon.stub().returns('http')
+      getTransportMethod: sinon.stub().returns('http'),
     }
   });
 

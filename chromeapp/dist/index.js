@@ -22438,6 +22438,12 @@ Polymer({
             return this._getTransportMethod();
           }
         },
+        coalescenceStrategy: {
+          type: String,
+          value: function() {
+            return this._getCoalescenceStrategy();
+          }
+        },
 
         /**
          * Describes the author of the element, but is really just an excuse to
@@ -22500,19 +22506,26 @@ Polymer({
         return result;
       },
 
+      _getCoalescenceStrategy: function() {
+        var settingsModule = this.getSettingsModule();
+        var result = settingsModule.getCoalescenceStrategy();
+        return result;
+      },
+
       getSettingsModule: function() {
         var result = require('settings');
         return result;
       },
 
       saveSettings: function() {
-        var enteredPath = this.$$('#abs-path-input').value;
-        var enteredName = this.$$('#instance-name-input').value;
-        var enteredPort = this.$$('#server-port-input').value;
-        var enteredDomain = this.$$('#domain-name-input').value;
-        var transportMethod = this.$$('#transport-method').selected;
+        let enteredPath = this.$$('#abs-path-input').value;
+        let enteredName = this.$$('#instance-name-input').value;
+        let enteredPort = this.$$('#server-port-input').value;
+        let enteredDomain = this.$$('#domain-name-input').value;
+        let transportMethod = this.$$('#transport-method').selected;
+        let coalescenceStrategy = this.$$('#coalescence-strategy').selected;
 
-        var settings = this.getSettingsModule();
+        let settings = this.getSettingsModule();
         settings.setAbsPath(enteredPath);
         settings.setInstanceName(enteredName);
         settings.setServerPort(enteredPort);
@@ -22522,6 +22535,12 @@ Polymer({
           settings.setTransportWebrtc();
         } else {
           settings.setTransportHttp();
+        }
+
+        if (coalescenceStrategy === 'bloom') {
+          settings.setCoalescenceBloom();
+        } else {
+          settings.setCoalescenceDigest();
         }
       },
 
@@ -47047,7 +47066,6 @@ const settings = require('../settings');
  */
 exports.getPeerAccessor = function(ipAddress, port) {
   let transportMethod = settings.getTransportMethod();
-  console.log(transportMethod);
   if (transportMethod === 'http') {
     return new ifHttp.HttpPeerAccessor({ ipAddress, port }); 
   } else if (transportMethod === 'webrtc') {
@@ -89950,6 +89968,7 @@ exports.createRTCSessionDescription = function(descJson) {
 },{"../../../app/scripts/webrtc/peer-connection":28,"../server/server-api":23,"../util":24,"buffer":35}],"coalMgr":[function(require,module,exports){
 'use strict';
 
+const settings = require('../settings');
 const stratBloom = require('./bloom-strategy');
 const stratDig = require('./digest-strategy');
 const util = require('../util');
@@ -89962,26 +89981,11 @@ const util = require('../util');
  * The client should use coalescer/manager to determine this information.
  */
 
-/**
- * Enum representing strategies for performing cache coalescence.
- */
-exports.STRATEGIES = {
-  /**
-   * Maintain a list of all available cached pages from each peer.
-   */
-  digest: 'digest',
-  bloom: 'bloom'
-};
 
 /**
  * The amount of time to wait between refreshing the coalescence strategy.
  */
 exports.REFRESH_CYCLE_MILLIS = 60000;
-
-/**
- * The current startegy for resolving coalescence requests.
- */
-exports.CURRENT_STRATEGY = exports.STRATEGIES.digest;
 
 exports.ACTIVE_SRAT_OBJECT = null;
 
@@ -90061,9 +90065,9 @@ exports.getStrategy = function() {
     return exports.ACTIVE_SRAT_OBJECT;
   }
   let result = null;
-  if (exports.CURRENT_STRATEGY === exports.STRATEGIES.digest) {
+  if (settings.getCoalescenceStrategy() === 'digest') {
     result = new stratDig.DigestStrategy();
-  } else if (exports.CURRENT_STRATEGY === exports.STRATEGIES.bloom) {
+  } else if (settings.getCoalescenceStrategy() === 'bloom') {
     result = new stratBloom.BloomStrategy();
   } else {
     throw new Error('Unrecognized strategy: ' + exports.CURRENT_STRATEGY);
@@ -90072,7 +90076,7 @@ exports.getStrategy = function() {
   return result;
 };
 
-},{"../util":24,"./bloom-strategy":5,"./digest-strategy":6}],"db":[function(require,module,exports){
+},{"../settings":"settings","../util":24,"./bloom-strategy":5,"./digest-strategy":6}],"db":[function(require,module,exports){
 'use strict';
 
 const Dexie = require('dexie');
@@ -98624,6 +98628,11 @@ const TRANSPORT_METHOD_STRINGS = {
   webrtc: 'webrtc'
 };
 
+const COALESCENCE_METHOD_STRINGS = {
+  digest: 'digest',
+  bloom: 'bloom'
+};
+
 exports.SETTINGS_OBJ = null;
 
 const userFriendlyKeys = {
@@ -98633,7 +98642,8 @@ const userFriendlyKeys = {
   baseDirPath: 'baseDirPath',
   serverPort: 'serverPort',
   hostName: 'hostName',
-  transportMethod: 'transportMethod'
+  transportMethod: 'transportMethod',
+  coalescenceStrategy: 'coalescenceStrategy',
 };
 
 /**
@@ -98649,7 +98659,8 @@ exports.getAllSettingKeys = function() {
     exports.createNameSpacedKey(userFriendlyKeys.baseDirPath),
     exports.createNameSpacedKey(userFriendlyKeys.serverPort),
     exports.createNameSpacedKey(userFriendlyKeys.hostName),
-    exports.createNameSpacedKey(userFriendlyKeys.transportMethod)
+    exports.createNameSpacedKey(userFriendlyKeys.transportMethod),
+    exports.createNameSpacedKey(userFriendlyKeys.coalescenceStrategy),
   ];
 };
 
@@ -98830,6 +98841,18 @@ exports.getTransportMethod = function() {
 };
 
 /**
+ * @return {string} String representing the coalescence strategy. Defaults to
+ * 'digest'.
+ */
+exports.getCoalescenceStrategy = function() {
+  let result = exports.get(userFriendlyKeys.coalescenceStrategy);
+  if (result === null) {
+    result = COALESCENCE_METHOD_STRINGS.digest;
+  }
+  return result;
+};
+
+/**
  * @param {string} path the absolute path to the base directory of SemCache,
  * which unfortunately cannot be determined via an API
  */
@@ -98900,6 +98923,30 @@ exports.setTransportHttp = function() {
 exports.setTransportWebrtc = function() {
   return exports.set(
     userFriendlyKeys.transportMethod, TRANSPORT_METHOD_STRINGS.webrtc
+  );
+};
+
+/**
+ * Indicate that digest should be used as the coalescence strategy.
+ *
+ * @return {Promise.<Object, Error>} Promise that resolves with the current
+ * settings object
+ */
+exports.setCoalescenceDigest = function() {
+  return exports.set(
+    userFriendlyKeys.coalescenceStrategy, COALESCENCE_METHOD_STRINGS.digest
+  );
+};
+
+/**
+ * Indicate that bloom should be used as the coalescence strategy.
+ *
+ * @return {Promise.<Object, Error>} Promise that resolves with the current
+ * settings object
+ */
+exports.setCoalescenceBloom = function() {
+  return exports.set(
+    userFriendlyKeys.coalescenceStrategy, COALESCENCE_METHOD_STRINGS.bloom
   );
 };
 

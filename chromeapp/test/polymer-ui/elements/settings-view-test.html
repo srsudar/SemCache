@@ -32,22 +32,24 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
       // This is ugly, but it's unclear how to inject functionality the way we
       // want without different suites
       suite('<settings-view> 1', function() {
-        var path = 'some path';
-        var dirId = 'abc123';
-        var port = 9876;
-        var instanceName = 'my awesome cache';
-        var domainName = 'mylaptop.local';
+        let path = 'some path';
+        let dirId = 'abc123';
+        let port = 9876;
+        let instanceName = 'my awesome cache';
+        let domainName = 'mylaptop.local';
 
         // stamp them somehow.
-        var setPathSpy = sinon.spy();
-        var setDirSpy = sinon.spy();
-        var setPortSpy = sinon.spy();
-        var setNameSpy = sinon.spy();
-        var setHostNameSpy = sinon.spy();
-        var setTransportHttpSpy = sinon.spy();
-        var setTransportWebrtcSpy = sinon.spy();
+        let setPathSpy = sinon.spy();
+        let setDirSpy = sinon.spy();
+        let setPortSpy = sinon.spy();
+        let setNameSpy = sinon.spy();
+        let setHostNameSpy = sinon.spy();
+        let setTransportHttpSpy = sinon.spy();
+        let setTransportWebrtcSpy = sinon.spy();
+        let setCoalescenceDigestSpy = sinon.spy();
+        let setCoalescenceBloomSpy = sinon.spy();
 
-        var settingsModuleSpy = {
+        let settingsModuleSpy = {
           setAbsPath: setPathSpy,
           setInstanceName: setNameSpy,
           setBaseDirId: setDirSpy,
@@ -55,6 +57,8 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
           setHostName: setHostNameSpy,
           setTransportHttp: setTransportHttpSpy,
           setTransportWebrtc: setTransportWebrtcSpy,
+          setCoalescenceDigest: setCoalescenceDigestSpy,
+          setCoalescenceBloom: setCoalescenceBloomSpy,
           getAbsPath: sinon.stub(),
           getInstanceName: sinon.stub(),
           getBaseDirId: sinon.stub(),
@@ -63,7 +67,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
           getTransportMethod: sinon.stub()
         };
 
-        var myEl;
+        let myEl;
         // In the app require() is provided by the browser-ified script. In the
         // tests we are stubbing out its functionality using the
         // getSettingsModule().
@@ -82,6 +86,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
           myEl.$$('#server-port-input').value = port;
           myEl.$$('#domain-name-input').value = domainName;
           myEl.$$('#transport-method').selected = 'http';
+          myEl.$$('#coalescence-strategy').selected = 'digest';
 
           saveEl.click();
 
@@ -93,9 +98,10 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
           assert.equal(setPortSpy.args[0][0], port);
           assert.equal(setNameSpy.args[0][0], instanceName);
           assert.equal(setHostNameSpy.args[0][0], domainName);
-          // We expect a call only to set http, but not to set webrtc
           assert.equal(setTransportHttpSpy.callCount, 1);
           assert.equal(setTransportWebrtcSpy.callCount, 0);
+          assert.equal(setCoalescenceDigestSpy.callCount, 1);
+          assert.equal(setCoalescenceBloomSpy.callCount, 0);
 
           // Save again changing the selected value
           myEl.$$('#transport-method').selected = 'webrtc';
@@ -108,21 +114,23 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
       });
 
       suite('<settings-view> 2', function() {
-        var path = 'a nice path';
-        var entryPath = 'the entry path';
-        var dirId = '987zyx';
-        var port = 1234;
-        var instanceName = 'Matt\'s cache';
-        var domainName = 'hello.local';
-        var transportMethod = 'webrtc';
+        let path = 'a nice path';
+        let entryPath = 'the entry path';
+        let dirId = '987zyx';
+        let port = 1234;
+        let instanceName = 'Matt\'s cache';
+        let domainName = 'hello.local';
+        let transportMethod = 'webrtc';
+        let coalescenceStrategy = 'bloom';
 
-        var settingsModuleSpy = {
+        let settingsModuleSpy = {
           getAbsPath: sinon.stub().returns(path),
           getInstanceName: sinon.stub().returns(instanceName),
           getBaseDirPath: sinon.stub().returns(entryPath),
           getServerPort: sinon.stub().returns(port),
           getHostName: sinon.stub().returns(domainName),
-          getTransportMethod: sinon.stub().returns(transportMethod)
+          getTransportMethod: sinon.stub().returns(transportMethod),
+          getCoalescenceStrategy: sinon.stub().returns(coalescenceStrategy),
         };
 
         window.require = function() {
@@ -157,6 +165,10 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
           assert.equal(
             myEl.$$('#transport-method').selected,
             transportMethod
+          );
+          assert.equal(
+            myEl.$$('#coalescence-strategy').selected,
+            coalescenceStrategy
           );
         });
 

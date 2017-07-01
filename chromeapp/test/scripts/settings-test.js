@@ -282,6 +282,12 @@ test('custom getters call internals', function(t) {
     'transportMethod',
     t
   );
+  helperGetCallsInternalsForKey(
+    settings,
+    settings.getCoalescenceStrategy,
+    'coalescenceStrategy',
+    t
+  );
   t.end();
   resetSettings();
 });
@@ -294,6 +300,19 @@ test('getTransportMethod defaults to http', function(t) {
 
   let actual = settings.getTransportMethod();
   t.equal(actual, 'http');
+  t.deepEqual(getSpy.args[0], [key]);
+  t.end();
+  resetSettings();
+});
+
+test('getCoalescenceStrategy defaults to digest', function(t) {
+  let key = 'coalescenceStrategy';
+  let getSpy = sinon.stub();
+  getSpy.withArgs(key).returns(null);
+  settings.get = getSpy;
+
+  let actual = settings.getCoalescenceStrategy();
+  t.equal(actual, 'digest');
   t.deepEqual(getSpy.args[0], [key]);
   t.end();
   resetSettings();
@@ -356,6 +375,20 @@ test('custom setters call internals', function(t) {
     settings.setTransportWebrtc,
     'transportMethod',
     'webrtc',
+    t
+  );
+  helperSetCallsInternalsForKey(
+    settings,
+    settings.setCoalescenceDigest,
+    'coalescenceStrategy',
+    'digest',
+    t
+  );
+  helperSetCallsInternalsForKey(
+    settings,
+    settings.setCoalescenceBloom,
+    'coalescenceStrategy',
+    'bloom',
     t
   );
   t.end();

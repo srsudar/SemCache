@@ -153,6 +153,19 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
       <paper-radio-button name="webrtc">WebRTC</paper-radio-button>
     </paper-radio-group>
 
+    <h2>Coalescence Strategy</h2>
+    <iron-label id="coalescence-strategy-hint">
+      Should we become aware of peer content via a digest (listing all pages),
+      or via Bloom filters.
+    </iron-label>
+    <br>
+    <paper-radio-group
+      id="coalescence-strategy"
+      selected="{{coalescenceStrategy}}">
+      <paper-radio-button name="digest">Digest</paper-radio-button>
+      <paper-radio-button name="bloom">Bloom Filter</paper-radio-button>
+    </paper-radio-group>
+
     </div>
     <content></content>
   </template>
@@ -196,6 +209,12 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
           type: String,
           value: function() {
             return this._getTransportMethod();
+          }
+        },
+        coalescenceStrategy: {
+          type: String,
+          value: function() {
+            return this._getCoalescenceStrategy();
           }
         },
 
@@ -260,19 +279,26 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
         return result;
       },
 
+      _getCoalescenceStrategy: function() {
+        var settingsModule = this.getSettingsModule();
+        var result = settingsModule.getCoalescenceStrategy();
+        return result;
+      },
+
       getSettingsModule: function() {
         var result = require('settings');
         return result;
       },
 
       saveSettings: function() {
-        var enteredPath = this.$$('#abs-path-input').value;
-        var enteredName = this.$$('#instance-name-input').value;
-        var enteredPort = this.$$('#server-port-input').value;
-        var enteredDomain = this.$$('#domain-name-input').value;
-        var transportMethod = this.$$('#transport-method').selected;
+        let enteredPath = this.$$('#abs-path-input').value;
+        let enteredName = this.$$('#instance-name-input').value;
+        let enteredPort = this.$$('#server-port-input').value;
+        let enteredDomain = this.$$('#domain-name-input').value;
+        let transportMethod = this.$$('#transport-method').selected;
+        let coalescenceStrategy = this.$$('#coalescence-strategy').selected;
 
-        var settings = this.getSettingsModule();
+        let settings = this.getSettingsModule();
         settings.setAbsPath(enteredPath);
         settings.setInstanceName(enteredName);
         settings.setServerPort(enteredPort);
@@ -282,6 +308,12 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
           settings.setTransportWebrtc();
         } else {
           settings.setTransportHttp();
+        }
+
+        if (coalescenceStrategy === 'bloom') {
+          settings.setCoalescenceBloom();
+        } else {
+          settings.setCoalescenceDigest();
         }
       },
 

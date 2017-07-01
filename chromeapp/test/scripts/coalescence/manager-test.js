@@ -33,7 +33,12 @@ function proxyquireManager(proxies) {
 }
 
 test('getStrategy returns digest strategy', function(t) {
-  mgr.CURRENT_STRATEGY = mgr.STRATEGIES.digest;
+  proxyquireManager({
+    '../settings': {
+      getCoalescenceStrategy: sinon.stub().returns('digest')
+    }
+  });
+
   let actual = mgr.getStrategy();
   let expected = new stratDig.DigestStrategy();
 
@@ -42,7 +47,12 @@ test('getStrategy returns digest strategy', function(t) {
 });
 
 test('getStrategy returns bloom strategy', function(t) {
-  mgr.CURRENT_STRATEGY = mgr.STRATEGIES.bloom;
+  proxyquireManager({
+    '../settings': {
+      getCoalescenceStrategy: sinon.stub().returns('bloom')
+    }
+  });
+
   let actual = mgr.getStrategy();
   let expected = new stratBloom.BloomStrategy();
 

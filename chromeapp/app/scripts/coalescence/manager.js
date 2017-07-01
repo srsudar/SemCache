@@ -1,5 +1,6 @@
 'use strict';
 
+const settings = require('../settings');
 const stratBloom = require('./bloom-strategy');
 const stratDig = require('./digest-strategy');
 const util = require('../util');
@@ -12,26 +13,11 @@ const util = require('../util');
  * The client should use coalescer/manager to determine this information.
  */
 
-/**
- * Enum representing strategies for performing cache coalescence.
- */
-exports.STRATEGIES = {
-  /**
-   * Maintain a list of all available cached pages from each peer.
-   */
-  digest: 'digest',
-  bloom: 'bloom'
-};
 
 /**
  * The amount of time to wait between refreshing the coalescence strategy.
  */
 exports.REFRESH_CYCLE_MILLIS = 60000;
-
-/**
- * The current startegy for resolving coalescence requests.
- */
-exports.CURRENT_STRATEGY = exports.STRATEGIES.digest;
 
 exports.ACTIVE_SRAT_OBJECT = null;
 
@@ -111,9 +97,9 @@ exports.getStrategy = function() {
     return exports.ACTIVE_SRAT_OBJECT;
   }
   let result = null;
-  if (exports.CURRENT_STRATEGY === exports.STRATEGIES.digest) {
+  if (settings.getCoalescenceStrategy() === 'digest') {
     result = new stratDig.DigestStrategy();
-  } else if (exports.CURRENT_STRATEGY === exports.STRATEGIES.bloom) {
+  } else if (settings.getCoalescenceStrategy() === 'bloom') {
     result = new stratBloom.BloomStrategy();
   } else {
     throw new Error('Unrecognized strategy: ' + exports.CURRENT_STRATEGY);

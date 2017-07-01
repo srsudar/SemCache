@@ -6088,6 +6088,17 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
       <paper-radio-button name="webrtc">WebRTC</paper-radio-button>
     </paper-radio-group>
 
+    <h2>Coalescence Strategy</h2>
+    <iron-label id="coalescence-strategy-hint">
+      Should we become aware of peer content via a digest (listing all pages),
+      or via Bloom filters.
+    </iron-label>
+    <br>
+    <paper-radio-group id="coalescence-strategy" selected="{{coalescenceStrategy}}">
+      <paper-radio-button name="digest">Digest</paper-radio-button>
+      <paper-radio-button name="bloom">Bloom Filter</paper-radio-button>
+    </paper-radio-group>
+
     </div>
     <content></content>
   </template>

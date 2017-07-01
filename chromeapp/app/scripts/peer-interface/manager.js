@@ -19,7 +19,6 @@ const settings = require('../settings');
  */
 exports.getPeerAccessor = function(ipAddress, port) {
   let transportMethod = settings.getTransportMethod();
-  console.log(transportMethod);
   if (transportMethod === 'http') {
     return new ifHttp.HttpPeerAccessor({ ipAddress, port }); 
   } else if (transportMethod === 'webrtc') {
