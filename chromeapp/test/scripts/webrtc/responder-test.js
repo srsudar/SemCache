@@ -289,7 +289,7 @@ test('onCachedPage resolves on success', function(t) {
   let apiResponse = sutil.getCachedPageResponseBuff();
 
   let getResponseSpy = sinon.stub();
-  getResponseSpy.withArgs(msg.request).resolves(apiResponse);
+  getResponseSpy.withArgs(href).resolves(apiResponse);
   let sendBufferSpy = sinon.stub().resolves();
 
   proxyquireResponder({
@@ -322,7 +322,7 @@ test('onCachedPage rejects on error', function(t) {
     }
   });
 
-  responder.onCachedPage(null, {})
+  responder.onCachedPage(null, { request: {} })
   .then(res => {
     t.fail(res);
     end(t);

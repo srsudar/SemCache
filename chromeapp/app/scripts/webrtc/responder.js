@@ -117,7 +117,7 @@ exports.onBloomFilter = function(channel) {
 
 exports.onCachedPage = function(channel, msg) {
   return new Promise(function(resolve, reject) {
-    serverApi.getResponseForCachedPage(msg.request)
+    serverApi.getResponseForCachedPage(msg.request.href)
     .then(buff => {
       return exports.sendBufferOverChannel(channel, buff);   
     })
