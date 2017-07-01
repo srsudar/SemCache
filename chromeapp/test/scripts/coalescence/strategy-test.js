@@ -72,19 +72,13 @@ function helperAssertGetAndProcess(
 
   if (peerInfos[0]) {
     getPaStub
-      .withArgs({
-        ipAddress: peerInfos[0].ipAddress,
-        port: peerInfos[0].port 
-      })
+      .withArgs(peerInfos[0].ipAddress, peerInfos[0].port)
       .returns(pa1);
   }
 
   if (peerInfos[1]) {
     getPaStub 
-      .withArgs({
-        ipAddress: peerInfos[1].ipAddress,
-        port: peerInfos[1].port 
-      })
+      .withArgs(peerInfos[1].ipAddress, peerInfos[1].port)
       .returns(pa2);
   }
   

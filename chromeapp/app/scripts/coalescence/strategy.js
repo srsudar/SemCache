@@ -166,10 +166,9 @@ class CoalescenceStrategy {
       let pendingResponses = peerInfos.length;
       let result = [];
       peerInfos.forEach(peerInfo => {
-        let peerInterface = peerIfMgr.getPeerAccessor({
-          ipAddress: peerInfo.ipAddress,
-          port: peerInfo.port
-        });
+        let peerInterface = peerIfMgr.getPeerAccessor(
+          peerInfo.ipAddress, peerInfo.port
+        );
         self.getResourceFromPeer(peerInterface, peerInfo)
         .then(resource => {
           pendingResponses--;
