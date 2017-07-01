@@ -7,6 +7,7 @@ const test = require('tape');
 const BloomFilter = require('../../../app/scripts/coalescence/bloom-filter').BloomFilter;
 const putil = require('../persistence/persistence-util');
 const sutil = require('./util');
+const tutil = require('../test-util');
 
 let api = require('../../../app/scripts/server/server-api');
 
@@ -33,28 +34,83 @@ function end(t) {
   t.end();
 }
 
-test('getAccessUrlForCachedPage outputs correct url', function(t) {
-  let fullPath = 'www.example.com_somedate';
-  let iface = {
-    address: '172.9.18.145',
-    port: 1234
+function helperThrowsIfNotSpecified(t, fn) {
+  let { ipAddress, port } = tutil.getIpPort();
+
+  let throwIp = function() {
+    fn(null, port);
   };
 
-  let expected = 'http://' +
-    iface.address +
-    ':' +
-    iface.port +
-    '/pages/' +
-    fullPath;
+  let throwPort = function() {
+    fn(ipAddress, null);
+  };
 
-  proxyquireApi({
-    '../app-controller': {
-      getListeningHttpInterface: sinon.stub().returns(iface)
-    }
-  });
+  t.throws(throwIp);
+  t.throws(throwPort);
+}
 
-  let actual = api.getAccessUrlForCachedPage(fullPath);
-  t.equal(expected, actual);
+function getUrlForPath(ipAddress, port, path) {
+  let result = [
+    'http://',
+    ipAddress,
+    ':',
+    port,
+    '/',
+    path
+  ].join('');
+  return result;
+}
+
+test('getUrlForDigest outputs correct url', function(t) {
+  let { ipAddress, port } = tutil.getIpPort();
+  let expected = getUrlForPath(
+    ipAddress, port, api.getApiEndpoints().pageDigest
+  );
+  let actual = api.getUrlForDigest(ipAddress, port);
+  t.equal(actual, expected);
+  end(t);
+});
+
+test('getUrlForDigest throws if invalid params', function(t) {
+  helperThrowsIfNotSpecified(t, api.getUrlForDigest);
+  end(t);
+});
+
+test('getUrForBloomFilter outputs correct url', function(t) {
+  let { ipAddress, port } = tutil.getIpPort();
+  let expected = getUrlForPath(
+    ipAddress, port, api.getApiEndpoints().bloomFilter
+  );
+  let actual = api.getUrlForBloomFilter(ipAddress, port);
+  t.equal(actual, expected);
+  end(t);
+});
+
+test('getUrlForBloomFilter throws if invalid params', function(t) {
+  helperThrowsIfNotSpecified(t, api.getUrlForBloomFilter);
+  end(t);
+});
+
+test('getAccessUrlForCachedPage outputs correct url', function(t) {
+  // We'll test this by encoding and decoding it.
+  let { ipAddress, port } = tutil.getIpPort();
+  let href = tutil.genUrls(1).next().value;
+
+  let path = api.getAccessUrlForCachedPage(ipAddress, port, href);
+  let recovered = api.getCachedPageHrefFromPath(path);
+
+  t.equal(recovered, href);
+  end(t);
+});
+
+test('getAccessUrlForCachedPage throws if invalid params', function(t) {
+  helperThrowsIfNotSpecified(t, api.getAccessUrlForCachedPage);
+
+  let noHref = function() {
+    api.getAccessUrlForCachedPage('1.2.3.4', 1234, null);
+  };
+
+  t.throws(noHref);
   end(t);
 });
 
@@ -109,24 +165,19 @@ test('getResponseForAllCachedPages resolves with pages', function(t) {
   });
 });
 
-test('getCachedFileNameFromPath parses path correct', function(t) {
-  let expected = 'www.npm.js_somedate.mhtml';
-  let path = '/pages/' + expected;
-
-  let api = require('../../../app/scripts/server/server-api');
-
-  let actual = api.getCachedFileNameFromPath(path);
-  t.equal(actual, expected);
-  t.end();
-});
-
 test('getListPageUrlForCache returns correct URL', function(t) {
-  let ipAddress = '123.4.56.7';
-  let port = 3333;
+  let { ipAddress, port } = tutil.getIpPort();
 
-  let expected = 'http://123.4.56.7:3333/list_pages';
+  let expected = getUrlForPath(
+    ipAddress, port, api.getApiEndpoints().listPageCache
+  );
   let actual = api.getListPageUrlForCache(ipAddress, port);
   t.equal(actual, expected);
+  end(t);
+});
+
+test('getListPageUrlForCache throws if invalid params', function(t) {
+  helperThrowsIfNotSpecified(t, api.getListPageUrlForCache);
   end(t);
 });
 
@@ -231,7 +282,6 @@ test('getResponseForAllPagesDigest rejects on error', function(t) {
 
 test('getResponseForCachedPage resolves on success', function(t) {
   let href = 'https://hello';
-  let params = { href };
   let metadataObj = { meta: 'oh my ' };
 
   let disks = [...putil.genCPDisks(2)];
@@ -251,7 +301,7 @@ test('getResponseForCachedPage resolves on success', function(t) {
   });
   api.createMetadatObj = sinon.stub().returns(metadataObj);
 
-  api.getResponseForCachedPage(params)
+  api.getResponseForCachedPage(href)
   .then(actual => {
     t.deepEqual(actual, expected);
     end(t);
@@ -269,7 +319,7 @@ test('getResponseForCachedPage resolves null if not found', function(t) {
     }
   });
 
-  api.getResponseForCachedPage({})
+  api.getResponseForCachedPage()
   .then(actual => {
     t.deepEqual(actual, null);
     end(t);
@@ -288,7 +338,7 @@ test('getResponseForCachedPage rejects on err', function(t) {
     }
   });
 
-  api.getResponseForCachedPage({})
+  api.getResponseForCachedPage()
   .then(res => {
     t.fail(res);
     end(t);
@@ -300,7 +350,7 @@ test('getResponseForCachedPage rejects on err', function(t) {
 });
 
 test('parseResponseForList correct', function(t) {
-  let expected = sutil.getListResponseObj();
+  let expected = sutil.getListResponseParsed();
   let response = sutil.getListResponseBuff();
   
   let actual = api.parseResponseForList(response);
@@ -310,7 +360,7 @@ test('parseResponseForList correct', function(t) {
 });
 
 test('parseResponseForCachedPage correct if non-null', function(t) {
-  let expected = sutil.getCachedPageResponseObj();
+  let expected = sutil.getCachedPageResponseParsed();
   let response = sutil.getCachedPageResponseBuff();
 
   let actual = api.parseResponseForCachedPage(response);
@@ -320,7 +370,7 @@ test('parseResponseForCachedPage correct if non-null', function(t) {
 });
 
 test('parseResponseForDigest correct', function(t) {
-  let expected = sutil.getDigestResponseJson();
+  let expected = sutil.getDigestResponseParsed();
   let response = sutil.getDigestResponseBuff();
 
   let actual = api.parseResponseForDigest(response);
@@ -330,17 +380,11 @@ test('parseResponseForDigest correct', function(t) {
 });
 
 test('parseResponseForBloomFilter correct', function(t) {
-  let expected = new BloomFilter();
-  expected.add('yo');
+  let expected = sutil.getBloomResponseParsed();
+  let response = sutil.getBloomResponseBuff();
 
-  // We expect the response to be just a serialized Bloom filter.
-  let buff = expected.toBuffer();
+  let actual = api.parseResponseForBloomFilter(response);
 
-  let actual = api.parseResponseForBloomFilter(buff);
-
-  // Testing for deepEqual on the top level object fails because of the
-  // _locations field. This seems to never be used in the object? Unclear as to
-  // what it is, so just ignoring it.
-  t.deepEqual(actual.buckets, expected.buckets);
+  tutil.assertBloomFiltersEqual(t, actual, expected);
   end(t);
 });

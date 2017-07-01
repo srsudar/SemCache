@@ -12,7 +12,6 @@ const dnssdSem = require('./dnssd/dns-sd-semcache');
 const evaluation = require('./evaluation');
 const extBridge = require('./extension-bridge/messaging');
 const fileSystem = require('./persistence/file-system');
-const ifCommon = require('./peer-interface/common');
 const peerIfMgr = require('./peer-interface/manager');
 const settings = require('./settings');
 const serverApi = require('./server/server-api');
@@ -407,13 +406,12 @@ exports.getAbsPathToBaseDir = function() {
  */
 exports.getListFromService = function(serviceName) {
   return new Promise(function(resolve, reject) {
-    let peerAccessor = peerIfMgr.getPeerAccessor();
     exports.resolveCache(serviceName)
     .then(cacheInfo => {
-      let listParams = ifCommon.createListParams(
-        cacheInfo.ipAddress, cacheInfo.port, cacheInfo.listUrl
+      let peerAccessor = peerIfMgr.getPeerAccessor(
+        cacheInfo.ipAddress, cacheInfo.port
       );
-      return peerAccessor.getList(listParams);
+      return peerAccessor.getList();
     })
     .then(pageList => {
       resolve(pageList);

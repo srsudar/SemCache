@@ -106,3 +106,22 @@ exports.genUrls = function*(num) {
     yield `http://foo.com/page_${i}`;
   }
 };
+
+exports.getIpPort = function() {
+  return {
+    ipAddress: '1.2.3.4',
+    port: 8888
+  };
+};
+
+/**
+ * Testing for deepEqual on the top level object fails because of the
+ * _locations field. This seems to never be used in the object? Unclear as to
+ * what it is, so just ignoring it.
+ */
+exports.assertBloomFiltersEqual = function(t, actual, expected) {
+  // Testing for deepEqual on the top level object fails because of the
+  // _locations field. This seems to never be used in the object? Unclear as to
+  // what it is, so just ignoring it.
+  t.deepEqual(actual.buckets, expected.buckets);
+};

@@ -6,7 +6,7 @@
  * API:
  * {
  *   channelName: /name of the channel to listen to/
- *   type: { list | file },
+ *   type: { list | etc },
  *   auth: /some object that can later be used for roles permissions/,
  *   request: {
  *     / depends on the object itself. could be a file path, eg /
@@ -15,7 +15,6 @@
  */
 
 exports.TYPE_LIST = 'list';
-exports.TYPE_FILE = 'file';
 exports.TYPE_DIGEST = 'digest';
 exports.TYPE_CACHED_PAGE = 'cachedpage';
 exports.TYPE_BLOOM_FILTER = 'bloomfilter';
@@ -23,7 +22,6 @@ exports.TYPE_BLOOM_FILTER = 'bloomfilter';
 /** Valid types of request messages. */
 let VALID_TYPES = [
   exports.TYPE_LIST,
-  exports.TYPE_FILE,
   exports.TYPE_DIGEST,
   exports.TYPE_CACHED_PAGE,
   exports.TYPE_BLOOM_FILTER,
@@ -88,19 +86,6 @@ exports.createCachedPageMessage = function(href) {
 };
 
 /**
- * @param {string} filePath
- *
- * @return {Object}
- */
-exports.createFileMessage = function(filePath) {
-  let result = exports.createMessage(exports.TYPE_FILE);
-  let request = {};
-  request.accessPath = filePath;
-  result.request = request;
-  return result;
-};
-
-/**
  * @param {string} type
  *
  * @return {Object}
@@ -125,15 +110,6 @@ exports.createMessage = function(type) {
  */
 exports.isList = function(msg) {
   return msg.type && msg.type === exports.TYPE_LIST;
-};
-
-/**
- * @param {Object} msg
- *
- * @return {boolean}
- */
-exports.isFile = function(msg) {
-  return msg.type && msg.type === exports.TYPE_FILE;
 };
 
 /**

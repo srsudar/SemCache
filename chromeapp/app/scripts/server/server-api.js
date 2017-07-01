@@ -7,7 +7,9 @@
  * instance. E.g. listing saved pages, providing saved pages, etc.
  */
 
-const appController = require('../app-controller');
+const base64 = require('base-64');
+const URI = require('urijs');
+
 const BloomFilter = require('../coalescence/bloom-filter').BloomFilter;
 const datastore = require('../persistence/datastore');
 const objects = require('../persistence/objects');
@@ -23,12 +25,29 @@ const VERSION = 0.0;
 const PATH_LIST_PAGE_CACHE = 'list_pages';
 const PATH_GET_CACHED_PAGE = 'pages';
 const PATH_GET_PAGE_DIGEST = 'page_digest';
+const PATH_GET_BLOOM_FILTER = 'bloom_filter';
 /** The path we use for mimicking the list_pages endpoing during evaluation. */
 const PATH_EVAL_LIST_PAGE_CACHE = 'eval_list';
 const PATH_RECEIVE_WRTC_OFFER = 'receive_wrtc';
 
 const DEFAULT_OFFSET = 0;
 const DEFAULT_LIMIT = 50;
+
+/**
+ * Generate a URL for the given path. Helper for taking care of scheme, etc.
+ *
+ * @param {string} ipAddress
+ * @param {number} port
+ * @param {string} path should NOT being with a trailing slash
+ */
+function createUrlForPath(ipAddress, port, path) {
+  if (!ipAddress || !port || !path) {
+    throw new Error(
+      'ipAddress, port, and path must be specified', ipAddress, port, path
+    );
+  }
+  return `${HTTP_SCHEME}${ipAddress}:${port}/${path}`; 
+}
 
 /**
  * Create the metadata object that is returned in server responses.
@@ -58,7 +77,8 @@ exports.getApiEndpoints = function() {
     listPageCache: PATH_LIST_PAGE_CACHE,
     pageDigest: PATH_GET_PAGE_DIGEST,
     evalListPages: PATH_EVAL_LIST_PAGE_CACHE,
-    receiveWrtcOffer: PATH_RECEIVE_WRTC_OFFER
+    receiveWrtcOffer: PATH_RECEIVE_WRTC_OFFER,
+    bloomFilter: PATH_GET_BLOOM_FILTER
   };
 };
 
@@ -69,29 +89,66 @@ exports.getApiEndpoints = function() {
  * @param {integer} port the port where the server is listening at ipAddress
  */
 exports.getListPageUrlForCache = function(ipAddress, port) {
-  let scheme = HTTP_SCHEME;
-  let endpoint = exports.getApiEndpoints().listPageCache;
-  
-  let result = scheme + ipAddress + ':' + port + '/' + endpoint;
-  return result;
+  return createUrlForPath(
+    ipAddress, port, exports.getApiEndpoints().listPageCache
+  );
+};
+
+/**
+ * Return the URL where the cache digest can be accessed.
+ *
+ * @param {string} ipAddress the IP address of the cache
+ * @param {integer} port the port where the server is listening at ipAddress
+ */
+exports.getUrlForDigest = function(ipAddress, port) {
+  return createUrlForPath(
+    ipAddress, port, exports.getApiEndpoints().pageDigest
+  );
+};
+
+/**
+ * Return the URL where the cache Bloom filter can be accessed.
+ *
+ * @param {string} ipAddress the IP address of the cache
+ * @param {integer} port the port where the server is listening at ipAddress
+ */
+exports.getUrlForBloomFilter = function(ipAddress, port) {
+  return createUrlForPath(
+    ipAddress, port, exports.getApiEndpoints().bloomFilter
+  );
 };
 
 /**
  * Create the full access path that can be used to access the cached page.
  *
- * @param {string} fullPath the full path of the file that is to be accessed
+ * @param {string} ipAddress the IP address of the cache
+ * @param {integer} port the port where the server is listening at ipAddress
+ * @param {string} href the href of the page to fetch
  *
  * @return {string} a fully qualified and valid URL
  */
-exports.getAccessUrlForCachedPage = function(fullPath) {
-  let scheme = HTTP_SCHEME;
-  // TODO: this might have to strip the path of directory where things are
-  // stored--it basically maps between the two urls.
-  let httpIface = appController.getListeningHttpInterface();
-  let addressAndPort = httpIface.address + ':' + httpIface.port;
-  let apiPath = exports.getApiEndpoints().pageCache;
-  let result = scheme + [addressAndPort, apiPath, fullPath].join('/');
-  return result;
+exports.getAccessUrlForCachedPage = function(ipAddress, port, href) {
+  if (!href) {
+    throw new Error('href not specified', href);
+  }
+  // We'll base 64 encode this.
+  let encoded = base64.encode(href);
+  let path = [exports.getApiEndpoints().pageCache, encoded].join('/');
+  return createUrlForPath(ipAddress, port, path);
+};
+
+/**
+ * Get the file name of the file that is being requested.
+ *
+ * @param {string} path the path of the request
+ *
+ * @return {string} the href of the file being requested
+ */
+exports.getCachedPageHrefFromPath = function(path) {
+  let uri = URI(path);
+  let encoded = uri.filename();
+  let href = base64.decode(encoded);
+  return href;
 };
 
 /**
@@ -120,15 +177,13 @@ exports.getResponseForAllCachedPages = function() {
 };
 
 /**
- * @param {Object} params parameters for the request
- * @param {string} params.href the href of the requested page
+ * @param {string} href the href of the requested page
  *
  * @return {Promise.<Buffer, Error>} Promise that resolves with a Buffer
  * representing the CPDisk, or a null value if the page is not found.
  */
-exports.getResponseForCachedPage = function(params) {
+exports.getResponseForCachedPage = function(href) {
   return new Promise(function(resolve, reject) {
-    let href = params.href;
     datastore.getCPDiskForHrefs(href)
     .then(cpdiskArr => {
       if (cpdiskArr.length === 0) {
@@ -201,16 +256,19 @@ exports.getResponseForBloomFilter = function() {
 /**
  * @param {Buffer} buff
  *
- * @return {Object}
+ * @return {Array.<CPSummary>}
  */
 exports.parseResponseForList = function(buff) {
-  // This is a pure JSON response. The only thing to do is parse and invoke the
-  // constructors.
+  console.log(buff.length);
+  console.log(buff);
+  let strReclaimed = buff.toString();
+  console.log('length of reclaimed', strReclaimed.length);
+  console.log('reclaimed:', strReclaimed);
   let result = JSON.parse(buff.toString());
   result.cachedPages = result.cachedPages.map(
     cpsumJson => objects.CPSummary.fromJSON(cpsumJson)
   );
-  return result;
+  return result.cachedPages;
 };
 
 /*
@@ -234,7 +292,7 @@ exports.parseResponseForCachedPage = function(buff) {
  */
 exports.parseResponseForDigest = function(buff) {
   // This one is pure JSON.
-  return JSON.parse(buff.toString());
+  return JSON.parse(buff.toString()).digest;
 };
 
 /**
@@ -244,16 +302,4 @@ exports.parseResponseForDigest = function(buff) {
  */
 exports.parseResponseForBloomFilter = function(buff) {
   return BloomFilter.fromBuffer(buff);
-};
-
-/**
- * Get the file name of the file that is being requested.
- *
- * @param {string} path the path of the request
- */
-exports.getCachedFileNameFromPath = function(path) {
-  let parts = path.split('/');
-  // The file name is the last part of the path.
-  let result = parts[parts.length - 1];
-  return result;
 };

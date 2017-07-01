@@ -86,39 +86,15 @@ exports.CachedPageHandler = function() {
 _.extend(exports.CachedPageHandler.prototype,
   {
     get: function() {
-      let fileName = api.getCachedFileNameFromPath(this.request.path);
-
-      fileSystem.getDirectoryForCacheEntries()
-      .then(cacheDir => {
-        return fsUtil.getFile(
-          cacheDir, 
-          {
-            create: false,
-            exclusive: false
-          },
-          fileName
-        );
-      })
-      .then(fileEntry => {
-        fileEntry.file(file => {
-          let that = this;
-          let fileReader = new FileReader();
-
-          fileReader.onload = function(evt) {
-            // set mime types etc?
-            that.write(evt.target.result);
-          };
-
-          fileReader.onerror = function(evt) {
-            console.error('error reading', evt.target.error);
-            that.request.connection.close();
-          };
-
-          fileReader.readAsArrayBuffer(file);
-        });
+      let href = api.getCachedPageHrefFromPath(this.request.path);
+      api.getResponseForCachedPage(href)
+      .then(buffer => {
+        this.write(buffer);
       })
       .catch(err => {
-        console.log('Error reading file: ', err);
+        console.log('error retrieving cached page for href:', href);
+        console.log(err);
+        this.request.connection.close();
       });
     }
   },
@@ -207,40 +183,7 @@ _.extend(exports.WebRtcOfferHandler.prototype,
 
     get: function() {
       console.log('IN GET');
-      let fileName = api.getCachedFileNameFromPath(this.request.path);
-
-      fileSystem.getDirectoryForCacheEntries()
-      .then(cacheDir => {
-        return fsUtil.getFile(
-          cacheDir, 
-          {
-            create: false,
-            exclusive: false
-          },
-          fileName
-        );
-      })
-      .then(fileEntry => {
-        fileEntry.file(file => {
-          let that = this;
-          let fileReader = new FileReader();
-
-          fileReader.onload = function(evt) {
-            // set mime types etc?
-            that.write(evt.target.result);
-          };
-
-          fileReader.onerror = function(evt) {
-            console.error('error reading', evt.target.error);
-            that.request.connection.close();
-          };
-
-          fileReader.readAsArrayBuffer(file);
-        });
-      })
-      .catch(err => {
-        console.log('Error reading file: ', err);
-      });
+      this.write('Nothing to get here');
     }
   },
   WSC.BaseHandler.prototype

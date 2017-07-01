@@ -2,9 +2,7 @@
 
 const TextDecoder = require('text-encoding').TextDecoder;
 
-const api = require('../server/server-api');
 const bufferedChannel = require('./buffered-channel');
-const fileSystem = require('../persistence/file-system');
 const message = require('./message');
 const serverApi = require('../server/server-api');
 
@@ -40,8 +38,6 @@ exports.onDataChannelMessageHandler = function(channel, event) {
 
   if (message.isList(msg)) {
     exports.onList(channel, msg);
-  } else if (message.isFile(msg)) {
-    exports.onFile(channel, msg);
   } else if (message.isDigest(msg)) {
     exports.onDigest(channel, msg);
   } else if (message.isCachedPage(msg)) {
@@ -149,34 +145,6 @@ exports.sendBufferOverChannel = function(channel, buff) {
       resolve();
     })
     .catch(err => {
-      reject(err);
-    });
-  });
-};
-
-/**
- * Handler that responds to a request for a file.
- *
- * Sends the contents of the file to the peer.
- *
- * @param {RTCDataChannel} channel the data channel on which to send the
- * response
- * @param {Object} msg the message requesting the information
- *
- * @return {Promise.<undefined, Error>} Promise that returns after sending has
- * begun.
- */
-exports.onFile = function(channel, msg) {
-  return new Promise(function(resolve, reject) {
-    let ccServer = exports.createChannelServer(channel);
-    let fileName = api.getCachedFileNameFromPath(msg.request.accessPath);
-    fileSystem.getFileContentsFromName(fileName)
-    .then(buff => {
-      ccServer.sendBuffer(buff);
-      resolve();
-    })
-    .catch(err => {
-      ccServer.sendError(err);
       reject(err);
     });
   });

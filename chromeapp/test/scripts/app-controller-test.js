@@ -6,9 +6,8 @@ const sinon = require('sinon');
 const test = require('tape');
 
 const constants = require('../../app/scripts/constants');
-const ifCommon = require('../../app/scripts/peer-interface/common');
 const putil = require('./persistence/persistence-util');
-const testUtil = require('./test-util');
+const tutil = require('./test-util');
 
 let appc = require('../../app/scripts/app-controller');
 
@@ -59,7 +58,7 @@ function rejectIfMissingSettingHelper(instanceName, port, dirId, host, t) {
 }
 
 test('saveMhtmlAndOpen persists and opens', function(t) {
-  let cacheInfo = testUtil.genCacheInfos(1).next().value;
+  let cacheInfo = tutil.genCacheInfos(1).next().value;
   let serviceName = cacheInfo.instanceName;
   let cpdisk = putil.genCPDisks(1).next().value;
   let href = cpdisk.captureHref;
@@ -151,29 +150,29 @@ test('saveMhtmlAndOpen rejects if error', function(t) {
 });
 
 test('getListFromService resolves with json', function(t) {
-  let serviceName = 'hello.semcache.local';
-  let cacheInfo = {
-    ipAddress: '1.2.3.4',
-    port: 8866,
-    listUrl: 'http://peer/list.json'
-  };
+  let cacheInfo = tutil.genCacheInfos(1).next().value;
   let expected = { cachedPages: ['page1', 'page2'] };
-  let listParams = ifCommon.createListParams(
-    cacheInfo.ipAddress, cacheInfo.port, cacheInfo.listUrl
-  );
+  let serviceName = cacheInfo.instanceName;
 
   let peerAccessorStub = sinon.stub();
 
   let getListStub = sinon.stub();
-  getListStub.withArgs(listParams).resolves(expected);
+  getListStub.resolves(expected);
   peerAccessorStub.getList = getListStub;
 
   let resolveCacheStub = sinon.stub();
-  resolveCacheStub.withArgs(serviceName).resolves(cacheInfo);
+  resolveCacheStub
+    .withArgs(serviceName)
+    .resolves(cacheInfo);
+
+  let getPeerStub = sinon.stub();
+  getPeerStub
+    .withArgs(cacheInfo.ipAddress, cacheInfo.port)
+    .returns(peerAccessorStub);
 
   proxyquireAppc({
     './peer-interface/manager': {
-      getPeerAccessor: sinon.stub().returns(peerAccessorStub)
+      getPeerAccessor: getPeerStub
     }
   });
 
@@ -196,11 +195,7 @@ test('getListFromService rejects with error', function(t) {
   let serviceName = 'hello.semcache.local';
   let expected = { error: 'getPeerAccessor failed' };
 
-  proxyquireAppc({
-    './peer-interface/manager': {
-      getPeerAccessor: sinon.stub().throws(expected)
-    }
-  });
+  appc.resolveCache = sinon.stub().rejects(expected);
 
   appc.getListFromService(serviceName)
   .then(res => {
@@ -399,7 +394,7 @@ test('getListUrlForSelf is sensible', function(t) {
 
 test('getOwnCache returns correct info', function(t) {
   let listUrl = 'list url';
-  let expected = testUtil.genCacheInfos(1).next().value;
+  let expected = tutil.genCacheInfos(1).next().value;
   expected.listUrl = listUrl;
   
   let getInstanceNameSpy = sinon.stub().returns(expected.friendlyName);
@@ -491,7 +486,7 @@ test('getPeerCacheNames does not query network if no network', function(t) {
 
 test('getPeerCacheNames resolves if running', function(t) {
   let serviceType = '_semcache._tcp';
-  let cacheNames = testUtil.createCacheNames(serviceType, 6);
+  let cacheNames = tutil.createCacheNames(serviceType, 6);
 
   let self = cacheNames[0];
   // We want to find all the other caches, in reverse order, with ourselves
@@ -556,7 +551,7 @@ test('getBrowseableCaches does not query network if not started', function(t) {
   let ipAddress = '4.3.2.1';
   let listUrl = 'list url';
 
-  let ownCache = testUtil.createCacheObj(
+  let ownCache = tutil.createCacheObj(
     hostName, instanceName, ipAddress, serverPort, listUrl
   );
   let browseSpy = sinon.spy();
@@ -593,13 +588,13 @@ test('getBrowseableCaches dedupes and returns correct list', function(t) {
 
   let listUrl = 'list url';
 
-  let ownCache = testUtil.createCacheObj(
+  let ownCache = tutil.createCacheObj(
     hostName, instanceName, ipAddress, serverPort, listUrl
   );
-  let firstCache = testUtil.createCacheObj(
+  let firstCache = tutil.createCacheObj(
     'someone.local', 'aaa cache', '5.5.5.5', 1234, listUrl
   );
-  let lastCache = testUtil.createCacheObj(
+  let lastCache = tutil.createCacheObj(
     'elseone.local', 'zzz cache', '8.8.8.8', 9999, listUrl
   );
 
@@ -723,7 +718,7 @@ test('stopServers restores state', function(t) {
 });
 
 test('resolveCache respects SELF_SERVICE_SHORTCUT', function(t) {
-  let expected = testUtil.genCacheInfos(1).next().value;
+  let expected = tutil.genCacheInfos(1).next().value;
 
   appc.getOwnCache = sinon.stub().returns(expected);
 
@@ -740,7 +735,7 @@ test('resolveCache respects SELF_SERVICE_SHORTCUT', function(t) {
 
 test('resolveCache does not use network for self', function(t) {
   let friendlyName = 'friendly name';
-  let ownCache = testUtil.createCacheObj(
+  let ownCache = tutil.createCacheObj(
     'me.local', friendlyName, '1.2.3.4', 7777, 'http://me.local:7777/list'
   );
   let fullName = ownCache.instanceName;
@@ -770,12 +765,12 @@ test('resolveCache does not use network for self', function(t) {
 });
 
 test('resolveCache queries network if needed and resolves', function(t) {
-  let ownCache = testUtil.createCacheObj(
+  let ownCache = tutil.createCacheObj(
     'me.local', 'own cache', '1.2.3.4', 7777, 'http://me.local:7777/list'
   );
 
   let friendlyName = 'friendly name';
-  let expected = testUtil.createCacheObj(
+  let expected = tutil.createCacheObj(
     'expected.local', friendlyName, '123.456.789.0', 9999, 'http://list.json'
   );
   let fullName = expected.instanceName;
@@ -806,7 +801,7 @@ test('resolveCache queries network if needed and resolves', function(t) {
 });
 
 test('resolveCache rejects if query fails', function(t) {
-  let ownCache = testUtil.createCacheObj(
+  let ownCache = tutil.createCacheObj(
     'me.local', 'own cache', '1.2.3.4', 7777, 'http://me.local:7777/list'
   );
   let fullName = 'missingRecords';

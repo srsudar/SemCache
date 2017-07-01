@@ -1,15 +1,16 @@
 'use strict';
 
-const proxyquire = require('proxyquire');
 const sinon = require('sinon');
 const test = require('tape');
 
 const coalObjects = require('../../../app/scripts/coalescence/objects');
 const objects = require('../../../app/scripts/coalescence/objects');
-const pifCommon = require('../../../app/scripts/peer-interface/common');
+const sutil = require('../server/util');
 const tutil = require('../test-util');
 
 let digestStrategy = require('../../../app/scripts/coalescence/digest-strategy');
+
+let DigestStrategy = digestStrategy.DigestStrategy;
 
 
 /**
@@ -22,12 +23,7 @@ function resetDigest() {
     require.resolve('../../../app/scripts/coalescence/digest-strategy')
   ];
   digestStrategy = require('../../../app/scripts/coalescence/digest-strategy');
-}
-
-function proxyquireDigest(proxies) {
-  digestStrategy= proxyquire(
-    '../../../app/scripts/coalescence/digest-strategy', proxies
-  );
+  DigestStrategy = digestStrategy.DigestStrategy;
 }
 
 function end(t) {
@@ -36,256 +32,6 @@ function end(t) {
   t.end();
 }
 
-function createPeerInfos() {
-  return [...tutil.genCacheInfos(2)];
-}
-
-function createRawDigests() {
-  let digest1 = [
-    {
-      fullUrl: 'http://foo.com',
-      captureDate: '2017-04-03'
-    }
-  ];
-  let digest2 = [
-    {
-      fullUrl: 'http://two.com',
-      captureDate: '2017-05-03'
-    }
-  ];
-  return [digest1, digest2];
-}
-
-function createProcessedDigests() {
-  let peerInfos = createPeerInfos();
-  let rawDigests = createRawDigests();
-  let result = [];
-  for (let i = 0; i < peerInfos.length; i++) {
-    let digest = new coalObjects.Digest(peerInfos[i], rawDigests[i]);
-    result.push(digest);
-  }
-  return result;
-}
-
-test('initialize rejects if something goes wrong', function(t) {
-  let expectedErr = { msg: 'browse rejected' };
-  proxyquireDigest({
-    '../dnssd/dns-sd-semcache': {
-      browseForSemCacheInstances: sinon.stub().rejects(expectedErr)
-    }
-  });
-
-  let digest = new digestStrategy.DigestStrategy();
-
-  t.false(digest.isInitializing());
-  t.false(digest.isInitialized());
-
-  digest.initialize()
-  .then(actual => {
-    t.fail(actual);
-    end(t);
-  })
-  .catch(actual => {
-    t.equal(actual, expectedErr);
-    t.false(digest.isInitializing());
-    t.false(digest.isInitialized());
-    end(t);
-  });
-});
-
-test('initialize resolves on success', function(t) {
-  let peerInfos = [
-    {
-      ipAddress: '1.2.3.4',
-      port: 1234
-    }
-  ];
-  let processedDigests = [
-    { digest: 'ate too much' },
-    { digest: 'starving' }
-  ];
-  let peerAccessor = 'I am a fake peer accessor';
-  let removeOwnInfoStub = sinon.stub().resolves(peerInfos);
-
-  proxyquireDigest({
-    '../dnssd/dns-sd-semcache': {
-      browseForSemCacheInstances: sinon.stub().resolves(peerInfos)
-    },
-    '../peer-interface/manager': {
-      getPeerAccessor: sinon.stub().returns(peerAccessor)
-    },
-    './util': {
-      removeOwnInfo: removeOwnInfoStub
-    }
-  });
-
-  let digest = new digestStrategy.DigestStrategy();
-
-  let getAndProcessDigestsStub = sinon.stub();
-  getAndProcessDigestsStub
-    .withArgs(peerAccessor, peerInfos)
-    .resolves(processedDigests);
-
-  digest.getAndProcessDigests = getAndProcessDigestsStub;
-  // Rather than use a stub to monitor whether or not the digests have been
-  // set, we're going to use a function so that we can also assert that the
-  // isInitializing() function is set correctly.
-  let moduleDigests = null;
-  digest.setDigests = function(passedDigests) {
-    moduleDigests = passedDigests;
-    t.true(digest.isInitializing());
-  };
-
-  t.false(digest.isInitializing());
-  t.false(digest.isInitialized());
-
-  digest.initialize()
-  .then(actual => {
-    t.deepEqual(actual, undefined);
-    t.false(digest.isInitializing());
-    t.true(digest.isInitialized());
-    // And the digests should have been set
-    t.equal(moduleDigests, processedDigests);
-    t.deepEqual(removeOwnInfoStub.args[0], [ peerInfos ]);
-    t.true(removeOwnInfoStub.calledOnce);
-    end(t);
-  })
-  .catch(err => {
-    t.fail(err);
-    end(t);
-  });
-});
-
-test('getAndProcessDigests resolves all success', function(t) {
-  let peerInfos = createPeerInfos();
-  let rawDigests = createRawDigests();
-
-  let digestResponse1 = {
-    metadata: 'whatever',
-    digest: rawDigests[0]
-  };
-  let digestResponse2 = {
-    metadata: 'whatever',
-    digest: rawDigests[1]
-  };
-
-  let getCacheDigestStub = sinon.stub();
-  getCacheDigestStub.withArgs(
-    pifCommon.createListParams(
-      peerInfos[0].ipAddress, peerInfos[0].port, null
-    )
-  ).resolves(digestResponse1);
-  getCacheDigestStub.withArgs(
-    pifCommon.createListParams(
-      peerInfos[1].ipAddress, peerInfos[1].port, null
-    )
-  ).resolves(digestResponse2);
-  
-  let peerInterface = {
-    getCacheDigest: getCacheDigestStub
-  };
-
-  let expected = createProcessedDigests();
-  let digest = new digestStrategy.DigestStrategy();
-
-  digest.getAndProcessDigests(peerInterface, peerInfos)
-  .then(actual => {
-    t.deepEqual(actual, expected);
-    end(t);
-  })
-  .catch(err => {
-    t.fail(err);
-    end(t);
-  });
-});
-
-test('getAndProcessDigests returns empty array if no peers', function(t) {
-  let digest = new digestStrategy.DigestStrategy();
-  let expected = [];
-
-  digest.getAndProcessDigests({}, [])
-  .then(actual => {
-    t.deepEqual(actual, expected);
-    end(t);
-  })
-  .catch(err => {
-    t.fail(err);
-    end(t);
-  });
-});
-
-test('getAndProcessDigests resolves last rejects', function(t) {
-  let peerInfos = createPeerInfos();
-  let rawDigests = createRawDigests();
-
-  let digestResponse1 = {
-    metadata: 'yawn',
-    digest: rawDigests[0]
-  };
-
-  let getCacheDigestStub = sinon.stub();
-  getCacheDigestStub.withArgs(
-    pifCommon.createListParams(
-      peerInfos[0].ipAddress, peerInfos[0].port, null
-    )
-  ).resolves(digestResponse1);
-  getCacheDigestStub.withArgs(
-    pifCommon.createListParams(
-      peerInfos[1].ipAddress, peerInfos[1].port, null
-    )
-  ).rejects({ msg: 'an error that will be swallowed' });
-  
-  let peerInterface = {
-    getCacheDigest: getCacheDigestStub
-  };
-
-  let expected = createProcessedDigests().slice(0, 1);
-  let digest = new digestStrategy.DigestStrategy();
-
-  digest.getAndProcessDigests(peerInterface, peerInfos)
-  .then(actual => {
-    t.deepEqual(actual, expected);
-    end(t);
-  })
-  .catch(err => {
-    t.fail(err);
-    end(t);
-  });
-});
-
-test('getAndProcessDigests resolves all reject', function(t) {
-  let peerInfos = createPeerInfos();
-
-  let getCacheDigestStub = sinon.stub();
-  getCacheDigestStub.withArgs(
-    pifCommon.createListParams(
-      peerInfos[0].ipAddress, peerInfos[0].port, null
-    )
-  ).rejects({ msg: 'first will be swallowed' });
-  getCacheDigestStub.withArgs(
-    pifCommon.createListParams(
-      peerInfos[1].ipAddress, peerInfos[1].port, null
-    )
-  ).rejects({ msg: 'second that will be swallowed' });
-  
-  let peerInterface = {
-    getCacheDigest: getCacheDigestStub
-  };
-
-  let expected = [];
-  let digest = new digestStrategy.DigestStrategy();
-
-  digest.getAndProcessDigests(peerInterface, peerInfos)
-  .then(actual => {
-    t.deepEqual(actual, expected);
-    end(t);
-  })
-  .catch(err => {
-    t.fail(err);
-    end(t);
-  });
-});
-
 test('performQuery returns empty array if no matches', function(t) {
   let digest1 = sinon.stub();
   digest1.performQueryForPage = sinon.stub().returns(null);
@@ -293,8 +39,8 @@ test('performQuery returns empty array if no matches', function(t) {
   digest2.performQueryForPage = sinon.stub().returns(null);
 
   let digests = [digest1, digest2];
-  let digest = new digestStrategy.DigestStrategy();
-  digest.setDigests(digests);
+  let digest = new DigestStrategy();
+  digest.setResources(digests);
   digest.isInitialized = sinon.stub().returns(true);
 
   digest.performQuery(['http://foo.com', 'http://bar.com'])
@@ -309,7 +55,7 @@ test('performQuery returns empty array if no matches', function(t) {
 });
 
 test('performQuery correct with extant pages', function(t) {
-  let peerInfos = createPeerInfos();
+  let peerInfos = [...tutil.genCacheInfos(2)];
 
   let peer1 = peerInfos[0];
   let peer2 = peerInfos[1];
@@ -396,8 +142,8 @@ test('performQuery correct with extant pages', function(t) {
   );
   
   let digests = [ digest1, digest2 ];
-  let digest = new digestStrategy.DigestStrategy();
-  digest.setDigests(digests);
+  let digest = new DigestStrategy();
+  digest.setResources(digests);
   digest.isInitialized = sinon.stub().returns(true);
 
   digest.performQuery(urls)
@@ -418,8 +164,8 @@ test('performQuery rejects with Error', function(t) {
     performQueryForPage: sinon.stub().throws(expected)
   };
 
-  let digest = new digestStrategy.DigestStrategy();
-  digest.setDigests([ digestStub ]);
+  let digest = new DigestStrategy();
+  digest.setResources([ digestStub ]);
 
   digest.performQuery([ 'http://woot.com' ])
   .then(actual => {
@@ -432,36 +178,41 @@ test('performQuery rejects with Error', function(t) {
   });
 });
 
-test('reset restores state', function(t) {
-  proxyquireDigest({
-    '../dnssd/dns-sd-semcache': {
-      browseForSemCacheInstances: sinon.stub().resolves()
-    },
-    '../peer-interface/manager': {
-      getPeerAccessor: sinon.stub().returns()
-    },
-    './util': {
-      removeOwnInfo: sinon.stub().resolves()
-    }
-  });
-  let digest = new digestStrategy.DigestStrategy();
-  digest.getAndProcessDigests = sinon.stub().resolves(['a']);
-  digest.setDigests = sinon.stub();
+test('getResourceFromPeer resolves with digest', function(t) {
+  let rawDigest = sutil.getDigestResponseParsed();
+  let peerInfo = tutil.genCacheInfos(1).next().value;
+  let expected = new coalObjects.Digest(peerInfo, rawDigest);
 
-  digest.initialize()
-  .then(() => {
-    t.false(digest.isInitializing());
-    t.true(digest.isInitialized());
+  let pa = sinon.stub();
+  pa.getCacheDigest = sinon.stub().resolves(rawDigest);
 
-    digest.reset();
-    t.false(digest.isInitializing());
-    t.false(digest.isInitialized());
-    // The second call will have been the reset one
-    t.deepEqual(digest.setDigests.args[1][0], []);
+  let digest = new DigestStrategy();
+  digest.getResourceFromPeer(pa, peerInfo)
+  .then(actual => {
+    t.deepEqual(actual, expected);
     end(t);
   })
   .catch(err => {
     t.fail(err);
+    end(t);
+  });
+});
+
+test('getResourceFromPeer rejects on error', function(t) {
+  let expected = { msg: 'err' };
+
+  let pa = {
+    getCacheDigest: sinon.stub().rejects(expected)
+  };
+
+  let digest = new DigestStrategy();
+  digest.getResourceFromPeer(pa, null)
+  .then(res => {
+    t.fail(res);
+    end(t);
+  })
+  .catch(actual => {
+    t.deepEqual(actual, expected);
     end(t);
   });
 });

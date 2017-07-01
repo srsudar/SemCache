@@ -12,15 +12,18 @@ const settings = require('../settings');
 /**
  * Create a PeerAccessor based on the configured settings.
  *
+ * @param {string} ipAddress
+ * @param {number} port
+ *
  * @return {HttpPeerAccessor|WebrtcPeerAccessor}
  */
-exports.getPeerAccessor = function(ipaddr, port) {
+exports.getPeerAccessor = function(ipAddress, port) {
   let transportMethod = settings.getTransportMethod();
   console.log(transportMethod);
   if (transportMethod === 'http') {
-    return new ifHttp.HttpPeerAccessor(); 
+    return new ifHttp.HttpPeerAccessor({ ipAddress, port }); 
   } else if (transportMethod === 'webrtc') {
-    return new ifWebrtc.WebrtcPeerAccessor({ ipaddr, port });
+    return new ifWebrtc.WebrtcPeerAccessor({ ipAddress, port });
   } else {
     throw new Error('Unrecognized transport method: ' + transportMethod);
   }

@@ -26,7 +26,6 @@ function end(t) {
 
 test('creates correctly with legal args', function(t) {
   let typeList = 'list';
-  let typeFile = 'file'; 
   let channelName = 'channel_123';
 
   message.createChannelName = sinon.stub().returns(channelName);
@@ -35,9 +34,6 @@ test('creates correctly with legal args', function(t) {
 
   t.equal(msg.type, typeList);
   t.equal(msg.channelName, channelName);
-
-  msg = new message.createMessage(typeFile);
-  t.equal(msg.type, typeFile);
 
   end(t);
 });
@@ -77,15 +73,6 @@ test('createCachedPageMessage returns correct type', function(t) {
   end(t);
 });
 
-test('createFileMessage returns with request information', function(t) {
-  let path = 'path/to/file.mhtml';
-  let actual = message.createFileMessage(path);
-
-  t.equal(actual.type, message.TYPE_FILE);
-  t.equal(actual.request.accessPath, path);
-  end(t);
-});
-
 test('isList correct', function(t) {
   let obj = {};
 
@@ -95,19 +82,6 @@ test('isList correct', function(t) {
 
   obj.type = message.TYPE_LIST;
   t.true(message.isList(obj));
-
-  end(t);
-});
-
-test('isFile correct', function(t) {
-  let obj = {};
-
-  t.false(message.isList(obj));
-  obj.type = 'fake';
-  t.false(message.isList(obj));
-
-  obj.type = message.TYPE_FILE;
-  t.true(message.isFile(obj));
 
   end(t);
 });

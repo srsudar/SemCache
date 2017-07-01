@@ -79,85 +79,6 @@ test('onList rejects with error', function(t) {
   });
 });
 
-test('onFile calls sendBuffer with file contents', function(t) {
-  let fileName = 'file-name';
-  let accessPath = 'path/to/file';
-  let msg = { request: { accessPath: accessPath } };
-  let buff = Buffer.from('file contents');
-  let channel = { testType: 'channel' };
-
-  let ccServerSpy = sinon.stub();
-  let createChannelServerSpy = sinon.stub();
-  createChannelServerSpy.withArgs(channel).returns(ccServerSpy);
-
-  let sendBufferSpy = sinon.stub();
-  ccServerSpy.sendBuffer = sendBufferSpy;
-
-  let getCachedFileNameFromPathSpy = sinon.stub();
-  getCachedFileNameFromPathSpy.withArgs(accessPath).returns(fileName);
-  let getFileContentsFromNameSpy = sinon.stub();
-  getFileContentsFromNameSpy.withArgs(fileName).resolves(buff);
-
-  proxyquireResponder({
-    '../persistence/file-system': {
-      getFileContentsFromName: getFileContentsFromNameSpy
-    },
-    '../server/server-api': {
-      getCachedFileNameFromPath: getCachedFileNameFromPathSpy
-    }
-  });
-  responder.createChannelServer = createChannelServerSpy;
-
-  responder.onFile(channel, msg)
-  .then(() => {
-    t.deepEqual(createChannelServerSpy.args[0], [channel]);
-    t.deepEqual(sendBufferSpy.args[0], [buff]);
-    end(t);
-  })
-  .catch(err => {
-    t.fail(err);
-    end(t);
-  });
-});
-
-test('onFile rejects with error', function(t) {
-  let fileName = 'file-name';
-  let accessPath = 'path/to/file';
-  let msg = { request: { accessPath: accessPath } };
-  let channel = { testType: 'channel' };
-  let serverMock = sinon.stub();
-  let sendErrorMock = sinon.stub();
-  serverMock.sendError = sendErrorMock;
-
-  let expected = { error: 'trouble' };
-
-  let getCachedFileNameFromPathSpy = sinon.stub().returns(fileName);
-  let getFileContentsFromNameSpy = sinon.stub();
-  getFileContentsFromNameSpy.withArgs(fileName).rejects(expected);
-
-  proxyquireResponder({
-    '../persistence/file-system': {
-      getFileContentsFromName: getFileContentsFromNameSpy
-    },
-    '../server/server-api': {
-      getCachedFileNameFromPath: getCachedFileNameFromPathSpy
-    }
-  });
-  responder.createChannelServer = sinon.stub();
-responder.createChannelServer.withArgs(channel).returns(serverMock);
-
-  responder.onFile(channel, msg)
-  .then(res => {
-    t.fail(res);
-    end(t);
-  })
-  .catch(actual => {
-    t.equal(sendErrorMock.args[0][0], expected);
-    t.equal(actual, expected);
-    end(t);
-  });
-});
-
 test('onDataChannelMessageHandler routes correctly', function(t) {
   let channel = { testType: 'channel' };
   let msg = { foo: 'msg' };
@@ -166,20 +87,17 @@ test('onDataChannelMessageHandler routes correctly', function(t) {
   let event = { data: msgBin };
 
   let isListSpy = sinon.stub();
-  let isFileSpy = sinon.stub();
   let isDigestSpy = sinon.stub();
   let isCachedPageSpy = sinon.stub();
   let isBloomFilterSpy = sinon.stub();
  
   let onListSpy = sinon.stub();
-  let onFileSpy = sinon.stub();
   let onDigestSpy = sinon.stub();
   let onCachedPageSpy = sinon.stub();
   let onBloomFilterSpy = sinon.stub();
 
   function setIsSpysFalse() {
     isListSpy.withArgs(msg).returns(false); 
-    isFileSpy.withArgs(msg).returns(false); 
     isDigestSpy.withArgs(msg).returns(false); 
     isCachedPageSpy.withArgs(msg).returns(false); 
     isBloomFilterSpy.withArgs(msg).returns(false); 
@@ -192,14 +110,12 @@ test('onDataChannelMessageHandler routes correctly', function(t) {
   proxyquireResponder({
     './message': {
       isList: isListSpy,
-      isFile: isFileSpy,
       isDigest: isDigestSpy,
       isCachedPage: isCachedPageSpy,
       isBloomFilter: isBloomFilterSpy
     }
   });
   responder.onList = onListSpy;
-  responder.onFile = onFileSpy;
   responder.onDigest = onDigestSpy;
   responder.onCachedPage = onCachedPageSpy;
   responder.onBloomFilter = onBloomFilterSpy;
@@ -211,24 +127,10 @@ test('onDataChannelMessageHandler routes correctly', function(t) {
   responder.onDataChannelMessageHandler(channel, event);
 
   t.equal(onListSpy.callCount, 1);
-  t.equal(onFileSpy.callCount, 0);
   t.equal(onDigestSpy.callCount, 0);
   t.equal(onCachedPageSpy.callCount, 0);
   t.equal(onBloomFilterSpy.callCount, 0);
   t.deepEqual(onListSpy.args[0], [channel, msg]);
-
-  // Now a file message
-  setIsSpysFalse();
-  setIsSpyTrue(isFileSpy);
-
-  responder.onDataChannelMessageHandler(channel, event);
-
-  t.equal(onListSpy.callCount, 1);
-  t.equal(onFileSpy.callCount, 1);
-  t.equal(onDigestSpy.callCount, 0);
-  t.equal(onCachedPageSpy.callCount, 0);
-  t.equal(onBloomFilterSpy.callCount, 0);
-  t.deepEqual(onFileSpy.args[0], [channel, msg]);
 
   // Now a digest message
   setIsSpysFalse();
@@ -237,7 +139,6 @@ test('onDataChannelMessageHandler routes correctly', function(t) {
   responder.onDataChannelMessageHandler(channel, event);
 
   t.equal(onListSpy.callCount, 1);
-  t.equal(onFileSpy.callCount, 1);
   t.equal(onDigestSpy.callCount, 1);
   t.equal(onCachedPageSpy.callCount, 0);
   t.equal(onBloomFilterSpy.callCount, 0);
@@ -250,7 +151,6 @@ test('onDataChannelMessageHandler routes correctly', function(t) {
   responder.onDataChannelMessageHandler(channel, event);
 
   t.equal(onListSpy.callCount, 1);
-  t.equal(onFileSpy.callCount, 1);
   t.equal(onDigestSpy.callCount, 1);
   t.equal(onCachedPageSpy.callCount, 1);
   t.equal(onBloomFilterSpy.callCount, 0);
@@ -263,7 +163,6 @@ test('onDataChannelMessageHandler routes correctly', function(t) {
   responder.onDataChannelMessageHandler(channel, event);
 
   t.equal(onListSpy.callCount, 1);
-  t.equal(onFileSpy.callCount, 1);
   t.equal(onDigestSpy.callCount, 1);
   t.equal(onCachedPageSpy.callCount, 1);
   t.equal(onBloomFilterSpy.callCount, 1);

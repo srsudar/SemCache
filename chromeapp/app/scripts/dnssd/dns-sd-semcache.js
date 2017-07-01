@@ -10,6 +10,7 @@
 
 const dnssd = require('./dns-sd');
 const serverApi = require('../server/server-api');
+const settings = require('../settings');
 
 
 const SEMCACHE_SERVICE_STRING = '_semcache._tcp';
@@ -120,8 +121,11 @@ exports.resolveCache = function(fullName) {
  * Browse for SemCache instances on the local network. This is a complete
  * resolution with all operating information.
  *
- * @return {Promise.<Object, Error>} Promise that resolves with a list of
- * objects like the following, or an empty list if no instances are found.
+ * @param {boolean} removeSelf true if the resulting list should remove our own
+ * cache info from the list
+ *
+ * @return {Promise.<Array<Object>, Error>} Promise that resolves with a list
+ * of objects like the following, or an empty list if no instances are found.
  *
  * {
  *   serviceName: "Sam's SemCache",
@@ -131,7 +135,48 @@ exports.resolveCache = function(fullName) {
  *   ipAddress: '1.2.3.4'
  * }
  */
-exports.browseForSemCacheInstances = function() {
-  let result = dnssd.browseServiceInstances(SEMCACHE_SERVICE_STRING);
-  return result;
+exports.browseForSemCacheInstances = function(removeSelf) {
+  return new Promise(function(resolve, reject) {
+    dnssd.browseServiceInstances(SEMCACHE_SERVICE_STRING)
+    .then(peerInfos => {
+      if (removeSelf) {
+        return exports.removeOwnInfo(peerInfos);
+      } else {
+        return peerInfos;
+      }
+    })
+    .then(filtered => {
+      resolve(filtered);
+    })
+    .catch(err => {
+      reject(err);
+    });
+  });
+};
+
+/**
+ * Remove the peerInfo object that represents our own machine.
+ *
+ * @param {Array.<Object>} peerInfos the peerInfo objects as returned from 
+ * browseForSemCacheInstances
+ *
+ * @return {Promise.<Array.<Object>, Error>}
+ */
+exports.removeOwnInfo = function(peerInfos) {
+  return new Promise(function(resolve, reject) {
+    settings.init()
+    .then(() => {
+      let result = [];
+      let ourDomain = settings.getHostName();
+      peerInfos.forEach(peerInfo => {
+        if (peerInfo.domainName !== ourDomain) {
+          result.push(peerInfo);
+        }
+      });
+      resolve(result);
+    })
+    .catch(err => {
+      reject(err);
+    });
+  });
 };

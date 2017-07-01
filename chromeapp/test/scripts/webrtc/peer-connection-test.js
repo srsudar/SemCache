@@ -75,7 +75,7 @@ test('getList issues call to peer', function(t) {
   rawConnection.on = sinon.stub();
   let msg = 'list message';
 
-  let expected = sutil.getListResponseObj();
+  let expected = sutil.getListResponseParsed();
 
   proxyquirePeerConn({
     './message': {
@@ -128,7 +128,7 @@ test('getCacheDigest issues call to peer', function(t) {
   rawConnection.on = sinon.stub();
   let msg = 'digest message';
 
-  let expected = sutil.getDigestResponseJson();
+  let expected = sutil.getDigestResponseParsed();
   let buffer = sutil.getDigestResponseBuff();
 
   proxyquirePeerConn({
@@ -300,7 +300,7 @@ test('getCachedPage resolves with CPDisk', function(t) {
     }
   });
 
-  let expected = sutil.getCachedPageResponseObj();
+  let expected = sutil.getCachedPageResponseParsed();
   let buffer = sutil.getCachedPageResponseBuff();
 
   let pc = new peerConn.PeerConnection(rawConnection);

@@ -1,30 +1,22 @@
 'use strict';
 
+const common = require('./common');
 const serverApi = require('../server/server-api');
 const util = require('../util');
 
+const PeerAccessor = common.PeerAccessor;
 
-class HttpPeerAccessor {
+
+class HttpPeerAccessor extends PeerAccessor {
   /**
-   * Retrieve a blob from the peer.
+   * Retrieve a cached page from a peer.
    *
-   * @param {Object} params parameter object as created by peer-interface/common
+   * @param {string} href
    *
-   * @return {Promise.<Blob, Error>}
+   * @return {Promise.<CPDisk, Error>}
    */
-  getFileBlob(params) {
-    return new Promise(function(resolve, reject) {
-      return util.fetch(params.fileUrl)
-      .then(response => {
-        return response.blob();
-      })
-      .then(blob => {
-        resolve(blob);
-      })
-      .catch(err => {
-        reject(err);
-      });
-    });
+  getCachedPage(href) {
+    throw new Error('unimplemented');
   }
 
   /**
@@ -34,14 +26,23 @@ class HttpPeerAccessor {
    *
    * @return {Promise.<Object, Error>}
    */
-  getList(params) {
+  getList() {
+    let self = this;
     return new Promise(function(resolve, reject) {
-      util.fetch(params.listUrl)
+      let listUrl = serverApi.getListPageUrlForCache(
+        self.ipAddress, self.port
+      );
+      util.fetch(listUrl)
       .then(response => {
-        return response.json();
+        return response.arrayBuffer();
       })
-      .then(json => {
-        resolve(json);
+      .then(arrayBuffer => {
+        console.log(arrayBuffer);
+        let buff = Buffer.from(arrayBuffer);
+        console.log('should be a buffer:', buff);
+        console.log(buff.length);
+        console.log('GOIGN TO PARSE');
+        resolve(serverApi.parseResponseForList(buff));
       })
       .catch(err => {
         reject(err);
@@ -57,9 +58,13 @@ class HttpPeerAccessor {
    * @return {Promise.<Object, Error>} Promise that resolves with the digest
    * response or rejects with an Error.
    */
-  getCacheDigest(params) {
+  getCacheDigest() {
+    let self = this;
     return new Promise(function(resolve, reject) {
-      util.fetch(params.digestUrl)
+      let digestUrl = serverApi.getUrlForDigest(
+        self.getIpAddress(), self.getPort()
+      );
+      util.fetch(digestUrl)
       .then(response => {
         return response.json();
       })
@@ -77,8 +82,15 @@ class HttpPeerAccessor {
    *
    * @return {Promise.<BloomFilter, Error>}
    */
-  getCacheBloomFilter(params) {
-    return util.fetch(params.bloomUrl)
+  getCacheBloomFilter() {
+    let self = this;
+    return Promise.resolve()
+    .then(() => {
+      let bloomUrl = serverApi.getUrlForBloomFilter(
+        self.getIpAddress(), self.getPort()
+      );
+      return util.fetch(bloomUrl);
+    })
     .then(response => {
       return response.arrayBuffer();
     })

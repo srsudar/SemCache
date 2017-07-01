@@ -1,18 +1,18 @@
 'use strict';
 
 /**
+ * The library we are wrapping.
+ */
+const lib = require('bloomfilter');
+const toArrayBuffer = require('to-arraybuffer');
+
+/**
  * Provides a Bloom filter API.
  *
  * We're using this rather than a bare library because I can't find a great
  * library that meets all of our requirements. For that reason we're going to
  * wrap them in case we need to swap one.
  */
-
-/**
- * The library we are wrapping.
- */
-const lib = require('bloomfilter');
-const toArrayBuffer = require('to-arraybuffer');
 
 
 /**

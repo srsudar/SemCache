@@ -4,7 +4,7 @@ const proxyquire = require('proxyquire');
 const sinon = require('sinon');
 const test = require('tape');
 
-const common = require('../../../app/scripts/peer-interface/common');
+const tutil = require('../test-util');
 
 let webrtcImpl = require('../../../app/scripts/peer-interface/webrtc-impl');
 
@@ -37,133 +37,51 @@ function end(t) {
   resetWebrtcImpl();
 }
 
-function getListParams() {
-  let ip = '1.2.3.4';
-  let port = 4321;
-  return common.createListParams(ip, port, null);
-}
 
 /**
  * @return {WebrtcPeerAccessor}
  */
 function createAccessor() {
-  return new webrtcImpl.WebrtcPeerAccessor('1.2.3.4', 8888);
+  let { ipAddress, port } = tutil.getIpPort();
+  return new webrtcImpl.WebrtcPeerAccessor({ ipAddress, port });
 }
 
 test('can create PeerAccessor', function(t) {
-  let ipaddr = '1.2.3.4';
-  let port = 1111;
-  let pa = new webrtcImpl.WebrtcPeerAccessor({ ipaddr, port });
-  t.deepEqual(pa.ipaddr, ipaddr);
-  t.deepEqual(pa.port, port);
+  let { ipAddress, port } = tutil.getIpPort();
+  let pa = createAccessor();
+  t.deepEqual(pa.getIpAddress(), ipAddress);
+  t.deepEqual(pa.getPort(), port);
   end(t);
-});
-
-test('getFileBlob resolves with peerConnection.getFile', function(t) {
-  let ipaddr = '1.2.3.4';
-  let port = 1234;
-  let fileUrl = 'path to file';
-  
-  let buffer = { tesType: 'I am the result of PeerConnection.getFile' };
-  let expected = 'I am a blob';
-  
-  let getBufferAsBlobSpy = sinon.stub();
-  getBufferAsBlobSpy.withArgs(buffer).returns(expected);
-  let peerConn = sinon.stub();
-  peerConn.getFile = sinon.stub();
-  peerConn.getFile.withArgs(fileUrl).resolves(buffer);
-  let getOrCreateConnectionSpy = sinon.stub();
-  getOrCreateConnectionSpy.withArgs(ipaddr, port).resolves(peerConn);
-  
-  proxyquireWebrtcImpl({
-    '../webrtc/connection-manager': {
-      getOrCreateConnection: getOrCreateConnectionSpy
-    },
-    '../util': {
-      getBufferAsBlob: getBufferAsBlobSpy
-    }
-  });
-
-  let params = common.createFileParams(ipaddr, port, fileUrl);
-  let peerAccessor = new webrtcImpl.WebrtcPeerAccessor();
-  peerAccessor.getFileBlob(params)
-  .then(actual => {
-    t.equal(actual, expected);
-    t.deepEqual(getOrCreateConnectionSpy.args[0], [ipaddr, port]);
-    end(t);
-  })
-  .catch(err => {
-    t.fail(err);
-    end(t);
-  });
-});
-
-test('getFileBlob rejects with error', function(t) {
-  let expected = { error: 'getOrCreateConnection fails' };
-
-  let getOrCreateConnectionSpy = sinon.stub().rejects(expected);
-  proxyquireWebrtcImpl({
-    '../webrtc/connection-manager': {
-      getOrCreateConnection: getOrCreateConnectionSpy
-    }
-  });
-
-  let peerAccessor = new webrtcImpl.WebrtcPeerAccessor();
-  peerAccessor.getFileBlob({})
-  .then(res => {
-    t.fail(res);
-    end(t);
-  })
-  .catch(actual => {
-    t.equal(actual, expected);
-    end(t);
-  });
 });
 
 test('getList resolves with json', function(t) {
   let expected = { listOfPages: 'much list' };
-  let ipaddr = '4.3.2.1';
-  let port = 9876;
+
   let peerConn = sinon.stub();
   peerConn.getList = sinon.stub().resolves(expected);
 
-  let getOrCreateConnectionSpy = sinon.stub();
-  getOrCreateConnectionSpy.withArgs(ipaddr, port).resolves(peerConn);
-  
-  proxyquireWebrtcImpl({
-    '../webrtc/connection-manager': {
-      getOrCreateConnection: getOrCreateConnectionSpy
-    }
-  });
-  let params = common.createListParams(ipaddr, port, 'listurl');
+  let pa = createAccessor();
+  pa.getConnection = sinon.stub().resolves(peerConn);
 
-  let peerAccessor = new webrtcImpl.WebrtcPeerAccessor();
-  peerAccessor.getList(params)
+  pa.getList()
   .then(actual => {
     t.equal(actual, expected);
-    t.deepEqual(getOrCreateConnectionSpy.args[0], [ipaddr, port]);
-    t.end();
-    resetWebrtcImpl();
+    end(t);
   })
   .catch(err => {
     t.fail(err);
-    t.end();
-    resetWebrtcImpl();
+    end(t);
   });
 });
 
 test('getList rejects with error', function(t) {
   let expected = { error: 'gone so wrong' };
-  let getOrCreateConnectionSpy = sinon.stub().rejects(expected);
-  
-  proxyquireWebrtcImpl({
-    '../webrtc/connection-manager': {
-      getOrCreateConnection: getOrCreateConnectionSpy
-    }
-  });
+  let getConnectionStub = sinon.stub().rejects(expected);
 
-  let peerAccessor = new webrtcImpl.WebrtcPeerAccessor();
-  peerAccessor.getList({})
+  let pa = createAccessor();
+  pa.getConnection = getConnectionStub;
+
+  pa.getList()
   .then(res => {
     t.fail(res);
     end(t);
@@ -176,26 +94,16 @@ test('getList rejects with error', function(t) {
 
 test('getCacheDigest resolves with json', function(t) {
   let expected = { digest: 'lots of pages in this digest' };
-  let ipaddr = '4.3.2.1';
-  let port = 9876;
+
   let peerConn = sinon.stub();
   peerConn.getCacheDigest = sinon.stub().resolves(expected);
 
-  let getOrCreateConnectionSpy = sinon.stub();
-  getOrCreateConnectionSpy.withArgs(ipaddr, port).resolves(peerConn);
-  
-  proxyquireWebrtcImpl({
-    '../webrtc/connection-manager': {
-      getOrCreateConnection: getOrCreateConnectionSpy
-    }
-  });
-  let params = common.createListParams(ipaddr, port, 'listurl');
+  let pa = createAccessor();
+  pa.getConnection = sinon.stub().resolves(peerConn);
 
-  let peerAccessor = new webrtcImpl.WebrtcPeerAccessor();
-  peerAccessor.getCacheDigest(params)
+  pa.getCacheDigest()
   .then(actual => {
     t.equal(actual, expected);
-    t.deepEqual(getOrCreateConnectionSpy.args[0], [ipaddr, port]);
     end(t);
   })
   .catch(err => {
@@ -206,16 +114,12 @@ test('getCacheDigest resolves with json', function(t) {
 
 test('getCacheDigest rejects with error', function(t) {
   let expected = { error: 'gone so wrong' };
-  let getOrCreateConnectionSpy = sinon.stub().rejects(expected);
-  
-  proxyquireWebrtcImpl({
-    '../webrtc/connection-manager': {
-      getOrCreateConnection: getOrCreateConnectionSpy
-    }
-  });
+  let getConnectionStub = sinon.stub().rejects(expected);
 
-  let peerAccessor = new webrtcImpl.WebrtcPeerAccessor();
-  peerAccessor.getCacheDigest({})
+  let pa = createAccessor();
+  pa.getConnection = getConnectionStub;
+
+  pa.getCacheDigest()
   .then(res => {
     t.fail(res);
     end(t);
@@ -228,24 +132,18 @@ test('getCacheDigest rejects with error', function(t) {
 
 test('getCacheBloomFilter resolves on success', function(t) {
   let expected = 'the bloom filter';
-  let params = getListParams();
   let getBloomStub = sinon.stub().resolves(expected);
 
   let pcxn = {
     getCacheBloomFilter: getBloomStub
   };
 
-  let getCxnStub = sinon.stub();
-  getCxnStub.withArgs(params.ipAddress, params.port).resolves(pcxn);
+  let getCxnStub = sinon.stub().resolves(pcxn);
 
-  proxyquireWebrtcImpl({
-    '../webrtc/connection-manager': {
-      getOrCreateConnection: getCxnStub
-    }
-  });
+  let pa = createAccessor();
+  pa.getConnection = getCxnStub;
 
-  let accessor = new webrtcImpl.WebrtcPeerAccessor();
-  accessor.getCacheBloomFilter(params)
+  pa.getCacheBloomFilter()
   .then(actual => {
     t.deepEqual(actual, expected);
     end(t);
@@ -313,6 +211,32 @@ test('getCachedPage rejects on error', function(t) {
   })
   .catch(actual => {
     t.deepEqual(actual, expected);
+    end(t);
+  });
+});
+
+test('getConnection returns result', function(t) {
+  let { ipAddress, port } = tutil.getIpPort();
+  let expected = 'it is me';
+
+  let getCxnStub = sinon.stub();
+  getCxnStub.withArgs(ipAddress, port).resolves(expected);
+  
+  proxyquireWebrtcImpl({
+    '../webrtc/connection-manager': {
+      getOrCreateConnection: getCxnStub
+    }
+  });
+
+  let pa = createAccessor();
+
+  pa.getConnection()
+  .then(actual => {
+    t.deepEqual(actual, expected);
+    end(t);
+  })
+  .catch(err => {
+    t.fail(err);
     end(t);
   });
 });

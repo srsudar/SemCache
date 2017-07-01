@@ -5,12 +5,35 @@ const sinon = require('sinon');
 const test = require('tape');
 
 const dnssd = require('../../../app/scripts/dnssd/dns-sd');
+const tutil = require('../test-util');
+
+let dnssdSem = require('../../../app/scripts/dnssd/dns-sd-semcache');
+
+
+function reset() {
+  delete require.cache[
+    require.resolve('../../../app/scripts/dnssd/dns-sd-semcache')
+  ];
+  dnssdSem = require('../../../app/scripts/dnssd/dns-sd-semcache');
+}
+
+function proxyquireDnssdSem(proxies) {
+  dnssdSem = proxyquire(
+    '../../../app/scripts/dnssd/dns-sd-semcache', proxies
+  );
+}
+
+function end(t) {
+  if (!t) { throw new Error('You forgot to pass tape'); }
+  t.end();
+  reset();
+}
 
 
 test('registerSemCache calls dnssd.register with correct args', function(t) {
   // This function should just call through to dns-sd.
   let registerMock = sinon.spy();
-  let dnssdSem = proxyquire('../../../app/scripts/dnssd/dns-sd-semcache', {
+  proxyquireDnssdSem({
     './dns-sd': {
       register: registerMock
     }
@@ -28,14 +51,14 @@ test('registerSemCache calls dnssd.register with correct args', function(t) {
   t.equal(registerMock.firstCall.args[2], dnssdSem.getSemCacheServiceString());
   t.equal(registerMock.firstCall.args[3], port);
 
-  t.end();
+  end(t);
 });
 
 test('registerSemCache returns dnssd.register result', function(t) {
   // This function should just call through to dns-sd.
   let returnResult = 'foobar';
   let registerMock = sinon.stub().returns(returnResult);
-  let dnssdSem = proxyquire('../../../app/scripts/dnssd/dns-sd-semcache', {
+  proxyquireDnssdSem({
     './dns-sd': {
       register: registerMock
     }
@@ -53,14 +76,14 @@ test('registerSemCache returns dnssd.register result', function(t) {
     ]
   );
 
-  t.end();
+  end(t);
 });
 
 test('browseForSemCacheInstanceNames calls dnssd module', function(t) {
   let expected = ['foo', 'bar'];
   let queryForServiceInstancesSpy = sinon.stub().returns(expected);
 
-  let dnssdSem = proxyquire('../../../app/scripts/dnssd/dns-sd-semcache', {
+  proxyquireDnssdSem({
     './dns-sd': {
       queryForServiceInstances: queryForServiceInstancesSpy
     }
@@ -77,7 +100,7 @@ test('browseForSemCacheInstanceNames calls dnssd module', function(t) {
       dnssd.DEFAULT_NUM_PTR_RETRIES
     ]
   );
-  t.end();
+  end(t);
 });
 
 test('resolveCache rejects if resolveService rejects', function(t) {
@@ -85,7 +108,7 @@ test('resolveCache rejects if resolveService rejects', function(t) {
   let resolveServiceSpy = sinon.stub().rejects(expected);
   let fullName = 'name';
 
-  let dnssdSem = proxyquire('../../../app/scripts/dnssd/dns-sd-semcache', {
+  proxyquireDnssdSem({
     './dns-sd': {
       resolveService: resolveServiceSpy
     }
@@ -94,11 +117,11 @@ test('resolveCache rejects if resolveService rejects', function(t) {
   dnssdSem.resolveCache(fullName)
   .then(res => {
     t.fail(res);
-    t.end();
+    end(t);
   })
   .catch(actual => {
     t.deepEqual(actual, expected);
-    t.end();
+    end(t);
   });
 });
 
@@ -124,7 +147,7 @@ test('resolveCache adds listUrl and resolves', function(t) {
 
   let resolveServiceSpy = sinon.stub().resolves(expected);
 
-  let dnssdSem = proxyquire('../../../app/scripts/dnssd/dns-sd-semcache', {
+  proxyquireDnssdSem({
     './dns-sd': {
       resolveService: resolveServiceSpy
     },
@@ -137,45 +160,91 @@ test('resolveCache adds listUrl and resolves', function(t) {
   .then(actual => {
     t.deepEqual(actual, expected);
     t.deepEqual(getListPageUrlForCacheSpy.args[0], [ipAddress, port]);
-    t.end();
+    end(t);
   })
   .catch(err => {
     t.fail(err);
-    t.end();
+    end(t);
   });
 });
 
-test('browseForSemCacheInstances calls browse with correct args', function(t) {
+test('browseForSemCacheInstances resolves filtered instances', function(t) {
   // This function should just call through to dns-sd.
-  let browseMock = sinon.spy();
-  let dnssdSem = proxyquire('../../../app/scripts/dnssd/dns-sd-semcache', {
+  let browseResult = [...tutil.genCacheInfos(3)];
+  let browseMock = sinon.stub();
+  browseMock
+    .withArgs(dnssdSem.getSemCacheServiceString())
+    .resolves(browseResult);
+  
+  let expected = browseResult.slice(1);
+  let removeOwnStub = sinon.stub();
+  removeOwnStub.withArgs(browseResult).resolves(expected);
+
+  proxyquireDnssdSem({
     './dns-sd': {
       browseServiceInstances: browseMock
     }
   });
+  dnssdSem.removeOwnInfo = removeOwnStub;
 
-  dnssdSem.browseForSemCacheInstances();
-
-  // Verify register was called with the correct arguments.
-  t.equal(browseMock.firstCall.args[0], dnssdSem.getSemCacheServiceString());
-
-  t.end();
+  dnssdSem.browseForSemCacheInstances(true)
+  .then(actual => {
+    t.deepEqual(actual, expected);
+    end(t);
+  })
+  .catch(err => {
+    t.fail(err);
+    end(t);
+  });
 });
 
-test('browseForSemCacheInstances returns dnssd.browse result', function(t) {
-  // This function should just call through to dns-sd.
-  let returnResult = 'manyinstances';
-  let browseMock = sinon.stub().returns(returnResult);
-  let dnssdSem = proxyquire('../../../app/scripts/dnssd/dns-sd-semcache', {
+test('browseServiceInstances resolves unfiltered instances', function(t) {
+  let browseResult = [...tutil.genCacheInfos(5)];
+  let expected = browseResult;
+  let browseMock = sinon.stub();
+  browseMock
+    .withArgs(dnssdSem.getSemCacheServiceString())
+    .resolves(browseResult);
+  
+  let removeOwnStub = sinon.stub();
+
+  proxyquireDnssdSem({
     './dns-sd': {
       browseServiceInstances: browseMock
     }
   });
+  dnssdSem.removeOwnInfo = removeOwnStub;
 
-  let actualReturn = dnssdSem.browseForSemCacheInstances();
-  t.equal(actualReturn, returnResult);
+  dnssdSem.browseForSemCacheInstances(false)
+  .then(actual => {
+    t.deepEqual(actual, expected);
+    t.equal(removeOwnStub.callCount, 0);
+    end(t);
+  })
+  .catch(err => {
+    t.fail(err);
+    end(t);
+  });
+});
 
-  t.end();
+test('browseForSemCacheInstances rejects', function(t) {
+  let expected = { err: 'uh oh' };
+
+  proxyquireDnssdSem({
+    './dns-sd': {
+      browseServiceInstances: sinon.stub().rejects(expected)
+    }
+  });
+
+  dnssdSem.browseForSemCacheInstances()
+  .then(res => {
+    t.fail(res);
+    end(t);
+  })
+  .catch(actual => {
+    t.deepEqual(actual, expected);
+    end(t);
+  });
 });
 
 test('getFullName correct', function(t) {
@@ -188,5 +257,71 @@ test('getFullName correct', function(t) {
 
   let actual = dnssdSem.getFullName(friendlyName);
   t.equal(actual, expected);
-  t.end();
+  end(t);
+});
+
+test('removeOwnInfo does nothing if not present', function(t) {
+  proxyquireDnssdSem({
+    '../settings': {
+      init: sinon.stub().resolves(),
+      getHostName: sinon.stub().returns('not in there')
+    }
+  });
+
+  let peerInfos = [...tutil.genCacheInfos(3)];
+  let expected = peerInfos;
+
+  dnssdSem.removeOwnInfo(peerInfos)
+  .then(actual => {
+    t.deepEqual(actual, expected);
+    end(t);
+  })
+  .catch(err => {
+    t.fail(err);
+    end(t);
+  });
+});
+
+test('removeOwnInfo removes our own information', function(t) {
+  let peerInfos = [...tutil.genCacheInfos(5)];
+  let ourInfo = peerInfos[0];
+  let expected = peerInfos.slice(1);
+
+  proxyquireDnssdSem({
+    '../settings': {
+      init: sinon.stub().resolves(),
+      getHostName: sinon.stub().returns(ourInfo.domainName)
+    }
+  });
+
+  dnssdSem.removeOwnInfo(peerInfos)
+  .then(actual => {
+    t.deepEqual(actual, expected);
+    end(t);
+  })
+  .catch(err => {
+    t.fail(err);
+    end(t);
+  });
+});
+
+test('removeOwnInfo rejects on error', function(t) {
+  let expected = { msg: 'trubs' };
+  let peerInfos = [...tutil.genCacheInfos(1)];
+
+  proxyquireDnssdSem({
+    '../settings': {
+      init: sinon.stub().rejects(expected)
+    }
+  });
+
+  dnssdSem.removeOwnInfo(peerInfos)
+  .then(actual => {
+    t.fail(actual);
+    end(t);
+  })
+  .catch(actual => {
+    t.deepEqual(actual, expected);
+    end(t);
+  });
 });

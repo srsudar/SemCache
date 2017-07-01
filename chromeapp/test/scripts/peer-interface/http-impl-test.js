@@ -4,7 +4,9 @@ const proxyquire = require('proxyquire');
 const sinon = require('sinon');
 const test = require('tape');
 
-const common = require('../../../app/scripts/peer-interface/common');
+const serverApi = require('../../../app/scripts/server/server-api');
+const sutil = require('../server/util');
+const tutil = require('../test-util');
 
 let httpImpl = require('../../../app/scripts/peer-interface/http-impl');
 
@@ -43,64 +45,22 @@ test('can create PeerAccessor', function(t) {
   end(t);
 });
 
-test('getFileBlob resolves with blob', function(t) {
-  let mhtmlUrl = 'the url';
+test.only('getList resolves with json', function(t) {
+  let { ipAddress, port } = tutil.getIpPort();
+  let listUrl = serverApi.getListPageUrlForCache(ipAddress, port);
+
+  let expected = sutil.getListResponseParsed();
   let response = sinon.stub();
-  let expected = { testType: 'I am the blob, coo coo cuchoo' };
-  response.blob = sinon.stub().resolves(expected);
 
-  let params = common.createFileParams('foo', 1234);
-  params.fileUrl = mhtmlUrl;
+  let responseBuff = sutil.getListResponseBuff();
+  console.log(responseBuff.length);
+  console.log(responseBuff);
+  console.log(responseBuff.buffer);
+  // The buffer property is not truncated by default.
+  let arrayBuffer = responseBuff.buffer.slice(0, responseBuff.length);
+  console.log(arrayBuffer);
 
-  let fetchSpy = sinon.stub();
-  fetchSpy.withArgs(mhtmlUrl).resolves(response);
-
-  proxyquireHttpImpl({
-    '../util': {
-      fetch: fetchSpy
-    }
-  });
-
-  let pa = new httpImpl.HttpPeerAccessor();
-  pa.getFileBlob(params)
-  .then(actual => {
-    t.equal(actual, expected);
-    end(t);
-  })
-  .catch(err => {
-    t.fail(err);
-    end(t);
-  });
-});
-
-test('getFileBlob rejects with error', function(t) {
-  let url = 'url';
-  let expected = { error: 'fetch went south' };
-  let fetchSpy = sinon.stub().rejects(expected);
-
-  proxyquireHttpImpl({
-    '../util': {
-      fetch: fetchSpy
-    }
-  });
-
-  let pa = new httpImpl.HttpPeerAccessor();
-  pa.getFileBlob(url)
-  .then(res => {
-    t.fail(res);
-    end(t);
-  })
-  .catch(actual => {
-    t.equal(actual, expected);
-    end(t);
-  });
-});
-
-test('getList resolves with json', function(t) {
-  let listUrl = 'http://1.2.3.4:22';
-  let expected = { list: 'so many pages' };
-  let response = sinon.stub();
-  response.json = sinon.stub().resolves(expected);
+  response.arrayBuffer = sinon.stub().resolves(arrayBuffer);
 
   let fetchSpy = sinon.stub();
   fetchSpy.withArgs(listUrl).resolves(response);
@@ -111,11 +71,10 @@ test('getList resolves with json', function(t) {
     }
   });
 
-  let params = common.createListParams(null, null, listUrl);
-  let peerAccessor = new httpImpl.HttpPeerAccessor();
-  peerAccessor.getList(params)
+  let peerAccessor = new httpImpl.HttpPeerAccessor({ ipAddress, port });
+  peerAccessor.getList()
   .then(actual => {
-    t.equal(actual, expected);
+    t.deepEqual(actual, expected);
     end(t);
   })
   .catch(err => {
@@ -125,6 +84,7 @@ test('getList resolves with json', function(t) {
 });
 
 test('getList rejects with error', function(t) {
+  let { ipAddress, port } = tutil.getIpPort();
   let expected = { error: 'fetch done gone wrong' };
   let fetchSpy = sinon.stub().rejects(expected);
 
@@ -134,8 +94,8 @@ test('getList rejects with error', function(t) {
     }
   });
 
-  let peerAccessor = new httpImpl.HttpPeerAccessor();
-  peerAccessor.getList({})
+  let peerAccessor = new httpImpl.HttpPeerAccessor({ ipAddress, port });
+  peerAccessor.getList()
   .then(res => {
     t.fail(res);
     end(t);
@@ -147,12 +107,15 @@ test('getList rejects with error', function(t) {
 });
 
 test('getCacheDigest resolves with json', function(t) {
-  let digestUrl = 'http://1.2.3.4:22/page_digest';
-  let expected = { digest: 'lots of stuff' };
-  let response = sinon.stub();
-  response.json = sinon.stub().resolves(expected);
+  let { ipAddress, port } = tutil.getIpPort();
+  let digestUrl = serverApi.getUrlForDigest(ipAddress, port);
 
-  let params = { digestUrl: digestUrl };
+  let expected = sutil.getDigestResponseParsed();
+  let response = sinon.stub();
+  response.arrayBuffer = sinon.stub().resolves(
+    sutil.getDigestResponseBuff().buffer
+  );
+
   let fetchSpy = sinon.stub();
   fetchSpy.withArgs(digestUrl).resolves(response);
   
@@ -162,8 +125,8 @@ test('getCacheDigest resolves with json', function(t) {
     }
   });
 
-  let peerAccessor = new httpImpl.HttpPeerAccessor();
-  peerAccessor.getCacheDigest(params)
+  let peerAccessor = new httpImpl.HttpPeerAccessor({ ipAddress, port });
+  peerAccessor.getCacheDigest()
   .then(actual => {
     t.equal(actual, expected);
     end(t);
@@ -175,6 +138,7 @@ test('getCacheDigest resolves with json', function(t) {
 });
 
 test('getCacheDigest rejects with error', function(t) {
+  let { ipAddress, port } = tutil.getIpPort();
   let expected = { error: 'fetch done gone wrong' };
   let fetchSpy = sinon.stub().rejects(expected);
 
@@ -184,8 +148,8 @@ test('getCacheDigest rejects with error', function(t) {
     }
   });
 
-  let peerAccessor = new httpImpl.HttpPeerAccessor();
-  peerAccessor.getCacheDigest({})
+  let peerAccessor = new httpImpl.HttpPeerAccessor({ ipAddress, port });
+  peerAccessor.getCacheDigest()
   .then(res => {
     t.fail(res);
     end(t);
@@ -197,38 +161,30 @@ test('getCacheDigest rejects with error', function(t) {
 });
 
 test('getCacheBloomFilter resolves on success', function(t) {
+  let { ipAddress, port } = tutil.getIpPort();
+  let bloomUrl = serverApi.getUrlForBloomFilter(ipAddress, port);
   // We need to return an ArrayBuffer from fetch and then pass a Buffer to our
   // parse method.
-  let uintArr = new Uint8Array(8);
-  uintArr[1] = 42;
-  let buff = Buffer.from(uintArr);
-  let arrayBuff = uintArr.buffer;
-  let params = common.createListParams('1.2.3.4', 4321);
-  let expected = 'parse result';
+  let arrayBuff = sutil.getBloomResponseBuff().buffer;
+  let expected = sutil.getBloomResponseParsed();
 
   let responseStub = {
     arrayBuffer: sinon.stub().resolves(arrayBuff)
   };
 
   let fetchStub = sinon.stub();
-  fetchStub.withArgs(params.bloomUrl).resolves(responseStub);
-
-  let parseStub = sinon.stub();
-  parseStub.withArgs(buff).returns(expected);
+  fetchStub.withArgs(bloomUrl).resolves(responseStub);
 
   proxyquireHttpImpl({
-    '../server/server-api': {
-      parseResponseForBloomFilter: parseStub
-    },
     '../util': {
       fetch: fetchStub
     }
   });
 
-  let peerAccessor = new httpImpl.HttpPeerAccessor();
-  peerAccessor.getCacheBloomFilter(params)
+  let peerAccessor = new httpImpl.HttpPeerAccessor({ ipAddress, port });
+  peerAccessor.getCacheBloomFilter()
   .then(actual => {
-    t.deepEqual(actual, expected);
+    tutil.assertBloomFiltersEqual(t, actual, expected);
     end(t);
   })
   .catch(err => {
@@ -238,6 +194,7 @@ test('getCacheBloomFilter resolves on success', function(t) {
 });
 
 test('getCacheBloomFilter rejects on error', function(t) {
+  let { ipAddress, port } = tutil.getIpPort();
   let expected = { err: 'yup' };
   
   proxyquireHttpImpl({
@@ -246,8 +203,8 @@ test('getCacheBloomFilter rejects on error', function(t) {
     }
   });
 
-  let accessor = new httpImpl.HttpPeerAccessor();
-  accessor.getCacheBloomFilter({})
+  let accessor = new httpImpl.HttpPeerAccessor({ ipAddress, port });
+  accessor.getCacheBloomFilter()
   .then(result => {
     t.fail(result);
     end(t);
@@ -256,4 +213,14 @@ test('getCacheBloomFilter rejects on error', function(t) {
     t.deepEqual(actual, expected);
     end(t);
   });
+});
+
+test('getCachedPage resolves on success', function(t) {
+  t.fail();
+  t.end();
+});
+
+test('getCachedPage rejects on error', function(t) {
+  t.fail();
+  t.end();
 });
