@@ -52,10 +52,16 @@ exports.createChannelName = function() {
 };
 
 /**
+ * @param {number} offset
+ * @param {number} limit
+ *
  * @return {Object}
  */
-exports.createListMessage = function() {
-  return exports.createMessage(exports.TYPE_LIST);
+exports.createListMessage = function(offset, limit) {
+  let request = { offset, limit };
+  let result = exports.createMessage(exports.TYPE_LIST);
+  result.request = request;
+  return result;
 };
 
 /**

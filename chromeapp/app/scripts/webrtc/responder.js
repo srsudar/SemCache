@@ -56,13 +56,15 @@ exports.onDataChannelMessageHandler = function(channel, event) {
  * 
  * @param {RTCDataChannel} channel the data channel on which to send the
  * response
+ * @param {Object} message
  *
  * @return {Promise.<undefined, Error>} Promise that returns after sending has
  * begun.
  */
-exports.onList = function(channel) {
+exports.onList = function(channel, message) {
   return new Promise(function(resolve, reject) {
-    serverApi.getResponseForAllCachedPages()
+    let { offset, limit } = message.request;
+    serverApi.getResponseForList(offset, limit)
     .then(buff => {
       return exports.sendBufferOverChannel(channel, buff);
     })

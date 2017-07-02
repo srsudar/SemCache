@@ -67,17 +67,6 @@ exports.setAbsPathToBaseDir = function(absPath) {
 };
 
 /**
- * @return {string} the URL for the list of pages in this device's own cache
- */
-exports.getListUrlForSelf = function() {
-  let iface = exports.getListeningHttpInterface();
-  let host = iface.address;
-  let port = iface.port;
-  let result = serverApi.getListPageUrlForCache(host, port);
-  return result;
-};
-
-/**
  * @return {Object} the cache object that represents this machine's own cache.
  */
 exports.getOwnCache = function() {
@@ -402,18 +391,20 @@ exports.getAbsPathToBaseDir = function() {
  *
  * @param {string} serviceName the full <instance>.<type>.<domain> name of the
  * service
+ * @param {number} offset
+ * @param {number} limit
  *
  * @return {Promise.<Object, Error>} Promise that resolves with the JSON
  * response representing the list, or rejects with an Error
  */
-exports.getListFromService = function(serviceName) {
+exports.getListFromService = function(serviceName, offset, limit) {
   return new Promise(function(resolve, reject) {
     exports.resolveCache(serviceName)
     .then(cacheInfo => {
       let peerAccessor = peerIfMgr.getPeerAccessor(
         cacheInfo.ipAddress, cacheInfo.port
       );
-      return peerAccessor.getList();
+      return peerAccessor.getList(offset, limit);
     })
     .then(pageList => {
       resolve(pageList);

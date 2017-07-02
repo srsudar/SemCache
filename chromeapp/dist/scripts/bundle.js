@@ -44510,17 +44510,6 @@ exports.setAbsPathToBaseDir = function(absPath) {
 };
 
 /**
- * @return {string} the URL for the list of pages in this device's own cache
- */
-exports.getListUrlForSelf = function() {
-  let iface = exports.getListeningHttpInterface();
-  let host = iface.address;
-  let port = iface.port;
-  let result = serverApi.getListPageUrlForCache(host, port);
-  return result;
-};
-
-/**
  * @return {Object} the cache object that represents this machine's own cache.
  */
 exports.getOwnCache = function() {

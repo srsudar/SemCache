@@ -92,7 +92,7 @@ exports.generateDummyPage = function(index, nonce) {
 
 /**
  * Generate a response mirroring the functionality of
- * server-api.getResponseForAllCachedPages to be used for evaluation.
+ * server-api.getResponseForList to be used for evaluation.
  *
  * @param {integer} numPages the number of responses to return
  * @param {string} nonce a string to incorporate into answers

@@ -10,6 +10,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 
 <link rel="import" href="../../../bower_components/polymer/polymer.html">
 <link rel="import" href="../../../bower_components/iron-icon/iron-icon.html">
+<link rel="import" href="../../../bower_components/iron-flex-layout/iron-flex-layout-classes.html">
 <link rel="import" href="../../../bower_components/paper-button/paper-button.html">
 <link rel="import" href="../../../bower_components/paper-fab/paper-fab.html">
 <link rel="import" href="../../../bower_components/paper-spinner/paper-spinner.html">
@@ -18,6 +19,13 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 
 <dom-module id="cache-page-list">
   <template>
+    <style include="iron-flex iron-flex-alignment"></style>
+    <style is="custom-style">
+      .flex-equal-around-justified {
+        @apply --layout-horizontal;
+        @apply --layout-around-justified;
+      }
+    </style>
     <style>
       :host {
         display: block;
@@ -29,8 +37,8 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
       }
 
       .cache-controls {
-        display: flex;
-        position: relative;
+        /* display: flex; */
+        /* position: relative; */
         height: 80px;
       }
 
@@ -51,18 +59,36 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
         margin: 16px;
       }
 
+      .page-button {
+        margin-top: 16px;
+      }
+
+      .back-button {
+        padding-right: 16px;
+      }
+
+      .next-button {
+        padding-left: 16px;
+      }
+
     </style>
 
-    <div id="control" class="cache-controls">
+    <div id="control" class="cache-controls container flex-horizontal">
       <paper-spinner id="loading" class="ringer hide" active></paper-spinner>
       <paper-fab icon="refresh" class="fab" on-tap="refresh"></paper-fab>
 
-      <paper-button raised>
-        <iron-icon icon="icons:chevron-left"></iron-icon>
-      </paper-button> 
-      <paper-button raised>
-        <iron-icon icon="icons:chevron-right"></iron-icon>
-      </paper-button> 
+      <div class="flexchild flex-equal-around-justified">
+
+        <paper-button class="page-button back-button" raised>
+          <iron-icon icon="icons:chevron-left"></iron-icon>
+          Prev
+        </paper-button> 
+        <paper-button class="page-button next-button" raised>
+          Next
+          <iron-icon icon="icons:chevron-right"></iron-icon>
+        </paper-button> 
+
+      </div>
 
       <paper-toast
         id="toasterror"

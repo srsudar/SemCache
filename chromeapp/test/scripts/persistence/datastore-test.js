@@ -81,6 +81,47 @@ test('getCachedPageSummaries returns database call', function(t) {
   end(t);
 });
 
+test('getNumCachedPages resolves on success', function(t) {
+  let expected = 105;
+  let cpinfos = [...putil.genCPInfos(105)];
+
+  proxyquireDatastore({
+    './database': {
+      getAllCPInfos: sinon.stub().resolves(cpinfos)
+    }
+  });
+
+  datastore.getNumCachedPages()
+  .then(actual => {
+    t.equal(actual, expected);
+    end(t);
+  })
+  .catch(err => {
+    t.fail(err);
+    end(t);
+  });
+});
+
+test('getNumCachedPages rejects on error', function(t) {
+  let expected = { msg: 'problems' };
+
+  proxyquireDatastore({
+    './database': {
+      getAllCPInfos: sinon.stub().rejects(expected)
+    }
+  });
+
+  datastore.getNumCachedPages()
+  .then(res => {
+    t.fail(res);
+    end(t);
+  })
+  .catch(actual => {
+    t.deepEqual(actual, expected);
+    end(t);
+  });
+});
+
 test('addPageToCache rejects if getFile rejects', function(t) {
   const expected = { err: 'things did not go as planned' };
   const fileName = 'hello.mhtml';

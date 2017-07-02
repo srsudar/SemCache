@@ -67,13 +67,16 @@ class PeerConnection extends EventEmitter {
   /**
    * Get the list of available files from the peer.
    *
+   * @param {number} offset
+   * @param {number} limit
+   *
    * @return {Promise.<Object, Error>} Promise that resolves with the JSON list
    * of the directory contents
    */
-  getList() {
+  getList(offset, limit) {
     let self = this;
     return new Promise(function(resolve, reject) {
-      let msg = message.createListMessage();
+      let msg = message.createListMessage(offset, limit);
 
       self.sendAndGetResponse(msg)
       .then(buff => {

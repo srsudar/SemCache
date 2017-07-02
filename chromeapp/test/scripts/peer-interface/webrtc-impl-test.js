@@ -55,15 +55,21 @@ test('can create PeerAccessor', function(t) {
 });
 
 test('getList resolves with json', function(t) {
+  let offset = 123;
+  let limit = 3;
   let expected = { listOfPages: 'much list' };
 
-  let peerConn = sinon.stub();
-  peerConn.getList = sinon.stub().resolves(expected);
+  let getListStub = sinon.stub();
+  getListStub.withArgs(offset, limit).resolves(expected);
+
+  let peerConn = {
+    getList: getListStub
+  };
 
   let pa = createAccessor();
   pa.getConnection = sinon.stub().resolves(peerConn);
 
-  pa.getList()
+  pa.getList(offset, limit)
   .then(actual => {
     t.equal(actual, expected);
     end(t);

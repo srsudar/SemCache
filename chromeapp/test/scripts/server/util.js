@@ -21,6 +21,10 @@ const BloomFilter = bloomFilter.BloomFilter;
 exports.getListResponseObj = function() {
   return {
     metadata: api.createMetadatObj(),
+    hasPrev: false,
+    hasNext: true,
+    prevOffset: 0,
+    nextOffset: 20,
     cachedPages: [...putil.genCPSummaries(2)]
   };
 };
