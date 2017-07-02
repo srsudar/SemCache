@@ -37,7 +37,7 @@ class BloomStrategy extends CoalescenceStrategy {
    */
   performQuery(urls) {
     if (!this.isInitialized()) {
-      console.warn('digest-strategy was queried but is not initialized');
+      console.warn('bloom-strategy was queried but is not initialized');
     }
     let self = this;
     return new Promise(function(resolve, reject) {

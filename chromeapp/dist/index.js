@@ -20142,7 +20142,7 @@ Polymer({
       limit: {
         type: Number,
         notify: true,
-        value: function() { return 2; }
+        value: function() { return 10; }
       },
     },
 
