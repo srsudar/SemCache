@@ -292,14 +292,14 @@ exports.getResponseForBloomFilter = function() {
 /**
  * @param {Buffer} buff
  *
- * @return {Array.<CPSummary>}
+ * @return {Object}
  */
 exports.parseResponseForList = function(buff) {
   let result = JSON.parse(buff.toString());
   result.cachedPages = result.cachedPages.map(
     cpsumJson => objects.CPSummary.fromJSON(cpsumJson)
   );
-  return result.cachedPages;
+  return result;
 };
 
 /*

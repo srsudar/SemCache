@@ -20116,7 +20116,34 @@ Polymer({
         type: Object,
         notify: true,
         value: function() { return []; }
-      }
+      },
+      hasPrev: {
+        type: Boolean,
+        notify: true,
+        reflectToAttribute: true,
+        value: false
+      },
+      hasNext: {
+        type: Boolean,
+        notify: true,
+        reflectToAttribute: true,
+        value: function() { return false; }
+      },
+      prevOffset: {
+        type: Number,
+        notify: true,
+        value: function() { return 0; }
+      },
+      nextOffset: {
+        type: Number,
+        notify: true,
+        value: function() { return 0; }
+      },
+      limit: {
+        type: Number,
+        notify: true,
+        value: function() { return 2; }
+      },
     },
 
     getAppControllerModule: function() {
@@ -20124,7 +20151,21 @@ Polymer({
       return appc;
     },
 
-    refresh: function() {
+    getPrev: function() {
+      return this.refresh(this.prevOffset, this.limit);
+    },
+
+    getNext: function() {
+      return this.refresh(this.nextOffset, this.limit);
+    },
+
+    refresh: function(offset, limit) {
+      if (!Number.isSafeInteger(offset)) {
+        offset = 0;
+      }
+      if (!Number.isSafeInteger(limit)) {
+        limit = this.limit;
+      }
       var thisEl = this;
       return new Promise(function(resolve) {
         if (!thisEl.serviceName) {
@@ -20138,10 +20179,30 @@ Polymer({
         })
         .then(appController => {
           appc = appController;
-          return appc.getListFromService(thisEl.serviceName);
+          return appc.getListFromService(thisEl.serviceName, offset, limit);
         })
-        .then(pageList => {
-          thisEl.pageList = pageList;
+        .then(pageListResp => {
+          // We expect:
+          // {
+          //   hasNext: boolean,
+          //   nextOffset: integer,
+          //   hasPrev: booean
+          //   prevOffset: integer,
+          //   cachedPages: [CPSummary, ... ]
+          // }
+          thisEl.hasPrev = pageListResp.hasPrev;
+          thisEl.hasNext = pageListResp.hasNext;
+          if (pageListResp.prevOffset) {
+            thisEl.prevOffset = pageListResp.prevOffset;
+          } else {
+            thisEl.prevOffset = 0;
+          }
+          if (pageListResp.nextOffset) {
+            thisEl.nextOffset = pageListResp.nextOffset;
+          } else {
+            thisEl.nextOffset = 0;
+          }
+          thisEl.pageList = pageListResp.cachedPages;
           thisEl.hideLoading();
           resolve();
         })
@@ -49215,12 +49276,15 @@ class WebrtcPeerAccessor extends PeerAccessor {
   /**
    * Retrieve the list of pages in the peer's cache.
    *
+   * @param {number} offset
+   * @param {number} limit
+   *
    * @return {Promise.<Object, Error>}
    */
-  getList() {
+  getList(offset, limit) {
     return this.getConnection()
       .then(peerConnection => {
-        return peerConnection.getList();
+        return peerConnection.getList(offset, limit);
       });
   }
 
@@ -49356,6 +49420,18 @@ exports.getCachedPageSummaries = function(offset, numDesired) {
   return database.getCachedPageSummaries(offset, numDesired);
 };
 
+/**
+ * Get the number of pages saved in the cache.
+ *
+ * @return {number}
+ */
+exports.getNumCachedPages = function() {
+  return database.getAllCPInfos()
+  .then(cpinfos => {
+    return cpinfos.length;
+  });
+};
+
 
 /**
  * Get all the cached pages that are stored in the cache.
@@ -49453,7 +49529,7 @@ exports.ListCachedPagesHandler = function() {
 _.extend(exports.ListCachedPagesHandler.prototype,
   {
     get: function() {
-      api.getResponseForAllCachedPages()
+      api.getResponseForList()
       .then(response => {
         this.setHeader('content-type', 'text/json');
         let encoder = new TextEncoder('utf-8');
@@ -49766,20 +49842,56 @@ exports.getCachedPageHrefFromPath = function(path) {
 /**
  * Return a JSON object response for the all cached pages endpoint.
  *
+ * @param {number} offset
+ * @param {number} limit
+ *
  * @return {Promise.<Buffer, Error} Promise that resolves with Buffer from an
  * object like the following:
  * {
  *   metadata: {},
- *   cachedPages: [CPSummary, CPSummary]
+ *   hasPrev: false,
+ *   hasNext: false,
+ *   prevOffset: 0,
+ *   nextOffset: 20,
+ *   cachedPages: [CPSummary.toJSON(), CPSummary.toJSON()]
  * }
  */
-exports.getResponseForAllCachedPages = function() {
+exports.getResponseForList = function(offset, limit) {
+  if (!Number.isSafeInteger(offset)) {
+    offset = DEFAULT_OFFSET;
+  }
+  if (!Number.isSafeInteger(limit)) {
+    limit = DEFAULT_LIMIT;
+  }
   return new Promise(function(resolve, reject) {
-    datastore.getCachedPageSummaries(DEFAULT_OFFSET, DEFAULT_LIMIT)
+    let result = {};
+    datastore.getCachedPageSummaries(offset, limit)
     .then(cpsums => {
-      let result = {};
       result.metadata = exports.createMetadatObj();
+
+      let hasPrev = false;
+      if (offset > 0) {
+        hasPrev = true;
+        let prevOffset = offset - limit;
+        if (prevOffset < 0) {
+          prevOffset = 0;
+        }
+        result.prevOffset = prevOffset;
+      }
+      result.hasPrev = hasPrev;
+
       result.cachedPages = cpsums.map(cpsum => cpsum.toJSON());
+      return datastore.getNumCachedPages();
+    })
+    .then(numPages => {
+      let hasNext = false;
+      if (numPages > offset + limit) {
+        hasNext = true;
+        let nextOffset = offset + limit;
+        result.nextOffset = nextOffset;
+      }
+      result.hasNext = hasNext;
+
       resolve(Buffer.from(JSON.stringify(result)));
     })
     .catch(err => {
@@ -49868,14 +49980,14 @@ exports.getResponseForBloomFilter = function() {
 /**
  * @param {Buffer} buff
  *
- * @return {Array.<CPSummary>}
+ * @return {Object}
  */
 exports.parseResponseForList = function(buff) {
   let result = JSON.parse(buff.toString());
   result.cachedPages = result.cachedPages.map(
     cpsumJson => objects.CPSummary.fromJSON(cpsumJson)
   );
-  return result.cachedPages;
+  return result;
 };
 
 /*
@@ -50816,10 +50928,16 @@ exports.createChannelName = function() {
 };
 
 /**
+ * @param {number} offset
+ * @param {number} limit
+ *
  * @return {Object}
  */
-exports.createListMessage = function() {
-  return exports.createMessage(exports.TYPE_LIST);
+exports.createListMessage = function(offset, limit) {
+  let request = { offset, limit };
+  let result = exports.createMessage(exports.TYPE_LIST);
+  result.request = request;
+  return result;
 };
 
 /**
@@ -50973,13 +51091,16 @@ class PeerConnection extends EventEmitter {
   /**
    * Get the list of available files from the peer.
    *
+   * @param {number} offset
+   * @param {number} limit
+   *
    * @return {Promise.<Object, Error>} Promise that resolves with the JSON list
    * of the directory contents
    */
-  getList() {
+  getList(offset, limit) {
     let self = this;
     return new Promise(function(resolve, reject) {
-      let msg = message.createListMessage();
+      let msg = message.createListMessage(offset, limit);
 
       self.sendAndGetResponse(msg)
       .then(buff => {
@@ -51363,13 +51484,15 @@ exports.onDataChannelMessageHandler = function(channel, event) {
  * 
  * @param {RTCDataChannel} channel the data channel on which to send the
  * response
+ * @param {Object} message
  *
  * @return {Promise.<undefined, Error>} Promise that returns after sending has
  * begun.
  */
-exports.onList = function(channel) {
+exports.onList = function(channel, message) {
   return new Promise(function(resolve, reject) {
-    serverApi.getResponseForAllCachedPages()
+    let { offset, limit } = message.request;
+    serverApi.getResponseForList(offset, limit)
     .then(buff => {
       return exports.sendBufferOverChannel(channel, buff);
     })
@@ -91486,18 +91609,20 @@ exports.getAbsPathToBaseDir = function() {
  *
  * @param {string} serviceName the full <instance>.<type>.<domain> name of the
  * service
+ * @param {number} offset
+ * @param {number} limit
  *
  * @return {Promise.<Object, Error>} Promise that resolves with the JSON
  * response representing the list, or rejects with an Error
  */
-exports.getListFromService = function(serviceName) {
+exports.getListFromService = function(serviceName, offset, limit) {
   return new Promise(function(resolve, reject) {
     exports.resolveCache(serviceName)
     .then(cacheInfo => {
       let peerAccessor = peerIfMgr.getPeerAccessor(
         cacheInfo.ipAddress, cacheInfo.port
       );
-      return peerAccessor.getList();
+      return peerAccessor.getList(offset, limit);
     })
     .then(pageList => {
       resolve(pageList);
@@ -94337,7 +94462,7 @@ exports.generateDummyPage = function(index, nonce) {
 
 /**
  * Generate a response mirroring the functionality of
- * server-api.getResponseForAllCachedPages to be used for evaluation.
+ * server-api.getResponseForList to be used for evaluation.
  *
  * @param {integer} numPages the number of responses to return
  * @param {string} nonce a string to incorporate into answers

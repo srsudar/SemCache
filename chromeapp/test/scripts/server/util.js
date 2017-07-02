@@ -23,14 +23,14 @@ exports.getListResponseObj = function() {
     metadata: api.createMetadatObj(),
     hasPrev: false,
     hasNext: true,
-    prevOffset: 0,
+    prevOffset: 5,
     nextOffset: 20,
     cachedPages: [...putil.genCPSummaries(2)]
   };
 };
 
 exports.getListResponseParsed = function() {
-  return exports.getListResponseJson().cachedPages;
+  return exports.getListResponseObj();
 };
 
 /**

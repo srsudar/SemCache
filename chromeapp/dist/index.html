@@ -4707,13 +4707,14 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 
       <div class="flexchild flex-equal-around-justified">
 
-        <paper-button class="page-button back-button" raised="">
-          <iron-icon icon="icons:chevron-left"></iron-icon>
-          Prev
+          <!-- disabled$="{{has&#45;prev}}" -->
+        <paper-button id="button-back" class="page-button back-button" disabled="{{!hasPrev}}" on-click="getPrev" raised="">
+            <iron-icon icon="icons:chevron-left"></iron-icon>
+            Prev
         </paper-button> 
-        <paper-button class="page-button next-button" raised="">
-          Next
-          <iron-icon icon="icons:chevron-right"></iron-icon>
+        <paper-button id="button-next" class="page-button next-button" disabled="{{!hasNext}}" on-click="getNext" raised="">
+            Next
+            <iron-icon icon="icons:chevron-right"></iron-icon>
         </paper-button> 
 
       </div>

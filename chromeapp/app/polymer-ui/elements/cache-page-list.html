@@ -79,13 +79,24 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 
       <div class="flexchild flex-equal-around-justified">
 
-        <paper-button class="page-button back-button" raised>
-          <iron-icon icon="icons:chevron-left"></iron-icon>
-          Prev
+          <!-- disabled$="{{has&#45;prev}}" -->
+        <paper-button
+          id="button-back"
+          class="page-button back-button"
+          disabled={{!hasPrev}}
+          on-click="getPrev"
+          raised>
+            <iron-icon icon="icons:chevron-left"></iron-icon>
+            Prev
         </paper-button> 
-        <paper-button class="page-button next-button" raised>
-          Next
-          <iron-icon icon="icons:chevron-right"></iron-icon>
+        <paper-button
+          id="button-next"
+          class="page-button next-button"
+          disabled={{!hasNext}}
+          on-click="getNext"
+          raised>
+            Next
+            <iron-icon icon="icons:chevron-right"></iron-icon>
         </paper-button> 
 
       </div>
@@ -124,7 +135,34 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
         type: Object,
         notify: true,
         value: function() { return []; }
-      }
+      },
+      hasPrev: {
+        type: Boolean,
+        notify: true,
+        reflectToAttribute: true,
+        value: false
+      },
+      hasNext: {
+        type: Boolean,
+        notify: true,
+        reflectToAttribute: true,
+        value: function() { return false; }
+      },
+      prevOffset: {
+        type: Number,
+        notify: true,
+        value: function() { return 0; }
+      },
+      nextOffset: {
+        type: Number,
+        notify: true,
+        value: function() { return 0; }
+      },
+      limit: {
+        type: Number,
+        notify: true,
+        value: function() { return 2; }
+      },
     },
 
     getAppControllerModule: function() {
@@ -132,7 +170,21 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
       return appc;
     },
 
-    refresh: function() {
+    getPrev: function() {
+      return this.refresh(this.prevOffset, this.limit);
+    },
+
+    getNext: function() {
+      return this.refresh(this.nextOffset, this.limit);
+    },
+
+    refresh: function(offset, limit) {
+      if (!Number.isSafeInteger(offset)) {
+        offset = 0;
+      }
+      if (!Number.isSafeInteger(limit)) {
+        limit = this.limit;
+      }
       var thisEl = this;
       return new Promise(function(resolve) {
         if (!thisEl.serviceName) {
@@ -146,10 +198,30 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
         })
         .then(appController => {
           appc = appController;
-          return appc.getListFromService(thisEl.serviceName);
+          return appc.getListFromService(thisEl.serviceName, offset, limit);
         })
-        .then(pageList => {
-          thisEl.pageList = pageList;
+        .then(pageListResp => {
+          // We expect:
+          // {
+          //   hasNext: boolean,
+          //   nextOffset: integer,
+          //   hasPrev: booean
+          //   prevOffset: integer,
+          //   cachedPages: [CPSummary, ... ]
+          // }
+          thisEl.hasPrev = pageListResp.hasPrev;
+          thisEl.hasNext = pageListResp.hasNext;
+          if (pageListResp.prevOffset) {
+            thisEl.prevOffset = pageListResp.prevOffset;
+          } else {
+            thisEl.prevOffset = 0;
+          }
+          if (pageListResp.nextOffset) {
+            thisEl.nextOffset = pageListResp.nextOffset;
+          } else {
+            thisEl.nextOffset = 0;
+          }
+          thisEl.pageList = pageListResp.cachedPages;
           thisEl.hideLoading();
           resolve();
         })

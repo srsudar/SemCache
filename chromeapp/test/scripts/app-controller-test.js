@@ -7,6 +7,7 @@ const test = require('tape');
 
 const constants = require('../../app/scripts/constants');
 const putil = require('./persistence/persistence-util');
+const sutil = require('./server/util');
 const tutil = require('./test-util');
 
 let appc = require('../../app/scripts/app-controller');
@@ -153,7 +154,7 @@ test('getListFromService resolves with json', function(t) {
   let offset = 15;
   let limit = 10;
   let cacheInfo = tutil.genCacheInfos(1).next().value;
-  let expected = { cachedPages: ['page1', 'page2'] };
+  let expected = sutil.getListResponseParsed();
   let serviceName = cacheInfo.instanceName;
 
   let peerAccessorStub = sinon.stub();
