@@ -12,7 +12,7 @@ const dnssdSem = require('./dnssd/dns-sd-semcache');
 const evaluation = require('./evaluation');
 const extBridge = require('./extension-bridge/messaging');
 const fileSystem = require('./persistence/file-system');
-const peerIfMgr = require('./peer-interface/manager');
+const clientMgr = require('./client/manager');
 const settings = require('./settings');
 const serverApi = require('./server/server-api');
 const webrtcCxnMgr = require('./webrtc/connection-manager');
@@ -401,7 +401,7 @@ exports.getListFromService = function(serviceName, offset, limit) {
   return new Promise(function(resolve, reject) {
     exports.resolveCache(serviceName)
     .then(cacheInfo => {
-      let peerAccessor = peerIfMgr.getPeerAccessor(
+      let peerAccessor = clientMgr.getClient(
         cacheInfo.ipAddress, cacheInfo.port
       );
       return peerAccessor.getList(offset, limit);
@@ -430,7 +430,7 @@ exports.saveMhtmlAndOpen = function(serviceName, href) {
     let streamName = 'open_' + href;
     exports.resolveCache(serviceName)
     .then(cacheInfo => {
-      return peerIfMgr.getPeerAccessor(
+      return clientMgr.getClient(
         cacheInfo.ipAddress, cacheInfo.port
       ).getCachedPage(href);
     })

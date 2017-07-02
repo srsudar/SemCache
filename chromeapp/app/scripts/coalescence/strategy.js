@@ -1,7 +1,7 @@
 'use strict';
 
 const dnssdSem = require('../dnssd/dns-sd-semcache');
-const peerIfMgr = require('../peer-interface/manager');
+const clientMgr = require('../client/manager');
 
 
 /**
@@ -166,7 +166,7 @@ class CoalescenceStrategy {
       let pendingResponses = peerInfos.length;
       let result = [];
       peerInfos.forEach(peerInfo => {
-        let peerInterface = peerIfMgr.getPeerAccessor(
+        let peerInterface = clientMgr.getClient(
           peerInfo.ipAddress, peerInfo.port
         );
         self.getResourceFromPeer(peerInterface, peerInfo)
@@ -196,7 +196,7 @@ class CoalescenceStrategy {
    * swallow the error--if a peer has left the network, the whole fetch should
    * not fail.
    *
-   * @param {HttpPeerAccessor|WebrtcPeerAccessor} peerAccessor
+   * @param {WebrtcPeerAccessor} peerAccessor
    * @param {Object} peerInfo
    *
    * @return {Promise.<Object, Error>}
@@ -204,6 +204,7 @@ class CoalescenceStrategy {
   getResourceFromPeer(peerAccessor, peerInfo) {
     console.log('getResourceFromPeer called on CoalescenceStrategy, no-op');
     console.log(peerAccessor);
+    console.log(peerInfo);
   }
 }
 

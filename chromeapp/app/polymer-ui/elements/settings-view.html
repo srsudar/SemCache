@@ -144,15 +144,6 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
     <iron-label id="server-port-hint">We temporarily need to manually select a
       port for the HTTP server to listen on.</iron-label>
 
-    <h2>Transport Method</h2>
-    <iron-label id="transport-method-hint">Indicate whether we should interact
-      with peers via HTTP or WebRTC.</iron-label>
-    <br>
-    <paper-radio-group id="transport-method" selected="{{transportMethod}}">
-      <paper-radio-button name="http">HTTP</paper-radio-button>
-      <paper-radio-button name="webrtc">WebRTC</paper-radio-button>
-    </paper-radio-group>
-
     <h2>Coalescence Strategy</h2>
     <iron-label id="coalescence-strategy-hint">
       Should we become aware of peer content via a digest (listing all pages),
@@ -203,12 +194,6 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
           type: String,
           value: function() {
             return this._getDomainName();
-          }
-        },
-        transportMethod: {
-          type: String,
-          value: function() {
-            return this._getTransportMethod();
           }
         },
         coalescenceStrategy: {
@@ -273,12 +258,6 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
         return result;
       },
 
-      _getTransportMethod: function() {
-        var settingsModule = this.getSettingsModule();
-        var result = settingsModule.getTransportMethod();
-        return result;
-      },
-
       _getCoalescenceStrategy: function() {
         var settingsModule = this.getSettingsModule();
         var result = settingsModule.getCoalescenceStrategy();
@@ -295,7 +274,6 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
         let enteredName = this.$$('#instance-name-input').value;
         let enteredPort = this.$$('#server-port-input').value;
         let enteredDomain = this.$$('#domain-name-input').value;
-        let transportMethod = this.$$('#transport-method').selected;
         let coalescenceStrategy = this.$$('#coalescence-strategy').selected;
 
         let settings = this.getSettingsModule();
@@ -303,12 +281,6 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
         settings.setInstanceName(enteredName);
         settings.setServerPort(enteredPort);
         settings.setHostName(enteredDomain);
-
-        if (transportMethod === 'webrtc') {
-          settings.setTransportWebrtc();
-        } else {
-          settings.setTransportHttp();
-        }
 
         if (coalescenceStrategy === 'bloom') {
           settings.setCoalescenceBloom();

@@ -891,30 +891,24 @@ test('runFetchFileIteration correct on success', function(t) {
 
   let ipAddr = '1.2.3.4';
   let port = 8876;
-  let mhtmlUrl = 'whyme.mhtml';
+  let href = 'http://nyt.com';
 
-  let params = { iam: 'aparam' };
-  let createFileParamsSpy = sinon.stub();
-  createFileParamsSpy.withArgs(ipAddr, port, mhtmlUrl).returns(params);
-
-  let getFileBlobStub = sinon.stub();
-  getFileBlobStub.withArgs(params).resolves(blob);
-  let peerAccessor = {
-    getFileBlob: getFileBlobStub
+  let getCachedPageStub = sinon.stub();
+  getCachedPageStub.withArgs(href).resolves(blob);
+  let client = {
+    getCachedPage: getCachedPageStub
   };
-  let getPeerAccessorSpy = sinon.stub().returns(peerAccessor);
+  let getClientSpy = sinon.stub();
+  getClientSpy.withArgs(ipAddr, port).returns(client);
 
   proxyquireEvaluation({
-    './peer-interface/common': {
-      createFileParams: createFileParamsSpy
-    },
-    './peer-interface/manager': {
-      getPeerAccessor: getPeerAccessorSpy
+    './client/manager': {
+      getClient: getClientSpy
     }
   });
   mockGetNow(times);
 
-  evaluation.runFetchFileIteration(mhtmlUrl, ipAddr, port)
+  evaluation.runFetchFileIteration(href, ipAddr, port)
   .then(actual => {
     t.deepEqual(actual, expected);
     end(t);

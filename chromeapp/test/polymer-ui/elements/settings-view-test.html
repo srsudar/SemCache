@@ -44,8 +44,6 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
         let setPortSpy = sinon.spy();
         let setNameSpy = sinon.spy();
         let setHostNameSpy = sinon.spy();
-        let setTransportHttpSpy = sinon.spy();
-        let setTransportWebrtcSpy = sinon.spy();
         let setCoalescenceDigestSpy = sinon.spy();
         let setCoalescenceBloomSpy = sinon.spy();
 
@@ -55,8 +53,6 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
           setBaseDirId: setDirSpy,
           setServerPort: setPortSpy,
           setHostName: setHostNameSpy,
-          setTransportHttp: setTransportHttpSpy,
-          setTransportWebrtc: setTransportWebrtcSpy,
           setCoalescenceDigest: setCoalescenceDigestSpy,
           setCoalescenceBloom: setCoalescenceBloomSpy,
           getAbsPath: sinon.stub(),
@@ -64,7 +60,6 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
           getBaseDirId: sinon.stub(),
           getServerPort: sinon.stub(),
           getHostName: sinon.stub(),
-          getTransportMethod: sinon.stub()
         };
 
         let myEl;
@@ -85,7 +80,6 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
           myEl.$$('#instance-name-input').value = instanceName;
           myEl.$$('#server-port-input').value = port;
           myEl.$$('#domain-name-input').value = domainName;
-          myEl.$$('#transport-method').selected = 'http';
           myEl.$$('#coalescence-strategy').selected = 'digest';
 
           saveEl.click();
@@ -98,18 +92,9 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
           assert.equal(setPortSpy.args[0][0], port);
           assert.equal(setNameSpy.args[0][0], instanceName);
           assert.equal(setHostNameSpy.args[0][0], domainName);
-          assert.equal(setTransportHttpSpy.callCount, 1);
-          assert.equal(setTransportWebrtcSpy.callCount, 0);
           assert.equal(setCoalescenceDigestSpy.callCount, 1);
           assert.equal(setCoalescenceBloomSpy.callCount, 0);
 
-          // Save again changing the selected value
-          myEl.$$('#transport-method').selected = 'webrtc';
-          saveEl.click();
-        
-          // At this point we should have seen a single call to each
-          assert.equal(setTransportHttpSpy.callCount, 1);
-          assert.equal(setTransportWebrtcSpy.callCount, 1);
         });
       });
 
@@ -120,7 +105,6 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
         let port = 1234;
         let instanceName = 'Matt\'s cache';
         let domainName = 'hello.local';
-        let transportMethod = 'webrtc';
         let coalescenceStrategy = 'bloom';
 
         let settingsModuleSpy = {
@@ -129,7 +113,6 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
           getBaseDirPath: sinon.stub().returns(entryPath),
           getServerPort: sinon.stub().returns(port),
           getHostName: sinon.stub().returns(domainName),
-          getTransportMethod: sinon.stub().returns(transportMethod),
           getCoalescenceStrategy: sinon.stub().returns(coalescenceStrategy),
         };
 
@@ -161,10 +144,6 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
           assert.equal(
             myEl.$$('#domain-name-input').value,
             domainName
-          );
-          assert.equal(
-            myEl.$$('#transport-method').selected,
-            transportMethod
           );
           assert.equal(
             myEl.$$('#coalescence-strategy').selected,

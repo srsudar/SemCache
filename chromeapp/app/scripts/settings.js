@@ -17,14 +17,6 @@ const fileSystem = require('./persistence/file-system');
 /** The prefix that we use to namespace setting keys. */
 const SETTING_NAMESPACE_PREFIX = 'setting_';
 
-/**
- * The strings we use to represent transport mechanisms in the database.
- */
-const TRANSPORT_METHOD_STRINGS = {
-  http: 'http',
-  webrtc: 'webrtc'
-};
-
 const COALESCENCE_METHOD_STRINGS = {
   digest: 'digest',
   bloom: 'bloom'
@@ -39,7 +31,6 @@ const userFriendlyKeys = {
   baseDirPath: 'baseDirPath',
   serverPort: 'serverPort',
   hostName: 'hostName',
-  transportMethod: 'transportMethod',
   coalescenceStrategy: 'coalescenceStrategy',
 };
 
@@ -56,7 +47,6 @@ exports.getAllSettingKeys = function() {
     exports.createNameSpacedKey(userFriendlyKeys.baseDirPath),
     exports.createNameSpacedKey(userFriendlyKeys.serverPort),
     exports.createNameSpacedKey(userFriendlyKeys.hostName),
-    exports.createNameSpacedKey(userFriendlyKeys.transportMethod),
     exports.createNameSpacedKey(userFriendlyKeys.coalescenceStrategy),
   ];
 };
@@ -225,19 +215,6 @@ exports.getHostName = function() {
 };
 
 /**
- * @return {string} String representing the transport method to be used by the
- * instance to interface with peers. Options are 'http' and 'webrtc'. Defaults
- * to 'http'.
- */
-exports.getTransportMethod = function() {
-  let result = exports.get(userFriendlyKeys.transportMethod);
-  if (result === null) {
-    result = TRANSPORT_METHOD_STRINGS.http;
-  }
-  return result;
-};
-
-/**
  * @return {string} String representing the coalescence strategy. Defaults to
  * 'digest'.
  */
@@ -295,32 +272,6 @@ exports.setServerPort = function(port) {
  */
 exports.setHostName = function(hostName) {
   return exports.set(userFriendlyKeys.hostName, hostName);
-};
-
-/**
- * Indicate that HTTP should be used as the transport mechanism to interface
- * with peers.
- *
- * @return {Promise.<Object, Error>} Promise that resolves with the current
- * settings object
- */
-exports.setTransportHttp = function() {
-  return exports.set(
-    userFriendlyKeys.transportMethod, TRANSPORT_METHOD_STRINGS.http
-  );
-};
-
-/**
- * Indicate that WebRTC should be used as the transport mechanism to interface
- * with peers.
- *
- * @return {Promise.<Object, Error>} Promise that resolves with the current
- * settings object
- */
-exports.setTransportWebrtc = function() {
-  return exports.set(
-    userFriendlyKeys.transportMethod, TRANSPORT_METHOD_STRINGS.webrtc
-  );
 };
 
 /**

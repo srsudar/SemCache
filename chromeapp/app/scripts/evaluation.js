@@ -11,8 +11,7 @@ const appc = require('./app-controller');
 const bloomFilter = require('./coalescence/bloom-filter');
 const chromep = require('./chrome-apis/chromep');
 const coalObjects = require('./coalescence/objects');
-const ifCommon = require('./peer-interface/common');
-const peerIfMgr = require('./peer-interface/manager');
+const clientMgr = require('./client/manager');
 const perObjs = require('./persistence/objects');
 const util = require('./util');
 
@@ -810,7 +809,7 @@ exports.runFetchFileTrial = function(
 /**
  * Fetch a file and report on the information that went into fetching it.
  *
- * @param {string} mhtmlUrl
+ * @param {string} href
  * @param {string} ipAddr
  * @param {integer} port
  *
@@ -820,11 +819,10 @@ exports.runFetchFileTrial = function(
  *   fileSize: {number}
  * }
  */
-exports.runFetchFileIteration = function(mhtmlUrl, ipAddr, port) {
+exports.runFetchFileIteration = function(href, ipAddr, port) {
   return new Promise(function(resolve, reject) {
     let start = exports.getNow();
-    let params = ifCommon.createFileParams(ipAddr, port, mhtmlUrl);
-    peerIfMgr.getPeerAccessor().getFileBlob(params)
+    clientMgr.getClient(ipAddr, port).getCachedPage(href)
     .then(blob => {
       // We are fetching, not writing to disk.
       let end = exports.getNow();

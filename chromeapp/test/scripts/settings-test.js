@@ -278,29 +278,10 @@ test('custom getters call internals', function(t) {
   );
   helperGetCallsInternalsForKey(
     settings,
-    settings.getTransportMethod,
-    'transportMethod',
-    t
-  );
-  helperGetCallsInternalsForKey(
-    settings,
     settings.getCoalescenceStrategy,
     'coalescenceStrategy',
     t
   );
-  t.end();
-  resetSettings();
-});
-
-test('getTransportMethod defaults to http', function(t) {
-  let key = 'transportMethod';
-  let getSpy = sinon.stub();
-  getSpy.withArgs(key).returns(null);
-  settings.get = getSpy;
-
-  let actual = settings.getTransportMethod();
-  t.equal(actual, 'http');
-  t.deepEqual(getSpy.args[0], [key]);
   t.end();
   resetSettings();
 });
@@ -361,20 +342,6 @@ test('custom setters call internals', function(t) {
     settings.setHostName,
     'hostName',
     'laptop.local',
-    t
-  );
-  helperSetCallsInternalsForKey(
-    settings,
-    settings.setTransportHttp,
-    'transportMethod',
-    'http',
-    t
-  );
-  helperSetCallsInternalsForKey(
-    settings,
-    settings.setTransportWebrtc,
-    'transportMethod',
-    'webrtc',
     t
   );
   helperSetCallsInternalsForKey(

@@ -1,12 +1,26 @@
 'use strict';
 
 const cmgr = require('../webrtc/connection-manager');
-const common = require('./common');
-
-const PeerAccessor = common.PeerAccessor;
 
 
-class WebrtcPeerAccessor extends PeerAccessor {
+class WebrtcClient {
+  /**
+   * @param {string} ipAddress
+   * @param {number} port
+   */
+  constructor({ ipAddress, port } = {}) {
+    this.ipAddress = ipAddress;
+    this.port = port;
+  }
+
+  getIpAddress() {
+    return this.ipAddress;
+  }
+
+  getPort() {
+    return this.port;
+  }
+
   /**
    * @return {Promise.<PeerConnection, Error>}
    */
@@ -67,4 +81,4 @@ class WebrtcPeerAccessor extends PeerAccessor {
   }
 }
 
-exports.WebrtcPeerAccessor = WebrtcPeerAccessor;
+exports.WebrtcClient = WebrtcClient;

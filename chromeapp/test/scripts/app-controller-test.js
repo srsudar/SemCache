@@ -71,14 +71,14 @@ test('saveMhtmlAndOpen persists and opens', function(t) {
   let resolveCacheStub = sinon.stub();
   resolveCacheStub.withArgs(serviceName).resolves(cacheInfo);
 
-  let getPeerAccessorStub = sinon.stub();
-  let peerAccessorStub = sinon.stub();
-  getPeerAccessorStub
+  let getClientStub = sinon.stub();
+  let clientStub = sinon.stub();
+  getClientStub
     .withArgs(cacheInfo.ipAddress, cacheInfo.port)
-    .returns(peerAccessorStub);
+    .returns(clientStub);
   let getCachedPageStub = sinon.stub();
   getCachedPageStub.withArgs(href).resolves(cpdisk);
-  peerAccessorStub.getCachedPage = getCachedPageStub;
+  clientStub.getCachedPage = getCachedPageStub;
 
   let addPageStub = sinon.stub();
   addPageStub.withArgs(cpdisk).resolves(entry);
@@ -107,8 +107,8 @@ test('saveMhtmlAndOpen persists and opens', function(t) {
         getNow: getNowStub,
         logTime: logTimeStub
       },
-      './peer-interface/manager': {
-        getPeerAccessor: getPeerAccessorStub
+      './client/manager': {
+        getClient: getClientStub
       }
     }
   );
@@ -157,11 +157,11 @@ test('getListFromService resolves with json', function(t) {
   let expected = sutil.getListResponseParsed();
   let serviceName = cacheInfo.instanceName;
 
-  let peerAccessorStub = sinon.stub();
+  let clientStub = sinon.stub();
 
   let getListStub = sinon.stub();
   getListStub.withArgs(offset, limit).resolves(expected);
-  peerAccessorStub.getList = getListStub;
+  clientStub.getList = getListStub;
 
   let resolveCacheStub = sinon.stub();
   resolveCacheStub
@@ -171,11 +171,11 @@ test('getListFromService resolves with json', function(t) {
   let getPeerStub = sinon.stub();
   getPeerStub
     .withArgs(cacheInfo.ipAddress, cacheInfo.port)
-    .returns(peerAccessorStub);
+    .returns(clientStub);
 
   proxyquireAppc({
-    './peer-interface/manager': {
-      getPeerAccessor: getPeerStub
+    './client/manager': {
+      getClient: getPeerStub
     }
   });
 
@@ -196,7 +196,7 @@ test('getListFromService resolves with json', function(t) {
 
 test('getListFromService rejects with error', function(t) {
   let serviceName = 'hello.semcache.local';
-  let expected = { error: 'getPeerAccessor failed' };
+  let expected = { error: 'getClient failed' };
 
   appc.resolveCache = sinon.stub().rejects(expected);
 

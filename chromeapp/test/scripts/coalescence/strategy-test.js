@@ -43,48 +43,48 @@ function createResources() {
 }
 
 function helperAssertGetAndProcess(
-  peerInfos, paResolve1, paResolve2, paReject1, paReject2
+  peerInfos, clientResolve1, clientResolve2, clientReject1, clientReject2
 ) {
-  let pa1 = 'peer accessor 1';
-  let pa2 = 'peer accessor 2';
+  let client1 = 'client 1';
+  let client2 = 'client 2';
 
   let pi1 = peerInfos[0];
   let pi2 = peerInfos[1];
 
   let getResourceStub = sinon.stub();
 
-  if (paResolve1) {
-    getResourceStub.withArgs(pa1, pi1).resolves(paResolve1);
+  if (clientResolve1) {
+    getResourceStub.withArgs(client1, pi1).resolves(clientResolve1);
 
   }
-  if (paReject1) {
-    getResourceStub.withArgs(pa1, pi1).rejects(paReject1);
+  if (clientReject1) {
+    getResourceStub.withArgs(client1, pi1).rejects(clientReject1);
   }
 
-  if (paResolve2) {
-    getResourceStub.withArgs(pa2, pi2).resolves(paResolve2);
+  if (clientResolve2) {
+    getResourceStub.withArgs(client2, pi2).resolves(clientResolve2);
   }
-  if (paReject2) {
-    getResourceStub.withArgs(pa2, pi2).rejects(paReject2);
+  if (clientReject2) {
+    getResourceStub.withArgs(client2, pi2).rejects(clientReject2);
   }
 
-  let getPaStub = sinon.stub();
+  let getClientStub = sinon.stub();
 
   if (peerInfos[0]) {
-    getPaStub
+    getClientStub
       .withArgs(peerInfos[0].ipAddress, peerInfos[0].port)
-      .returns(pa1);
+      .returns(client1);
   }
 
   if (peerInfos[1]) {
-    getPaStub 
+    getClientStub 
       .withArgs(peerInfos[1].ipAddress, peerInfos[1].port)
-      .returns(pa2);
+      .returns(client2);
   }
   
   proxyquireStrategy({
-    '../peer-interface/manager': {
-      getPeerAccessor: getPaStub
+    '../client/manager': {
+      getClient: getClientStub
     }
   });
 

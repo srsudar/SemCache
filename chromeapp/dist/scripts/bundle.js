@@ -65,7 +65,7 @@ exports.getRuntimeBare = function() {
   return chrome.runtime;
 };
 
-},{"chrome-promise":37}],2:[function(require,module,exports){
+},{"chrome-promise":35}],2:[function(require,module,exports){
 /* globals chrome */
 'use strict';
 
@@ -166,6 +166,114 @@ exports.applyArgsCheckLastError = function(fn, callArgs) {
 };
 
 },{}],3:[function(require,module,exports){
+'use strict';
+
+const webrtcClient = require('./webrtc-client');
+
+
+/**
+ * Manages clients for the application. Speaks to the server module.
+ */
+
+/**
+ * Create a PeerAccessor.
+ *
+ * @param {string} ipAddress
+ * @param {number} port
+ *
+ * @return {WebrtcPeerAccessor}
+ */
+exports.getClient = function(ipAddress, port) {
+  return new webrtcClient.WebrtcClient({ ipAddress, port });
+};
+
+},{"./webrtc-client":4}],4:[function(require,module,exports){
+'use strict';
+
+const cmgr = require('../webrtc/connection-manager');
+
+
+class WebrtcClient {
+  /**
+   * @param {string} ipAddress
+   * @param {number} port
+   */
+  constructor({ ipAddress, port } = {}) {
+    this.ipAddress = ipAddress;
+    this.port = port;
+  }
+
+  getIpAddress() {
+    return this.ipAddress;
+  }
+
+  getPort() {
+    return this.port;
+  }
+
+  /**
+   * @return {Promise.<PeerConnection, Error>}
+   */
+  getConnection() {
+    return cmgr.getOrCreateConnection(this.getIpAddress(), this.getPort());
+  }
+
+  /**
+   * Retrieve a cached page from a peer.
+   *
+   * @param {string} href
+   *
+   * @return {Promise.<CPDisk, Error>}
+   */
+  getCachedPage(href) {
+    return this.getConnection()
+      .then(peerConnection => {
+        return peerConnection.getCachedPage(href);
+      });
+  }
+
+  /**
+   * Retrieve the list of pages in the peer's cache.
+   *
+   * @param {number} offset
+   * @param {number} limit
+   *
+   * @return {Promise.<Object, Error>}
+   */
+  getList(offset, limit) {
+    return this.getConnection()
+      .then(peerConnection => {
+        return peerConnection.getList(offset, limit);
+      });
+  }
+
+  /**
+   * Retrieve the list of cached pages available in this cache.
+   *
+   * @return {Promise.<Object, Error>} Promise that resolves with the digest
+   * response or rejects with an Error.
+   */
+  getCacheDigest() {
+    return this.getConnection()
+      .then(peerConnection => {
+        return peerConnection.getCacheDigest();
+      });
+  }
+
+  /**
+   * @return {Promise.<BloomFilter, Error>}
+   */
+  getCacheBloomFilter() {
+    return this.getConnection()
+      .then(peerConnection => {
+        return peerConnection.getCacheBloomFilter();
+      });
+  }
+}
+
+exports.WebrtcClient = WebrtcClient;
+
+},{"../webrtc/connection-manager":"cmgr"}],5:[function(require,module,exports){
 (function (Buffer){
 'use strict';
 
@@ -249,7 +357,7 @@ class BloomFilter {
 exports.BloomFilter = BloomFilter;
 
 }).call(this,require("buffer").Buffer)
-},{"bloomfilter":34,"buffer":35,"to-arraybuffer":58}],4:[function(require,module,exports){
+},{"bloomfilter":32,"buffer":33,"to-arraybuffer":56}],6:[function(require,module,exports){
 'use strict';
 
 const objects = require('./objects');
@@ -324,7 +432,7 @@ class BloomStrategy extends CoalescenceStrategy {
 
 exports.BloomStrategy = BloomStrategy;
 
-},{"./objects":6,"./strategy":7}],5:[function(require,module,exports){
+},{"./objects":8,"./strategy":9}],7:[function(require,module,exports){
 'use strict';
 
 const objects = require('./objects');
@@ -413,7 +521,7 @@ class DigestStrategy extends CoalescenceStrategy {
 
 exports.DigestStrategy = DigestStrategy;
 
-},{"./objects":6,"./strategy":7}],6:[function(require,module,exports){
+},{"./objects":8,"./strategy":9}],8:[function(require,module,exports){
 (function (Buffer){
 'use strict';
 
@@ -502,11 +610,11 @@ exports.Digest = Digest;
 exports.PeerBloomFilter = PeerBloomFilter;
 
 }).call(this,{"isBuffer":require("../../../node_modules/is-buffer/index.js")})
-},{"../../../node_modules/is-buffer/index.js":43,"./bloom-filter":3}],7:[function(require,module,exports){
+},{"../../../node_modules/is-buffer/index.js":41,"./bloom-filter":5}],9:[function(require,module,exports){
 'use strict';
 
 const dnssdSem = require('../dnssd/dns-sd-semcache');
-const peerIfMgr = require('../peer-interface/manager');
+const clientMgr = require('../client/manager');
 
 
 /**
@@ -671,7 +779,7 @@ class CoalescenceStrategy {
       let pendingResponses = peerInfos.length;
       let result = [];
       peerInfos.forEach(peerInfo => {
-        let peerInterface = peerIfMgr.getPeerAccessor(
+        let peerInterface = clientMgr.getClient(
           peerInfo.ipAddress, peerInfo.port
         );
         self.getResourceFromPeer(peerInterface, peerInfo)
@@ -701,7 +809,7 @@ class CoalescenceStrategy {
    * swallow the error--if a peer has left the network, the whole fetch should
    * not fail.
    *
-   * @param {HttpPeerAccessor|WebrtcPeerAccessor} peerAccessor
+   * @param {WebrtcPeerAccessor} peerAccessor
    * @param {Object} peerInfo
    *
    * @return {Promise.<Object, Error>}
@@ -709,12 +817,13 @@ class CoalescenceStrategy {
   getResourceFromPeer(peerAccessor, peerInfo) {
     console.log('getResourceFromPeer called on CoalescenceStrategy, no-op');
     console.log(peerAccessor);
+    console.log(peerInfo);
   }
 }
 
 exports.CoalescenceStrategy = CoalescenceStrategy;
 
-},{"../dnssd/dns-sd-semcache":"dnsSem","../peer-interface/manager":18}],8:[function(require,module,exports){
+},{"../client/manager":3,"../dnssd/dns-sd-semcache":"dnsSem"}],10:[function(require,module,exports){
 'use strict';
 
 const SELF_SERVICE_SHORTCUT = '_SELF_INSTANCE_NAME_';
@@ -728,7 +837,7 @@ const SELF_SERVICE_SHORTCUT = '_SELF_INSTANCE_NAME_';
  */
 exports.SELF_SERVICE_SHORTCUT = SELF_SERVICE_SHORTCUT;
 
-},{}],9:[function(require,module,exports){
+},{}],11:[function(require,module,exports){
 /*jshint esnext:true*/
 /*
  * https://github.com/justindarc/dns-sd.js
@@ -917,7 +1026,7 @@ function defineType(values) {
   return T;
 }
 
-},{}],10:[function(require,module,exports){
+},{}],12:[function(require,module,exports){
 /*jshint esnext:true, bitwise:false */
 
 /**
@@ -1360,7 +1469,7 @@ exports.getFlagsAsValue = function(qr, opcode, aa, tc, rd, ra, rcode) {
 exports.DnsPacket = DnsPacket;
 exports.fromBuffer = DnsPacket.fromBuffer;
 
-},{"./dns-codes":9,"./question-section":12,"./resource-record":13,"smart-buffer":54}],11:[function(require,module,exports){
+},{"./dns-codes":11,"./question-section":14,"./resource-record":15,"smart-buffer":52}],13:[function(require,module,exports){
 'use strict';
 
 const SmartBuffer = require('smart-buffer').SmartBuffer;
@@ -1545,7 +1654,7 @@ exports.getIpStringFromSmartBuffer = function(sBuff) {
   return result;
 };
 
-},{"smart-buffer":54}],12:[function(require,module,exports){
+},{"smart-buffer":52}],14:[function(require,module,exports){
 'use strict';
 
 const SmartBuffer = require('smart-buffer').SmartBuffer;
@@ -1656,7 +1765,7 @@ class QuestionSection {
 
 exports.QuestionSection = QuestionSection;
 
-},{"./dns-util":11,"smart-buffer":54}],13:[function(require,module,exports){
+},{"./dns-util":13,"smart-buffer":52}],15:[function(require,module,exports){
 /* global exports, require */
 'use strict';
 
@@ -2165,7 +2274,7 @@ exports.PtrRecord = PtrRecord;
 exports.ResourceRecord = ResourceRecord;
 exports.SrvRecord = SrvRecord;
 
-},{"./dns-codes":9,"./dns-util":11,"smart-buffer":54}],14:[function(require,module,exports){
+},{"./dns-codes":11,"./dns-util":13,"smart-buffer":52}],16:[function(require,module,exports){
 'use strict';
 
 /**
@@ -2326,7 +2435,7 @@ exports.createNetworkQueryResponse = function(params, body) {
   );
 };
 
-},{}],15:[function(require,module,exports){
+},{}],17:[function(require,module,exports){
 /* globals chrome */
 'use strict';
 
@@ -2350,258 +2459,7 @@ window.dnssd = require('dnssd');
 window.dnsc = require('dnsc');
 window.dnsSem = require('dnsSem');
 
-},{"dnsSem":"dnsSem","dnsc":"dnsc","dnssd":"dnssd"}],16:[function(require,module,exports){
-'use strict';
-
-
-/**
- * Base class to be extended by peer interface implementations.
- */
-class PeerAccessor {
-  /**
-   * @param {string} ipAddress
-   * @param {number} port
-   */
-  constructor({ ipAddress, port } = {}) {
-    this.ipAddress = ipAddress;
-    this.port = port;
-  }
-
-  getIpAddress() {
-    return this.ipAddress;
-  }
-
-  getPort() {
-    return this.port;
-  }
-}
-
-exports.PeerAccessor = PeerAccessor;
-
-},{}],17:[function(require,module,exports){
-(function (Buffer){
-'use strict';
-
-const common = require('./common');
-const serverApi = require('../server/server-api');
-const util = require('../util');
-
-const PeerAccessor = common.PeerAccessor;
-
-
-class HttpPeerAccessor extends PeerAccessor {
-  /**
-   * Retrieve a cached page from a peer.
-   *
-   * @param {string} href
-   *
-   * @return {Promise.<CPDisk, Error>}
-   */
-  getCachedPage(href) {
-    let self = this;
-    return Promise.resolve()
-    .then(() => {
-      let cpUrl = serverApi.getAccessUrlForCachedPage(
-        self.getIpAddress(), self.getPort(), href
-      );
-      return util.fetch(cpUrl);
-    })
-    .then(response => {
-      return response.arrayBuffer();
-    })
-    .then(arrayBuffer => {
-      let buffer = Buffer.from(arrayBuffer);
-      return serverApi.parseResponseForCachedPage(buffer);
-    });
-  }
-
-  /**
-   * Retrieve the list of pages in the peer's cache.
-   *
-   * @param {Object} params parameter object as created by peer-interface/common
-   *
-   * @return {Promise.<Object, Error>}
-   */
-  getList() {
-    let self = this;
-    return new Promise(function(resolve, reject) {
-      let listUrl = serverApi.getListPageUrlForCache(
-        self.ipAddress, self.port
-      );
-      util.fetch(listUrl)
-      .then(response => {
-        return response.arrayBuffer();
-      })
-      .then(arrayBuffer => {
-        let buff = Buffer.from(arrayBuffer);
-        resolve(serverApi.parseResponseForList(buff));
-      })
-      .catch(err => {
-        reject(err);
-      });
-    });
-  }
-
-  /**
-   * Retrieve the list of cached pages available in this cache.
-   *
-   * @param {Object} params parameter object as created by peer-interface/common
-   *
-   * @return {Promise.<Object, Error>} Promise that resolves with the digest
-   * response or rejects with an Error.
-   */
-  getCacheDigest() {
-    let self = this;
-    return new Promise(function(resolve, reject) {
-      let digestUrl = serverApi.getUrlForDigest(
-        self.getIpAddress(), self.getPort()
-      );
-      util.fetch(digestUrl)
-      .then(response => {
-        return response.arrayBuffer();
-      })
-      .then(arrayBuffer => {
-        let buffer = Buffer.from(arrayBuffer);
-        resolve(serverApi.parseResponseForDigest(buffer));
-      })
-      .catch(err => {
-        reject(err);
-      });
-    });
-  }
-
-  /**
-   * @param {Object} params
-   *
-   * @return {Promise.<BloomFilter, Error>}
-   */
-  getCacheBloomFilter() {
-    let self = this;
-    return Promise.resolve()
-    .then(() => {
-      let bloomUrl = serverApi.getUrlForBloomFilter(
-        self.getIpAddress(), self.getPort()
-      );
-      return util.fetch(bloomUrl);
-    })
-    .then(response => {
-      return response.arrayBuffer();
-    })
-    .then(arrayBuffer => {
-      let buff = Buffer.from(arrayBuffer);
-      let result = serverApi.parseResponseForBloomFilter(buff);
-      return result;
-    });
-  }
-}
-
-exports.HttpPeerAccessor = HttpPeerAccessor;
-
-}).call(this,require("buffer").Buffer)
-},{"../server/server-api":23,"../util":24,"./common":16,"buffer":35}],18:[function(require,module,exports){
-'use strict';
-
-const ifHttp = require('./http-impl');
-const ifWebrtc = require('./webrtc-impl');
-const settings = require('../settings');
-
-
-/**
- * Manages peer interfaces for the application.
- */
-
-/**
- * Create a PeerAccessor based on the configured settings.
- *
- * @param {string} ipAddress
- * @param {number} port
- *
- * @return {HttpPeerAccessor|WebrtcPeerAccessor}
- */
-exports.getPeerAccessor = function(ipAddress, port) {
-  let transportMethod = settings.getTransportMethod();
-  if (transportMethod === 'http') {
-    return new ifHttp.HttpPeerAccessor({ ipAddress, port }); 
-  } else if (transportMethod === 'webrtc') {
-    return new ifWebrtc.WebrtcPeerAccessor({ ipAddress, port });
-  } else {
-    throw new Error('Unrecognized transport method: ' + transportMethod);
-  }
-};
-
-},{"../settings":"settings","./http-impl":17,"./webrtc-impl":19}],19:[function(require,module,exports){
-'use strict';
-
-const cmgr = require('../webrtc/connection-manager');
-const common = require('./common');
-
-const PeerAccessor = common.PeerAccessor;
-
-
-class WebrtcPeerAccessor extends PeerAccessor {
-  /**
-   * @return {Promise.<PeerConnection, Error>}
-   */
-  getConnection() {
-    return cmgr.getOrCreateConnection(this.getIpAddress(), this.getPort());
-  }
-
-  /**
-   * Retrieve a cached page from a peer.
-   *
-   * @param {string} href
-   *
-   * @return {Promise.<CPDisk, Error>}
-   */
-  getCachedPage(href) {
-    return this.getConnection()
-      .then(peerConnection => {
-        return peerConnection.getCachedPage(href);
-      });
-  }
-
-  /**
-   * Retrieve the list of pages in the peer's cache.
-   *
-   * @param {number} offset
-   * @param {number} limit
-   *
-   * @return {Promise.<Object, Error>}
-   */
-  getList(offset, limit) {
-    return this.getConnection()
-      .then(peerConnection => {
-        return peerConnection.getList(offset, limit);
-      });
-  }
-
-  /**
-   * Retrieve the list of cached pages available in this cache.
-   *
-   * @return {Promise.<Object, Error>} Promise that resolves with the digest
-   * response or rejects with an Error.
-   */
-  getCacheDigest() {
-    return this.getConnection()
-      .then(peerConnection => {
-        return peerConnection.getCacheDigest();
-      });
-  }
-
-  /**
-   * @return {Promise.<BloomFilter, Error>}
-   */
-  getCacheBloomFilter() {
-    return this.getConnection()
-      .then(peerConnection => {
-        return peerConnection.getCacheBloomFilter();
-      });
-  }
-}
-
-exports.WebrtcPeerAccessor = WebrtcPeerAccessor;
-
-},{"../webrtc/connection-manager":"cmgr","./common":16}],20:[function(require,module,exports){
+},{"dnsSem":"dnsSem","dnsc":"dnsc","dnssd":"dnssd"}],18:[function(require,module,exports){
 'use strict';
 
 /**
@@ -2748,7 +2606,7 @@ exports.createFileNameForPage = function(href, captureDate) {
   return result;
 };
 
-},{"../util":24,"./database":"db","./file-system":"fileSystem","./file-system-util":"fsUtil","sanitize-filename":53,"urijs":64}],21:[function(require,module,exports){
+},{"../util":22,"./database":"db","./file-system":"fileSystem","./file-system-util":"fsUtil","sanitize-filename":51,"urijs":62}],19:[function(require,module,exports){
 /* globals WSC, _, TextEncoder */
 'use strict';
 
@@ -2779,7 +2637,7 @@ _.extend(exports.EvaluationHandler.prototype, {
   }
 }, WSC.BaseHandler.prototype);
 
-},{"../evaluation":"eval"}],22:[function(require,module,exports){
+},{"../evaluation":"eval"}],20:[function(require,module,exports){
 /* globals WSC, RTCPeerConnection, RTCSessionDescription, RTCIceCandidate */
 'use strict';
 
@@ -2971,7 +2829,7 @@ _.extend(exports.WebRtcOfferHandler.prototype,
   WSC.BaseHandler.prototype
 );
 
-},{"../persistence/file-system":"fileSystem","../persistence/file-system-util":"fsUtil","../webrtc/connection-manager":"cmgr","../webrtc/responder":30,"./server-api":23,"text-encoding":55,"underscore":61}],23:[function(require,module,exports){
+},{"../persistence/file-system":"fileSystem","../persistence/file-system-util":"fsUtil","../webrtc/connection-manager":"cmgr","../webrtc/responder":28,"./server-api":21,"text-encoding":53,"underscore":59}],21:[function(require,module,exports){
 (function (Buffer){
 'use strict';
 
@@ -3311,7 +3169,7 @@ exports.parseResponseForBloomFilter = function(buff) {
 };
 
 }).call(this,require("buffer").Buffer)
-},{"../coalescence/bloom-filter":3,"../persistence/datastore":20,"../persistence/objects":"persistenceObjs","base-64":31,"buffer":35,"urijs":64}],24:[function(require,module,exports){
+},{"../coalescence/bloom-filter":5,"../persistence/datastore":18,"../persistence/objects":"persistenceObjs","base-64":29,"buffer":33,"urijs":62}],22:[function(require,module,exports){
 (function (Buffer){
 'use strict';
 
@@ -3723,7 +3581,7 @@ exports.buffToObj = function(buff) {
 };
 
 }).call(this,require("buffer").Buffer)
-},{"blob-to-buffer":33,"buffer":35,"dataurl-to-blob":38,"smart-buffer":54}],25:[function(require,module,exports){
+},{"blob-to-buffer":31,"buffer":33,"dataurl-to-blob":36,"smart-buffer":52}],23:[function(require,module,exports){
 'use strict';
 
 const commonChannel = require('./common-channel');
@@ -3857,7 +3715,7 @@ class BufferedChannelServer extends commonChannel.BaseServer {
 exports.BufferedChannelClient = BufferedChannelClient;
 exports.BufferedChannelServer = BufferedChannelServer;
 
-},{"./common-channel":26,"./protocol":29}],26:[function(require,module,exports){
+},{"./common-channel":24,"./protocol":27}],24:[function(require,module,exports){
 (function (Buffer){
 'use strict';
 
@@ -4160,7 +4018,7 @@ exports.BaseClient = BaseClient;
 exports.BaseServer = BaseServer;
 
 }).call(this,require("buffer").Buffer)
-},{"./protocol":29,"buffer":35,"events":40}],27:[function(require,module,exports){
+},{"./protocol":27,"buffer":33,"events":38}],25:[function(require,module,exports){
 'use strict';
 
 /**
@@ -4308,7 +4166,7 @@ exports.isCachedPage = function(msg) {
   return msg.type && msg.type === exports.TYPE_CACHED_PAGE;
 };
 
-},{}],28:[function(require,module,exports){
+},{}],26:[function(require,module,exports){
 'use strict';
 
 const EventEmitter = require('wolfy87-eventemitter');
@@ -4520,7 +4378,7 @@ exports.createClient = function(pc, msg) {
 
 exports.PeerConnection = PeerConnection;
 
-},{"../server/server-api":23,"./buffered-channel":25,"./message":27,"wolfy87-eventemitter":67}],29:[function(require,module,exports){
+},{"../server/server-api":21,"./buffered-channel":23,"./message":25,"wolfy87-eventemitter":65}],27:[function(require,module,exports){
 (function (Buffer){
 'use strict';
 
@@ -4712,7 +4570,7 @@ exports.createErrorMessage = function(reason) {
 exports.ProtocolMessage = ProtocolMessage;
 
 }).call(this,require("buffer").Buffer)
-},{"buffer":35}],30:[function(require,module,exports){
+},{"buffer":33}],28:[function(require,module,exports){
 'use strict';
 
 const TextDecoder = require('text-encoding').TextDecoder;
@@ -4880,7 +4738,7 @@ exports.createChannelServer = function(channel) {
   return new bufferedChannel.BufferedChannelServer(channel);
 };
 
-},{"../server/server-api":23,"./buffered-channel":25,"./message":27,"text-encoding":55}],31:[function(require,module,exports){
+},{"../server/server-api":21,"./buffered-channel":23,"./message":25,"text-encoding":53}],29:[function(require,module,exports){
 (function (global){
 /*! http://mths.be/base64 v0.1.0 by @mathias | MIT license */
 ;(function(root) {
@@ -5049,7 +4907,7 @@ exports.createChannelServer = function(channel) {
 }(this));
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],32:[function(require,module,exports){
+},{}],30:[function(require,module,exports){
 'use strict'
 
 exports.byteLength = byteLength
@@ -5165,7 +5023,7 @@ function fromByteArray (uint8) {
   return parts.join('')
 }
 
-},{}],33:[function(require,module,exports){
+},{}],31:[function(require,module,exports){
 (function (Buffer){
 /* global Blob, FileReader */
 
@@ -5190,7 +5048,7 @@ module.exports = function blobToBuffer (blob, cb) {
 }
 
 }).call(this,require("buffer").Buffer)
-},{"buffer":35}],34:[function(require,module,exports){
+},{"buffer":33}],32:[function(require,module,exports){
 (function(exports) {
   exports.BloomFilter = BloomFilter;
   exports.fnv_1a = fnv_1a;
@@ -5310,7 +5168,7 @@ module.exports = function blobToBuffer (blob, cb) {
   }
 })(typeof exports !== "undefined" ? exports : this);
 
-},{}],35:[function(require,module,exports){
+},{}],33:[function(require,module,exports){
 (function (global){
 /*!
  * The buffer module from node.js, for the browser.
@@ -7103,14 +6961,14 @@ function isnan (val) {
 }
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"base64-js":32,"ieee754":42,"isarray":36}],36:[function(require,module,exports){
+},{"base64-js":30,"ieee754":40,"isarray":34}],34:[function(require,module,exports){
 var toString = {}.toString;
 
 module.exports = Array.isArray || function (arr) {
   return toString.call(arr) == '[object Array]';
 };
 
-},{}],37:[function(require,module,exports){
+},{}],35:[function(require,module,exports){
 /*!
  * chrome-promise 2.0.3
  * https://github.com/tfoxy/chrome-promise
@@ -7205,7 +7063,7 @@ module.exports = Array.isArray || function (arr) {
   }
 }));
 
-},{}],38:[function(require,module,exports){
+},{}],36:[function(require,module,exports){
 module.exports = function (dataURL) {
 
     'use strict';
@@ -7249,7 +7107,7 @@ module.exports = function (dataURL) {
 };
 
 
-},{}],39:[function(require,module,exports){
+},{}],37:[function(require,module,exports){
 (function (global){
 (function (global, factory) {
    typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory() :
@@ -11857,7 +11715,7 @@ return Dexie;
 
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],40:[function(require,module,exports){
+},{}],38:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -12161,7 +12019,7 @@ function isUndefined(arg) {
   return arg === void 0;
 }
 
-},{}],41:[function(require,module,exports){
+},{}],39:[function(require,module,exports){
 var isBuffer = require('is-buffer')
 
 var flat = module.exports = flatten
@@ -12268,7 +12126,7 @@ function unflatten(target, opts) {
   return result
 }
 
-},{"is-buffer":43}],42:[function(require,module,exports){
+},{"is-buffer":41}],40:[function(require,module,exports){
 exports.read = function (buffer, offset, isLE, mLen, nBytes) {
   var e, m
   var eLen = nBytes * 8 - mLen - 1
@@ -12354,7 +12212,7 @@ exports.write = function (buffer, value, offset, isLE, mLen, nBytes) {
   buffer[offset + i - d] |= s * 128
 }
 
-},{}],43:[function(require,module,exports){
+},{}],41:[function(require,module,exports){
 /*!
  * Determine if an object is a Buffer
  *
@@ -12377,7 +12235,7 @@ function isSlowBuffer (obj) {
   return typeof obj.readFloatLE === 'function' && typeof obj.slice === 'function' && isBuffer(obj.slice(0, 0))
 }
 
-},{}],44:[function(require,module,exports){
+},{}],42:[function(require,module,exports){
 (function (process){
 /**
  * Module dependencies.
@@ -12681,7 +12539,7 @@ function createDataRows(params) {
 }
 
 }).call(this,require('_process'))
-},{"_process":52,"flat":41,"lodash.clonedeep":45,"lodash.flatten":46,"lodash.get":47,"lodash.set":48,"lodash.uniq":49,"os":51}],45:[function(require,module,exports){
+},{"_process":50,"flat":39,"lodash.clonedeep":43,"lodash.flatten":44,"lodash.get":45,"lodash.set":46,"lodash.uniq":47,"os":49}],43:[function(require,module,exports){
 (function (global){
 /**
  * lodash (Custom Build) <https://lodash.com/>
@@ -14433,7 +14291,7 @@ function stubFalse() {
 module.exports = cloneDeep;
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],46:[function(require,module,exports){
+},{}],44:[function(require,module,exports){
 (function (global){
 /**
  * lodash (Custom Build) <https://lodash.com/>
@@ -14786,7 +14644,7 @@ function isObjectLike(value) {
 module.exports = flatten;
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],47:[function(require,module,exports){
+},{}],45:[function(require,module,exports){
 (function (global){
 /**
  * lodash (Custom Build) <https://lodash.com/>
@@ -15721,7 +15579,7 @@ function get(object, path, defaultValue) {
 module.exports = get;
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],48:[function(require,module,exports){
+},{}],46:[function(require,module,exports){
 (function (global){
 /**
  * lodash (Custom Build) <https://lodash.com/>
@@ -16715,7 +16573,7 @@ function set(object, path, value) {
 module.exports = set;
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],49:[function(require,module,exports){
+},{}],47:[function(require,module,exports){
 (function (global){
 /**
  * lodash (Custom Build) <https://lodash.com/>
@@ -17615,7 +17473,7 @@ function noop() {
 module.exports = uniq;
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],50:[function(require,module,exports){
+},{}],48:[function(require,module,exports){
 (function (global){
 /**
  * @license
@@ -34703,7 +34561,7 @@ module.exports = uniq;
 }.call(this));
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],51:[function(require,module,exports){
+},{}],49:[function(require,module,exports){
 exports.endianness = function () { return 'LE' };
 
 exports.hostname = function () {
@@ -34750,7 +34608,7 @@ exports.tmpdir = exports.tmpDir = function () {
 
 exports.EOL = '\n';
 
-},{}],52:[function(require,module,exports){
+},{}],50:[function(require,module,exports){
 // shim for using process in browser
 var process = module.exports = {};
 
@@ -34936,7 +34794,7 @@ process.chdir = function (dir) {
 };
 process.umask = function() { return 0; };
 
-},{}],53:[function(require,module,exports){
+},{}],51:[function(require,module,exports){
 /*jshint node:true*/
 'use strict';
 
@@ -34994,7 +34852,7 @@ module.exports = function (input, options) {
   return sanitize(output, '');
 };
 
-},{"truncate-utf8-bytes":59}],54:[function(require,module,exports){
+},{"truncate-utf8-bytes":57}],52:[function(require,module,exports){
 (function (Buffer){
 "use strict";
 // The default Buffer size if one is not provided.
@@ -35734,7 +35592,7 @@ class SmartBuffer {
 exports.SmartBuffer = SmartBuffer;
 
 }).call(this,require("buffer").Buffer)
-},{"buffer":35}],55:[function(require,module,exports){
+},{"buffer":33}],53:[function(require,module,exports){
 // This is free and unencumbered software released into the public domain.
 // See LICENSE.md for more information.
 
@@ -35745,7 +35603,7 @@ module.exports = {
   TextDecoder: encoding.TextDecoder,
 };
 
-},{"./lib/encoding.js":57}],56:[function(require,module,exports){
+},{"./lib/encoding.js":55}],54:[function(require,module,exports){
 (function(global) {
   'use strict';
 
@@ -35793,7 +35651,7 @@ module.exports = {
 // For strict environments where `this` inside the global scope
 // is `undefined`, take a pure object instead
 }(this || {}));
-},{}],57:[function(require,module,exports){
+},{}],55:[function(require,module,exports){
 // This is free and unencumbered software released into the public domain.
 // See LICENSE.md for more information.
 
@@ -39107,7 +38965,7 @@ module.exports = {
 // For strict environments where `this` inside the global scope
 // is `undefined`, take a pure object instead
 }(this || {}));
-},{"./encoding-indexes.js":56}],58:[function(require,module,exports){
+},{"./encoding-indexes.js":54}],56:[function(require,module,exports){
 var Buffer = require('buffer').Buffer
 
 module.exports = function (buf) {
@@ -39136,14 +38994,14 @@ module.exports = function (buf) {
 	}
 }
 
-},{"buffer":35}],59:[function(require,module,exports){
+},{"buffer":33}],57:[function(require,module,exports){
 'use strict';
 
 var truncate = require("./lib/truncate");
 var getLength = require("utf8-byte-length/browser");
 module.exports = truncate.bind(null, getLength);
 
-},{"./lib/truncate":60,"utf8-byte-length/browser":66}],60:[function(require,module,exports){
+},{"./lib/truncate":58,"utf8-byte-length/browser":64}],58:[function(require,module,exports){
 'use strict';
 
 function isHighSurrogate(codePoint) {
@@ -39188,7 +39046,7 @@ module.exports = function truncate(getLength, string, byteLength) {
 };
 
 
-},{}],61:[function(require,module,exports){
+},{}],59:[function(require,module,exports){
 //     Underscore.js 1.8.3
 //     http://underscorejs.org
 //     (c) 2009-2015 Jeremy Ashkenas, DocumentCloud and Investigative Reporters & Editors
@@ -40738,7 +40596,7 @@ module.exports = function truncate(getLength, string, byteLength) {
   }
 }.call(this));
 
-},{}],62:[function(require,module,exports){
+},{}],60:[function(require,module,exports){
 /*!
  * URI.js - Mutating URLs
  * IPv6 Support
@@ -40925,7 +40783,7 @@ module.exports = function truncate(getLength, string, byteLength) {
   };
 }));
 
-},{}],63:[function(require,module,exports){
+},{}],61:[function(require,module,exports){
 /*!
  * URI.js - Mutating URLs
  * Second Level Domain (SLD) Support
@@ -41172,7 +41030,7 @@ module.exports = function truncate(getLength, string, byteLength) {
   return SLD;
 }));
 
-},{}],64:[function(require,module,exports){
+},{}],62:[function(require,module,exports){
 /*!
  * URI.js - Mutating URLs
  *
@@ -43428,7 +43286,7 @@ module.exports = function truncate(getLength, string, byteLength) {
   return URI;
 }));
 
-},{"./IPv6":62,"./SecondLevelDomains":63,"./punycode":65}],65:[function(require,module,exports){
+},{"./IPv6":60,"./SecondLevelDomains":61,"./punycode":63}],63:[function(require,module,exports){
 (function (global){
 /*! https://mths.be/punycode v1.4.0 by @mathias */
 ;(function(root) {
@@ -43965,7 +43823,7 @@ module.exports = function truncate(getLength, string, byteLength) {
 }(this));
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],66:[function(require,module,exports){
+},{}],64:[function(require,module,exports){
 'use strict';
 
 function isHighSurrogate(codePoint) {
@@ -44014,7 +43872,7 @@ module.exports = function getByteLength(string) {
   return byteLength;
 };
 
-},{}],67:[function(require,module,exports){
+},{}],65:[function(require,module,exports){
 /*!
  * EventEmitter v5.2.0 - git.io/ee
  * Unlicense - http://unlicense.org/
@@ -44517,7 +44375,7 @@ const dnssdSem = require('./dnssd/dns-sd-semcache');
 const evaluation = require('./evaluation');
 const extBridge = require('./extension-bridge/messaging');
 const fileSystem = require('./persistence/file-system');
-const peerIfMgr = require('./peer-interface/manager');
+const clientMgr = require('./client/manager');
 const settings = require('./settings');
 const serverApi = require('./server/server-api');
 const webrtcCxnMgr = require('./webrtc/connection-manager');
@@ -44906,7 +44764,7 @@ exports.getListFromService = function(serviceName, offset, limit) {
   return new Promise(function(resolve, reject) {
     exports.resolveCache(serviceName)
     .then(cacheInfo => {
-      let peerAccessor = peerIfMgr.getPeerAccessor(
+      let peerAccessor = clientMgr.getClient(
         cacheInfo.ipAddress, cacheInfo.port
       );
       return peerAccessor.getList(offset, limit);
@@ -44935,7 +44793,7 @@ exports.saveMhtmlAndOpen = function(serviceName, href) {
     let streamName = 'open_' + href;
     exports.resolveCache(serviceName)
     .then(cacheInfo => {
-      return peerIfMgr.getPeerAccessor(
+      return clientMgr.getClient(
         cacheInfo.ipAddress, cacheInfo.port
       ).getCachedPage(href);
     })
@@ -44960,7 +44818,7 @@ exports.saveMhtmlAndOpen = function(serviceName, href) {
   });
 };
 
-},{"./coalescence/manager":"coalMgr","./constants":8,"./dnssd/dns-controller":"dnsc","./dnssd/dns-sd-semcache":"dnsSem","./evaluation":"eval","./extension-bridge/messaging":"extBridge","./peer-interface/manager":18,"./persistence/datastore":20,"./persistence/file-system":"fileSystem","./server/server-api":23,"./server/server-controller":"serverController","./settings":"settings","./webrtc/connection-manager":"cmgr"}],"chromeUdp":[function(require,module,exports){
+},{"./client/manager":3,"./coalescence/manager":"coalMgr","./constants":10,"./dnssd/dns-controller":"dnsc","./dnssd/dns-sd-semcache":"dnsSem","./evaluation":"eval","./extension-bridge/messaging":"extBridge","./persistence/datastore":18,"./persistence/file-system":"fileSystem","./server/server-api":21,"./server/server-controller":"serverController","./settings":"settings","./webrtc/connection-manager":"cmgr"}],"chromeUdp":[function(require,module,exports){
 /* globals chrome */
 'use strict';
 
@@ -45479,7 +45337,7 @@ exports.createRTCSessionDescription = function(descJson) {
 };
 
 }).call(this,require("buffer").Buffer)
-},{"../../../app/scripts/webrtc/peer-connection":28,"../server/server-api":23,"../util":24,"buffer":35}],"coalMgr":[function(require,module,exports){
+},{"../../../app/scripts/webrtc/peer-connection":26,"../server/server-api":21,"../util":22,"buffer":33}],"coalMgr":[function(require,module,exports){
 'use strict';
 
 const settings = require('../settings');
@@ -45591,7 +45449,7 @@ exports.getStrategy = function() {
   return result;
 };
 
-},{"../settings":"settings","../util":24,"./bloom-strategy":4,"./digest-strategy":5}],"db":[function(require,module,exports){
+},{"../settings":"settings","../util":22,"./bloom-strategy":6,"./digest-strategy":7}],"db":[function(require,module,exports){
 'use strict';
 
 const Dexie = require('dexie');
@@ -45808,7 +45666,7 @@ exports.getCachedPageSummaries = function(offset, numDesired) {
   });
 };
 
-},{"./objects":"persistenceObjs","dexie":39}],"dnsSem":[function(require,module,exports){
+},{"./objects":"persistenceObjs","dexie":37}],"dnsSem":[function(require,module,exports){
 /*jshint esnext:true*/
 'use strict';
 
@@ -45992,7 +45850,7 @@ exports.removeOwnInfo = function(peerInfos) {
   });
 };
 
-},{"../server/server-api":23,"../settings":"settings","./dns-sd":"dnssd"}],"dnsc":[function(require,module,exports){
+},{"../server/server-api":21,"../settings":"settings","./dns-sd":"dnssd"}],"dnsc":[function(require,module,exports){
 (function (Buffer){
 /*jshint esnext:true*/
 /* globals Promise */
@@ -46661,7 +46519,7 @@ exports.addRecord = function(name, record) {
 };
 
 }).call(this,require("buffer").Buffer)
-},{"../chrome-apis/udp":"chromeUdp","../util":24,"./dns-codes":9,"./dns-packet":10,"./dns-util":11,"./question-section":12,"buffer":35}],"dnssd":[function(require,module,exports){
+},{"../chrome-apis/udp":"chromeUdp","../util":22,"./dns-codes":11,"./dns-packet":12,"./dns-util":13,"./question-section":14,"buffer":33}],"dnssd":[function(require,module,exports){
 /*jshint esnext:true*/
 /* globals Promise */
 'use strict';
@@ -47654,7 +47512,7 @@ exports.queryForResponses = function(
   });
 };
 
-},{"../util":24,"./dns-codes":9,"./dns-controller":"dnsc","./dns-packet":10,"./dns-util":11,"./resource-record":13,"lodash":50}],"eval":[function(require,module,exports){
+},{"../util":22,"./dns-codes":11,"./dns-controller":"dnsc","./dns-packet":12,"./dns-util":13,"./resource-record":15,"lodash":48}],"eval":[function(require,module,exports){
 'use strict';
 
 /**
@@ -47668,8 +47526,7 @@ const appc = require('./app-controller');
 const bloomFilter = require('./coalescence/bloom-filter');
 const chromep = require('./chrome-apis/chromep');
 const coalObjects = require('./coalescence/objects');
-const ifCommon = require('./peer-interface/common');
-const peerIfMgr = require('./peer-interface/manager');
+const clientMgr = require('./client/manager');
 const perObjs = require('./persistence/objects');
 const util = require('./util');
 
@@ -48467,7 +48324,7 @@ exports.runFetchFileTrial = function(
 /**
  * Fetch a file and report on the information that went into fetching it.
  *
- * @param {string} mhtmlUrl
+ * @param {string} href
  * @param {string} ipAddr
  * @param {integer} port
  *
@@ -48477,11 +48334,10 @@ exports.runFetchFileTrial = function(
  *   fileSize: {number}
  * }
  */
-exports.runFetchFileIteration = function(mhtmlUrl, ipAddr, port) {
+exports.runFetchFileIteration = function(href, ipAddr, port) {
   return new Promise(function(resolve, reject) {
     let start = exports.getNow();
-    let params = ifCommon.createFileParams(ipAddr, port, mhtmlUrl);
-    peerIfMgr.getPeerAccessor().getFileBlob(params)
+    clientMgr.getClient(ipAddr, port).getCachedPage(href)
     .then(blob => {
       // We are fetching, not writing to disk.
       let end = exports.getNow();
@@ -48614,7 +48470,7 @@ exports.generateDummyPageInfos = function(numPages, peerNumber) {
   return result;
 };
 
-},{"./app-controller":"appController","./chrome-apis/chromep":1,"./coalescence/bloom-filter":3,"./coalescence/objects":6,"./peer-interface/common":16,"./peer-interface/manager":18,"./persistence/objects":"persistenceObjs","./server/server-api":23,"./util":24,"json2csv":44}],"extBridge":[function(require,module,exports){
+},{"./app-controller":"appController","./chrome-apis/chromep":1,"./client/manager":3,"./coalescence/bloom-filter":5,"./coalescence/objects":8,"./persistence/objects":"persistenceObjs","./server/server-api":21,"./util":22,"json2csv":42}],"extBridge":[function(require,module,exports){
 'use strict';
 
 const base64 = require('base-64');
@@ -48878,7 +48734,7 @@ exports.sendMessageToOpenUrl = function(url) {
   exports.sendMessageToExtension(message);
 };
 
-},{"../app-controller":"appController","../chrome-apis/chromep":1,"../coalescence/manager":"coalMgr","../constants":8,"../persistence/datastore":20,"../persistence/objects":"persistenceObjs","./common-messaging":14,"base-64":31}],"fileSystem":[function(require,module,exports){
+},{"../app-controller":"appController","../chrome-apis/chromep":1,"../coalescence/manager":"coalMgr","../constants":10,"../persistence/datastore":18,"../persistence/objects":"persistenceObjs","./common-messaging":16,"base-64":29}],"fileSystem":[function(require,module,exports){
 'use strict';
 
 /**
@@ -49304,7 +49160,7 @@ exports.createFileReader = function() {
 };
 
 }).call(this,require("buffer").Buffer)
-},{"../util":24,"buffer":35}],"moment":[function(require,module,exports){
+},{"../util":22,"buffer":33}],"moment":[function(require,module,exports){
 //! moment.js
 //! version : 2.18.1
 //! authors : Tim Wood, Iskren Chernev, Moment.js contributors
@@ -54042,7 +53898,7 @@ exports.CPInfo = CPInfo;
 exports.CPSummary = CPSummary;
 exports.CPDisk = CPDisk;
 
-},{"../util":24}],"serverController":[function(require,module,exports){
+},{"../util":22}],"serverController":[function(require,module,exports){
 /* global WSC, DummyHandler */
 'use strict';
 
@@ -54115,7 +53971,7 @@ exports.start = function(host, port) {
   startServer(host, port, endpointHandlers);
 };
 
-},{"./evaluation-handler":21,"./handlers":22,"./server-api":23}],"settings":[function(require,module,exports){
+},{"./evaluation-handler":19,"./handlers":20,"./server-api":21}],"settings":[function(require,module,exports){
 /* global Promise */
 'use strict';
 
@@ -54135,14 +53991,6 @@ const fileSystem = require('./persistence/file-system');
 /** The prefix that we use to namespace setting keys. */
 const SETTING_NAMESPACE_PREFIX = 'setting_';
 
-/**
- * The strings we use to represent transport mechanisms in the database.
- */
-const TRANSPORT_METHOD_STRINGS = {
-  http: 'http',
-  webrtc: 'webrtc'
-};
-
 const COALESCENCE_METHOD_STRINGS = {
   digest: 'digest',
   bloom: 'bloom'
@@ -54157,7 +54005,6 @@ const userFriendlyKeys = {
   baseDirPath: 'baseDirPath',
   serverPort: 'serverPort',
   hostName: 'hostName',
-  transportMethod: 'transportMethod',
   coalescenceStrategy: 'coalescenceStrategy',
 };
 
@@ -54174,7 +54021,6 @@ exports.getAllSettingKeys = function() {
     exports.createNameSpacedKey(userFriendlyKeys.baseDirPath),
     exports.createNameSpacedKey(userFriendlyKeys.serverPort),
     exports.createNameSpacedKey(userFriendlyKeys.hostName),
-    exports.createNameSpacedKey(userFriendlyKeys.transportMethod),
     exports.createNameSpacedKey(userFriendlyKeys.coalescenceStrategy),
   ];
 };
@@ -54343,19 +54189,6 @@ exports.getHostName = function() {
 };
 
 /**
- * @return {string} String representing the transport method to be used by the
- * instance to interface with peers. Options are 'http' and 'webrtc'. Defaults
- * to 'http'.
- */
-exports.getTransportMethod = function() {
-  let result = exports.get(userFriendlyKeys.transportMethod);
-  if (result === null) {
-    result = TRANSPORT_METHOD_STRINGS.http;
-  }
-  return result;
-};
-
-/**
  * @return {string} String representing the coalescence strategy. Defaults to
  * 'digest'.
  */
@@ -54413,32 +54246,6 @@ exports.setServerPort = function(port) {
  */
 exports.setHostName = function(hostName) {
   return exports.set(userFriendlyKeys.hostName, hostName);
-};
-
-/**
- * Indicate that HTTP should be used as the transport mechanism to interface
- * with peers.
- *
- * @return {Promise.<Object, Error>} Promise that resolves with the current
- * settings object
- */
-exports.setTransportHttp = function() {
-  return exports.set(
-    userFriendlyKeys.transportMethod, TRANSPORT_METHOD_STRINGS.http
-  );
-};
-
-/**
- * Indicate that WebRTC should be used as the transport mechanism to interface
- * with peers.
- *
- * @return {Promise.<Object, Error>} Promise that resolves with the current
- * settings object
- */
-exports.setTransportWebrtc = function() {
-  return exports.set(
-    userFriendlyKeys.transportMethod, TRANSPORT_METHOD_STRINGS.webrtc
-  );
 };
 
 /**
@@ -54509,4 +54316,4 @@ exports.promptAndSetNewBaseDir = function() {
   });
 };
 
-},{"./chrome-apis/chromep":1,"./persistence/file-system":"fileSystem"}]},{},[15]);
+},{"./chrome-apis/chromep":1,"./persistence/file-system":"fileSystem"}]},{},[17]);

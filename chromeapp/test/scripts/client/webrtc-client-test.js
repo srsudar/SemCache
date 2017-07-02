@@ -6,17 +6,20 @@ const test = require('tape');
 
 const tutil = require('../test-util');
 
-let webrtcImpl = require('../../../app/scripts/peer-interface/webrtc-impl');
+let webrtcClient = require('../../../app/scripts/client/webrtc-client');
+
+let WebrtcClient = webrtcClient.WebrtcClient;
 
 
 /**
  * Proxyquire the messaging module with proxies set as the proxied modules.
  */
 function proxyquireWebrtcImpl(proxies) {
-  webrtcImpl = proxyquire(
-    '../../../app/scripts/peer-interface/webrtc-impl',
+  webrtcClient = proxyquire(
+    '../../../app/scripts/client/webrtc-client',
     proxies
   );
+  WebrtcClient = webrtcClient.WebrtcClient;
 }
 
 /**
@@ -26,9 +29,10 @@ function proxyquireWebrtcImpl(proxies) {
  */
 function resetWebrtcImpl() {
   delete require.cache[
-    require.resolve('../../../app/scripts/peer-interface/webrtc-impl')
+    require.resolve('../../../app/scripts/client/webrtc-client')
   ];
-  webrtcImpl = require('../../../app/scripts/peer-interface/webrtc-impl');
+  webrtcClient = require('../../../app/scripts/client/webrtc-client');
+  WebrtcClient = webrtcClient.WebrtcClient;
 }
 
 function end(t) {
@@ -39,12 +43,24 @@ function end(t) {
 
 
 /**
- * @return {WebrtcPeerAccessor}
+ * @return {WebrtcClient}
  */
 function createAccessor() {
   let { ipAddress, port } = tutil.getIpPort();
-  return new webrtcImpl.WebrtcPeerAccessor({ ipAddress, port });
+  return new WebrtcClient({ ipAddress, port });
 }
+
+test('getters correct', function(t) {
+  let ipAddress = '1.2.244.1';
+  let port = 777;
+
+  let pa = new WebrtcClient({ ipAddress, port });
+
+  t.equal(pa.getIpAddress(), ipAddress);
+  t.equal(pa.getPort(), port);
+
+  t.end();
+});
 
 test('can create PeerAccessor', function(t) {
   let { ipAddress, port } = tutil.getIpPort();
@@ -169,7 +185,7 @@ test('getCacheBloomFilter rejects on error', function(t) {
     }
   });
 
-  let accessor = new webrtcImpl.WebrtcPeerAccessor();
+  let accessor = new WebrtcClient();
   accessor.getCacheBloomFilter({})
   .then(result => {
     t.fail(result);
