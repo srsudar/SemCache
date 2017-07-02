@@ -154,20 +154,56 @@ exports.getCachedPageHrefFromPath = function(path) {
 /**
  * Return a JSON object response for the all cached pages endpoint.
  *
+ * @param {number} offset
+ * @param {number} limit
+ *
  * @return {Promise.<Buffer, Error} Promise that resolves with Buffer from an
  * object like the following:
  * {
  *   metadata: {},
- *   cachedPages: [CPSummary, CPSummary]
+ *   hasPrev: false,
+ *   hasNext: false,
+ *   prevOffset: 0,
+ *   nextOffset: 20,
+ *   cachedPages: [CPSummary.toJSON(), CPSummary.toJSON()]
  * }
  */
-exports.getResponseForAllCachedPages = function() {
+exports.getResponseForList = function(offset, limit) {
+  if (!Number.isSafeInteger(offset)) {
+    offset = DEFAULT_OFFSET;
+  }
+  if (!Number.isSafeInteger(limit)) {
+    limit = DEFAULT_LIMIT;
+  }
   return new Promise(function(resolve, reject) {
-    datastore.getCachedPageSummaries(DEFAULT_OFFSET, DEFAULT_LIMIT)
+    let result = {};
+    datastore.getCachedPageSummaries(offset, limit)
     .then(cpsums => {
-      let result = {};
       result.metadata = exports.createMetadatObj();
+
+      let hasPrev = false;
+      if (offset > 0) {
+        hasPrev = true;
+        let prevOffset = offset - limit;
+        if (prevOffset < 0) {
+          prevOffset = 0;
+        }
+        result.prevOffset = prevOffset;
+      }
+      result.hasPrev = hasPrev;
+
       result.cachedPages = cpsums.map(cpsum => cpsum.toJSON());
+      return datastore.getNumCachedPages();
+    })
+    .then(numPages => {
+      let hasNext = false;
+      if (numPages > offset + limit) {
+        hasNext = true;
+        let nextOffset = offset + limit;
+        result.nextOffset = nextOffset;
+      }
+      result.hasNext = hasNext;
+
       resolve(Buffer.from(JSON.stringify(result)));
     })
     .catch(err => {
@@ -256,14 +292,14 @@ exports.getResponseForBloomFilter = function() {
 /**
  * @param {Buffer} buff
  *
- * @return {Array.<CPSummary>}
+ * @return {Object}
  */
 exports.parseResponseForList = function(buff) {
   let result = JSON.parse(buff.toString());
   result.cachedPages = result.cachedPages.map(
     cpsumJson => objects.CPSummary.fromJSON(cpsumJson)
   );
-  return result.cachedPages;
+  return result;
 };
 
 /*

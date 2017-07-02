@@ -47,9 +47,14 @@ test('createMessage throws with invalid type', function(t) {
   end(t);
 });
 
-test('createListMessage returns type list', function(t) {
-  let actual = message.createListMessage();
-  t.equal(actual.type, message.TYPE_LIST);
+test('createListMessage correct', function(t) {
+  let offset = 125;
+  let limit = 5;
+  let request = { offset, limit };
+  let actual = message.createListMessage(offset, limit);
+
+  t.deepEqual(actual.type, message.TYPE_LIST);
+  t.deepEqual(actual.request, request);
   end(t);
 });
 

@@ -103,6 +103,18 @@ exports.getCachedPageSummaries = function(offset, numDesired) {
   return database.getCachedPageSummaries(offset, numDesired);
 };
 
+/**
+ * Get the number of pages saved in the cache.
+ *
+ * @return {number}
+ */
+exports.getNumCachedPages = function() {
+  return database.getAllCPInfos()
+  .then(cpinfos => {
+    return cpinfos.length;
+  });
+};
+
 
 /**
  * Get all the cached pages that are stored in the cache.

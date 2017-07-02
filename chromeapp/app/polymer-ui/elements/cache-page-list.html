@@ -9,8 +9,9 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 -->
 
 <link rel="import" href="../../../bower_components/polymer/polymer.html">
-<link rel="import" href="../../../bower_components/iron-ajax/iron-ajax.html">
-<link rel="import" href="../../../bower_components/iron-icons/iron-icons.html">
+<link rel="import" href="../../../bower_components/iron-icon/iron-icon.html">
+<link rel="import" href="../../../bower_components/iron-flex-layout/iron-flex-layout-classes.html">
+<link rel="import" href="../../../bower_components/paper-button/paper-button.html">
 <link rel="import" href="../../../bower_components/paper-fab/paper-fab.html">
 <link rel="import" href="../../../bower_components/paper-spinner/paper-spinner.html">
 <link rel="import" href="../../../bower_components/paper-toast/paper-toast.html">
@@ -18,6 +19,13 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 
 <dom-module id="cache-page-list">
   <template>
+    <style include="iron-flex iron-flex-alignment"></style>
+    <style is="custom-style">
+      .flex-equal-around-justified {
+        @apply --layout-horizontal;
+        @apply --layout-around-justified;
+      }
+    </style>
     <style>
       :host {
         display: block;
@@ -29,8 +37,8 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
       }
 
       .cache-controls {
-        display: flex;
-        position: relative;
+        /* display: flex; */
+        /* position: relative; */
         height: 80px;
       }
 
@@ -51,11 +59,47 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
         margin: 16px;
       }
 
+      .page-button {
+        margin-top: 16px;
+      }
+
+      .back-button {
+        padding-right: 16px;
+      }
+
+      .next-button {
+        padding-left: 16px;
+      }
+
     </style>
 
-    <div id="control" class="cache-controls">
+    <div id="control" class="cache-controls container flex-horizontal">
       <paper-spinner id="loading" class="ringer hide" active></paper-spinner>
       <paper-fab icon="refresh" class="fab" on-tap="refresh"></paper-fab>
+
+      <div class="flexchild flex-equal-around-justified">
+
+          <!-- disabled$="{{has&#45;prev}}" -->
+        <paper-button
+          id="button-back"
+          class="page-button back-button"
+          disabled={{!hasPrev}}
+          on-click="getPrev"
+          raised>
+            <iron-icon icon="icons:chevron-left"></iron-icon>
+            Prev
+        </paper-button> 
+        <paper-button
+          id="button-next"
+          class="page-button next-button"
+          disabled={{!hasNext}}
+          on-click="getNext"
+          raised>
+            Next
+            <iron-icon icon="icons:chevron-right"></iron-icon>
+        </paper-button> 
+
+      </div>
 
       <paper-toast
         id="toasterror"
@@ -91,7 +135,34 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
         type: Object,
         notify: true,
         value: function() { return []; }
-      }
+      },
+      hasPrev: {
+        type: Boolean,
+        notify: true,
+        reflectToAttribute: true,
+        value: false
+      },
+      hasNext: {
+        type: Boolean,
+        notify: true,
+        reflectToAttribute: true,
+        value: function() { return false; }
+      },
+      prevOffset: {
+        type: Number,
+        notify: true,
+        value: function() { return 0; }
+      },
+      nextOffset: {
+        type: Number,
+        notify: true,
+        value: function() { return 0; }
+      },
+      limit: {
+        type: Number,
+        notify: true,
+        value: function() { return 2; }
+      },
     },
 
     getAppControllerModule: function() {
@@ -99,7 +170,21 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
       return appc;
     },
 
-    refresh: function() {
+    getPrev: function() {
+      return this.refresh(this.prevOffset, this.limit);
+    },
+
+    getNext: function() {
+      return this.refresh(this.nextOffset, this.limit);
+    },
+
+    refresh: function(offset, limit) {
+      if (!Number.isSafeInteger(offset)) {
+        offset = 0;
+      }
+      if (!Number.isSafeInteger(limit)) {
+        limit = this.limit;
+      }
       var thisEl = this;
       return new Promise(function(resolve) {
         if (!thisEl.serviceName) {
@@ -113,10 +198,30 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
         })
         .then(appController => {
           appc = appController;
-          return appc.getListFromService(thisEl.serviceName);
+          return appc.getListFromService(thisEl.serviceName, offset, limit);
         })
-        .then(pageList => {
-          thisEl.pageList = pageList;
+        .then(pageListResp => {
+          // We expect:
+          // {
+          //   hasNext: boolean,
+          //   nextOffset: integer,
+          //   hasPrev: booean
+          //   prevOffset: integer,
+          //   cachedPages: [CPSummary, ... ]
+          // }
+          thisEl.hasPrev = pageListResp.hasPrev;
+          thisEl.hasNext = pageListResp.hasNext;
+          if (pageListResp.prevOffset) {
+            thisEl.prevOffset = pageListResp.prevOffset;
+          } else {
+            thisEl.prevOffset = 0;
+          }
+          if (pageListResp.nextOffset) {
+            thisEl.nextOffset = pageListResp.nextOffset;
+          } else {
+            thisEl.nextOffset = 0;
+          }
+          thisEl.pageList = pageListResp.cachedPages;
           thisEl.hideLoading();
           resolve();
         })

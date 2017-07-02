@@ -81,7 +81,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
     <app-drawer-layout fullbleed>
 
       <!-- Drawer content -->
-      <app-drawer>
+      <app-drawer slot="drawer">
         <app-toolbar>SemCache</app-toolbar>
         <start-app-button started={{app-started}}></start-app-button>
         <cache-provider caches="{{retrievedCaches}}" started={{app-started}}></cache-provider>
@@ -90,9 +90,9 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
       </app-drawer>
 
       <!-- Main content -->
-      <app-header-layout has-scrolling-region>
+      <app-header-layout fullbleed has-scrolling-region>
 
-        <app-header condenses reveals effects="waterfall">
+        <app-header slot="header" condenses reveals effects="waterfall">
           <app-toolbar>
             <paper-icon-button icon="menu" drawer-toggle></paper-icon-button>
             <div title>SemCache</div>

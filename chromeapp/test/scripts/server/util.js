@@ -21,12 +21,16 @@ const BloomFilter = bloomFilter.BloomFilter;
 exports.getListResponseObj = function() {
   return {
     metadata: api.createMetadatObj(),
+    hasPrev: false,
+    hasNext: true,
+    prevOffset: 5,
+    nextOffset: 20,
     cachedPages: [...putil.genCPSummaries(2)]
   };
 };
 
 exports.getListResponseParsed = function() {
-  return exports.getListResponseJson().cachedPages;
+  return exports.getListResponseObj();
 };
 
 /**

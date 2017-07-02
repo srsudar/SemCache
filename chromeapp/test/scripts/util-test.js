@@ -1,6 +1,8 @@
 /*jshint esnext:true*/
 'use strict';
 
+const SmartBuffer = require('smart-buffer').SmartBuffer;
+
 const sinon = require('sinon');
 const test = require('tape');
 

@@ -34,7 +34,7 @@ exports.ListCachedPagesHandler = function() {
 _.extend(exports.ListCachedPagesHandler.prototype,
   {
     get: function() {
-      api.getResponseForAllCachedPages()
+      api.getResponseForList()
       .then(response => {
         this.setHeader('content-type', 'text/json');
         let encoder = new TextEncoder('utf-8');

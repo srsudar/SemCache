@@ -31,12 +31,15 @@ class WebrtcPeerAccessor extends PeerAccessor {
   /**
    * Retrieve the list of pages in the peer's cache.
    *
+   * @param {number} offset
+   * @param {number} limit
+   *
    * @return {Promise.<Object, Error>}
    */
-  getList() {
+  getList(offset, limit) {
     return this.getConnection()
       .then(peerConnection => {
-        return peerConnection.getList();
+        return peerConnection.getList(offset, limit);
       });
   }
 

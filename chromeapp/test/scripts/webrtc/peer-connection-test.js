@@ -71,24 +71,27 @@ test('emits close event when rawConnection closed', function(t) {
 });
 
 test('getList issues call to peer', function(t) {
+  let offset = 100;
+  let limit = 120;
   let rawConnection = sinon.stub();
   rawConnection.on = sinon.stub();
-  let msg = 'list message';
-
-  let expected = sutil.getListResponseParsed();
+  let msg = 'listmessage';
+  let createMsgStub = sinon.stub();
+  createMsgStub.withArgs(offset, limit).returns(msg);
 
   proxyquirePeerConn({
     './message': {
-      createListMessage: sinon.stub().returns(msg)
+      createListMessage: createMsgStub
     }
   });
+
+  let expected = sutil.getListResponseParsed();
 
   let pc = new peerConn.PeerConnection(rawConnection);
   pc.sendAndGetResponse = sinon.stub();
   pc.sendAndGetResponse.withArgs(msg).resolves(sutil.getListResponseBuff());
-  
 
-  pc.getList()
+  pc.getList(offset, limit)
   .then(actual => {
     t.deepEqual(actual, expected);
     end(t);

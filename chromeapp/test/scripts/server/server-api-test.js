@@ -114,7 +114,7 @@ test('getAccessUrlForCachedPage throws if invalid params', function(t) {
   end(t);
 });
 
-test('getResponseForAllCachedPages rejects if read fails', function(t) {
+test('getResponseForList rejects if read fails', function(t) {
   let errObj = {msg: 'could not read pages'};
   let getCachedPageSummariesStub = sinon.stub().rejects(errObj);
 
@@ -124,7 +124,7 @@ test('getResponseForAllCachedPages rejects if read fails', function(t) {
     }
   });
 
-  api.getResponseForAllCachedPages()
+  api.getResponseForList()
   .then(res => {
     t.fail(res);
     end(t);
@@ -135,28 +135,80 @@ test('getResponseForAllCachedPages rejects if read fails', function(t) {
   });
 });
 
-test('getResponseForAllCachedPages resolves with pages', function(t) {
-  let cpsums = [...putil.genCPSummaries(9)];
+test('getResponseForList resolves no next, no prev', function(t) {
+  let offset = 0;
+  let limit = 50;
+  let num = 9;
+  let cpsums = [...putil.genCPSummaries(num)];
   let metadataObj = { foo: 'bar' };
   let getSummariesStub = sinon.stub();
-  getSummariesStub.withArgs(0, 50).resolves(cpsums);
+  getSummariesStub.withArgs(offset, limit).resolves(cpsums);
 
   proxyquireApi({
     '../persistence/datastore': {
-      getCachedPageSummaries: getSummariesStub
+      getCachedPageSummaries: getSummariesStub,
+      getNumCachedPages: sinon.stub().resolves(num)
     }
   });
   api.createMetadatObj = sinon.stub().returns(metadataObj);
 
   let expectedJson = {
     metadata: metadataObj,
-    cachedPages: cpsums
+    hasPrev: false,
+    hasNext: false,
+    cachedPages: cpsums.map(cpsum => cpsum.toJSON())
   };
   let expectedBuff = Buffer.from(JSON.stringify(expectedJson));
 
-  api.getResponseForAllCachedPages()
-  .then(actual => {
-    t.deepEqual(actual, expectedBuff);
+  api.getResponseForList(offset, limit)
+  .then(actualBuff => {
+    // Can't rely on order of these things when you're stringifying, and
+    // straight Buffer comparisons rely on order. Instead prase them and make
+    // sure we reclaim both as identical.
+    let expected = JSON.parse(expectedBuff.toString());
+    let actual = JSON.parse(actualBuff.toString());
+    t.deepEqual(actual, expected);
+    end(t);
+  })
+  .catch(err => {
+    t.fail(err);
+    end(t);
+  });
+});
+
+test('getResponseForList correct for prev and next', function(t) {
+  let offset = 10;
+  let limit = 5;
+  let num = 100;
+  let cpsums = [...putil.genCPSummaries(num)].slice(offset, offset + limit);
+  let metadataObj = { foo: 'bar' };
+  let getSummariesStub = sinon.stub();
+  getSummariesStub
+    .withArgs(offset, limit).resolves(cpsums);
+
+  proxyquireApi({
+    '../persistence/datastore': {
+      getCachedPageSummaries: getSummariesStub,
+      getNumCachedPages: sinon.stub().resolves(num)
+    }
+  });
+  api.createMetadatObj = sinon.stub().returns(metadataObj);
+
+  let expectedJson = {
+    metadata: metadataObj,
+    hasPrev: true,
+    hasNext: true,
+    prevOffset: offset - limit,
+    nextOffset: offset + limit,
+    cachedPages: cpsums.map(cpsum => cpsum.toJSON())
+  };
+  let expectedBuff = Buffer.from(JSON.stringify(expectedJson));
+
+  api.getResponseForList(offset, limit)
+  .then(actualBuff => {
+    let actual = JSON.parse(actualBuff.toString());
+    let expected = JSON.parse(expectedBuff.toString());
+    t.deepEqual(actual, expected);
     end(t);
   })
   .catch(err => {

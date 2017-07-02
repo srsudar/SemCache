@@ -4,6 +4,7 @@ const proxyquire = require('proxyquire');
 const sinon = require('sinon');
 const test = require('tape');
 
+const message = require('../../../app/scripts/webrtc/message');
 const sutil = require('../server/util');
 
 let responder = require('../../../app/scripts/webrtc/responder');
@@ -33,20 +34,26 @@ function end(t) {
 
 
 test('onList calls sendBuffer with binary contents', function(t) {
+  let offset = 200;
+  let limit = 10;
   let apiResponse = sutil.getListResponseBuff();
   let channel = 'i am the channel';
-  let getResponseForAllCachedPagesSpy = sinon.stub().resolves(apiResponse);
+  let getResponseForListSpy = sinon.stub();
+  getResponseForListSpy.withArgs(offset, limit).resolves(apiResponse);
   let sendBuffSpy = sinon.stub();
   sendBuffSpy.withArgs(channel, apiResponse).resolves();
 
+  let msg = message.createListMessage(offset, limit);
+  console.log(msg);
+
   proxyquireResponder({
     '../server/server-api': {
-      getResponseForAllCachedPages: getResponseForAllCachedPagesSpy
+      getResponseForList: getResponseForListSpy
     }
   });
   responder.sendBufferOverChannel = sendBuffSpy;
 
-  responder.onList(channel)
+  responder.onList(channel, msg)
   .then(() => {
     t.deepEqual(sendBuffSpy.args[0], [channel, apiResponse]);
     end(t);
@@ -60,15 +67,15 @@ test('onList calls sendBuffer with binary contents', function(t) {
 test('onList rejects with error', function(t) {
   let channel = 'i am the channel';
   let expected = { error: 'went south' };
-  let getResponseForAllCachedPagesSpy = sinon.stub().rejects(expected);
+  let getResponseForListSpy = sinon.stub().rejects(expected);
 
   proxyquireResponder({
     '../server/server-api': {
-      getResponseForAllCachedPages: getResponseForAllCachedPagesSpy
+      getResponseForList: getResponseForListSpy
     }
   });
 
-  responder.onList(channel)
+  responder.onList(channel, { request: {} })
   .then(res => {
     t.fail(res);
     end(t);

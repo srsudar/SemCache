@@ -7,6 +7,7 @@ const test = require('tape');
 
 const constants = require('../../app/scripts/constants');
 const putil = require('./persistence/persistence-util');
+const sutil = require('./server/util');
 const tutil = require('./test-util');
 
 let appc = require('../../app/scripts/app-controller');
@@ -150,14 +151,16 @@ test('saveMhtmlAndOpen rejects if error', function(t) {
 });
 
 test('getListFromService resolves with json', function(t) {
+  let offset = 15;
+  let limit = 10;
   let cacheInfo = tutil.genCacheInfos(1).next().value;
-  let expected = { cachedPages: ['page1', 'page2'] };
+  let expected = sutil.getListResponseParsed();
   let serviceName = cacheInfo.instanceName;
 
   let peerAccessorStub = sinon.stub();
 
   let getListStub = sinon.stub();
-  getListStub.resolves(expected);
+  getListStub.withArgs(offset, limit).resolves(expected);
   peerAccessorStub.getList = getListStub;
 
   let resolveCacheStub = sinon.stub();
@@ -178,7 +181,7 @@ test('getListFromService resolves with json', function(t) {
 
   appc.resolveCache = resolveCacheStub;
 
-  appc.getListFromService(serviceName)
+  appc.getListFromService(serviceName, offset, limit)
   .then(actual => {
     t.equal(actual, expected);
     t.end();
@@ -380,21 +383,6 @@ test('startServersAndRegister resolves if register resolves', function(t) {
     t.end();
     resetAppController();
   });
-});
-
-test('getListUrlForSelf is sensible', function(t) {
-  let iface = {
-    address: '123.4.5.67',
-    port: 7161
-  };
-  
-  appc.getListeningHttpInterface = sinon.stub().returns(iface);
-
-  let expected = 'http://123.4.5.67:7161/list_pages';
-  let actual = appc.getListUrlForSelf();
-  t.equal(actual, expected);
-  t.end();
-  resetAppController();
 });
 
 test('getOwnCache returns correct info', function(t) {
