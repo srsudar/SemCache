@@ -55,6 +55,16 @@ exports.wait = function(ms) {
 };
 
 /**
+ * A wrapper around the native setTimeout function, to accommodate testing.
+ *
+ * @param {Function} fn
+ * @param {number} ms
+ */
+exports.setTimeout = function(fn, ms) {
+  setTimeout(fn, ms);
+};
+
+/**
  * Returns a Promise that resolves at a random time within the given range.
  *
  * @param {integer} min the minimum number of milliseconds to wait

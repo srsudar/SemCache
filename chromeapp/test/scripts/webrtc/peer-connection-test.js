@@ -303,15 +303,25 @@ test('sendAndGetResponse resolves on success', function(t) {
     clientStub.emitComplete();
   };
 
+  let setTimeoutStub = sinon.stub();
+
+  proxyquirePeerConn({
+    '../util': {
+      setTimeout: setTimeoutStub
+    }
+  });
+
   let createClientStub = sinon.stub();
   createClientStub.withArgs(rawCxn, msg).returns(clientStub);
   peerConn.createClient = createClientStub;
 
   let pc = new peerConn.PeerConnection(rawCxn);
 
+  // No timeout, make sure we use the default value
   pc.sendAndGetResponse(msg)
   .then(actual => {
     t.deepEqual(actual, expected);
+    t.equal(setTimeoutStub.args[0][1], peerConn.DEFAULT_TIMEOUT);
     end(t);
   })
   .catch(err => {
@@ -331,6 +341,13 @@ test('sendAndGetResponse rejects on error', function(t) {
     clientStub.emitError(expected);
   };
 
+  let setTimeoutStub = sinon.stub();
+  proxyquirePeerConn({
+    '../util': {
+      setTimeout: setTimeoutStub
+    }
+  });
+
   let createClientStub = sinon.stub();
   createClientStub.withArgs(rawCxn, msg).returns(clientStub);
   peerConn.createClient = createClientStub;
@@ -346,6 +363,53 @@ test('sendAndGetResponse rejects on error', function(t) {
   .catch(actual => {
     t.deepEqual(emitCloseStub.args[0], [expected]);
     t.equal(emitCloseStub.callCount, 1);
+    t.deepEqual(actual, expected);
+    end(t);
+  });
+});
+
+test('sendAndGetResponse rejects on timeout', function(t) {
+  let { rawCxn, msg } = getRawCxnAndMsg();
+
+  let timeout = 123456;
+  let clientStub = new commonChannel.BaseClient(rawCxn, msg);
+  let emitCloseStub = sinon.stub();
+  // A bit rigid here--we are mimicking the error type that rejects in
+  // peer-connection
+  let expected = new Error('timed out');
+  let startStub = sinon.stub();
+  clientStub.start = startStub;
+
+  let actualTimeout = null;
+  let setTimeoutStub = function(callback, timeoutParam) {
+    actualTimeout = timeoutParam;
+    // Invoke immediately, like we timed out.
+    callback();
+  };
+
+  proxyquirePeerConn({
+    '../util': {
+      setTimeout: setTimeoutStub
+    }
+  });
+
+  let createClientStub = sinon.stub();
+  createClientStub.withArgs(rawCxn, msg).returns(clientStub);
+  peerConn.createClient = createClientStub;
+
+  let pc = new peerConn.PeerConnection(rawCxn);
+  pc.emitClose = emitCloseStub;
+
+  pc.sendAndGetResponse(msg, timeout)
+  .then(result => {
+    t.fail(result);
+    end(t);
+  })
+  .catch(actual => {
+    t.equal(actualTimeout, timeout);
+    t.deepEqual(emitCloseStub.args[0], [expected]);
+    t.equal(emitCloseStub.callCount, 1);
+    t.equal(startStub.callCount, 1);
     t.deepEqual(actual, expected);
     end(t);
   });

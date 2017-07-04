@@ -5,11 +5,14 @@ const EventEmitter = require('wolfy87-eventemitter');
 const bufferedChannel = require('./buffered-channel');
 const message = require('./message');
 const serverApi = require('../server/server-api');
+const util = require('../util');
 
 
 const EV_CLOSE = 'close';
 
 const Client = bufferedChannel.BufferedChannelClient;
+
+exports.DEFAULT_TIMEOUT = 20000;
 
 /**
  * Handles a connection to a SemCache peer. This forms the client portion of a
@@ -163,35 +166,59 @@ class PeerConnection extends EventEmitter {
    * message will be closed. The response is resolved after the first message is
    * received.
    *
-   * @param {RTCPeerConnection} pc the connection over which to send the message
    * @param {Object} msg the message to send to the peer
+   * @param {number} timeout the timeout, in milliseconds, to wait for the send
+   * to complete
    * 
    * @return {Promise.<ArrayBuffer, Error>} Promise that resolves with the
    * ArrayBuffer message received on the channel or with an Error if something
    * went wrong. Callers are responsible for any parsing of the ArrayBuffer
    * object, eg to reclaim a JSON response.
    */
-  sendAndGetResponse(msg) {
+  sendAndGetResponse(msg, timeout) {
+    timeout = timeout || exports.DEFAULT_TIMEOUT;
     let self = this;
     return new Promise(function(resolve, reject) {
+      let settled = false;
       Promise.resolve()
       .then(() => {
         let client = exports.createClient(self.rawConnection, msg);
 
         client.on('complete', buff => {
-          resolve(buff);
+          if (!settled) {
+            settled = true;
+            resolve(buff);
+          }
         });
 
         client.on('error', err => {
           self.emitClose(err);
-          reject(err);
+          if (!settled) {
+            settled = true;
+            reject(err);
+          }
         });
 
         client.start();
+
+        util.setTimeout(
+          function() {
+            let err = new Error('timed out waiting for channel');
+            self.emitClose(err);
+            if (!settled) {
+              settled = true;
+              reject(err);
+            }
+          },
+          timeout
+        );
       })
       .catch(err => {
         self.emitClose(err);
-        reject(err);
+        if (!settled) {
+          settled = true;
+          reject(err);
+        }
       });
     });
   }
