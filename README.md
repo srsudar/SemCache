@@ -14,6 +14,9 @@ It can be thought of as similar to [Pocket](https://getpocket.com/) but with
 local network sharing. It saves webpages as bare `.mhtml`, and does not try to
 make them pretty like Pocket.
 
+SemCache is the code for the research project
+[Siskin](https://dl.acm.org/citation.cfm?id=3209820).
+
 ## Why?
 
 The purpose of SemCache is to leverage the networks that often exist between
